@@ -5,7 +5,7 @@
 # and a laptop compile the same bytes. Borrowed from quire, where the same
 # arrangement is what makes F-Droid reproducible-build checks tractable.
 FROM --platform=linux/amd64 node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS web-tests
-FROM --platform=linux/amd64 eclipse-temurin:21-jdk-jammy
+FROM --platform=linux/amd64 eclipse-temurin:22-jdk-jammy
 
 ARG ANDROID_CMDLINE_TOOLS_VERSION=11076708
 ARG ANDROID_PLATFORM=android-34
