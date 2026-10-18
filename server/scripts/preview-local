@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Real relay with synthetic household/accounts in an isolated disposable database.
+# No cluster, no external identity provider, no production keys or app data.
+set -euo pipefail
+umask 077
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT"
+CONTAINER="comanda-browser-preview-$(python3 -c 'import uuid; print(uuid.uuid4())')"
+CREATED=false
+mkdir -p server/build
+OUTPUT="$(mktemp -d server/build/browser-preview.XXXXXX)"
+chmod 700 "$OUTPUT"
+cleanup() {
+  if [ "$CREATED" = true ]; then docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; fi
+  rm -f "$OUTPUT/postgres.env"
+}
+trap cleanup EXIT
+python3 - "$OUTPUT" <<'PY'
+import secrets,sys
+from pathlib import Path
+p=Path(sys.argv[1])/'postgres.env'
+p.write_text('POSTGRES_DB=comanda_test\nPOSTGRES_USER=comanda_test\nPOSTGRES_PASSWORD='+secrets.token_hex(32)+'\n')
+p.chmod(0o600)
+PY
+docker run --rm -d --name "$CONTAINER" --env-file "$OUTPUT/postgres.env" \
+  -p 127.0.0.1::5432 --tmpfs /var/lib/postgresql/data:rw,size=512m \
+  postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea >/dev/null
+CREATED=true
+for attempt in $(seq 1 30); do
+  if docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U comanda_test -d comanda_test >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U comanda_test -d comanda_test >/dev/null
+PORT="$(docker port "$CONTAINER" 5432/tcp | sed 's/.*://')"
+export COMANDA_TEST_JDBC_URL="jdbc:postgresql://host.docker.internal:$PORT/comanda_test"
+export COMANDA_TEST_DB_USER=comanda_test
+export COMANDA_TEST_DB_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$OUTPUT/postgres.env")"
+export COMANDA_PREVIEW_PORT="${COMANDA_PREVIEW_PORT:-18746}"
+printf 'Synthetic browser preview: http://localhost:%s\nPrivate fixture files: %s/%s\nStop by creating %s/stop\n' "$COMANDA_PREVIEW_PORT" "$ROOT" "$OUTPUT" "$OUTPUT"
+scripts/dgradle -p server browserPreview "-PpreviewPort=$COMANDA_PREVIEW_PORT" "-PpreviewOutput=/workspace/$OUTPUT" --no-watch-fs "$@"

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_produce">Fruit and vegetables</string>
+    <string name="category_dairy">Dairy and eggs</string>
+    <string name="category_bakery">Bakery</string>
+    <string name="category_meat">Meat</string>
+    <string name="category_fish">Fish and seafood</string>
+    <string name="category_frozen">Frozen</string>
+    <string name="category_pantry">Cupboard</string>
+    <string name="category_drinks">Drinks</string>
+    <string name="category_snacks">Snacks</string>
+    <string name="category_household">Household</string>
+    <string name="category_personal_care">Personal care</string>
+    <string name="category_other">Other</string>
+    <string name="item_edit">Edit item</string>
+    <string name="item_edit_action">Edit %1$s</string>
+    <string name="edit_name">Name</string>
+    <string name="edit_quantity">Quantity</string>
+    <string name="edit_category">Move to…</string>
+    <string name="edit_category_auto">Automatic</string>
+    <string name="edit_repeat_days">Repeat every (days)</string>
+    <string name="edit_repeat_hint">Add this item automatically when it is due. Leave empty to stop repeating.</string>
+    <string name="edit_save">Save</string>
+    <string name="edit_cancel">Cancel</string>
+    <string name="unit_pieces">Pieces</string>
+    <string name="unit_gram">g</string>
+    <string name="unit_kilogram">kg</string>
+    <string name="unit_millilitre">ml</string>
+    <string name="unit_litre">l</string>
+    <string name="unit_pack">Packs</string>
+    <string name="repeat_added">Added by a repeat rule</string>
+    <string name="autocomplete_add">Add %1$s</string>
+    <string name="edit_name_invalid">Enter an item name.</string>
+    <string name="edit_quantity_invalid">Use a number of at least 0, or leave it empty.</string>
+    <string name="edit_repeat_invalid">Use a whole number of days above 0, or leave it empty.</string>
+</resources>

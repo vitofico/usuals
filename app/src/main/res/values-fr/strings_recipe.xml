@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recipe_title">Importer une recette</string>
+    <string name="recipe_close">Fermer</string>
+    <string name="recipe_url">URL de la recette</string>
+    <string name="recipe_read">Lire la recette</string>
+    <string name="recipe_intro">Collez ou partagez un lien de recette. %1$s lit la page sur votre téléphone et vous permet de vérifier les ingrédients avant de les ajouter.</string>
+    <string name="recipe_no_structured">Cette page ne contient pas d’ingrédients structurés. Essayez votre modèle facultatif ou fermez cet écran et saisissez les ingrédients.</string>
+    <string name="recipe_model_privacy">Utiliser le modèle envoie le texte de la page au fournisseur configuré et consomme un des appels du jour.</string>
+    <string name="recipe_use_model">Lire avec mon modèle</string>
+    <string name="recipe_servings">Quantité obtenue : %1$s</string>
+    <string name="recipe_review_hint">Vérifiez les ingrédients. Les produits de base et les achats des 7 derniers jours ne sont pas cochés au départ. Les articles déjà sur votre liste sont exclus. Les mesures d’origine sont conservées pour vérification.</string>
+    <string name="recipe_model_review">Ces ingrédients proviennent d’un modèle. Vérifiez chaque nom et quantité avant de les ajouter.</string>
+    <string name="recipe_on_list">Déjà sur votre liste</string>
+    <string name="recipe_pantry">Produit de base</string>
+    <string name="recipe_recent">Acheté dans les 7 derniers jours</string>
+    <string name="recipe_empty">Aucun ingrédient utilisable trouvé. Essayez une autre page ou ajoutez les articles à la main.</string>
+    <plurals name="recipe_add">
+        <item quantity="one">Ajouter %1$d ingrédient</item>
+        <item quantity="other">Ajouter %1$d ingrédients</item>
+        <item quantity="many">Ajouter %1$d ingrédients</item>
+    </plurals>
+    <string name="recipe_model_missing">Configurez d’abord un modèle facultatif dans les Paramètres, puis réessayez. Aucun texte de la page n’a été envoyé à un modèle.</string>
+    <string name="recipe_model_empty">Le modèle n’a renvoyé aucun ingrédient utilisable. Vérifiez la connexion dans les Paramètres ou ajoutez-les à la main.</string>
+    <string name="recipe_invalid_url">Saisissez un lien HTTP ou HTTPS de recette valide, sans identifiant ni mot de passe.</string>
+    <string name="recipe_blocked">Ce site bloque la lecture automatique. Ouvrez-le dans votre navigateur et ajoutez les ingrédients à la main, ou essayez un autre site.</string>
+    <string name="recipe_http">Le site n’a pas pu fournir cette page (HTTP %1$d). Vérifiez le lien ou essayez une autre recette.</string>
+    <string name="recipe_unreachable">Impossible de joindre le site de la recette. Vérifiez votre connexion et réessayez.</string>
+    <string name="recipe_timeout">Le site de la recette a mis trop de temps à répondre. Réessayez plus tard.</string>
+    <string name="recipe_too_large">Cette page est trop volumineuse pour être importée. Essayez une autre recette.</string>
+    <string name="recipe_not_html">Ce lien n’est pas une page web de recette. Collez un lien de page HTTP ou HTTPS.</string>
+    <string name="recipe_failed">Impossible d’importer la recette. Votre liste est toujours là.</string>
+</resources>

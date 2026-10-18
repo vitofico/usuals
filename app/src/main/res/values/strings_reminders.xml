@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_title">Weekly reminder</string>
+    <string name="reminder_help">Choose a day and time to review your shopping lists. This device only, off by default. Android may deliver it later to save battery.</string>
+    <string name="reminder_on">Reminder is on</string>
+    <string name="reminder_off">Reminder is off</string>
+    <string name="reminder_enable">Enable reminder</string>
+    <string name="reminder_save">Save reminder</string>
+    <string name="reminder_disable">Turn off reminder</string>
+    <string name="reminder_permission">Allow notifications to receive reminders. You can change this in Android settings.</string>
+    <string name="reminder_notification_settings">Notification settings</string>
+    <string name="reminder_failed">Could not save the reminder. Please try again.</string>
+    <string name="reminder_channel">Shopping reminders</string>
+    <string name="reminder_notification_title">Time to check your lists</string>
+    <string name="reminder_notification_body">Review what you need before your next shop.</string>
+</resources>

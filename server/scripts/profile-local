@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Build and exercise the wrapper-built distribution under proposed container limits."""
+import concurrent.futures, http.client, json, os, pathlib, secrets, shutil, subprocess, tempfile, threading, time
+os.umask(0o077)
+if not __debug__:
+    raise SystemExit('Local deployment checks require Python validation enabled; remove -O/PYTHONOPTIMIZE')
+root = pathlib.Path(__file__).resolve().parents[2]
+pgimage = 'postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea'
+image = 'comanda-relay:local-s5'
+prefix = 'comanda-profile-'+str(os.getpid())
+pg, relay = prefix+'-pg', prefix+'-relay'
+volumes = [prefix+'-'+x for x in ['data','identity','pg-secrets','app-secret','backup','tools']]
+directory = pathlib.Path(tempfile.mkdtemp(prefix=prefix+'-'))
+client_directory = root/'server/build'/prefix
+client_created = False
+def run(args, **kw): return subprocess.check_output(args, stderr=subprocess.PIPE, **kw).decode().strip()
+def request(port, method, path, body=None):
+    c = http.client.HTTPConnection('127.0.0.1', port, timeout=20)
+    try:
+        c.request(method,path,body=body,headers={'Content-Type':'application/json','Authorization':'Bearer '+'A'*43})
+        response = c.getresponse(); data = response.read(); return response.status, data
+    finally: c.close()
+peak = [0]; sampling = threading.Event()
+def sample():
+    while not sampling.wait(.1):
+        try:
+            used = run(['docker','exec',relay,'cat','/sys/fs/cgroup/memory.current'])
+            peak[0] = max(peak[0],int(used))
+        except subprocess.CalledProcessError: pass
+try:
+    log = (directory/'image-build.log').open('wb')
+    subprocess.run([str(root/'scripts/dgradle'),'-p','server','installDist','--no-watch-fs'],cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
+    client_directory.mkdir(mode=0o700)
+    client_created = True
+    subprocess.run(['docker','build','--platform','linux/amd64','-f',str(root/'server/Dockerfile'),'-t',image,str(root/'server/build/install/comanda-relay')],stdout=log,stderr=subprocess.STDOUT,check=True)
+    subprocess.run(['docker','pull','--platform','linux/amd64',pgimage],stdout=log,stderr=subprocess.STDOUT,check=True)
+    log.close()
+    postgres_source = json.loads(run(['docker','image','inspect','--platform','linux/amd64',pgimage]))[0]
+    assert postgres_source['Architecture'] == 'amd64' and postgres_source['Os'] == 'linux'
+    assert postgres_source['Descriptor']['mediaType'] in ('application/vnd.oci.image.manifest.v1+json', 'application/vnd.docker.distribution.manifest.v2+json'), 'Expected a platform manifest, not an index'
+    # Resolve the platform manifest through its repository, not an engine-specific image ID.
+    pgimage = 'postgres@' + postgres_source['Descriptor']['digest']
+    with (directory/'image-build.log').open('ab') as log:
+        subprocess.run(['docker','pull','--platform','linux/amd64',pgimage],stdout=log,stderr=subprocess.STDOUT,check=True)
+    for key in ['admin-password','app-password','backup-password']: (directory/key).write_text(secrets.token_hex(32))
+    for volume in volumes: run(['docker','volume','create',volume])
+    run(['docker','network','create',prefix])
+    run(['docker','run','--platform','linux/amd64','--rm','-v',str(directory)+':/seed:ro','-v',volumes[0]+':/data','-v',volumes[1]+':/identity','-v',volumes[2]+':/pg-secret','-v',volumes[3]+':/app-secret','-v',volumes[4]+':/backup','-v',volumes[5]+':/tools','-v',str(root/'deploy/k8s')+':/manifest:ro',pgimage,'sh','-ec',
+        'chown 70:70 /data /backup; chown 10001:10001 /identity; chmod 700 /data /backup /identity; cp /seed/*-password /pg-secret/; cp /seed/app-password /app-secret/; chown -R 0:70 /pg-secret; chown -R 0:10001 /app-secret; chmod 750 /pg-secret /app-secret; chmod 640 /pg-secret/* /app-secret/*; cp /manifest/initialize.sql /manifest/initialize-replication.sh /tools/; chown -R 0:70 /tools; chmod 750 /tools; chmod 550 /tools/*'])
+    hardened = ['--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--tmpfs','/tmp:rw,size=32m']
+    run(['docker','run','--platform','linux/amd64','-d','--name',pg,'--network',prefix,'--user','70:70','--memory','1g','--cpus','1',*hardened,
+        '--tmpfs','/var/run/postgresql:rw,uid=70,gid=70,size=16m','-v',volumes[0]+':/var/lib/postgresql/data','-v',volumes[2]+':/run/secrets:ro','-v',volumes[4]+':/backup',
+        '-v',volumes[5]+':/docker-entrypoint-initdb.d:ro',
+        '-e','PGDATA=/var/lib/postgresql/data/pgdata','-e','POSTGRES_PASSWORD_FILE=/run/secrets/admin-password','-e','POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256',pgimage,
+        'postgres','-c','shared_buffers=128MB','-c','max_connections=20','-c','log_min_error_statement=panic'])
+    for _ in range(90):
+        if subprocess.run(['docker','exec',pg,'pg_isready','-h','127.0.0.1','-U','postgres'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode == 0: break
+        time.sleep(.5)
+    else: raise RuntimeError('Non-root database did not become ready')
+    roles = run(['docker','exec',pg,'psql','-qAt','-U','postgres','-d','postgres','-c',"SELECT rolname,rolsuper,rolreplication FROM pg_roles WHERE rolname IN ('comanda','comanda_backup') ORDER BY rolname"])
+    assert roles == 'comanda|f|f\ncomanda_backup|f|t'
+    common = ['--platform','linux/amd64','--network',prefix,'--user','10001:10001','--memory','512m','--cpus','1',*hardened,'-v',volumes[1]+':/identity','-v',volumes[3]+':/run/secrets:ro',
+        '-e','COMANDA_IDENTITY_FILE=/identity/identity','-e','COMANDA_FENCE_FILE=/identity/fence','-e','COMANDA_ORIGIN=https://comanda.invalid','-e','COMANDA_JDBC_URL=jdbc:postgresql://'+pg+':5432/comanda','-e','COMANDA_DB_USER=comanda','-e','COMANDA_DB_PASSWORD_FILE=/run/secrets/app-password','-e','COMANDA_OPS_BIND=0.0.0.0']
+    run(['docker','run','--rm',*common,image,'init-identity']); run(['docker','run','--rm',*common,image,'migrate'])
+    run(['docker','run','-d','--name',relay,'-p','127.0.0.1::8080','-p','127.0.0.1::9090',*[x.replace(volumes[1]+':/identity', volumes[1]+':/identity:ro') if x == volumes[1]+':/identity' else x for x in common],image])
+    port = int(run(['docker','port',relay,'8080/tcp']).split(':')[-1]); ops = int(run(['docker','port',relay,'9090/tcp']).split(':')[-1])
+    for _ in range(90):
+        try:
+            if request(port,'GET','/readyz')[0] == 200: break
+        except OSError: pass
+        time.sleep(.5)
+    else: raise RuntimeError('Bounded relay did not become ready')
+    thread = threading.Thread(target=sample,daemon=True); thread.start()
+    body = json.dumps({'envelope':{'header':'AA','ciphertext':'A'*(8*1024*1024),'signature':'AA'},'seq':0,'head':'A'*43}).encode()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        statuses = list(pool.map(lambda _: request(port,'PUT','/v1/lists/00000000-0000-4000-8000-000000000001/snapshot',body)[0],range(32)))
+    assert all(status in [401,503] for status in statuses)
+    assert request(port,'GET','/metrics')[0] == 404
+    assert request(port,'GET','/readyz')[0] == 200
+    bootstrap = run(['docker','run','--rm',*common,image,'bootstrap-token'])
+    assert len(bootstrap) == 43 and all(c.isalnum() or c in '-_' for c in bootstrap)
+    configuration = client_directory/'input.json'
+    configuration.write_text(json.dumps({'address':'http://host.docker.internal:'+str(port),'bootstrapToken':bootstrap}))
+    configuration.chmod(0o600)
+    with (directory/'authenticated-client.log').open('wb') as client_log:
+        subprocess.run([str(root/'scripts/dgradle'),'-p','server','profileClient','-PprofileInput=build/'+prefix+'/input.json','--no-watch-fs'],cwd=root,
+            stdout=client_log,stderr=subprocess.STDOUT,check=True)
+    authenticated = json.loads((client_directory/'authenticated-results.json').read_text())
+    assert authenticated['passed']
+    metrics = request(ops,'GET','/metrics')[1].decode(); assert 'comanda_storage_probe_ok 1' in metrics, 'Post-load storage probe failed'
+    assert 'device' not in metrics and 'household' not in metrics, 'Metrics expose an identity label'
+    sampling.set(); thread.join(timeout=3)
+    state = json.loads(run(['docker','inspect',relay]))[0]['State']
+    postgres_id = run(['docker','inspect',pg,'--format','{{.Image}}'])
+    postgres_metadata = json.loads(run(['docker','image','inspect','--platform','linux/amd64',pgimage]))[0]
+    assert run(['docker','exec',pg,'uname','-m']) == 'x86_64', 'PostgreSQL runtime is not amd64'
+    assert postgres_metadata['Architecture'] == 'amd64' and postgres_metadata['Os'] == 'linux', 'Unexpected PostgreSQL platform: '+postgres_metadata['Architecture']+'/'+postgres_metadata['Os']
+    assert state['Running'] and not state['OOMKilled'], 'Relay stopped or was OOM-killed'
+    assert 0 < peak[0] < 512*1024*1024, 'Sampled cgroup memory: '+str(peak[0])+' bytes; limit: '+str(512*1024*1024)
+    print(json.dumps({'passed':True,'imageId':run(['docker','image','inspect',image,'--format','{{.Id}}']),
+        'postgresImageId':postgres_id,'postgresPlatform':'linux/amd64','relayLimitMiB':512,'sampledPeakMiB':round(peak[0]/1024/1024,2),'unauthenticatedBulkRequests':len(statuses),'authenticated':authenticated,
+        'publicMetricsAbsent':True,'postgresNonRootAndLeastPrivilegeRoles':True,'oomKilled':False,
+        'scope':'local amd64 anonymous and authenticated near-limit single-household smoke, not many-household/long-duration or cluster capacity'}))
+except Exception as error:
+    (directory/'failure.txt').write_text(type(error).__name__+'\n'+str(error)+'\n'+getattr(error,'stderr',b'').decode(errors='replace'))
+    for name in [pg,relay]:
+        result = subprocess.run(['docker','logs',name],capture_output=True)
+        (directory/(name+'.log')).write_bytes(result.stdout+result.stderr)
+    print('FAIL: protected diagnostic directory '+str(directory)); raise SystemExit(1)
+finally:
+    sampling.set()
+    if client_created: shutil.rmtree(client_directory,ignore_errors=True)
+    for name in [pg,relay]: subprocess.run(['docker','rm','-f',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    for volume in volumes: subprocess.run(['docker','volume','rm',volume],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    subprocess.run(['docker','network','rm',prefix],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    for name in ['admin-password','app-password','backup-password']: (directory/name).unlink(missing_ok=True)
+    if not (directory/'failure.txt').exists(): shutil.rmtree(directory)

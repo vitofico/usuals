@@ -1,0 +1,25 @@
+#!/bin/sh
+# PostgreSQL calls this with its own validated source path and archive name.
+set -eu
+umask 077
+[ "$#" -eq 2 ]
+case "$2" in ''|*[!A-Za-z0-9.]*) exit 1;; esac
+[ "${#2}" -le 64 ]
+directory="${COMANDA_WAL_DIRECTORY:-/backup/wal}"
+mkdir -p "$directory"
+target="$directory/$2.gz"
+if [ -e "$target" ]; then
+  gzip -t "$target"
+  gzip -dc "$target" | cmp - "$1"
+  sync
+  exit 0
+fi
+temporary="$(mktemp "$directory/.wal-partial.XXXXXX")"
+trap 'rm -f "$temporary"' EXIT HUP INT TERM
+gzip -c "$1" > "$temporary"
+sync
+if ! ln "$temporary" "$target"; then
+  gzip -t "$target"
+  gzip -dc "$target" | cmp - "$1"
+fi
+sync

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window, launcher and RemoteViews roles mirror ui/theme/Color.kt. -->
+<resources>
+    <color name="comanda_ground">#F8F5EF</color>
+    <color name="comanda_accent">#583D53</color>
+    <color name="comanda_ground_dark">#1D181E</color>
+    <color name="ic_launcher_background">#583D53</color>
+    <color name="brand_champagne">#EFE1CA</color>
+    <color name="widget_surface">#FFFDFA</color>
+    <color name="widget_ink">#302331</color>
+    <color name="widget_secondary">#6E5E6B</color>
+    <color name="widget_accent">#583D53</color>
+    <color name="widget_outline">#E3D9DD</color>
+</resources>

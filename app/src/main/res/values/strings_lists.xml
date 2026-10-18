@@ -1,0 +1,26 @@
+<resources>
+    <string name="lists_choose">Your lists</string>
+    <string name="lists_new">New list</string>
+    <string name="lists_name">List name</string>
+    <string name="lists_create">Create</string>
+    <string name="lists_selected">Selected</string>
+    <plurals name="lists_pending"><item quantity="one">%d change waiting to sync</item><item quantity="other">%d changes waiting to sync</item></plurals>
+    <plurals name="lists_conflicts"><item quantity="one">%d change needs review</item><item quantity="other">%d changes need review</item></plurals>
+    <string name="lists_review_title">Review a change</string>
+    <string name="lists_review_body">This change could not be applied. The current item has been kept. Review it to enter the values you want.</string>
+    <string name="lists_review_item">Review item</string>
+    <string name="lists_keep_current">Keep current</string>
+    <string name="lists_current_value">Current: %1$s</string>
+    <string name="lists_requested_value">Requested: %1$s</string>
+    <string name="lists_value_unspecified">Not specified</string>
+    <string name="lists_value_checked">Checked</string>
+    <string name="lists_value_unchecked">Unchecked</string>
+    <string name="lists_note">Note</string>
+    <string name="lists_store">Store</string>
+    <string name="lists_check">Check state</string>
+    <string name="lists_imported_home">Imported Home</string>
+    <string name="lists_shared_label">Shared list</string>
+    <string name="lists_local_label">Local list</string>
+    <string name="lists_alias_requested">Requested: use %2$s for %1$s</string>
+    <string name="lists_alias_current">Current: use %2$s for %1$s</string>
+</resources>

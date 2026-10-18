@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lists_choose">Deine Listen</string>
+    <string name="lists_new">Neue Liste</string>
+    <string name="lists_name">Listenname</string>
+    <string name="lists_create">Erstellen</string>
+    <string name="lists_selected">Ausgewählt</string>
+    <plurals name="lists_pending">
+        <item quantity="one">%d Änderung wartet auf Synchronisierung</item>
+        <item quantity="other">%d Änderungen warten auf Synchronisierung</item>
+    </plurals>
+    <plurals name="lists_conflicts">
+        <item quantity="one">%d Änderung muss geprüft werden</item>
+        <item quantity="other">%d Änderungen müssen geprüft werden</item>
+    </plurals>
+    <string name="lists_review_title">Änderung prüfen</string>
+    <string name="lists_review_body">Diese Änderung konnte nicht übernommen werden. Der aktuelle Artikel wurde beibehalten. Prüfe ihn und gib die gewünschten Werte ein.</string>
+    <string name="lists_review_item">Artikel prüfen</string>
+    <string name="lists_keep_current">Aktuellen Wert behalten</string>
+    <string name="lists_current_value">Aktuell: %1$s</string>
+    <string name="lists_requested_value">Angefordert: %1$s</string>
+    <string name="lists_value_unspecified">Nicht angegeben</string>
+    <string name="lists_value_checked">Abgehakt</string>
+    <string name="lists_value_unchecked">Nicht abgehakt</string>
+    <string name="lists_note">Notiz</string>
+    <string name="lists_store">Geschäft</string>
+    <string name="lists_check">Abhakstatus</string>
+    <string name="lists_imported_home">Importiertes Zuhause</string>
+    <string name="lists_shared_label">Geteilte Liste</string>
+    <string name="lists_local_label">Lokale Liste</string>
+    <string name="lists_alias_requested">Angefordert: %2$s für %1$s verwenden</string>
+    <string name="lists_alias_current">Aktuell: %2$s für %1$s verwenden</string>
+</resources>

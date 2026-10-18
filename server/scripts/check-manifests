@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Offline structural checks only. Does not query or apply to a Kubernetes API."""
+import json, pathlib, shutil, subprocess
+if not __debug__:
+    raise SystemExit('Local deployment checks require Python validation enabled; remove -O/PYTHONOPTIMIZE')
+root = pathlib.Path(__file__).resolve().parents[2]
+kustomize = shutil.which('kustomize') or '/opt/homebrew/bin/kustomize'
+rendered = subprocess.check_output([kustomize, 'build', str(root / 'deploy/k8s')])
+def documents(data):
+    return json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e', 'puts JSON.generate(YAML.load_stream(STDIN.read))'], input=data))
+objects = documents(rendered)
+assert not any(x['kind'] == 'Secret' for x in objects), 'Private secrets must remain outside rendered base'
+objects += [x for p in (root / 'deploy/k8s/jobs').glob('*.yaml') for x in documents(p.read_bytes())]
+relay_images = set()
+for obj in objects:
+    spec = obj.get('spec', {})
+    if obj['kind'] == 'CronJob': spec = spec['jobTemplate']['spec']
+    pod = spec.get('template', {}).get('spec')
+    if not pod: continue
+    assert pod['automountServiceAccountToken'] is False
+    security = pod['securityContext']
+    assert security['runAsNonRoot'] and security['seccompProfile']['type'] == 'RuntimeDefault'
+    for container in pod['containers']:
+        if container['name'] == 'relay': relay_images.add(container['image'])
+        c = container['securityContext']
+        assert c['readOnlyRootFilesystem'] and not c['allowPrivilegeEscalation'] and c['capabilities']['drop'] == ['ALL']
+        assert container['resources']['requests'] and container['resources']['limits']
+        assert '@sha256:' in container['image'] or container['image'] == 'comanda-relay:deployment-not-approved'
+assert len(relay_images) == 1, 'Deployment and explicit operator jobs must use the same image'
+for service in [x for x in objects if x['kind'] == 'Service']:
+    assert service['spec'].get('type', 'ClusterIP') == 'ClusterIP'
+    assert all(p['port'] != 9090 for p in service['spec']['ports'])
+assert len({(x['kind'],x['metadata']['name']) for x in objects}) == len(objects)
+print(f'PASS: {len(objects)} resources, hardened pod templates, private metrics, no rendered secrets; API/schema/admission/live checks remain deployment gates')

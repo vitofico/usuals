@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_title">Promemoria settimanale</string>
+    <string name="reminder_help">Scegli giorno e ora per rivedere le liste. Solo su questo dispositivo, disattivato inizialmente. Android può ritardarlo per risparmiare batteria.</string>
+    <string name="reminder_on">Promemoria attivo</string>
+    <string name="reminder_off">Promemoria disattivato</string>
+    <string name="reminder_enable">Attiva promemoria</string>
+    <string name="reminder_save">Salva promemoria</string>
+    <string name="reminder_disable">Disattiva promemoria</string>
+    <string name="reminder_permission">Consenti le notifiche per ricevere i promemoria. Puoi modificarlo nelle impostazioni di Android.</string>
+    <string name="reminder_notification_settings">Impostazioni notifiche</string>
+    <string name="reminder_failed">Impossibile salvare il promemoria. Riprova.</string>
+    <string name="reminder_channel">Promemoria della spesa</string>
+    <string name="reminder_notification_title">Controlla le tue liste</string>
+    <string name="reminder_notification_body">Rivedi ciò che ti serve prima della prossima spesa.</string>
+</resources>

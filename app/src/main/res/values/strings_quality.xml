@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Open Food Facts says about a scanned product. Facts, never a verdict. -->
+<resources>
+    <string name="quality_nutri_score">Nutri-Score %1$s</string>
+    <string name="quality_nutri_score_absent">Nutri-Score: not stated</string>
+    <string name="quality_nova_1">NOVA 1 (unprocessed)</string>
+    <string name="quality_nova_2">NOVA 2 (culinary ingredient)</string>
+    <string name="quality_nova_3">NOVA 3 (processed)</string>
+    <string name="quality_nova_4">NOVA 4 (ultra-processed)</string>
+    <string name="quality_nova_absent">NOVA: not stated</string>
+    <string name="quality_allergens">Allergens: %1$s</string>
+    <string name="quality_allergens_absent">Allergens: not stated</string>
+    <string name="quality_allergens_none_listed">Open Food Facts lists no allergens. It is a crowd-sourced database, so that is not a guarantee: check the packaging.</string>
+    <string name="quality_record_blank">Open Food Facts has a record for this product, but it is empty.</string>
+    <!-- ODbL credit, shown wherever Open Food Facts data is displayed. -->
+    <string name="quality_attribution">Product data from Open Food Facts, under the ODbL licence.</string>
+</resources>

@@ -1,0 +1,9 @@
+Aurea es una lista de la compra para Android con un historial que se queda en el teléfono. Añade por voz, teclado, texto compartido o código de barras. Edita cantidades, categorías, repeticiones y etiquetas de tienda. El widget muestra lo que falta por comprar.
+
+Finaliza una compra para guardar los productos marcados con su fecha y poder deshacerlo. Los pendientes siguen en la lista. Importa listas anteriores con fecha, comparte la lista como texto y exporta o restaura el historial desde el selector de archivos de Android. Las sugerencias ofrecen productos habituales. La predicción de intervalos sigue desactivada hasta validarla con historial real. Solo las repeticiones explícitas añaden productos automáticamente.
+
+Comparte una receta para revisar y añadir sus ingredientes. Las recetas con datos estructurados no necesitan modelo. Para recetas en texto hay un modelo opcional. La consulta de nombres en Open Food Facts también es opcional y viene desactivada; confirmas cada nombre. Sin conexión puedes nombrar el producto manualmente.
+
+Sin cuentas, telemetría, analítica, informes de errores ni Play Services. La copia en la nube está excluida. Las claves del modelo se guardan en Android Keystore. Las consultas de recetas y códigos de barras salen directamente del teléfono. No hay sincronización entre teléfonos.
+
+Interfaz en inglés, con entrada en inglés y español. Apache-2.0. Software de desarrollo todavía sin publicar.

@@ -1,0 +1,115 @@
+package io.theficos.comanda.ui.list
+
+import io.theficos.comanda.smart.Category
+import io.theficos.comanda.smart.ItemMemory
+import io.theficos.comanda.smart.Suggestion
+import io.theficos.comanda.smart.RepeatOffer
+import io.theficos.comanda.model.Item
+import io.theficos.comanda.model.FinishedTrip
+import io.theficos.comanda.model.ItemId
+import io.theficos.comanda.model.Quantity
+import io.theficos.comanda.ui.recipe.RecipeUiState
+import io.theficos.comanda.ui.scan.ScanNameOffer
+
+/**
+ * Everything the list screen draws, and nothing it has to work out for itself.
+ *
+ * The rule this type exists to enforce: no string in here is a user-facing
+ * sentence. The view model hands over counts, names and flags; the composable
+ * renders them with `stringResource`. That keeps the copy in
+ * `strings.xml` where it can be translated and reviewed, and it keeps the view
+ * model free of an Android context so it can be tested on the JVM.
+ */
+data class ListUiState(
+    val directory: ListDirectory = ListDirectory(),
+    val header: ListHeader = ListHeader(),
+    /** Still to buy, in list order. */
+    val pending: List<ListRow> = emptyList(),
+    /** Checked. Collapsed into one counted row unless [checkedExpanded]. */
+    val checked: List<ListRow> = emptyList(),
+    val checkedExpanded: Boolean = false,
+    val finishedTrip: FinishedTrip? = null,
+    val prompt: ListPrompt? = null,
+    val busy: Boolean = false,
+    val historyError: Boolean = false,
+    val capture: CaptureState = CaptureState.Idle,
+    /** The row being edited, if any. */
+    val editing: ListRow? = null,
+    val productInfo: io.theficos.comanda.ui.product.ProductInfoState? = null,
+    val autocomplete: List<ItemMemory> = emptyList(),
+    val suggestions: List<Suggestion> = emptyList(),
+    val scanMerge: io.theficos.comanda.ui.scan.ScanMerge? = null,
+    val mergeReview: MergeReview? = null,
+    val repeatOffer: RepeatOffer? = null,
+    val recipe: RecipeUiState? = null,
+    val scanNames: List<ScanNameOffer> = emptyList(),
+    val lastScannedItem: Item? = null,
+    val stores: List<String> = emptyList(),
+    val selectedStore: String? = null,
+    val personal: io.theficos.comanda.ui.shopping.ShoppingPreferences = io.theficos.comanda.ui.shopping.ShoppingPreferences(),
+    val deferred: List<ListRow> = emptyList(),
+) {
+    /** True when the screen should show the instruction instead of a list. */
+    val isEmpty: Boolean get() = pending.isEmpty() && checked.isEmpty() && deferred.isEmpty()
+}
+
+/**
+ * The header: household name, then a subline that answers "how much is left"
+ * and "who has been adding" in one line.
+ *
+ * [contributors] holds display names only, and [includesYou] is separate
+ * because "tú" is a translated word rather than a person's name.
+ */
+data class ListHeader(
+    val householdName: String? = null,
+    val itemCount: Int = 0,
+    val contributors: List<String> = emptyList(),
+    val includesYou: Boolean = false,
+)
+
+/** One line on the list, already reduced to what the row draws. */
+data class ListRow(
+    val id: ItemId,
+    val name: String,
+    val quantity: Quantity? = null,
+    val note: String? = null,
+    val checked: Boolean = false,
+    val version: io.theficos.comanda.model.ItemVersion? = null,
+    val rawName: String = name,
+    val gtin: io.theficos.comanda.model.Gtin? = null,
+    val category: Category = Category.OTHER,
+    val categoryOverride: Category? = null,
+    val repeatEveryDays: Int? = null,
+    val fromSuggestion: Boolean = false,
+    val quantityHint: Quantity? = null,
+    val store: String? = null,
+)
+
+/**
+ * What the bottom band is doing.
+ *
+ * [Typing] is not an error state. It is the same capture, entered a different
+ * way, in the same place on screen, which is why it carries the draft rather
+ * than opening a dialog. [becauseSpeechIsUnavailable] only decides whether the
+ * band explains itself once; it does not change what the band does.
+ */
+sealed interface CaptureState {
+
+    data object Idle : CaptureState
+
+    /** Holding the band. [partial] is what the recogniser has heard so far. */
+    data class Listening(val partial: String = "") : CaptureState
+
+    data class Typing(
+        val draft: String = "",
+        val becauseSpeechIsUnavailable: Boolean = false,
+    ) : CaptureState
+}
+
+sealed interface ListPrompt {
+    data object AllChecked : ListPrompt
+    data class Stale(val ids: Set<ItemId>) : ListPrompt
+    data class CarryOver(val ids: Set<ItemId>, val names: List<String>) : ListPrompt
+}
+
+data class MergeReview(val incoming: Item, val usual: ItemMemory, val version: io.theficos.comanda.model.ListVersion? = null)

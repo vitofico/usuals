@@ -1,0 +1,35 @@
+Comanda
+Copyright 2026 Vito Fico and contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes software developed by:
+
+  - The AndroidX project, Google LLC (Apache-2.0), including Room, CameraX,
+    Lifecycle, Navigation, Activity and androidx.security:security-crypto.
+  - The Jetpack Compose project, Google LLC (Apache-2.0).
+  - The ZXing project, ZXing Authors (Apache-2.0), used for barcode decoding.
+    ZXing is used in place of ML Kit so that the app carries no Google Play
+    Services dependency.
+  - The Kotlin project, JetBrains (Apache-2.0), including the Kotlin standard
+    library, kotlinx.coroutines and kotlinx.serialization.
+  - The OkHttp project, Square, Inc. (Apache-2.0).
+  - Core library desugaring, com.android.tools:desugar_jdk_libs, which is
+    derived from OpenJDK and distributed under the GNU General Public License,
+    version 2, with the Classpath Exception.
+
+Test and build-time only, not redistributed in the application:
+
+  - JUnit (EPL-2.0), Truth (Apache-2.0), Robolectric (Apache-2.0),
+    Turbine (Apache-2.0), OkHttp MockWebServer (Apache-2.0),
+    the Android Gradle Plugin and Gradle (Apache-2.0).
+
+Trademarks
+
+  Mercadona and any other retailer named in this repository or in the
+  application are trademarks of their respective owners. Comanda is an
+  independent project, not affiliated with, endorsed by, or sponsored by any
+  supermarket or retailer, and it accesses a retailer only from the user's own
+  device, with the user's own session.
+
+This NOTICE file is provided for attribution and does not modify the LICENSE.

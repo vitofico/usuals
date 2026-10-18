@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shopping_tools">Herramientas de compra</string>
+    <string name="shopping_start">Empezar compra</string>
+    <string name="shopping_stop">Salir del modo compra</string>
+    <string name="shopping_mode">Modo compra</string>
+    <string name="shopping_keep_awake">Mantener pantalla encendida al comprar</string>
+    <string name="shopping_haptics">Vibrar al marcar un artículo</string>
+    <string name="shopping_personal_help">Estas opciones se quedan en este dispositivo. Los favoritos y el orden de las tiendas se incluyen en tus exportaciones; no se comparten con el hogar.</string>
+    <string name="shopping_favorites">Favoritos</string>
+    <string name="shopping_pin">Guardar en favoritos</string>
+    <string name="shopping_unpin">Quitar favorito</string>
+    <string name="shopping_no_favorites">Mantén pulsado un artículo y guárdalo aquí para añadirlo rápidamente.</string>
+    <string name="shopping_aisle_order">Orden de pasillos</string>
+    <string name="shopping_aisle_for">Orden de categorías para %1$s</string>
+    <string name="shopping_up">Subir %1$s</string>
+    <string name="shopping_down">Bajar %1$s</string>
+    <string name="shopping_reset_order">Restablecer orden</string>
+    <string name="shopping_next_time">Comprar la próxima vez</string>
+    <string name="shopping_next_time_help">Siguen sin marcar para todos. Volverán tras terminar la próxima compra o puedes recuperarlos ahora.</string>
+    <string name="shopping_restore_item">Recuperar %1$s para esta compra</string>
+    <string name="shopping_restore">Recuperar</string>
+    <string name="shopping_close">Cerrar</string>
+    <string name="history_search">Buscar compras anteriores</string>
+    <string name="history_add_selected">Añadir seleccionados (%1$d)</string>
+    <string name="history_rebuy_review">Selecciona compras anteriores para añadirlas a la lista actual. Se omiten los artículos ya pendientes y no se duplican las cantidades.</string>
+    <string name="history_rebuy_done">Compras seleccionadas añadidas: %1$d.</string>
+    <string name="history_no_results">No hay compras anteriores que coincidan.</string>
+    <string name="history_select_trip">Seleccionar esta compra</string>
+    <string name="shopping_preferences_unavailable">No se pudieron leer las preferencias personales. Tus listas están a salvo. Se conservan las preferencias guardadas para recuperarlas.</string>
+</resources>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="416" viewBox="0 0 1280 416" role="img" aria-labelledby="title description">
+  <title id="title">Aurea. Good things, remembered.</title>
+  <desc id="description">Warm ivory, aubergine ink and a champagne basket mark. An editorial cover for a shopping list with a little less to remember.</desc>
+  <defs>
+    <clipPath id="cover"><rect width="1280" height="416" rx="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#cover)">
+    <rect width="1280" height="416" fill="#F8F5EF"/>
+    <rect x="856" width="424" height="416" fill="#583D53"/>
+    <path d="M896 416V211a172 172 0 0 1 344 0v205" fill="none" stroke="#76596F" stroke-width="1"/>
+    <path d="M916 416V211a152 152 0 0 1 304 0v205" fill="none" stroke="#76596F" stroke-width="1"/>
+    <text x="64" y="62" fill="#583D53" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="4">AUREA</text>
+    <g fill="#302331" font-family="Georgia, 'Times New Roman', serif" font-size="68">
+      <text x="60" y="157">Good things,</text>
+      <text x="60" y="233">remembered.</text>
+    </g>
+    <text x="64" y="288" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="19">Your shopping list. A little more considered.</text>
+    <path d="M64 335h60" stroke="#B39568" stroke-width="2"/>
+    <text x="64" y="373" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="2">OFFLINE FIRST · SHARED BY CHOICE</text>
+    <g transform="translate(960 78) scale(4.5)" fill="none" stroke="#EFE1CA" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 41 20 9Q24 0 28 9L41 41" stroke-width="2.4"/>
+      <path d="M11 28Q24 44 37 28" stroke-width="2.1"/>
+    </g>
+    <text x="1068" y="336" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">MAKE ROOM FOR</text>
+    <text x="1068" y="360" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">THE GOOD THINGS</text>
+  </g>
+</svg>

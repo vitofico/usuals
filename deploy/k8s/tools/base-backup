@@ -1,0 +1,17 @@
+#!/bin/sh
+# PGHOST/PGUSER/PGPASSFILE select the restricted replication role. No password in argv.
+set -eu
+umask 077
+directory="${COMANDA_BASE_DIRECTORY:-/backup/base}"
+mkdir -p "$directory"
+# A failed prior process requires inspection before removing this lock.
+mkdir "$directory/.running"
+trap 'rmdir "$directory/.running"' EXIT HUP INT TERM
+name="$(date -u +%Y%m%dT%H%M%SZ)"
+staging="$directory/.base-partial-$name"
+mkdir "$staging"
+pg_basebackup --no-password --pgdata="$staging" --format=plain --wal-method=stream --checkpoint=fast --manifest-checksums=SHA256
+pg_verifybackup "$staging"
+sync
+mv "$staging" "$directory/$name"
+sync

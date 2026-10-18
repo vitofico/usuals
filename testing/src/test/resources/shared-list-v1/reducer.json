@@ -1,0 +1,2653 @@
+{
+  "formatVersion": 1,
+  "idNotation": "symbolic-scenario-only",
+  "description": "Ordered semantic fixtures, not wire payloads. S1 adapts revisions to typed commands; every expected fact and outcome is mandatory.",
+  "cases": [
+    {
+      "id": "independent-fields",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "quantity": "genesis"
+          },
+          "changes": {
+            "quantity": "2.0",
+            "unit": "LITRE"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.name": "Oat milk",
+          "rows.milk.quantity": "2.0"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied"
+        }
+      }
+    },
+    {
+      "id": "same-field-conflict",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Whole milk"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.name": "Oat milk",
+          "conflicts.b.incoming.name": "Whole milk"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "retry-once",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "new",
+          "key": "milk",
+          "quantity": "2.0",
+          "unit": "LITRE"
+        },
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "new",
+          "key": "milk",
+          "quantity": "2.0",
+          "unit": "LITRE"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "3.0",
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "applied_once"
+        }
+      }
+    },
+    {
+      "id": "capture-id-redirect",
+      "initial": {
+        "rows": []
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk"
+        },
+        {
+          "id": "b",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk"
+        },
+        {
+          "id": "c",
+          "kind": "edit",
+          "target": "second",
+          "expected": {
+            "note": null
+          },
+          "changes": {
+            "note": "unsweetened"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "redirects.second": "first",
+          "rows.first.note": "unsweetened"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "merged",
+          "c": "applied"
+        }
+      }
+    },
+    {
+      "id": "checked-capture-is-new",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 2,
+          "rows.milk.checked": true,
+          "rows.second.checked": false
+        },
+        "outcomes": {
+          "a": "applied"
+        }
+      }
+    },
+    {
+      "id": "missing-quantity-is-not-one",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "1.0",
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "merged"
+        }
+      }
+    },
+    {
+      "id": "quantity-unit-conflict",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "quantity": "500.0",
+          "unit": "GRAM"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "1.0",
+          "conflicts.a.incoming.unit": "GRAM"
+        },
+        "outcomes": {
+          "a": "conflict"
+        }
+      }
+    },
+    {
+      "id": "pack-is-not-piece",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "PACK",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "quantity": "2.0",
+          "unit": "PIECE"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "1.0",
+          "rows.milk.unit": "PACK"
+        },
+        "outcomes": {
+          "a": "conflict"
+        }
+      }
+    },
+    {
+      "id": "fractional-binary64",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "0.1",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "quantity": "0.2",
+          "unit": "LITRE"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "0.30000000000000004"
+        },
+        "outcomes": {
+          "a": "merged"
+        }
+      }
+    },
+    {
+      "id": "delete-stale-edit",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "delete",
+          "target": "milk",
+          "expected": {
+            "lifecycle": "genesis"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 0,
+          "tombstones.milk": "a"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "stale-check-toggle",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "check",
+          "target": "milk",
+          "expected": {
+            "check": "genesis"
+          },
+          "checked": true,
+          "checkedAt": 100
+        },
+        {
+          "id": "b",
+          "kind": "check",
+          "target": "milk",
+          "expected": {
+            "check": "genesis"
+          },
+          "checked": false,
+          "checkedAt": null
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.checked": true,
+          "rows.milk.checkedAt": 100
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "concurrent-finish",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip-a",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "finish",
+          "tripId": "trip-b",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 1,
+          "purchases.milk.tripId": "trip-a",
+          "purchases.milk.boughtAt": 100,
+          "tripCount": 1,
+          "activeRowCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "no_op"
+        }
+      }
+    },
+    {
+      "id": "edit-before-finish",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "quantity": "genesis"
+          },
+          "changes": {
+            "quantity": "2.0",
+            "unit": "LITRE"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 0,
+          "activeRowCount": 1,
+          "rows.milk.quantity": "2.0"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "finish-before-edit",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 1,
+          "purchases.milk.name": "Milk",
+          "activeRowCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "undo-is-idempotent",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        },
+        {
+          "id": "c",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 0,
+          "tripCount": 0,
+          "activeRowCount": 1,
+          "rows.milk.checked": true
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "no_op"
+        }
+      }
+    },
+    {
+      "id": "duplicate-undo-preserves-later-edit",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        },
+        {
+          "id": "c",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          }
+        },
+        {
+          "id": "d",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.name": "Oat milk",
+          "purchaseCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "no_op"
+        }
+      }
+    },
+    {
+      "id": "reclose-after-undo",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "new-trip",
+          "closedAt": 300,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "b",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 1,
+          "purchases.milk.tripId": "new-trip",
+          "cancelledCloses.a": true
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied"
+        }
+      }
+    },
+    {
+      "id": "undo-only-own-trip",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": true,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis",
+            "checkedAt": 100
+          }
+        ],
+        "purchases": [
+          {
+            "id": "bread",
+            "tripId": "older",
+            "name": "Bread"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "kind": "undo",
+          "finishId": "a",
+          "tripId": "trip"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchaseCount": 1,
+          "purchases.bread.tripId": "older",
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied"
+        }
+      }
+    },
+    {
+      "id": "repeat-occurrence-once",
+      "initial": {
+        "rows": [],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        },
+        "purchases": [
+          {
+            "id": "buy-milk",
+            "tripId": "old-trip",
+            "name": "Milk",
+            "boughtAt": 0
+          }
+        ],
+        "effectiveCloses": [
+          {
+            "id": "old-close",
+            "tripId": "old-trip",
+            "itemIds": [
+              "buy-milk"
+            ]
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "first",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        },
+        {
+          "id": "b",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "second",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "rows.first.quantity": null
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "no_op"
+        }
+      }
+    },
+    {
+      "id": "undo-preserves-edited-repeat",
+      "initial": {
+        "rows": [
+          {
+            "id": "bought-milk",
+            "name": "Milk",
+            "checked": true,
+            "archived": true,
+            "lifecycle": "closed-trip"
+          }
+        ],
+        "automaticRows": [
+          {
+            "id": "repeat",
+            "enabledBy": "closed-trip",
+            "unchanged": false,
+            "note": "keep me"
+          }
+        ],
+        "effectiveCloses": [
+          {
+            "id": "closed-trip",
+            "tripId": "trip",
+            "itemIds": [
+              "bought-milk"
+            ]
+          }
+        ],
+        "purchases": [
+          {
+            "id": "bought-milk",
+            "tripId": "trip",
+            "name": "Milk",
+            "boughtAt": 0
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "undo",
+          "finishId": "closed-trip",
+          "tripId": "trip"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.repeat.note": "keep me",
+          "activeRowCount": 2
+        },
+        "outcomes": {
+          "a": "applied"
+        }
+      }
+    },
+    {
+      "id": "alias-cycle-rejected",
+      "initial": {
+        "rows": [],
+        "aliases": {
+          "milk": "dairy"
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "alias",
+          "expected": "genesis",
+          "delta": {
+            "dairy": "milk"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "aliases.milk": "dairy",
+          "aliases.dairy": null
+        },
+        "outcomes": {
+          "a": "rejected"
+        }
+      }
+    },
+    {
+      "id": "clock-skew-never-wins",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "Milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Oat milk"
+          },
+          "updatedAt": 999999999
+        },
+        {
+          "id": "b",
+          "kind": "edit",
+          "target": "milk",
+          "expected": {
+            "name": "genesis"
+          },
+          "changes": {
+            "name": "Whole milk"
+          },
+          "updatedAt": 1
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.name": "Oat milk"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "immutable-purchase-import",
+      "initial": {
+        "rows": [],
+        "purchases": [
+          {
+            "id": "milk",
+            "tripId": "trip",
+            "name": "Milk",
+            "quantity": "1.0"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "import",
+          "purchases": [
+            {
+              "id": "milk",
+              "tripId": "trip",
+              "name": "Milk",
+              "quantity": "2.0"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "facts": {
+          "purchases.milk.quantity": "1.0",
+          "purchaseCount": 1
+        },
+        "outcomes": {
+          "a": "rejected"
+        }
+      }
+    },
+    {
+      "id": "list-isolation",
+      "initial": {
+        "lists": {
+          "home": {
+            "rows": [
+              {
+                "id": "milk",
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checked": true,
+                "lifecycle": "genesis",
+                "nameRevision": "genesis",
+                "quantityRevision": "genesis",
+                "checkRevision": "genesis",
+                "checkedAt": 100
+              }
+            ]
+          },
+          "camping": {
+            "rows": [
+              {
+                "id": "milk",
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checked": true,
+                "lifecycle": "genesis",
+                "nameRevision": "genesis",
+                "quantityRevision": "genesis",
+                "checkRevision": "genesis",
+                "checkedAt": 100
+              }
+            ]
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "finish",
+          "tripId": "trip",
+          "closedAt": 200,
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "Milk",
+                "quantity": "1.0",
+                "unit": "LITRE",
+                "checkedAt": 100
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ],
+          "list": "home"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "lists.home.purchaseCount": 1,
+          "lists.camping.purchaseCount": 0,
+          "lists.camping.activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "applied"
+        }
+      }
+    },
+    {
+      "id": "repeat-redirect-preserves-dependent-edit",
+      "initial": {
+        "rows": [],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        },
+        "purchases": [
+          {
+            "id": "buy-milk",
+            "tripId": "old-trip",
+            "name": "Milk",
+            "boughtAt": 0
+          }
+        ],
+        "effectiveCloses": [
+          {
+            "id": "old-close",
+            "tripId": "old-trip",
+            "itemIds": [
+              "buy-milk"
+            ]
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "first",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        },
+        {
+          "id": "b",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "second",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        },
+        {
+          "id": "c",
+          "kind": "edit",
+          "target": "second",
+          "expected": {
+            "note": null
+          },
+          "changes": {
+            "note": "keep me"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "redirects.second": "first",
+          "rows.first.note": "keep me"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "no_op",
+          "c": "applied"
+        }
+      }
+    },
+    {
+      "id": "removed-repeat-rule",
+      "initial": {
+        "rows": [],
+        "purchases": [
+          {
+            "id": "buy-milk",
+            "tripId": "old-trip",
+            "name": "Milk",
+            "boughtAt": 0
+          }
+        ],
+        "rules": {}
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "first",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 0
+        },
+        "outcomes": {
+          "a": "rejected"
+        }
+      }
+    },
+    {
+      "id": "cancelled-repeat-purchase",
+      "initial": {
+        "rows": [],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        },
+        "purchases": []
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "due-milk",
+          "proposedId": "first",
+          "key": "milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "buy-milk",
+          "asOf": 1814400000
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 0
+        },
+        "outcomes": {
+          "a": "rejected"
+        }
+      }
+    },
+    {
+      "id": "shared-preference-revision",
+      "initial": {
+        "rows": [],
+        "preferences": {
+          "milk": {
+            "category": "DAIRY",
+            "revision": "genesis"
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "preference",
+          "key": "milk",
+          "expected": "genesis",
+          "changes": {
+            "category": "PANTRY"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "preference",
+          "key": "milk",
+          "expected": "genesis",
+          "changes": {
+            "category": "OTHER"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "preferences.milk.category": "PANTRY"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "list-name-revision",
+      "initial": {
+        "rows": [],
+        "name": "Home",
+        "nameRevision": "genesis"
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "list_name",
+          "expected": "genesis",
+          "name": "Weekend"
+        },
+        {
+          "id": "b",
+          "kind": "list_name",
+          "expected": "genesis",
+          "name": "Holiday"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "name": "Weekend"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "conflict"
+        }
+      }
+    },
+    {
+      "id": "repeat-rearms-after-next-effective-finish",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "late-old",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "rows.second.name": "Milk",
+          "redirects.late-old": "first",
+          "tombstones.first": "b"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "no_op"
+        }
+      }
+    },
+    {
+      "id": "rearmed-repeat-deduplicates-and-redirects",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "other-phone",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "f",
+          "kind": "edit",
+          "target": "other-phone",
+          "expected": {
+            "note": null
+          },
+          "changes": {
+            "note": "keep me"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "redirects.other-phone": "second",
+          "rows.second.note": "keep me"
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "no_op",
+          "f": "applied"
+        }
+      }
+    },
+    {
+      "id": "undo-rearmed-repeat-never-resurrects-on-late-retry",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "undo",
+          "finishId": "c",
+          "tripId": "shop"
+        },
+        {
+          "id": "f",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "late-cycle",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "rows.bread.checked": true,
+          "redirects.late-cycle": "second",
+          "tombstones.second": "e",
+          "purchaseCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "applied",
+          "f": "no_op"
+        }
+      }
+    },
+    {
+      "id": "undone-finish-cannot-enable-unaccepted-rearm",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "e",
+          "kind": "undo",
+          "finishId": "c",
+          "tripId": "shop"
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "purchaseCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "e": "applied",
+          "d": "rejected"
+        }
+      }
+    },
+    {
+      "id": "repeat-rearm-requires-accepted-finish",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "missing"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "d": "rejected"
+        }
+      }
+    },
+    {
+      "id": "edited-rearmed-repeat-survives-undo",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "edit",
+          "target": "second",
+          "expected": {
+            "note": null
+          },
+          "changes": {
+            "note": "keep me"
+          }
+        },
+        {
+          "id": "f",
+          "kind": "undo",
+          "finishId": "c",
+          "tripId": "shop"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 2,
+          "rows.second.note": "keep me",
+          "purchaseCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "applied",
+          "f": "applied"
+        }
+      }
+    },
+    {
+      "id": "cancelled-ancestor-cannot-bypass-latest-delete",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          },
+          {
+            "id": "apple",
+            "key": "apple",
+            "name": "Apple",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "edit",
+          "target": "second",
+          "expected": {
+            "note": null
+          },
+          "changes": {
+            "note": "keep me"
+          }
+        },
+        {
+          "id": "g",
+          "kind": "finish",
+          "tripId": "shop-2",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "apple",
+              "facts": {
+                "key": "apple",
+                "name": "Apple",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "h",
+          "kind": "undo",
+          "finishId": "c",
+          "tripId": "shop"
+        },
+        {
+          "id": "i",
+          "kind": "delete",
+          "target": "second",
+          "expected": {
+            "lifecycle": "d"
+          }
+        },
+        {
+          "id": "j",
+          "kind": "repeat",
+          "occurrence": "bad-sibling",
+          "proposedId": "bypassed",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "g"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "tombstones.second": "i",
+          "repeatReady.milk": false
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "applied",
+          "g": "applied",
+          "h": "applied",
+          "i": "applied",
+          "j": "rejected"
+        }
+      }
+    },
+    {
+      "id": "undo-then-later-finish-enables-new-cycle",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "rule",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        },
+        {
+          "id": "e",
+          "kind": "undo",
+          "finishId": "c",
+          "tripId": "shop"
+        },
+        {
+          "id": "f",
+          "kind": "finish",
+          "tripId": "shop-new",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "e",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "g",
+          "kind": "repeat",
+          "occurrence": "cycle-new",
+          "proposedId": "third",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "rule",
+          "enablingPurchase": "rule",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "f"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "rows.third.name": "Milk",
+          "tombstones.second": "e",
+          "repeatReady.milk": false
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "applied",
+          "e": "applied",
+          "f": "applied",
+          "g": "applied"
+        }
+      }
+    },
+    {
+      "id": "rearm-cannot-borrow-another-legacy-identity",
+      "initial": {
+        "rows": [
+          {
+            "id": "bread",
+            "key": "bread",
+            "name": "Bread",
+            "quantity": null,
+            "unit": null,
+            "checked": true,
+            "checkedAt": 10,
+            "lifecycle": "genesis",
+            "nameRevision": "genesis",
+            "quantityRevision": "genesis",
+            "checkRevision": "genesis"
+          }
+        ],
+        "rules": {
+          "milk": {
+            "revision": "genesis",
+            "everyDays": 21
+          },
+          "eggs": {
+            "revision": "genesis",
+            "everyDays": 21
+          }
+        }
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "repeat",
+          "occurrence": "cycle-0",
+          "proposedId": "first",
+          "key": "milk",
+          "name": "Milk",
+          "ruleRevision": "genesis",
+          "enablingPurchase": "genesis",
+          "asOf": 20
+        },
+        {
+          "id": "b",
+          "kind": "delete",
+          "target": "first",
+          "expected": {
+            "lifecycle": "a"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "finish",
+          "tripId": "shop",
+          "closedAt": 30,
+          "rows": [
+            {
+              "id": "bread",
+              "facts": {
+                "key": "bread",
+                "name": "Bread",
+                "quantity": null,
+                "unit": null,
+                "checkedAt": 10
+              },
+              "expectedLifecycle": "genesis",
+              "expectedFields": {
+                "name": "genesis",
+                "quantity": "genesis",
+                "check": "genesis"
+              }
+            }
+          ]
+        },
+        {
+          "id": "d",
+          "kind": "repeat",
+          "occurrence": "cycle-1",
+          "proposedId": "second",
+          "key": "eggs",
+          "name": "Eggs",
+          "ruleRevision": "genesis",
+          "enablingPurchase": "genesis",
+          "asOf": 30,
+          "cycle": {
+            "previous": "cycle-0",
+            "deletion": "b",
+            "finish": "c"
+          }
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 0
+        },
+        "outcomes": {
+          "a": "applied",
+          "b": "applied",
+          "c": "applied",
+          "d": "rejected"
+        }
+      }
+    }
+  ]
+}

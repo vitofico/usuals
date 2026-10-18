@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_lookup_toggle">Namen gescannter Produkte suchen</string>
+    <string name="scan_lookup_hint">Standardmäßig aus. Sendet Barcodes an Open Food Facts, um Namen und Kategorien vorzuschlagen. Du bestätigst jeden Namen. Scannen funktioniert immer auch offline.</string>
+    <string name="scan_lookup_privacy">Wenn du die Barcode-Suche aktivierst, sendet Aurea gescannte Barcodes direkt an Open Food Facts, um Namen, Kategorien und Produktdetails abzurufen. Deine Listen und dein Einkaufsverlauf werden nie gesendet. Die Suche ist standardmäßig aus.</string>
+    <string name="scan_name_manual">Artikel benennen</string>
+    <string name="scan_name_offer">Diesen Produktnamen verwenden?</string>
+    <string name="scan_name_barcode">Barcode: %1$s</string>
+    <string name="scan_name_category">Kategorie: %1$s</string>
+    <string name="scan_name_confirm">Namen verwenden</string>
+    <string name="scan_name_skip">Jetzt nicht</string>
+    <string name="scan_name_skip_all">Übrige Namen überspringen</string>
+    <string name="scan_name_disabled">Die Namenssuche ist ausgeschaltet. Aktiviere sie, um Barcodes für Namen und Kategorien an Open Food Facts zu senden. Deine Liste und dein Verlauf bleiben auf diesem Telefon.</string>
+    <string name="scan_name_enable">Produktnamen aktivieren</string>
+    <string name="scan_name_not_found">Open Food Facts hat keinen Namen für diesen Barcode. Gib ihn einmal ein und %1$s merkt ihn sich.</string>
+    <string name="scan_name_unavailable">Die Namenssuche konnte nicht abgeschlossen werden. Prüfe deine Verbindung und versuche es erneut oder benenne den Artikel selbst.</string>
+    <string name="scan_name_restricted">Dieser Barcode gilt nur für ein bestimmtes Geschäft. Der Produktname kann in Open Food Facts nicht gesucht werden.</string>
+    <string name="scan_name_retry">Namenssuche wiederholen</string>
+    <string name="scan_saved">Barcode %1$s hinzugefügt. Die Kamera ist pausiert.</string>
+    <string name="scan_saved_name">%1$s hinzugefügt. Die Kamera ist pausiert.</string>
+    <string name="scan_duplicate">Barcode %1$s wurde in dieser Sitzung bereits gescannt. Es wurde kein weiterer Artikel hinzugefügt.</string>
+    <string name="scan_next">Nächsten Artikel scannen</string>
+    <string name="scan_done">Scannen beenden</string>
+    <plurals name="scan_count">
+        <item quantity="one">%1$d eindeutiger Barcode gescannt.</item>
+        <item quantity="other">%1$d eindeutige Barcodes gescannt.</item>
+    </plurals>
+    <string name="edit_store">Geschäftskennzeichnung (optional)</string>
+    <string name="store_all">Alle Geschäfte</string>
+    <string name="store_empty">Keine Artikel für dieses Geschäft. Wähle Alle Geschäfte, um die übrigen zu sehen.</string>
+</resources>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_intro">Toutes vos courses terminées, mémorisées.</string>
+    <string name="history_transfer_title">Conservez votre historique</string>
+    <string name="history_title">Historique</string>
+    <string name="history_back">Retour</string>
+    <string name="history_export">Exporter les données</string>
+    <string name="history_import">Importer les données</string>
+    <string name="history_transfer_hint">Les exports incluent vos listes nommées, sessions de courses, achats et préférences d’articles. Les clés, l’appartenance aux groupes et les données produits en cache restent sur le téléphone.</string>
+    <string name="history_imported">Données de courses importées.</string>
+    <string name="history_exported">Données de courses exportées.</string>
+    <string name="history_invalid_file">Cet export %1$s n’est pas compatible. Choisissez un fichier JSON de %1$s.</string>
+    <string name="history_invalid_date">Saisissez une date valide au format AAAA-MM-JJ, aujourd’hui ou avant.</string>
+    <string name="history_empty_import">Aucun article trouvé. Collez une liste de courses et réessayez.</string>
+    <string name="history_failed">Impossible d’enregistrer ou de lire les données. Votre liste est toujours là. Réessayez.</string>
+    <string name="history_dismiss">Fermer</string>
+    <string name="history_past_title">Ajouter des courses passées</string>
+    <string name="history_date_label">Date des courses (AAAA-MM-JJ)</string>
+    <string name="history_paste_label">Collez les articles achetés</string>
+    <string name="history_import_past">Enregistrer ces courses</string>
+    <string name="history_empty">Terminez des courses pour commencer votre historique d’achats.</string>
+    <plurals name="history_item_count">
+        <item quantity="one">%1$d article</item>
+        <item quantity="other">%1$d articles</item>
+        <item quantity="many">%1$d articles</item>
+    </plurals>
+    <string name="history_purchase">%1$s %2$s</string>
+    <string name="finish_shop">Terminer les courses</string>
+    <string name="finish_shop_question">Terminer ces courses ?</string>
+    <string name="finish_shop_all_checked">Tout est coché. Enregistrer ces articles comme des courses terminées ?</string>
+    <string name="finish_shop_keep_open">Garder la liste ouverte</string>
+    <plurals name="finish_shop_saved">
+        <item quantity="one">%1$d article enregistré comme courses terminées.</item>
+        <item quantity="other">%1$d articles enregistrés comme courses terminées.</item>
+        <item quantity="many">%1$d articles enregistrés comme courses terminées.</item>
+    </plurals>
+    <string name="finish_shop_undo">Annuler</string>
+    <plurals name="history_stale_question">
+        <item quantity="one">Enregistrer %1$d article coché précédemment comme des courses terminées ?</item>
+        <item quantity="other">Enregistrer ces %1$d articles cochés précédemment comme des courses terminées ?</item>
+        <item quantity="many">Enregistrer ces %1$d articles cochés précédemment comme des courses terminées ?</item>
+    </plurals>
+    <string name="history_not_now">Pas maintenant</string>
+    <string name="history_still_needed">Toujours nécessaire ?</string>
+    <string name="history_carry_over">Ces articles sont restés sur la liste pendant plusieurs courses : %1$s</string>
+    <string name="history_keep">Garder</string>
+    <string name="history_remove">Supprimer</string>
+    <string name="share_list">Partager la liste</string>
+    <string name="share_open_item">☐ %1$s %2$s</string>
+    <string name="share_checked_item">☑ %1$s %2$s</string>
+</resources>

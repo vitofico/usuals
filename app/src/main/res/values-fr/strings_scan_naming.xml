@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_lookup_toggle">Rechercher les noms des produits scannés</string>
+    <string name="scan_lookup_hint">Désactivé par défaut. Envoie les codes-barres à Open Food Facts pour proposer des noms et catégories. Vous confirmez chaque nom. Le scan fonctionne toujours hors connexion.</string>
+    <string name="scan_lookup_privacy">Si vous activez la recherche par code, Aurea envoie les codes scannés directement à Open Food Facts pour obtenir noms, catégories et détails des produits. Vos listes et votre historique d’achats ne sont jamais envoyés. La recherche est désactivée par défaut.</string>
+    <string name="scan_name_manual">Nommer cet article</string>
+    <string name="scan_name_offer">Utiliser ce nom de produit ?</string>
+    <string name="scan_name_barcode">Code-barres : %1$s</string>
+    <string name="scan_name_category">Catégorie : %1$s</string>
+    <string name="scan_name_confirm">Utiliser ce nom</string>
+    <string name="scan_name_skip">Pas maintenant</string>
+    <string name="scan_name_skip_all">Ignorer les noms restants</string>
+    <string name="scan_name_disabled">La recherche de noms est désactivée. Activez-la pour envoyer les codes-barres à Open Food Facts et obtenir des noms et catégories. Votre liste et votre historique restent sur ce téléphone.</string>
+    <string name="scan_name_enable">Activer les noms de produits</string>
+    <string name="scan_name_not_found">Open Food Facts n’a pas de nom pour ce code-barres. Nommez-le une fois et %1$s le retiendra.</string>
+    <string name="scan_name_unavailable">La recherche du nom n’a pas pu aboutir. Vérifiez votre connexion et réessayez, ou nommez l’article vous-même.</string>
+    <string name="scan_name_restricted">Ce code-barres est propre à un magasin. Son nom ne peut pas être recherché dans Open Food Facts.</string>
+    <string name="scan_name_retry">Réessayer la recherche du nom</string>
+    <string name="scan_saved">Code-barres %1$s ajouté. La caméra est en pause.</string>
+    <string name="scan_saved_name">%1$s ajouté. La caméra est en pause.</string>
+    <string name="scan_duplicate">Le code-barres %1$s a déjà été scanné dans cette session. Aucun article supplémentaire n’a été ajouté.</string>
+    <string name="scan_next">Scanner l’article suivant</string>
+    <string name="scan_done">Terminer le scan</string>
+    <plurals name="scan_count">
+        <item quantity="one">%1$d code-barres unique scanné.</item>
+        <item quantity="other">%1$d codes-barres uniques scannés.</item>
+        <item quantity="many">%1$d codes-barres uniques scannés.</item>
+    </plurals>
+    <string name="edit_store">Étiquette de magasin (facultative)</string>
+    <string name="store_all">Tous les magasins</string>
+    <string name="store_empty">Aucun article pour ce magasin. Choisissez Tous les magasins pour voir les autres.</string>
+</resources>

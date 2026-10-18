@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="recipe_title">Rezept importieren</string>
+    <string name="recipe_close">Schließen</string>
+    <string name="recipe_url">Rezept-URL</string>
+    <string name="recipe_read">Rezept lesen</string>
+    <string name="recipe_intro">Füge einen Rezeptlink ein oder teile ihn. %1$s liest die Seite auf deinem Telefon. Du kannst die Zutaten vor dem Hinzufügen prüfen.</string>
+    <string name="recipe_no_structured">Diese Seite enthält keine strukturierten Zutaten. Du kannst dein optionales Modell versuchen oder diese Ansicht schließen und die Zutaten eingeben.</string>
+    <string name="recipe_model_privacy">Bei Verwendung des Modells wird der Seitentext an deinen eingestellten Anbieter gesendet und einer deiner heutigen Modellaufrufe verbraucht.</string>
+    <string name="recipe_use_model">Mit meinem Modell lesen</string>
+    <string name="recipe_servings">Rezeptmenge: %1$s</string>
+    <string name="recipe_review_hint">Prüfe die Zutaten. Vorratszutaten und Käufe der letzten 7 Tage sind zunächst nicht ausgewählt. Artikel auf deiner Liste werden ausgeschlossen. Die ursprünglichen Mengenangaben bleiben zur Prüfung erhalten.</string>
+    <string name="recipe_model_review">Diese Zutaten stammen von einem Modell. Prüfe jeden Namen und jede Menge vor dem Hinzufügen.</string>
+    <string name="recipe_on_list">Bereits auf deiner Liste</string>
+    <string name="recipe_pantry">Vorratszutat</string>
+    <string name="recipe_recent">In den letzten 7 Tagen gekauft</string>
+    <string name="recipe_empty">Keine verwendbaren Zutaten gefunden. Versuche eine andere Seite oder füge die Artikel von Hand hinzu.</string>
+    <plurals name="recipe_add">
+        <item quantity="one">%1$d Zutat hinzufügen</item>
+        <item quantity="other">%1$d Zutaten hinzufügen</item>
+    </plurals>
+    <string name="recipe_model_missing">Richte zuerst ein optionales Modell in den Einstellungen ein und versuche es erneut. Es wurde kein Seitentext an ein Modell gesendet.</string>
+    <string name="recipe_model_empty">Das Modell hat keine verwendbaren Zutaten geliefert. Prüfe die Verbindung in den Einstellungen oder füge sie von Hand hinzu.</string>
+    <string name="recipe_invalid_url">Gib einen gültigen HTTP- oder HTTPS-Rezeptlink ohne Benutzername oder Passwort ein.</string>
+    <string name="recipe_blocked">Diese Website blockiert das automatische Lesen. Öffne sie im Browser und füge die Zutaten von Hand hinzu oder versuche eine andere Website.</string>
+    <string name="recipe_http">Die Website konnte diese Seite nicht liefern (HTTP %1$d). Prüfe den Link oder versuche ein anderes Rezept.</string>
+    <string name="recipe_unreachable">Die Rezeptseite ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.</string>
+    <string name="recipe_timeout">Die Rezeptseite hat zu lange zum Antworten gebraucht. Versuche es später erneut.</string>
+    <string name="recipe_too_large">Diese Seite ist zu groß zum Importieren. Versuche ein anderes Rezept.</string>
+    <string name="recipe_not_html">Dieser Link führt nicht zu einer Rezeptwebseite. Füge einen HTTP- oder HTTPS-Seitenlink ein.</string>
+    <string name="recipe_failed">Das Rezept konnte nicht importiert werden. Deine Liste bleibt erhalten.</string>
+</resources>

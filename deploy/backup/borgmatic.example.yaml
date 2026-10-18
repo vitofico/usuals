@@ -1,0 +1,14 @@
+# Adapt privately to the installed Borgmatic version and existing encrypted repo.
+# This is an operator template, excluded from Kubernetes and never executed locally.
+source_directories:
+  - /mnt/cluster-data/comanda/backups
+repositories:
+  - path: REPLACE_WITH_PRIVATE_EXISTING_ENCRYPTED_REPOSITORY
+    label: comanda
+exclude_patterns:
+  - '*/.base-partial-*'
+  - '*/.wal-partial.*'
+  - '*/.running'
+compression: zstd,3
+# Preserve each complete recovery set. No WAL/base deletion is automatic in the pilot.
+# Plan/prune the 30-day window only after an off-site restore has verified coverage.

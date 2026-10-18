@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_lookup_toggle">Cerca i nomi dei prodotti scansionati</string>
+    <string name="scan_lookup_hint">Disattivato per impostazione predefinita. Invia i codici a barre a Open Food Facts per proporre nomi e categorie. Confermi tu ogni nome. La scansione funziona sempre senza connessione.</string>
+    <string name="scan_lookup_privacy">Se attivi la ricerca dei codici, Aurea invia i codici scansionati direttamente a Open Food Facts per ottenere nomi, categorie e dettagli dei prodotti. Le liste e la cronologia degli acquisti non vengono mai inviate. La ricerca è disattivata per impostazione predefinita.</string>
+    <string name="scan_name_manual">Dai un nome all’articolo</string>
+    <string name="scan_name_offer">Usare questo nome del prodotto?</string>
+    <string name="scan_name_barcode">Codice a barre: %1$s</string>
+    <string name="scan_name_category">Categoria: %1$s</string>
+    <string name="scan_name_confirm">Usa nome</string>
+    <string name="scan_name_skip">Non ora</string>
+    <string name="scan_name_skip_all">Salta i nomi rimanenti</string>
+    <string name="scan_name_disabled">La ricerca dei nomi è disattivata. Attivala per inviare i codici a barre a Open Food Facts e ottenere nomi e categorie. La lista e la cronologia restano su questo telefono.</string>
+    <string name="scan_name_enable">Attiva i nomi dei prodotti</string>
+    <string name="scan_name_not_found">Open Food Facts non ha un nome per questo codice. Puoi assegnarlo una volta e %1$s lo ricorderà.</string>
+    <string name="scan_name_unavailable">Impossibile completare la ricerca del nome. Controlla la connessione e riprova, oppure assegna il nome tu.</string>
+    <string name="scan_name_restricted">Questo codice è specifico di un negozio. Il nome non può essere cercato su Open Food Facts.</string>
+    <string name="scan_name_retry">Riprova la ricerca del nome</string>
+    <string name="scan_saved">Codice %1$s aggiunto. La fotocamera è in pausa.</string>
+    <string name="scan_saved_name">%1$s aggiunto. La fotocamera è in pausa.</string>
+    <string name="scan_duplicate">Il codice %1$s è già stato scansionato in questa sessione. Nessun altro articolo è stato aggiunto.</string>
+    <string name="scan_next">Scansiona il prossimo articolo</string>
+    <string name="scan_done">Termina scansione</string>
+    <plurals name="scan_count">
+        <item quantity="one">%1$d codice distinto scansionato.</item>
+        <item quantity="other">%1$d codici distinti scansionati.</item>
+        <item quantity="many">%1$d codici distinti scansionati.</item>
+    </plurals>
+    <string name="edit_store">Etichetta negozio (facoltativa)</string>
+    <string name="store_all">Tutti i negozi</string>
+    <string name="store_empty">Nessun articolo per questo negozio. Scegli Tutti i negozi per vedere gli altri.</string>
+</resources>

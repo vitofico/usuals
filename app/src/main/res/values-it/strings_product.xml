@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="product_details">Dettagli del prodotto</string>
+    <string name="product_brand">Marca: %1$s</string>
+    <string name="product_pack">Formato: %1$s</string>
+    <string name="product_ingredients">Ingredienti</string>
+    <string name="product_ingredients_unknown">Ingredienti non indicati.</string>
+    <string name="product_traces">Può contenere tracce di: %1$s</string>
+    <string name="product_traces_unknown">Tracce non indicate.</string>
+    <string name="product_traces_empty">Open Food Facts non elenca tracce.</string>
+    <string name="product_check_package">I dati della comunità possono essere incompleti o non aggiornati. Controlla sempre ingredienti e allergeni sulla confezione.</string>
+    <string name="product_saved">Salvato su questo dispositivo: %1$s</string>
+    <string name="product_saved_stale">Dati salvati meno recenti: %1$s</string>
+    <string name="product_refresh">Aggiorna</string>
+    <string name="product_close">Chiudi</string>
+    <string name="product_source">Visualizza o contribuisci su Open Food Facts</string>
+    <string name="product_disabled">La ricerca dei codici è disattivata. I dettagli salvati restano disponibili offline.</string>
+    <string name="product_settings">Impostazioni di ricerca</string>
+    <string name="product_rate_limited">Open Food Facts è occupato. Attendi un minuto prima di riprovare. I dettagli salvati restano disponibili.</string>
+    <string name="product_unavailable">Impossibile aggiornare i dettagli. I dati salvati sono mostrati qui sotto.</string>
+    <string name="product_source_updated">Fonte aggiornata: %1$s</string>
+    <string name="product_not_found">Nessun prodotto trovato per questo codice. Puoi aggiungere i dettagli mancanti su Open Food Facts.</string>
+</resources>
