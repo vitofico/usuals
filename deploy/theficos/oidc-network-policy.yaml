@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: oidc-egress}
+spec:
+  podSelector: {matchLabels: {app: usuals-relay}}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: {cidr: 192.168.1.210/32}
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: traefik}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: traefik}}
+      ports: [{protocol: TCP, port: 443}]

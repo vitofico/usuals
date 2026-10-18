@@ -4,6 +4,8 @@ metadata:
   name: usuals
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # OAuth callback codes must never enter ingress access logs.
+    traefik.ingress.kubernetes.io/router.observability.accesslogs: 'false'
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
