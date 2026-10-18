@@ -26,7 +26,9 @@ JVM. `ServiceLocator` must construct every production component.
 - Publish only with the maintainer's authorization. On 2026-10-18 the maintainer
   authorized private GitHub publication and, after verifying Grove/Tide themes,
   a squash and force-push. Use an explicit lease to protect concurrent updates.
-  That approval does not authorize cluster deployment or a public release.
+  Vito subsequently authorized the initial theficos cluster deployment in this
+  chat. Keep its operational follow-up local unless publication is requested.
+  A public release remains outside that approval.
 - Versions live in `gradle/libs.versions.toml`. Prefer existing dependencies.
   No Play Services, Firebase, ML Kit, analytics or crash reporting.
 - English UI resources live in `:app` `values/`. A new UI language adds only

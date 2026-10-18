@@ -1,9 +1,11 @@
 # Shared-list relay runbook
 
-Local preparation only. Every cluster action below requires Vito's approval.
-No public relay, DNS change, SOPS decryption, image import or backup-job change
-has been performed. Record source commit, image digest, config and operator at
-each deployment. Do not put secrets in command arguments, logs or Git.
+Use an explicit deployment authorization before applying these steps. Vito
+authorized the initial theficos deployment on 2026-10-18; see its
+[deployment record](../../deploy/theficos/README.md) for observed configuration,
+completed checks and remaining pilot gates. Record source commit, image digest,
+config and operator at each deployment. Do not put secrets in command arguments,
+logs or Git.
 
 ## First deployment
 

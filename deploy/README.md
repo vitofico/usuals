@@ -1,8 +1,9 @@
-# Deployment package, not yet approved
+# Deployment packages
 
-All files are local review material. Do not apply manifests, import an image,
-provision storage/DNS, decrypt secrets or change backup jobs without Vito's
-explicit approval. No cluster credentials are required for the local checks.
+The generic templates remain review material and require deployment approval.
+Vito authorized the initial theficos deployment on 2026-10-18. Its observed
+configuration and verification are in [theficos/README.md](theficos/README.md).
+No cluster credentials are required for the local checks below.
 
 ```sh
 server/scripts/test-local
