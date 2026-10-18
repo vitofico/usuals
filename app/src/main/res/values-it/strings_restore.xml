@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="restore_open">Apri backup cifrato del server</string>
+    <string name="restore_title">Rivedi una lista recuperata</string>
+    <string name="restore_key_help">Apri il kit di recupero corrispondente e inserisci la sua chiave separata per leggere il backup. Un dispositivo del proprietario ancora disponibile può usare le proprie chiavi salvate. La verifica avviene su questo dispositivo.</string>
+    <string name="restore_open_kit">Apri il kit di recupero per questo backup</string>
+    <string name="restore_copy_help">Salva una copia locale indipendente e confrontala con il lavoro più recente sui tuoi dispositivi. Le liste, le modifiche non inviate e le chiavi di condivisione restano intatte. Il gruppo ripristinato resta bloccato. Quando sei pronto, condividi la copia verificata tramite un nuovo gruppo.</string>
+    <string name="restore_older">Questo backup è precedente allo stato salvato su questo dispositivo. Conserva e riconcilia il lavoro più recente.</string>
+    <string name="restore_ancestry">Alcuni punti di controllo salvati non possono essere collegati a questo backup. Questa copia non può dimostrare di contenere il lavoro più recente. Confrontala con le liste conservate.</string>
+    <string name="restore_save">Salva come copia locale</string>
+    <string name="restore_saved">Lista recuperata salvata come copia locale indipendente. Confrontala con il lavoro più recente prima di condividerla di nuovo.</string>
+    <plurals name="restore_items">
+        <item quantity="one">%d articolo attuale</item>
+        <item quantity="other">%d articoli attuali</item>
+        <item quantity="many">%d articoli attuali</item>
+    </plurals>
+    <plurals name="restore_purchases">
+        <item quantity="one">%d acquisto passato</item>
+        <item quantity="other">%d acquisti passati</item>
+        <item quantity="many">%d acquisti passati</item>
+    </plurals>
+    <string name="restore_request">Crea una richiesta di backup del server</string>
+    <string name="restore_request_help">Inserisci sotto la chiave di recupero separata e apri il kit corrispondente. Invia all’operatore solo il file di richiesta pubblica. Verifica con lui l’intera impronta tramite un canale fidato prima che esporti una lista.</string>
+    <string name="restore_fingerprint">Impronta del destinatario di recupero: %1$s</string>
+</resources>

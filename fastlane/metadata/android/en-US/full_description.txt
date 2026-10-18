@@ -1,0 +1,9 @@
+Usuals is an offline Android shopping list with purchase memory that stays on your phone. Add by voice, keyboard, shared text or barcode. Edit quantities, categories, repeat rules and store tags. A home-screen widget shows what is left to buy.
+
+Finish a shop to save checked rows as a dated trip, with Undo. Unchecked rows stay on the list. Import past lists with a date, share the list as text, and export or restore shopping history through Android's file picker. Suggestions offer staples; inferred interval predictions stay off until real-history evaluation proves them useful. Only explicit repeat rules add automatically.
+
+Share a recipe link to review and add its ingredients. Standard recipe data needs no model. Prose recipes offer an optional model. Barcode naming through Open Food Facts is also optional and off by default; you confirm each name. Without a connection, scans offer manual naming.
+
+No account, telemetry, analytics, crash reporting or Play Services. Cloud backup is excluded. Model keys stay in Android Keystore. Recipe reads and opt-in barcode requests go directly from the phone to their sources. No household sync is built.
+
+English UI, with English and Spanish input. Apache-2.0. Unpublished development software.

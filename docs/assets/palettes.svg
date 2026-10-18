@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title description">
+<title id="title">Three ways to make Usuals yours</title>
+<desc id="description">Plum, Grove and Tide. Each palette has a light and a dark appearance.</desc>
+<rect x="0" y="0" width="424" height="360" rx="20" fill="#F8F5EF"/>
+<text x="28" y="52" font-family="Georgia,serif" font-size="32" fill="#302331">Plum</text>
+<text x="28" y="80" font-family="Arial,sans-serif" font-size="13" fill="#583D53">Aubergine &amp; champagne</text>
+<rect x="24" y="108" width="376" height="92" rx="16" fill="#FFFDFA"/>
+<circle cx="54" cy="140" r="9" fill="none" stroke="#583D53" stroke-width="2"/>
+<rect x="78" y="134" width="174" height="10" rx="5" fill="#583D53"/>
+<rect x="78" y="156" width="110" height="7" rx="3" fill="#EFE1CA"/>
+<rect x="316" y="130" width="60" height="46" rx="10" fill="#EFE1CA"/>
+<rect x="24" y="212" width="376" height="92" rx="16" fill="#1D181E"/>
+<circle cx="54" cy="244" r="9" fill="none" stroke="#E2BCD4" stroke-width="2"/>
+<rect x="78" y="238" width="174" height="10" rx="5" fill="#E2BCD4"/>
+<rect x="78" y="260" width="110" height="7" rx="3" fill="#E2BCD4" opacity=".35"/>
+<rect x="316" y="234" width="60" height="46" rx="10" fill="#E2BCD4"/>
+<text x="28" y="335" font-family="Arial,sans-serif" font-size="10" letter-spacing="2" fill="#583D53">LIGHT &amp; DARK, TOGETHER</text>
+<rect x="428" y="0" width="424" height="360" rx="20" fill="#F3F5ED"/>
+<text x="456" y="52" font-family="Georgia,serif" font-size="32" fill="#243428">Grove</text>
+<text x="456" y="80" font-family="Arial,sans-serif" font-size="13" fill="#36593F">Botanical green &amp; oat</text>
+<rect x="452" y="108" width="376" height="92" rx="16" fill="#FCFDF8"/>
+<circle cx="482" cy="140" r="9" fill="none" stroke="#36593F" stroke-width="2"/>
+<rect x="506" y="134" width="174" height="10" rx="5" fill="#36593F"/>
+<rect x="506" y="156" width="110" height="7" rx="3" fill="#EDE1CA"/>
+<rect x="744" y="130" width="60" height="46" rx="10" fill="#EDE1CA"/>
+<rect x="452" y="212" width="376" height="92" rx="16" fill="#171F19"/>
+<circle cx="482" cy="244" r="9" fill="none" stroke="#BCD5AA" stroke-width="2"/>
+<rect x="506" y="238" width="174" height="10" rx="5" fill="#BCD5AA"/>
+<rect x="506" y="260" width="110" height="7" rx="3" fill="#BCD5AA" opacity=".35"/>
+<rect x="744" y="234" width="60" height="46" rx="10" fill="#BCD5AA"/>
+<text x="456" y="335" font-family="Arial,sans-serif" font-size="10" letter-spacing="2" fill="#36593F">LIGHT &amp; DARK, TOGETHER</text>
+<rect x="856" y="0" width="424" height="360" rx="20" fill="#EFF5F7"/>
+<text x="884" y="52" font-family="Georgia,serif" font-size="32" fill="#233640">Tide</text>
+<text x="884" y="80" font-family="Arial,sans-serif" font-size="13" fill="#285D70">Ink blue &amp; sea glass</text>
+<rect x="880" y="108" width="376" height="92" rx="16" fill="#FBFDFE"/>
+<circle cx="910" cy="140" r="9" fill="none" stroke="#285D70" stroke-width="2"/>
+<rect x="934" y="134" width="174" height="10" rx="5" fill="#285D70"/>
+<rect x="934" y="156" width="110" height="7" rx="3" fill="#DBEAE3"/>
+<rect x="1172" y="130" width="60" height="46" rx="10" fill="#DBEAE3"/>
+<rect x="880" y="212" width="376" height="92" rx="16" fill="#151F27"/>
+<circle cx="910" cy="244" r="9" fill="none" stroke="#A7D6E5" stroke-width="2"/>
+<rect x="934" y="238" width="174" height="10" rx="5" fill="#A7D6E5"/>
+<rect x="934" y="260" width="110" height="7" rx="3" fill="#A7D6E5" opacity=".35"/>
+<rect x="1172" y="234" width="60" height="46" rx="10" fill="#A7D6E5"/>
+<text x="884" y="335" font-family="Arial,sans-serif" font-size="10" letter-spacing="2" fill="#285D70">LIGHT &amp; DARK, TOGETHER</text>
+</svg>

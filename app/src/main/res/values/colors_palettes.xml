@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_grove_surface">#FCFDF8</color>
+    <color name="widget_grove_outline">#D8E0D1</color>
+    <color name="widget_grove_ink">#243428</color>
+    <color name="widget_grove_secondary">#53644F</color>
+    <color name="widget_grove_accent">#36593F</color>
+    <color name="widget_tide_surface">#FBFDFE</color>
+    <color name="widget_tide_outline">#D3E1E7</color>
+    <color name="widget_tide_ink">#233640</color>
+    <color name="widget_tide_secondary">#526872</color>
+    <color name="widget_tide_accent">#285D70</color>
+</resources>

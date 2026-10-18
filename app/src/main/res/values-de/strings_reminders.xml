@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_title">Wöchentliche Erinnerung</string>
+    <string name="reminder_help">Wähle Tag und Uhrzeit zum Prüfen deiner Listen. Nur auf diesem Gerät, standardmäßig aus. Android kann die Erinnerung verzögern, um Akku zu sparen.</string>
+    <string name="reminder_on">Erinnerung eingeschaltet</string>
+    <string name="reminder_off">Erinnerung ausgeschaltet</string>
+    <string name="reminder_enable">Erinnerung aktivieren</string>
+    <string name="reminder_save">Erinnerung speichern</string>
+    <string name="reminder_disable">Erinnerung ausschalten</string>
+    <string name="reminder_permission">Erlaube Benachrichtigungen, um Erinnerungen zu erhalten. Du kannst dies in den Android-Einstellungen ändern.</string>
+    <string name="reminder_notification_settings">Benachrichtigungseinstellungen</string>
+    <string name="reminder_failed">Die Erinnerung konnte nicht gespeichert werden. Versuche es erneut.</string>
+    <string name="reminder_channel">Einkaufserinnerungen</string>
+    <string name="reminder_notification_title">Prüfe deine Listen</string>
+    <string name="reminder_notification_body">Prüfe vor dem nächsten Einkauf, was du brauchst.</string>
+</resources>

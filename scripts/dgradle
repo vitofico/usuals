@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Run gradle inside the project's docker image.
+# Usage: scripts/dgradle <gradle-args...>
+# Examples:
+#   scripts/dgradle test
+#   scripts/dgradle :agent:test
+#   scripts/dgradle :app:assembleDebug
+#
+# Host JDK and Android SDK are not required. The image is built on first use,
+# and rebuilt whenever the Dockerfile changes.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The image is named after the Dockerfile that produced it. The tag used to be
+# a fixed usuals-build:latest, which meant the image was built once and then
+# reused for ever: a merge that bumped the base image or one of the SDK pins
+# left CI on the new toolchain and every laptop that already had the tag on the
+# old one, silently, which is the exact divergence the docker build path exists
+# to prevent (ADR-0010). Keying the tag on the content of the Dockerfile means
+# a changed Dockerfile asks for an image that does not exist yet and so gets
+# built, while an unchanged one still costs nothing but a docker image inspect.
+#
+# Images from older Dockerfiles are left behind on purpose, so moving between
+# branches whose Dockerfiles differ is instant the second time. They are a
+# couple of gigabytes each: `docker image ls usuals-build` lists them and
+# `docker image rm` reclaims the disk.
+if command -v shasum >/dev/null 2>&1; then
+  DOCKERFILE_SHA=$(shasum -a 256 "$ROOT/Dockerfile" | cut -c1-12)
+else
+  DOCKERFILE_SHA=$(sha256sum "$ROOT/Dockerfile" | cut -c1-12)
+fi
+IMAGE="usuals-build:$DOCKERFILE_SHA"
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "[dgradle] building $IMAGE under linux/amd64 (Rosetta on Apple Silicon, ~5 min)…"
+  # --pull because the base is a moving tag (eclipse-temurin:21-jdk-jammy), so a
+  # laptop holding a months-old copy would otherwise build on an older base than
+  # a fresh CI runner pulls. It closes half the gap: the apt and sdkmanager
+  # fetches inside the Dockerfile are unpinned too, and only a change to the
+  # Dockerfile's own bytes triggers a rebuild at all. Pinning the base by digest
+  # is what would close the rest.
+  #
+  # usuals-build:latest is tagged alongside it so the name the docs use still
+  # points at something, and at the newest build rather than the first one.
+  docker build --pull --platform linux/amd64 -t "$IMAGE" -t usuals-build:latest "$ROOT"
+fi
+
+# Only allocate a TTY when stdin is one, which keeps the script usable from
+# non-interactive contexts (CI, agent shells) without losing the colored
+# Gradle output when run from a real terminal.
+RUN_FLAGS=(-i)
+if [ -t 0 ] && [ -t 1 ]; then
+  RUN_FLAGS+=(-t)
+fi
+
+# Explicit disposable browser QA only. Normal builds expose no host ports.
+if [ -n "${USUALS_PREVIEW_PORT:-}" ]; then
+  if ! [[ "$USUALS_PREVIEW_PORT" =~ ^[0-9]{4,5}$ ]] ||
+      (( 10#$USUALS_PREVIEW_PORT < 1024 || 10#$USUALS_PREVIEW_PORT > 65535 )); then
+    echo 'Invalid USUALS_PREVIEW_PORT' >&2
+    exit 2
+  fi
+  RUN_FLAGS+=(-p "127.0.0.1:$USUALS_PREVIEW_PORT:$USUALS_PREVIEW_PORT")
+fi
+
+# host.docker.internal lets a test inside the container reach an Ollama running
+# on the host (see docs/providers.md). Harmless when nothing listens there.
+#
+# USUALS_OFF_LIVE is the opt-in for OpenFoodFactsLiveContractTest, which is the
+# only test allowed to touch the real Open Food Facts. Unset, those tests skip.
+# It is passed through rather than defaulted so that CI, which sets nothing,
+# cannot accidentally point a build matrix at a volunteer-funded service.
+exec docker run --rm "${RUN_FLAGS[@]}" \
+  --platform linux/amd64 \
+  --add-host=host.docker.internal:host-gateway \
+  -e USUALS_OLLAMA_URL="${USUALS_OLLAMA_URL:-}" \
+  -e USUALS_OFF_LIVE="${USUALS_OFF_LIVE:-}" \
+  -e USUALS_TEST_JDBC_URL="${USUALS_TEST_JDBC_URL:-}" \
+  -e USUALS_TEST_DB_USER="${USUALS_TEST_DB_USER:-}" \
+  -e USUALS_TEST_DB_PASSWORD \
+  -v "$ROOT":/workspace \
+  -v usuals-gradle-cache:/root/.gradle \
+  -v usuals-android-cache:/root/.android \
+  "$IMAGE" \
+  ./gradlew "$@"

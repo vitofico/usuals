@@ -1,0 +1,9 @@
+{
+  "hostname": "usuals.example.org",
+  "trustedProxyCidrs": ["REPLACE_WITH_VERIFIED_INGRESS_PEER_CIDR"],
+  "storageClass": "microk8s-hostpath",
+  "backupServer": "192.0.2.10",
+  "backupPath": "/srv/cluster-data/usuals/backups",
+  "ingressNamespace": "traefik",
+  "ingressPodLabels": {"app.kubernetes.io/name": "traefik"}
+}

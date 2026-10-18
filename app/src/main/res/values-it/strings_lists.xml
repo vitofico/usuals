@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lists_choose">Le tue liste</string>
+    <string name="lists_new">Nuova lista</string>
+    <string name="lists_name">Nome della lista</string>
+    <string name="lists_create">Crea</string>
+    <string name="lists_selected">Selezionata</string>
+    <plurals name="lists_pending">
+        <item quantity="one">%d modifica da sincronizzare</item>
+        <item quantity="other">%d modifiche da sincronizzare</item>
+        <item quantity="many">%d modifiche da sincronizzare</item>
+    </plurals>
+    <plurals name="lists_conflicts">
+        <item quantity="one">%d modifica da rivedere</item>
+        <item quantity="other">%d modifiche da rivedere</item>
+        <item quantity="many">%d modifiche da rivedere</item>
+    </plurals>
+    <string name="lists_review_title">Rivedi una modifica</string>
+    <string name="lists_review_body">Impossibile applicare questa modifica. L’articolo attuale è stato conservato. Rivedilo per inserire i valori desiderati.</string>
+    <string name="lists_review_item">Rivedi articolo</string>
+    <string name="lists_keep_current">Mantieni attuale</string>
+    <string name="lists_current_value">Attuale: %1$s</string>
+    <string name="lists_requested_value">Richiesto: %1$s</string>
+    <string name="lists_value_unspecified">Non specificato</string>
+    <string name="lists_value_checked">Spuntato</string>
+    <string name="lists_value_unchecked">Non spuntato</string>
+    <string name="lists_note">Nota</string>
+    <string name="lists_store">Negozio</string>
+    <string name="lists_check">Stato della spunta</string>
+    <string name="lists_imported_home">Casa importata</string>
+    <string name="lists_shared_label">Lista condivisa</string>
+    <string name="lists_local_label">Lista locale</string>
+    <string name="lists_alias_requested">Richiesto: usa %2$s per %1$s</string>
+    <string name="lists_alias_current">Attuale: usa %2$s per %1$s</string>
+</resources>

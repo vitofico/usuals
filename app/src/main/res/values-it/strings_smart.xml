@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_produce">Frutta e verdura</string>
+    <string name="category_dairy">Latticini e uova</string>
+    <string name="category_bakery">Pane e prodotti da forno</string>
+    <string name="category_meat">Carne</string>
+    <string name="category_fish">Pesce e frutti di mare</string>
+    <string name="category_frozen">Surgelati</string>
+    <string name="category_pantry">Dispensa</string>
+    <string name="category_drinks">Bevande</string>
+    <string name="category_snacks">Snack</string>
+    <string name="category_household">Casa</string>
+    <string name="category_personal_care">Cura della persona</string>
+    <string name="category_other">Altro</string>
+    <string name="item_edit">Modifica articolo</string>
+    <string name="item_edit_action">Modifica %1$s</string>
+    <string name="edit_name">Nome</string>
+    <string name="edit_quantity">Quantità</string>
+    <string name="edit_category">Sposta in…</string>
+    <string name="edit_category_auto">Automatica</string>
+    <string name="edit_repeat_days">Ripeti ogni (giorni)</string>
+    <string name="edit_repeat_hint">Aggiunge automaticamente questo articolo alla scadenza. Lascia vuoto per interrompere la ripetizione.</string>
+    <string name="edit_save">Salva</string>
+    <string name="edit_cancel">Annulla</string>
+    <string name="unit_pieces">Pezzi</string>
+    <string name="unit_gram">g</string>
+    <string name="unit_kilogram">kg</string>
+    <string name="unit_millilitre">ml</string>
+    <string name="unit_litre">l</string>
+    <string name="unit_pack">Confezioni</string>
+    <string name="repeat_added">Aggiunto da una regola di ripetizione</string>
+    <string name="autocomplete_add">Aggiungi %1$s</string>
+    <string name="edit_name_invalid">Inserisci il nome dell’articolo.</string>
+    <string name="edit_quantity_invalid">Usa un numero maggiore o uguale a 0, oppure lascia vuoto.</string>
+    <string name="edit_repeat_invalid">Usa un numero intero di giorni maggiore di 0, oppure lascia vuoto.</string>
+</resources>

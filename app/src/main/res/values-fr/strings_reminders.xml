@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_title">Rappel hebdomadaire</string>
+    <string name="reminder_help">Choisissez un jour et une heure pour revoir vos listes. Sur cet appareil uniquement, désactivé par défaut. Android peut retarder le rappel pour économiser la batterie.</string>
+    <string name="reminder_on">Rappel activé</string>
+    <string name="reminder_off">Rappel désactivé</string>
+    <string name="reminder_enable">Activer le rappel</string>
+    <string name="reminder_save">Enregistrer le rappel</string>
+    <string name="reminder_disable">Désactiver le rappel</string>
+    <string name="reminder_permission">Autorisez les notifications pour recevoir les rappels. Vous pouvez modifier ce choix dans les paramètres Android.</string>
+    <string name="reminder_notification_settings">Paramètres des notifications</string>
+    <string name="reminder_failed">Impossible de sauvegarder le rappel. Réessayez.</string>
+    <string name="reminder_channel">Rappels de courses</string>
+    <string name="reminder_notification_title">Consultez vos listes</string>
+    <string name="reminder_notification_body">Vérifiez vos besoins avant vos prochaines courses.</string>
+</resources>
