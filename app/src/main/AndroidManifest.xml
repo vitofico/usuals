@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Capture. Asked for on the first press of the band, never again after a refusal. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+      Scanning. The camera is optional hardware: a phone without one loses the
+      barcode path and keeps everything else, so the feature is declared as not
+      required and the app stays installable.
+
+      Asked for by the scan screen, once, and only on a phone that declares a
+      camera. A refusal is final for the life of the graph and falls back to the
+      typed field, per design section 12: a second dialog is what makes people
+      uninstall things, and the field is a first-class way in rather than a
+      consolation prize.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!--
+      Recipe pages and the optional configured model are read directly from
+      this device. Cleartext supports explicitly configured LAN model endpoints.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Android 11 and later hide other packages unless they are declared. The
+      recogniser lives in another package, so without this `isRecognitionAvailable`
+      says no on every phone and the band would fall back to the keyboard for
+      everyone.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Usuals">
+
+        <!--
+          Cloud backup is empty under both backup rule formats. Android 12 and
+          later may transfer the database directly, with secret preferences excluded.
+
+          singleTask, so a second share into a running app reaches the activity
+          through onNewIntent instead of stacking another copy of the list on
+          top of the first.
+        -->
+        <receiver android:name=".widget.ShoppingListWidget" android:exported="true" android:label="@string/app_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/shopping_widget_info" />
+        </receiver>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="usuals" android:host="join" />
+            </intent-filter>
+            <!--
+              Share a recipe or a message into the app and it becomes items.
+              Text/plain accepts a list or a recipe URL for ingredient review.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

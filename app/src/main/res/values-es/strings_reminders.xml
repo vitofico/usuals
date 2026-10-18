@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminder_title">Recordatorio semanal</string>
+    <string name="reminder_help">Elige un día y una hora para revisar tus listas. Solo en este dispositivo, desactivado de inicio. Android puede retrasarlo para ahorrar batería.</string>
+    <string name="reminder_on">Recordatorio activado</string>
+    <string name="reminder_off">Recordatorio desactivado</string>
+    <string name="reminder_enable">Activar recordatorio</string>
+    <string name="reminder_save">Guardar recordatorio</string>
+    <string name="reminder_disable">Desactivar recordatorio</string>
+    <string name="reminder_permission">Permite las notificaciones para recibir recordatorios. Puedes cambiarlo en los ajustes de Android.</string>
+    <string name="reminder_notification_settings">Ajustes de notificaciones</string>
+    <string name="reminder_failed">No se pudo guardar el recordatorio. Inténtalo de nuevo.</string>
+    <string name="reminder_channel">Recordatorios de compra</string>
+    <string name="reminder_notification_title">Revisa tus listas</string>
+    <string name="reminder_notification_body">Revisa lo que necesitas antes de tu próxima compra.</string>
+</resources>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="restore_open">Ouvrir une sauvegarde chiffrée du serveur</string>
+    <string name="restore_title">Vérifier une liste récupérée</string>
+    <string name="restore_key_help">Ouvrez le kit de récupération correspondant et saisissez sa clé séparée pour lire cette sauvegarde. Un appareil du propriétaire encore disponible peut utiliser ses clés enregistrées. La vérification se fait sur cet appareil.</string>
+    <string name="restore_open_kit">Ouvrir le kit de récupération de cette sauvegarde</string>
+    <string name="restore_copy_help">Enregistrez une copie locale indépendante, puis comparez-la au travail plus récent sur vos appareils. Vos listes, modifications non envoyées et clés de partage sont conservées. Le foyer restauré reste bloqué. Partagez la copie vérifiée via un nouveau foyer quand vous êtes prêt.</string>
+    <string name="restore_older">Cette sauvegarde est plus ancienne que l’état enregistré sur cet appareil. Conservez et rapprochez votre travail plus récent.</string>
+    <string name="restore_ancestry">Certains points de contrôle enregistrés ne peuvent pas être reliés à cette sauvegarde. Cette copie ne peut pas prouver qu’elle contient votre travail le plus récent. Comparez-la à vos listes conservées.</string>
+    <string name="restore_save">Enregistrer comme copie locale</string>
+    <string name="restore_saved">Liste récupérée enregistrée comme copie locale indépendante. Comparez-la à votre travail plus récent avant de la partager à nouveau.</string>
+    <plurals name="restore_items">
+        <item quantity="one">%d article actuel</item>
+        <item quantity="other">%d articles actuels</item>
+        <item quantity="many">%d articles actuels</item>
+    </plurals>
+    <plurals name="restore_purchases">
+        <item quantity="one">%d achat passé</item>
+        <item quantity="other">%d achats passés</item>
+        <item quantity="many">%d achats passés</item>
+    </plurals>
+    <string name="restore_request">Créer une demande de sauvegarde du serveur</string>
+    <string name="restore_request_help">Saisissez ci-dessous votre clé de récupération séparée, puis ouvrez le kit correspondant. Envoyez uniquement le fichier de demande publique à l’opérateur. Vérifiez cette empreinte complète avec lui via un canal de confiance avant l’export d’une liste.</string>
+    <string name="restore_fingerprint">Empreinte du destinataire de récupération : %1$s</string>
+</resources>

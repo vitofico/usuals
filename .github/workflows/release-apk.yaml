@@ -1,0 +1,267 @@
+name: release-apk
+
+# Builds and signs a release APK from a tag that already exists, and attaches it
+# to a GitHub Release.
+#
+# It never computes a version, never touches gradle.properties and never creates
+# a tag. That is the whole point: a failed release can be repaired without
+# burning a version number. Galley learned this the expensive way, tagging before
+# publishing and deriving the next version from the tags already present, so each
+# retry minted a new one and left empty releases behind.
+#
+# Two entry points, both naming an existing tag:
+#   workflow_call     android-ci.yaml calls this after it pushes the tag.
+#   workflow_dispatch the manual repair lever, for a tag whose Release is missing
+#                     or has no APK attached, typically because a runner died in
+#                     the gap between the tag push and this workflow.
+#
+# There is no `on: push: tags` trigger. android-ci pushes the tag with
+# GITHUB_TOKEN and GitHub does not start workflow runs for those, so such a
+# trigger would sit there looking like automation while never firing once.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Existing tag to build and publish, e.g. v2026.09.10.7"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and publish, e.g. v2026.09.10.7"
+        required: true
+        type: string
+
+# Never let two publishes of the same tag race over the release assets. Distinct
+# tags may run in parallel.
+concurrency:
+  group: release-apk-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Same reasoning as android-ci: an outer net well under GitHub's six-hour
+    # maximum execution limit, so a wedged Gradle task fails rather than idles.
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Checkout only proves the ref resolves, and it accepts a branch name or a
+      # bare SHA just as happily as a tag. The release API creates a ref when the
+      # one it is given is missing, so a dispatch that fat-fingers "main" would
+      # otherwise mint refs/tags/main and mark it Latest.
+      #
+      # The tag arrives through env rather than inline ${{ }} because it is free
+      # text from a manual dispatch, and interpolating free text into a shell is
+      # how free text becomes a script.
+      - name: Verify the input is a tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1 || {
+            echo "::error::$TAG is not an existing tag, refusing to publish."
+            exit 1
+          }
+
+      # One tag is enough here, unlike android-ci. This job never calls
+      # scripts/dgradle (see the assemble step below for why), so nothing looks
+      # the image up by the Dockerfile hash that dgradle names its images after.
+      # A runner is fresh every time, so the tag is never stale.
+      - name: Build the build image
+        run: docker build --platform linux/amd64 -t usuals-build:latest .
+
+      # Restore only, never save. android-ci owns the cache entry; a release
+      # build reads it to skip a cold dependency download and leaves it alone.
+      - name: Restore the Gradle cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/gradle-volume
+          # android-ci appends its run id to the key it saves, so nothing here
+          # ever matches exactly. Both prefixes are listed as restore keys: the
+          # dependency-matched one first, the catch-all second.
+          key: usuals-gradle-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', '**/*.gradle.kts') }}-
+          restore-keys: |
+            usuals-gradle-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties', '**/*.gradle.kts') }}-
+            usuals-gradle-
+
+      - name: Load the Gradle cache into the Docker volume
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gradle-volume"
+          docker volume create usuals-gradle-cache >/dev/null
+          if [ -n "$(ls -A "$RUNNER_TEMP/gradle-volume")" ]; then
+            docker run --rm \
+              -v usuals-gradle-cache:/vol \
+              -v "$RUNNER_TEMP/gradle-volume":/backup:ro \
+              alpine:3.20 sh -c 'cp -a /backup/. /vol/'
+          else
+            echo "No Gradle cache restored, this run pays for a cold dependency download."
+          fi
+
+      # One step decides the signing state rather than an `if:` on a secret, so
+      # the decision is visible in the log and both branches are spelled out.
+      - name: Decode the signing keystore
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.USUALS_RELEASE_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYSTORE_B64:-}" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            test -s "$RUNNER_TEMP/release.keystore"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "note=" >> "$GITHUB_OUTPUT"
+            echo "Release keystore decoded, this build will be release-signed."
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            # Carried as an output rather than decided inline in the release
+            # step. A `x == 'true' && '' || 'warning'` expression looks right and
+            # is not: an empty string is falsy in a workflow expression, so the
+            # signed branch would fall through and stamp the warning onto every
+            # release.
+            echo "note=This build is signed with the debug key, not the release key. Do not treat it as a release. F-Droid rejects the signature, and Android refuses to upgrade over a changed one later, so anyone who installs this is stuck with it. Testers only." >> "$GITHUB_OUTPUT"
+            echo "No release keystore configured, this build will be debug-signed."
+          fi
+
+      # app/build.gradle.kts falls back to the debug signing config when
+      # USUALS_RELEASE_KEYSTORE is blank, so :app:assembleRelease still succeeds
+      # and still produces an app-release.apk. The job is allowed to continue,
+      # because a debug-signed build is genuinely useful to hand to a tester, but
+      # it is published as a prerelease that is never marked Latest and the asset
+      # says so in its own filename. Two reasons, both permanent: F-Droid rejects
+      # the signature outright, and anyone who installs a debug-signed APK can
+      # never upgrade to a properly signed one, because Android refuses to
+      # install over a changed signature.
+      - name: Warn that this build is debug-signed
+        if: steps.signing.outputs.signed != 'true'
+        run: |
+          {
+            echo "### Debug-signed build"
+            echo
+            echo "USUALS_RELEASE_KEYSTORE_B64 is not set, so this APK is signed with the"
+            echo "debug key. Do not publish it as the latest release and do not submit it"
+            echo "to F-Droid. Anyone who installs it cannot upgrade to a release-signed"
+            echo "build afterwards, because Android refuses to install over a changed"
+            echo "signature. Hand it to testers who understand that, or set the signing"
+            echo "secrets and re-run this workflow against the same tag."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Debug-signed APK, must not be published as latest."
+
+      # Not scripts/dgradle. That script is the contributor ergonomics path and
+      # forwards no secrets by design: it passes one environment variable and
+      # mounts only the repository. A signing build needs four more variables and
+      # the keystore file inside the container, so this spells out the same
+      # docker run with those additions. It has to stay in step with dgradle's
+      # mounts, which is the price of not putting secrets into a script every
+      # contributor runs on their laptop.
+      #
+      # The -e flags carry no values. Docker forwards each variable from this
+      # step's environment, so the passwords never appear on a command line.
+      - name: Assemble release APK
+        env:
+          USUALS_RELEASE_KEYSTORE: ${{ steps.signing.outputs.signed == 'true' && '/secrets/release.keystore' || '' }}
+          USUALS_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.USUALS_RELEASE_KEYSTORE_PASSWORD }}
+          USUALS_RELEASE_KEY_ALIAS: ${{ secrets.USUALS_RELEASE_KEY_ALIAS }}
+          USUALS_RELEASE_KEY_PASSWORD: ${{ secrets.USUALS_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mounts=()
+          if [ -s "$RUNNER_TEMP/release.keystore" ]; then
+            mounts+=(-v "$RUNNER_TEMP/release.keystore:/secrets/release.keystore:ro")
+          fi
+          docker run --rm -i \
+            --platform linux/amd64 \
+            -e USUALS_RELEASE_KEYSTORE \
+            -e USUALS_RELEASE_KEYSTORE_PASSWORD \
+            -e USUALS_RELEASE_KEY_ALIAS \
+            -e USUALS_RELEASE_KEY_PASSWORD \
+            "${mounts[@]}" \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -v usuals-gradle-cache:/root/.gradle \
+            -v usuals-android-cache:/root/.android \
+            usuals-build:latest \
+            ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Verify native 16 KB alignment
+        run: python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release.apk
+
+      # AGP names every build app-release.apk, which is a poor thing to have
+      # sitting in a downloads folder. Name the asset for its version, and say in
+      # the filename when it is debug-signed, so the warning survives being
+      # downloaded and forwarded.
+      - name: Name the release asset
+        id: asset
+        env:
+          TAG: ${{ inputs.tag }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -euo pipefail
+          # A glob rather than `find | head`, which under pipefail fails the step
+          # when find is cut off by the SIGPIPE head hands it.
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/*.apk)
+          src="${apks[0]:-}"
+          if [ -z "$src" ]; then
+            echo "::error::No APK found under app/build/outputs/apk/release."
+            exit 1
+          fi
+          if [ "$SIGNED" = "true" ]; then
+            dest="$RUNNER_TEMP/usuals-${TAG}.apk"
+          else
+            dest="$RUNNER_TEMP/usuals-${TAG}-debug-signed.apk"
+          fi
+          cp "$src" "$dest"
+          echo "path=$dest" >> "$GITHUB_OUTPUT"
+          ls -l "$dest"
+
+      # GitHub marks a newly created Release as Latest unless told otherwise, so
+      # repairing an old tag would quietly demote the current release and point
+      # every download at a stale version. Decide it from the tag graph instead
+      # of asking the operator to remember, and never award it to a debug-signed
+      # build. Repairing the newest tag, the ordinary case right after a run
+      # stranded it, still gets the badge.
+      - name: Decide whether this tag is the newest
+        id: latest
+        env:
+          TAG: ${{ inputs.tag }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          set -euo pipefail
+          newest=$(git tag --sort=-creatordate | head -n 1)
+          if [ "$SIGNED" != "true" ]; then
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            echo "Debug-signed, so this release will not be marked Latest."
+          elif [ "$newest" = "$TAG" ]; then
+            echo "make_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            echo "$newest is newer than $TAG, leaving the Latest badge where it is."
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: ${{ steps.asset.outputs.path }}
+          generate_release_notes: true
+          # Empty on a properly signed build. On a debug-signed one it carries
+          # the warning above the generated notes, so it is the first thing on
+          # the release page rather than a line in a CI log nobody opens.
+          body: ${{ steps.signing.outputs.note }}
+          prerelease: ${{ steps.signing.outputs.signed != 'true' }}
+          make_latest: ${{ steps.latest.outputs.make_latest }}
+          # This workflow exists for the re-run case, so an asset the previous
+          # attempt already uploaded must be replaced rather than collided with.
+          overwrite_files: true
+          # An empty Release is the exact failure this workflow repairs. Refuse
+          # to publish one if the glob matched nothing.
+          fail_on_unmatched_files: true

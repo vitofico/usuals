@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="household_fallback_name">Casa</string>
+    <plurals name="list_item_count">
+        <item quantity="one">%1$d articolo</item>
+        <item quantity="other">%1$d articoli</item>
+        <item quantity="many">%1$d articoli</item>
+    </plurals>
+    <string name="list_subtitle">%1$s · %2$s</string>
+    <string name="contributor_you">tu</string>
+    <string name="contributor_separator">", "</string>
+    <string name="open_settings">Impostazioni</string>
+    <string name="list_empty_instruction">Tieni premuta la barra e di’ cosa ti serve.</string>
+    <plurals name="list_checked_count">
+        <item quantity="one">%1$d spuntato</item>
+        <item quantity="other">%1$d spuntati</item>
+        <item quantity="many">%1$d spuntati</item>
+    </plurals>
+    <string name="list_checked_expand">Mostra articoli spuntati</string>
+    <string name="list_checked_collapse">Nascondi articoli spuntati</string>
+    <string name="item_check">Spunta %1$s</string>
+    <string name="item_uncheck">Rimetti %1$s nella lista</string>
+    <string name="item_remove">Rimuovi</string>
+    <string name="item_quantity_pieces">×%1$s</string>
+    <string name="capture_hint">Tieni premuto per parlare</string>
+    <string name="capture_listening">In ascolto</string>
+    <string name="capture_band">Barra di inserimento, tieni premuto per parlare</string>
+    <string name="capture_write_hint">Scrivi cosa ti serve</string>
+    <string name="capture_add">Aggiungi</string>
+    <string name="capture_speech_unavailable">La dettatura non è disponibile su questo telefono. Scrivi cosa ti serve.</string>
+    <string name="capture_scan">Scansiona un codice a barre</string>
+    <string name="capture_type">Scrivi articoli</string>
+    <string name="list_empty_title">Tutto pronto per la prossima spesa</string>
+    <string name="scan_title">Scansiona</string>
+    <string name="scan_back">Indietro</string>
+    <string name="scan_intro">Scansiona una confezione</string>
+    <string name="scan_guidance">Inquadra il codice a barre. La fotocamera si ferma quando lo legge.</string>
+    <string name="scan_permission_rationale">Per leggere un codice a barre serve la fotocamera. Viene usata solo in questa schermata e non vengono salvate immagini.</string>
+    <string name="scan_permission_grant">Usa la fotocamera</string>
+    <string name="scan_permission_denied">Nessun accesso alla fotocamera. Digita il codice, funziona allo stesso modo.</string>
+    <string name="scan_camera_unavailable">La fotocamera non è disponibile qui. Digita il codice.</string>
+    <string name="scan_manual_title">Digita il codice</string>
+    <string name="scan_manual_label">Codice a barre</string>
+    <string name="scan_manual_hint">EAN-13, EAN-8 o UPC-A.</string>
+    <string name="scan_manual_add">Aggiungi</string>
+    <string name="scan_manual_invalid">Il codice non sembra valido.</string>
+    <string name="quantity_gram">%1$s g</string>
+    <string name="quantity_kilogram">%1$s kg</string>
+    <string name="quantity_millilitre">%1$s ml</string>
+    <string name="quantity_litre">%1$s l</string>
+    <string name="quantity_pack">%1$s conf.</string>
+</resources>

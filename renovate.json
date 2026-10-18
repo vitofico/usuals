@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate owns the Gradle version catalog only. The github-actions and dockerfile managers are deliberately off, because .github/dependabot.yml covers those and two bots on one manifest means two PRs for one bump.",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitsDisabled",
+    ":dependencyDashboard",
+    "schedule:weekly"
+  ],
+  "enabledManagers": ["gradle", "gradle-wrapper"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 0,
+  "rangeStrategy": "bump",
+  "commitMessagePrefix": ":arrow_up: chore:",
+  "packageRules": [
+    {
+      "description": "Kotlin, its compiler plugins and AGP move as one. A Kotlin bump without the matching Compose compiler plugin does not build, and AGP is the other half of that pairing.",
+      "matchPackageNames": [
+        "org.jetbrains.kotlin:kotlin-gradle-plugin",
+        "org.jetbrains.kotlin.plugin.compose",
+        "org.jetbrains.kotlin.plugin.serialization",
+        "com.google.devtools.ksp",
+        "com.android.tools.build:gradle"
+      ],
+      "groupName": "kotlin and android gradle plugin",
+      "labels": ["dependencies", "toolchain"]
+    },
+    {
+      "description": "AndroidX moves often and rarely interestingly. One batched PR a week, early Monday, so it lands before anyone is working.",
+      "matchPackagePrefixes": ["androidx."],
+      "groupName": "androidx",
+      "schedule": ["before 9am on monday"]
+    },
+    {
+      "description": "The coroutines and serialization runtimes are versioned together upstream and are easier to review as one change.",
+      "matchPackagePrefixes": ["org.jetbrains.kotlinx:"],
+      "groupName": "kotlinx"
+    },
+    {
+      "description": "The Gradle wrapper is pinned to what the build image ships. Raising it is a build-environment decision, so it gets its own PR and its own label rather than riding along with a library bump.",
+      "matchManagers": ["gradle-wrapper"],
+      "groupName": "gradle wrapper",
+      "labels": ["dependencies", "toolchain"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "description": "A known vulnerability does not wait for Monday.",
+    "labels": ["security"],
+    "schedule": []
+  }
+}

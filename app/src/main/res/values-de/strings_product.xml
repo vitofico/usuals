@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="product_details">Produktdetails</string>
+    <string name="product_brand">Marke: %1$s</string>
+    <string name="product_pack">Packungsgröße: %1$s</string>
+    <string name="product_ingredients">Zutaten</string>
+    <string name="product_ingredients_unknown">Zutaten sind nicht angegeben.</string>
+    <string name="product_traces">Kann Spuren enthalten von: %1$s</string>
+    <string name="product_traces_unknown">Spuren sind nicht angegeben.</string>
+    <string name="product_traces_empty">Open Food Facts führt keine Spuren auf.</string>
+    <string name="product_check_package">Die Daten der Community können unvollständig oder veraltet sein. Prüfe Zutaten und Allergene immer auf der Verpackung.</string>
+    <string name="product_saved">Auf diesem Gerät gespeichert: %1$s</string>
+    <string name="product_saved_stale">Ältere gespeicherte Daten: %1$s</string>
+    <string name="product_refresh">Aktualisieren</string>
+    <string name="product_close">Schließen</string>
+    <string name="product_source">Auf Open Food Facts ansehen oder mitwirken</string>
+    <string name="product_disabled">Die Online-Suche nach Barcodes ist aus. Gespeicherte Details bleiben offline verfügbar.</string>
+    <string name="product_settings">Sucheinstellungen</string>
+    <string name="product_rate_limited">Open Food Facts ist ausgelastet. Warte eine Minute, bevor du es erneut versuchst. Gespeicherte Details bleiben verfügbar.</string>
+    <string name="product_unavailable">Die Produktdetails konnten nicht aktualisiert werden. Gespeicherte Daten werden unten angezeigt.</string>
+    <string name="product_source_updated">Quelle aktualisiert: %1$s</string>
+    <string name="product_not_found">Für diesen Barcode wurde kein Produkt gefunden. Du kannst fehlende Angaben auf Open Food Facts ergänzen.</string>
+</resources>

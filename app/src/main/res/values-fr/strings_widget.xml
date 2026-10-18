@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_open">Ouvrir la liste de courses</string>
+    <string name="widget_empty">Plus rien à acheter.</string>
+    <string name="widget_item">☐ %1$s %2$s</string>
+    <plurals name="widget_count">
+        <item quantity="one">%1$d article à acheter</item>
+        <item quantity="other">%1$d articles à acheter</item>
+        <item quantity="many">%1$d articles à acheter</item>
+    </plurals>
+    <plurals name="widget_more">
+        <item quantity="one">et %1$d autre</item>
+        <item quantity="other">et %1$d autres</item>
+        <item quantity="many">et %1$d autres</item>
+    </plurals>
+</resources>

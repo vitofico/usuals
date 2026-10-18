@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_privacy_details">Privacy details</string>
+    <string name="settings_privacy_hide">Hide privacy details</string>
+    <string name="settings_expanded">Expanded</string>
+    <string name="settings_collapsed">Collapsed</string>
+    <string name="settings_typography_credit">Typography: Manrope. SIL Open Font License 1.1. The license is included in the app.</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+
+    <!-- Model -->
+    <string name="settings_model_title">Model</string>
+    <string name="settings_model_intro">Optional. A model reads recipes that are not published in a standard format. Everything else works without one.</string>
+    <string name="settings_model_provider">Provider</string>
+    <string name="settings_provider_anthropic" translatable="false">Anthropic</string>
+    <string name="settings_provider_openai">OpenAI-compatible</string>
+    <string name="settings_provider_ollama" translatable="false">Ollama</string>
+    <string name="settings_model_base_url">Base URL</string>
+    <string name="settings_model_name">Model</string>
+    <string name="settings_model_ollama_hint">10.0.2.2 is the emulator\'s route to your computer. On a real phone use the address of the machine running Ollama.</string>
+    <string name="settings_model_local_example">Example local model: qwen3.8:27b-mlx</string>
+    <string name="settings_model_is_local">Stays on my network</string>
+    <string name="settings_model_is_local_hint">Mark an endpoint you run on your network. This label does not verify where it is hosted.</string>
+    <string name="settings_model_api_key">API key</string>
+    <string name="settings_model_api_key_hint">Stored in the Android keystore. It cannot be read back from here, from a log, or from an error report.</string>
+    <string name="settings_model_api_key_saved">A key is stored.</string>
+    <string name="settings_model_api_key_missing">No key stored.</string>
+    <string name="settings_model_api_key_unavailable">The keystore on this phone is not responding, so whether a key is stored is unknown.</string>
+    <string name="settings_model_api_key_save">Save key</string>
+    <string name="settings_model_api_key_clear">Delete key</string>
+    <string name="settings_test_connection">Test connection</string>
+    <string name="settings_probe_running">Testing…</string>
+    <string name="settings_probe_unreachable">No answer.</string>
+    <string name="settings_probe_reachable">It answers.</string>
+    <string name="settings_probe_model_missing">It answers, but it does not know «%1$s».</string>
+    <string name="settings_probe_model_ok">It knows «%1$s».</string>
+    <string name="settings_probe_no_structured_output">this endpoint does not return structured output, so it cannot read recipes</string>
+    <string name="settings_probe_structured_ok">Structured output works. Recipe reading is available.</string>
+    <string name="settings_probe_local">This endpoint is marked local to your network.</string>
+    <string name="settings_probe_remote">It is a hosted endpoint: what you send it leaves your phone.</string>
+
+    <!-- Privacy -->
+    <string name="settings_privacy_title">Privacy</string>
+    <string name="settings_privacy_kept_title">What stays here</string>
+    <string name="settings_privacy_kept_capture">Your shopping list, history and suggestions are stored on this phone. Keyboard capture and purchase memory work offline.</string>
+    <string name="settings_privacy_kept_secrets">Your model key is stored with Android Keystore, excluded from exports and logs, and used to authenticate with the model endpoint you configure.</string>
+    <string name="settings_privacy_edges_title">What does leave</string>
+    <string name="settings_privacy_edge_voice">Voice uses on-device recognition when available. Otherwise the selected Android speech service may send audio off this phone. Keyboard entry works offline.</string>
+    <string name="settings_privacy_edge_recipe">Reading a recipe link sends the page URL to that site from your phone. The page text goes to a model only when you tap Read with my model.</string>
+    <string name="settings_privacy_edge_cloud">A hosted model receives the recipe text you submit. Check the endpoint you configure.</string>
+    <string name="settings_privacy_local_path">For a model on your network, point an OpenAI-compatible endpoint at your own runtime.</string>
+    <string name="settings_privacy_local_now">This endpoint is marked local. Submitted recipe text goes there; its privacy depends on how it is run.</string>
+    <string name="settings_privacy_cloud_now">Your provider setting is %1$s and marked hosted. Submitted recipe text goes to that endpoint.</string>
+
+    <!-- Budget -->
+    <string name="settings_budget_title">Budget</string>
+    <string name="settings_budget_daily">Model calls per day</string>
+    <string name="settings_budget_daily_hint">A number you can see and change, that stops the app rather than surprising you. 0 turns the model off completely.</string>
+    <string name="settings_budget_today">Today you are at %1$d of %2$d.</string>
+    <plurals name="settings_budget_today_disabled">
+        <item quantity="one">The model is off. Today you are at %1$d call.</item>
+        <item quantity="other">The model is off. Today you are at %1$d calls.</item>
+    </plurals>
+    <string name="settings_budget_exhausted">Today\'s calls are used up. Recipes published in a standard format still import.</string>
+
+    <!-- About -->
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_version">Version %1$s (%2$d)</string>
+    <string name="settings_about_licence">Licence %1$s</string>
+    <string name="settings_about_off_attribution">Product data comes from Open Food Facts, under the ODbL (Open Database License).</string>
+    <string name="settings_about_no_telemetry">No telemetry, analytics or crash-reporting services.</string>
+    <string name="settings_probe_unexpected">The connection test could not finish. Try again.</string>
+    <string name="model_problem_unreachable">Could not reach the endpoint. Check the address and connection.</string>
+    <string name="model_problem_key_rejected">The provider rejected the key. Check it in Settings.</string>
+    <string name="model_problem_not_found">The endpoint or model was not found. Check the configuration.</string>
+    <string name="model_problem_rate_limited">The provider is limiting requests. Try again later.</string>
+    <string name="model_problem_http">The provider returned HTTP %1$d. Try again later.</string>
+    <string name="model_problem_empty">The provider returned no content. Check the model and try again.</string>
+    <string name="model_problem_json">The provider did not return structured data. Try another model.</string>
+    <string name="model_problem_unsupported">Choose Ollama or an OpenAI-compatible provider. This build does not support the Anthropic protocol.</string>
+    <string name="model_problem_endpoint">Enter the endpoint address.</string>
+    <string name="model_problem_model">Enter the model name.</string>
+    <string name="model_problem_configuration">Complete the provider settings and try again.</string>
+    <string name="model_problem_budget">Today’s model call limit has been reached, or model calls are disabled.</string>
+</resources>

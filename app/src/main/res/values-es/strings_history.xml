@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_intro">Todas tus compras terminadas, en tu historial.</string>
+    <string name="history_transfer_title">Conserva tu historial</string>
+    <string name="history_title">Historial</string>
+    <string name="history_back">Atrás</string>
+    <string name="history_export">Exportar datos</string>
+    <string name="history_import">Importar datos</string>
+    <string name="history_transfer_hint">Las exportaciones incluyen tus listas con nombre, compras, artículos comprados y preferencias. Las claves, la pertenencia a grupos y los datos de productos en caché se quedan en el teléfono.</string>
+    <string name="history_imported">Datos de compra importados.</string>
+    <string name="history_exported">Datos de compra exportados.</string>
+    <string name="history_invalid_file">No es una exportación compatible de %1$s. Elige un archivo JSON de %1$s.</string>
+    <string name="history_invalid_date">Introduce una fecha válida con formato AAAA-MM-DD, de hoy o anterior.</string>
+    <string name="history_empty_import">No se encontraron artículos. Pega una lista de la compra y vuelve a intentarlo.</string>
+    <string name="history_failed">No se pudieron guardar o leer los datos. Tu lista sigue aquí. Inténtalo de nuevo.</string>
+    <string name="history_dismiss">Cerrar</string>
+    <string name="history_past_title">Añadir una compra anterior</string>
+    <string name="history_date_label">Fecha de compra (AAAA-MM-DD)</string>
+    <string name="history_paste_label">Pega los artículos que compraste</string>
+    <string name="history_import_past">Guardar compra anterior</string>
+    <string name="history_empty">Termina una compra para empezar tu historial.</string>
+    <plurals name="history_item_count">
+        <item quantity="one">%1$d artículo</item>
+        <item quantity="other">%1$d artículos</item>
+        <item quantity="many">%1$d artículos</item>
+    </plurals>
+    <string name="history_purchase">%1$s %2$s</string>
+    <string name="finish_shop">Terminar compra</string>
+    <string name="finish_shop_question">¿Terminar esta compra?</string>
+    <string name="finish_shop_all_checked">Todo está marcado. ¿Guardar estos artículos como una compra?</string>
+    <string name="finish_shop_keep_open">Mantener lista abierta</string>
+    <plurals name="finish_shop_saved">
+        <item quantity="one">Se guardó %1$d artículo como una compra.</item>
+        <item quantity="other">Se guardaron %1$d artículos como una compra.</item>
+        <item quantity="many">Se guardaron %1$d artículos como una compra.</item>
+    </plurals>
+    <string name="finish_shop_undo">Deshacer</string>
+    <plurals name="history_stale_question">
+        <item quantity="one">¿Guardar %1$d artículo marcado anteriormente como una compra?</item>
+        <item quantity="other">¿Guardar estos %1$d artículos marcados anteriormente como una compra?</item>
+        <item quantity="many">¿Guardar estos %1$d artículos marcados anteriormente como una compra?</item>
+    </plurals>
+    <string name="history_not_now">Ahora no</string>
+    <string name="history_still_needed">¿Todavía lo necesitas?</string>
+    <string name="history_carry_over">Estos artículos llevan varias compras pendientes: %1$s</string>
+    <string name="history_keep">Conservar</string>
+    <string name="history_remove">Eliminar</string>
+    <string name="share_list">Compartir lista</string>
+    <string name="share_open_item">☐ %1$s %2$s</string>
+    <string name="share_checked_item">☑ %1$s %2$s</string>
+</resources>

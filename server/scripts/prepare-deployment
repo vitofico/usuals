@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+"""Prepare or verify a private local deployment bundle. Never contacts Kubernetes."""
+import argparse, hashlib, ipaddress, json, os, pathlib, re, shutil, subprocess, tempfile
+from urllib.parse import urlsplit
+
+if not __debug__:
+    raise SystemExit('Deployment preparation requires Python validation enabled; remove -O/PYTHONOPTIMIZE')
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+POSTGRES = 'postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea'
+
+def digest(path):
+    h = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''): h.update(chunk)
+    return h.hexdigest()
+
+def run(args, **kwargs):
+    return subprocess.check_output(args, stderr=subprocess.PIPE, **kwargs)
+
+def platform_manifest(metadata):
+    assert metadata['Architecture'] == 'amd64' and metadata['Os'] == 'linux'
+    descriptor = metadata['Descriptor']
+    assert descriptor['mediaType'] in ('application/vnd.oci.image.manifest.v1+json', 'application/vnd.docker.distribution.manifest.v2+json'), 'Expected a platform image manifest, not an index'
+    assert re.fullmatch('sha256:[0-9a-f]{64}', descriptor['digest'])
+    return descriptor['digest']
+
+def inventory(path):
+    if path is None: return None
+    value = json.loads(path.read_text())
+    assert set(value) == {'hostname', 'trustedProxyCidrs', 'storageClass', 'backupServer', 'backupPath', 'ingressNamespace', 'ingressPodLabels'}
+    def dns(value):
+        return isinstance(value, str) and len(value) <= 253 and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', part) for part in value.split('.'))
+    assert dns(value['hostname']) and '.' in value['hostname']
+    assert dns(value['storageClass'])
+    assert re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', value['ingressNamespace'])
+    assert dns(value['backupServer'])
+    assert isinstance(value['trustedProxyCidrs'], list) and 0 < len(value['trustedProxyCidrs']) <= 16
+    for cidr in value['trustedProxyCidrs']:
+        assert isinstance(cidr, str) and '%' not in cidr
+        net = ipaddress.ip_network(cidr, strict=True)
+        assert net.version != 6 or net.network_address.ipv4_mapped is None
+        assert net.prefixlen > 0 and not net.is_multicast and not net.is_unspecified
+    assert value['backupPath'].startswith('/') and not any(x in ('..', '.') for x in value['backupPath'].split('/'))
+    assert re.fullmatch(r'/[A-Za-z0-9_./-]+', value['backupPath'])
+    assert isinstance(value['ingressPodLabels'], dict) and value['ingressPodLabels']
+    def label_name(text):
+        return isinstance(text, str) and bool(re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9._-]{0,61}[A-Za-z0-9])?', text))
+    for key, label in value['ingressPodLabels'].items():
+        parts = key.split('/')
+        assert len(parts) in (1, 2) and label_name(parts[-1])
+        assert len(parts) == 1 or dns(parts[0])
+        assert label_name(label)
+    return value
+
+def documents(data):
+    return json.loads(run(['ruby', '-ryaml', '-rjson', '-e', 'puts JSON.generate(YAML.load_stream(STDIN.read))'], input=data))
+
+def oidc_inventory(path):
+    if path is None: return None
+    value = json.loads(path.read_text())
+    assert set(value) == {'issuer', 'clientId', 'adminSubjects', 'allowedGroups', 'egressCidrs'}
+    issuer_text = value['issuer']
+    assert isinstance(issuer_text, str) and issuer_text.startswith('https://') and len(issuer_text) <= 2048 and issuer_text.isascii()
+    assert not re.search(r'%(?![0-9A-Fa-f]{2})', issuer_text)
+    issuer = urlsplit(issuer_text)
+    assert issuer.scheme == 'https' and issuer.hostname and issuer.port in (None, 443)
+    assert issuer.username is None and issuer.password is None and not issuer.query and not issuer.fragment
+    assert value['issuer'].endswith('/') and not any(x in ('.', '..') for x in issuer.path.split('/'))
+    assert not any(c.isspace() or c == '\\' or ord(c) < 32 for c in value['issuer'])
+    assert len(issuer.hostname) <= 253 and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', part) for part in issuer.hostname.split('.'))
+    assert re.fullmatch(r"/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*", issuer.path) and '//' not in issuer.path
+    def runtime_text(text, maximum):
+        return isinstance(text, str) and text.strip() and len(text.encode('utf-16-le', errors='strict')) // 2 <= maximum and not any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in text)
+    assert runtime_text(value['clientId'], 256)
+    for field in ('adminSubjects', 'allowedGroups'):
+        entries = value[field]
+        assert isinstance(entries, list) and 0 < len(entries) <= 100 and len(set(entries)) == len(entries)
+        assert all(runtime_text(x, 255) for x in entries)
+        assert len(json.dumps(entries).encode('utf-8')) <= 32768, 'Identity set exceeds runtime JSON limit'
+    assert isinstance(value['egressCidrs'], list) and 0 < len(value['egressCidrs']) <= 16
+    for cidr in value['egressCidrs']:
+        assert isinstance(cidr, str) and '%' not in cidr
+        network = ipaddress.ip_network(cidr, strict=True)
+        assert network.prefixlen == network.max_prefixlen and not network.is_multicast and not network.is_unspecified
+        assert network.version != 6 or network.network_address.ipv4_mapped is None
+    assert 'REPLACE_' not in json.dumps(value), 'Verify identity inventory before configuration'
+    return value
+
+def render(image, postgres, config, oidc=None, local_accounts=False):
+    kustomize = shutil.which('kustomize') or '/opt/homebrew/bin/kustomize'
+    normal = documents(run([kustomize, 'build', str(ROOT/'deploy/k8s')]))
+    jobs = [x for p in sorted((ROOT/'deploy/k8s/jobs').glob('*.yaml')) for x in documents(p.read_bytes())]
+    for obj in normal + jobs:
+        assert obj['kind'] != 'Secret'
+        spec = obj.get('spec', {})
+        if obj['kind'] == 'CronJob': spec = spec['jobTemplate']['spec']
+        pod = spec.get('template', {}).get('spec')
+        if pod:
+            for container in pod['containers']:
+                if container['image'] == POSTGRES:
+                    container['image'] = postgres
+                    container['imagePullPolicy'] = 'Never'
+                else:
+                    assert container['image'] == 'usuals-relay:deployment-not-approved'
+                if container['name'] == 'relay':
+                    assert container['image'] == 'usuals-relay:deployment-not-approved'
+                    container['image'] = image
+                    if config:
+                        for env in container.get('env', []):
+                            if env['name'] == 'USUALS_ORIGIN': env['value'] = 'https://' + config['hostname']
+                            if env['name'] == 'USUALS_TRUSTED_PROXY_CIDRS': env['value'] = ','.join(config['trustedProxyCidrs'])
+        if not config: continue
+        if obj['kind'] == 'Ingress':
+            spec['tls'][0]['hosts'] = [config['hostname']]
+            spec['rules'][0]['host'] = config['hostname']
+        if obj['kind'] == 'PersistentVolumeClaim' and spec.get('storageClassName'):
+            spec['storageClassName'] = config['storageClass']
+        if obj['kind'] == 'PersistentVolume' and 'nfs' in spec:
+            spec['nfs'] = {'server': config['backupServer'], 'path': config['backupPath']}
+        if obj['kind'] == 'NetworkPolicy' and obj['metadata']['name'] == 'relay-ingress':
+            spec['ingress'][0]['from'] = [{'namespaceSelector': {'matchLabels': {'kubernetes.io/metadata.name': config['ingressNamespace']}}, 'podSelector': {'matchLabels': config['ingressPodLabels']}}]
+    if oidc or local_accounts:
+        assert config is not None, 'Configured accounts also require verified base inventory'
+        deployment = next(obj for obj in normal if obj['kind'] == 'Deployment' and obj['metadata']['name'] == 'usuals-relay')
+        pod = deployment['spec']['template']['spec']
+        relay = next(container for container in pod['containers'] if container['name'] == 'relay')
+        settings = {'USUALS_LOCAL_AUTH_ENABLED':str(local_accounts).lower()}
+        if oidc:
+            settings.update({'USUALS_OIDC_ENABLED':'true', 'USUALS_OIDC_ISSUER':oidc['issuer'], 'USUALS_OIDC_CLIENT_ID':oidc['clientId'],
+                'USUALS_OIDC_CLIENT_SECRET_FILE':'/run/oidc/client-secret', 'USUALS_OIDC_ADMIN_SUBJECTS':json.dumps(oidc['adminSubjects']),
+                'USUALS_OIDC_ALLOWED_GROUPS':json.dumps(oidc['allowedGroups'])})
+            relay.setdefault('volumeMounts', []).append({'name':'oidc-secret','mountPath':'/run/oidc/client-secret','subPath':'client-secret','readOnly':True})
+            pod.setdefault('volumes', []).append({'name':'oidc-secret','secret':{'secretName':'usuals-oidc','defaultMode':0o440}})
+            normal.append({'apiVersion':'networking.k8s.io/v1','kind':'NetworkPolicy','metadata':{'name':'oidc-egress','namespace':deployment['metadata']['namespace']},
+                'spec':{'podSelector':{'matchLabels':{'app':'usuals-relay'}},'policyTypes':['Egress'],
+                    'egress':[{'to':[{'ipBlock':{'cidr':cidr}} for cidr in oidc['egressCidrs']],'ports':[{'protocol':'TCP','port':443}]}]}})
+        assert not any(env['name'] in settings for env in relay['env'])
+        relay['env'] += [{'name':name, 'value':value} for name,value in settings.items()]
+    assert len([c for obj in normal+jobs for c in obj.get('spec',{}).get('template',{}).get('spec',{}).get('containers',[]) if c['name']=='relay' and c['image']==image]) == 3
+    def list_of(items): return json.dumps({'apiVersion':'v1','kind':'List','items':items}, indent=2) + '\n'
+    return list_of(normal), jobs
+
+def verify(folder):
+    value = json.loads((folder/'bundle.json').read_text())
+    assert value['version'] == 1 and value['deploymentApproved'] is False
+    for name, expected in value['sha256'].items():
+        path = pathlib.PurePosixPath(name)
+        assert not path.is_absolute() and '..' not in path.parts and name != 'bundle.json'
+        file = folder/name
+        assert not any((folder/pathlib.Path(*path.parts[:i])).is_symlink() for i in range(1, len(path.parts) + 1))
+        assert not file.is_symlink() and file.is_file() and digest(file) == expected, f'Changed bundle file: {name}'
+    files = {str(x.relative_to(folder)) for x in folder.rglob('*') if x.is_file()}
+    assert files == set(value['sha256']) | {'bundle.json'}, 'Unexpected or missing bundle files'
+    print('PASS: bundle integrity; deployment is still unapproved')
+
+def prepare(args):
+    config = inventory(args.inventory)
+    oidc = oidc_inventory(args.oidc_inventory)
+    assert not (oidc or args.local_accounts) or config is not None, 'Configured accounts require --inventory'
+    output = args.output.resolve()
+    assert output.parent.is_dir() and not output.exists(), 'Output must be a new directory with an existing parent'
+    assert output != ROOT and ROOT not in output.parents, 'Keep bundles outside the source repository'
+    status = run(['git','status','--porcelain'],cwd=ROOT).decode()
+    assert not status.strip(), 'Commit and verify the source before preparing a deployment bundle'
+    commit = run(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip()
+    branch = run(['git','branch','--show-current'],cwd=ROOT).decode().strip()
+    staging = pathlib.Path(tempfile.mkdtemp(prefix='.usuals-bundle-', dir=output.parent))
+    try:
+        with (staging/'build.log').open('wb') as log:
+            subprocess.run([str(ROOT/'scripts/dgradle'),'-p','server','installDist','--no-watch-fs'],cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,check=True)
+            subprocess.run([str(ROOT/'server/scripts/check-manifests')],stdout=log,stderr=subprocess.STDOUT,check=True)
+            temporary_tag = 'usuals-relay:bundle-' + commit[:12]
+            subprocess.run(['docker','build','--pull=false','--network=none','--platform','linux/amd64','-f',str(ROOT/'server/Dockerfile'),'-t',temporary_tag,str(ROOT/'server/build/install/usuals-relay')],stdout=log,stderr=subprocess.STDOUT,check=True)
+        relay = json.loads(run(['docker','image','inspect','--platform','linux/amd64',temporary_tag]))[0]
+        relay_manifest = platform_manifest(relay)
+        image_id = relay['Id']
+        assert re.fullmatch('sha256:[0-9a-f]{64}', image_id)
+        # Engine image IDs differ between image stores. Keep the inspected platform and tag.
+        image = 'usuals-relay:sha256-' + image_id.removeprefix('sha256:')
+        run(['docker','tag',temporary_tag,image])
+        subprocess.run(['docker','save','--platform','linux/amd64','--output',str(staging/'relay-image.tar'),image],check=True)
+        with (staging/'build.log').open('ab') as log:
+            subprocess.run(['docker','pull','--platform','linux/amd64',POSTGRES],stdout=log,stderr=subprocess.STDOUT,check=True)
+        pg = json.loads(run(['docker','image','inspect','--platform','linux/amd64',POSTGRES]))[0]
+        pg_manifest = platform_manifest(pg)
+        pg_source = 'postgres@' + pg_manifest
+        with (staging/'build.log').open('ab') as log:
+            subprocess.run(['docker','pull','--platform','linux/amd64',pg_source],stdout=log,stderr=subprocess.STDOUT,check=True)
+        postgres = 'usuals-postgres:sha256-' + pg['Id'].removeprefix('sha256:')
+        run(['docker','tag',pg_source,postgres])
+        subprocess.run(['docker','save','--platform','linux/amd64','--output',str(staging/'postgres-image.tar'),postgres],check=True)
+        manifests, jobs = render(image, postgres, config, oidc, args.local_accounts)
+        (staging/'manifests.json').write_text(manifests)
+        (staging/'operator-jobs').mkdir()
+        for job in jobs:
+            (staging/'operator-jobs'/(job['metadata']['name']+'.json')).write_text(json.dumps(job,indent=2)+'\n')
+        (staging/'inventory.json').write_text(json.dumps(config,indent=2)+'\n')
+        (staging/'identity-inventory.json').write_text(json.dumps(oidc,indent=2)+'\n')
+        for source, target in [('docs/sync/runbook.md','RUNBOOK.md'),('docs/sync/recovery-copy.md','RECOVERY.md'),('deploy/README.md','DEPLOYMENT.md')]:
+            shutil.copyfile(ROOT/source,staging/target)
+        shutil.copyfile(ROOT/'docs/sync/web-identity.md',staging/'IDENTITY.md')
+        shutil.copyfile(ROOT/'web/PROTOCOL.md',staging/'BROWSER.md')
+        (staging/'REVIEW.txt').write_text('Deployment is NOT approved. Do not apply or import this bundle yet.\n'
+            'Candidate bundles retain an invalid trusted-proxy marker and cannot serve traffic.\n'
+            'Before approval: verify inventory, TLS/CNI/storage, private secrets and independent identity storage; rehearse encrypted off-site restore and authenticated capacity; arrange the household pilot.\n'
+            'Operator jobs are separate files: initialize identity once, inspect its result, then migrate separately in runbook order.\n'
+            'After approval, import both image tar files using the cluster runtime and verify its tag/image ID and platform. These are local content-derived tags, not registry references.\n')
+        distribution = ROOT/'server/build/install/usuals-relay'
+        files = {str(p.relative_to(distribution)): digest(p) for p in sorted(distribution.rglob('*')) if p.is_file()}
+        value = {'version':1,'deploymentApproved':False,'status':'configured' if config else 'candidate','oidcConfigured':oidc is not None,'localAccountsEnabled':args.local_accounts,'commit':commit,'branch':branch,'platform':'linux/amd64',
+            'image':image,'imageId':image_id,'imageManifestDigest':relay_manifest,'postgresSource':POSTGRES,'postgresImage':postgres,'postgresImageId':pg['Id'],'postgresManifestDigest':pg_manifest,'distributionSha256':files,
+            'sha256':{str(p.relative_to(staging)):digest(p) for p in sorted(staging.rglob('*')) if p.is_file()}}
+        (staging/'bundle.json').write_text(json.dumps(value,indent=2)+'\n')
+        verify(staging)
+        assert not run(['git','status','--porcelain'],cwd=ROOT).decode().strip(), 'Source changed while preparing'
+        assert run(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip() == commit, 'Source commit changed while preparing'
+        staging.rename(output)
+        print('Prepared '+value['status']+' bundle: '+str(output))
+    finally:
+        if staging.exists(): shutil.rmtree(staging)
+
+def main():
+    os.umask(0o077)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--inventory',type=pathlib.Path,help='Verified nonsecret JSON inventory; omit for a fail-closed candidate')
+    parser.add_argument('--oidc-inventory',type=pathlib.Path,help='Verified nonsecret Authentik settings and exact TLS egress hosts; requires --inventory')
+    parser.add_argument('--local-accounts',action='store_true',help='Enable standalone accounts; first admin is an explicit offline operator step, requires --inventory')
+    parser.add_argument('--output',type=pathlib.Path)
+    parser.add_argument('--verify',type=pathlib.Path)
+    args = parser.parse_args()
+    if args.verify:
+        assert args.output is None and args.inventory is None and args.oidc_inventory is None and not args.local_accounts
+        verify(args.verify.resolve())
+    else:
+        assert args.output is not None, '--output is required'
+        prepare(args)
+
+if __name__ == '__main__': main()
