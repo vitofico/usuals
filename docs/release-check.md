@@ -1102,8 +1102,9 @@ elapsed household pilot remain separate acceptance gates.
   was removed after configuring the four GitHub secrets.
 - F-Droid inclusion request: https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283.
   All nine pipeline jobs passed, including an independent source build and
-  signature-copy verification against the published developer binary. Inclusion
-  awaits maintainer review. Obtainium's public import page resolves successfully.
+  signature-copy verification against the published developer binary. The request
+  was subsequently closed; see the policy outcome below. Obtainium's public import
+  page resolves successfully.
 - An isolated Linux filesystem probe confirmed root-owned build outputs block
   runner signing and runner-owned Git checkouts need explicit container trust.
   The release workflow restores artifact ownership after Docker assembly and
@@ -1125,5 +1126,11 @@ elapsed household pilot remain separate acceptance gates.
   queued data. CodeQL has zero open alerts. The fresh runner used the configured
   signing secrets, reproduced the exact APK and verified that all three release
   assets were unchanged. All 12 native libraries pass 16 KB checks.
-- Public distribution work is complete. The F-Droid inclusion request remains
-  under maintainer review after all nine independent pipeline jobs passed.
+- GitHub Releases and Obtainium distribution are complete. F-Droid closed the
+  initial request on 2026-10-19 despite all nine pipeline jobs passing. The closure
+  cites the requirement for more than three months of maintenance, the merge
+  request template not being followed, and insufficient unique features. Vito
+  instructed us not to resubmit because the maintenance requirement is unmet.
+  No replacement request was opened. Future consideration must address all
+  closure reasons, not only project age. This status correction changes no APK,
+  source tag, signing identity or release asset.

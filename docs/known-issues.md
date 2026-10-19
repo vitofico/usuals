@@ -33,6 +33,8 @@ deferred when the phone was returned. Live voice was not exercised in this
 follow-up. See the extended QA record in [release checks](release-check.md).
 
 Signed APKs are distributed through GitHub Releases and Obtainium. F-Droid
-inclusion requires maintainer review; see the [distribution guide](distribution.md).
+closed the initial submission, including because Usuals has not been maintained
+for more than three months. Resubmission is paused; see the
+[distribution guide](distribution.md) for all closure feedback.
 Docker builds remain required under ADR-0010. See
 [release checks](release-check.md) for the verified local scope.

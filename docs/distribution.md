@@ -21,9 +21,17 @@ Add `https://github.com/vitofico/usuals` or use the
 [app link](../distribution/obtainium-link.txt). Only stable `app-release.apk`
 assets are selected. There is no separate Obtainium store submission.
 
-F-Droid inclusion is [submitted for review](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283). Do not interpret the prepared
-[metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) as an accepted
-listing. It names the public source/tag, exact version, Java 21/SDK 34 build,
+F-Droid [closed the initial submission on 2026-10-19](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283),
+citing the requirement for more than three months of maintenance, failure to
+follow its merge request template, and insufficient unique features. The
+maintainer has paused resubmission because Usuals does not meet the maintenance
+requirement. Passing the build pipeline does not establish inclusion eligibility.
+Any future submission must also address the template and distinctiveness feedback;
+reaching the maintenance threshold alone does not guarantee acceptance.
+
+Usuals is not listed on F-Droid. The prepared
+[metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) is retained for
+future consideration. It names the public source/tag, exact version, Java 21/SDK 34 build,
 upstream APK and allowed signing certificate. The recipe requests signature
 preservation through reproducible builds. Optional proprietary model services
 are declared as `NonFreeNet`; offline lists and local models need none.
