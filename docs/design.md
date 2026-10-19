@@ -18,8 +18,12 @@ artwork is `web/assets/mark.svg`: champagne on a rounded aubergine tile. Android
 header and empty state retain those brand colours across all palettes. The
 launcher uses the same geometry within the adaptive icon safe area; its monochrome
 layer reuses the foreground drawable so the silhouettes cannot diverge. Android
-controls the launcher's outer mask and themed colours. No bitmap, generated asset
-or remote request is needed.
+controls the launcher's outer mask and themed colours. No bitmap or remote
+request is needed on Android. Widget branding uses the same
+tile, and notifications share the foreground silhouette. `scripts/sync-brand-assets`
+exports the canonical SVG to Android, the README cover and the store icon; its
+`--check` mode detects drift. Authentik references the same SVG served by the web
+app. The store's PNG is a render of that artwork, not a separate design.
 
 ## Palettes
 

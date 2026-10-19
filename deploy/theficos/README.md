@@ -118,6 +118,14 @@ kustomize build deploy/theficos
 For live inspection use SSH and `microk8s kubectl` on the node, following the
 cluster repository's conventions. Do not use an unrelated local kubectl context.
 
+## Application icon
+
+Authentik's Usuals application references
+`https://usuals.theficos.dedyn.io/assets/mark.svg`, the canonical aubergine and
+champagne dotted U. On 2026-10-19 the application metadata's `meta_icon` was
+updated and the served SVG verified. No access policy, user, provider or
+deployment changed. Keep this reference aligned with `web/assets/mark.svg`.
+
 ## Remaining operational gates
 
 On 2026-10-19 Vito explicitly approved copying encrypted recovery material to

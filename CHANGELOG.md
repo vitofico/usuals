@@ -5,6 +5,8 @@
 - Matched Android's launcher, themed icon, list header and empty state to the
   web version's dotted U, with the original aubergine and champagne colours.
 - Removed the old basket mark and separate monochrome drawable.
+- Applied the same mark to widgets, store metadata and refreshed documentation
+  screenshots. Added canonical SVG exports to keep the artwork consistent.
 
 ## Unreleased: selectable palettes (2026-10-18)
 
@@ -26,7 +28,7 @@ listing has been published. See
 [release checks](docs/release-check.md) and [known issues](docs/known-issues.md).
 
 - Named the product Usuals and refined Android with an ivory/aubergine palette,
-  editorial headings, restrained champagne details and a new U/basket icon.
+  editorial headings, restrained champagne details and the dotted U icon.
 - Added an encrypted Usuals browser editor with complete English, Spanish,
   Italian, French and German catalogs, owner-verified joining, durable pending
   edits and JVM/browser protocol fixtures. Owner/recovery actions stay in Android.
