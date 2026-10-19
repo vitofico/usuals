@@ -21,6 +21,14 @@ import { body } from "../src/membership.mjs";
 import { open } from "../src/crypto.mjs";
 import { snapshotDecode, reduce } from "../src/reducer.mjs";
 const directory = process.env.USUALS_WEB_INTEROP_DIR;
+test("membership denial accepts its empty 200 response only when explicitly requested", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(null, { status: 200 });
+    assert.equal(await request("/v1/households/synthetic/join-requests/synthetic/deny", { method: "POST", empty: true }), null);
+    await assert.rejects(request("/api/me"));
+  } finally { globalThis.fetch = original; }
+});
 async function setup() {
   const f = JSON.parse(
       await readFile(join(directory, "kotlin-input.json"), "utf8"),

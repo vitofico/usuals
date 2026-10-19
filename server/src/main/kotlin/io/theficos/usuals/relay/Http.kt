@@ -127,6 +127,9 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             post("/api/devices/link") { run {
                 call.privateResponse(); webIdentity.link(call.webCaller(webIdentity), call.body(16384)); call.respond(HttpStatusCode.NoContent)
             } }
+            post("/api/households") { run {
+                call.privateResponse(); call.json(webIdentity.createHousehold(call.webCaller(webIdentity), call.body(65536), relay), HttpStatusCode.Created)
+            } }
             get("/api/admin/users") { run { call.privateResponse(); call.json(webIdentity.users(call.webToken(webIdentity), call.request.queryParameters["after"])) } }
             post("/api/admin/users/{id}") { run {
                 call.privateResponse(); call.json(webIdentity.update(call.webCaller(webIdentity), call.routeId("id"), call.body(1024)))
@@ -171,6 +174,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         post("/v1/join-requests") { run { call.json(service.join(call.body(), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty())), HttpStatusCode.Accepted) } }
         get("/v1/households/{h}/join-requests") { run { call.json(service.pending(call.bearer(), call.routeId("h"))) } }
         post("/v1/households/{h}/join-requests/{r}/deny") { run { service.deny(call.bearer(), call.routeId("h"), call.routeId("r")); call.respond(HttpStatusCode.OK) } }
+        post("/v1/households/{h}/join-requests/{r}/expired") { run { call.json(service.expired(call.bearer(), call.routeId("h"), call.routeId("r"), call.body(16384))) } }
         get("/v1/households/{h}/membership") { run(bulk = true) { call.json(relay.membership(call.bearer(), call.routeId("h"), call.cursor("afterEpoch"))) } }
         post("/v1/households/{h}/membership") { run(bulk = true) { call.json(service.change(call.bearer(), call.routeId("h"), call.body(8 * 1024 * 1024)).response()) } }
         get("/v1/households/{h}/lists") { run { call.json(relay.lists(call.bearer(), call.routeId("h"))) } }

@@ -31,9 +31,9 @@ ordinary invite or password reset. Optional OIDC allowed groups must be
 a signed array in the ID token, and at least one configured group must match.
 Without that optional filter, Authentik's application policy controls admission.
 
-Account sign-in never creates a household, obtains its keys, approves a join,
+Account sign-in alone never creates a household, obtains its keys, approves a join,
 resets encryption or bypasses verified recovery. The relay continues to store
-opaque ciphertext. A browser device first follows the existing invitation,
+opaque ciphertext. A joining browser device follows the existing invitation,
 fingerprint verification, owner approval and signed manifest protocol. It then
 links its existing principal with a signed session challenge, an active account
 cookie and CSRF proof. Signing and encryption private keys remain in the browser.
@@ -201,3 +201,18 @@ Sources: [Authentik OAuth2 provider and endpoint documentation](https://docs.goa
 and [OpenID Connect Core validation rules](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
 Password parameters follow the [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 and the password-length baseline in [NIST SP 800-63B](https://pages.nist.gov/800-63-4/sp800-63b.html).
+
+## Web-first household setup
+
+An admitted local or SSO account may explicitly create its first household in the
+web app after unlocking its separate browser vault. It generates owner and recovery
+keys locally, requires saving and verifying a native-compatible encrypted recovery
+kit, and binds its fresh owner device atomically through `POST /api/households`.
+This same-origin endpoint requires the session CSRF token, limits attempts to five
+per minute and retains a permanent maximum of ten created households per account.
+Exact genesis retries are idempotent for their original creating account.
+
+Existing Android lists still use Android setup and an owner-approved invitation.
+Web owners can invite, approve and remove devices. Recovery and advanced owner
+operations use Android and the saved kit. Neither admission nor administrative
+account access grants membership in somebody else's household.

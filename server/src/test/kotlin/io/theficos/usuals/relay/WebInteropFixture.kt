@@ -190,5 +190,19 @@ object WebInteropFixture {
         check(wrapped.listId == list && wrapped.epoch == 3L)
         check(SyncCrypto.unwrap(server.serverId, household, wrapped, recipient, recipient.publicKeys.signingPublicKey).contentEquals(key))
         println("PASS: browser-created envelope and HPKE package verified by JVM/Tink")
+        val created = Wire.json.parseToJsonElement(Files.readString(directory.resolve("browser-owner-output.json"))).jsonObject
+        val kit = RecoveryKits.open(Wire.decode(created.getValue("file").jsonPrimitive.content), created.getValue("secret").jsonPrimitive.content)
+        val signed = Wire.json.decodeFromJsonElement<SignedManifest>(created.getValue("signed"))
+        val restored = VerifiedMembership.genesis(kit.genesis, kit.server, kit.household, kit.genesis.signed().hash())
+            .advance(ManifestProof(signed.manifestBytes, signed.signature))
+        check(restored.manifest.action == "create_list" && restored.manifest.epoch == 2L)
+        val recoveryFingerprint = Wire.fingerprint(kit.server.serverId, kit.household, kit.recovery.publicKeys.signingPublicKey, kit.recovery.publicKeys.recipientPublicKey)
+        val recoveryPackage = signed.packages.single { it.recipientFingerprint == recoveryFingerprint }
+        val owner = restored.manifest.members.single().devices.single()
+        val listKey = SyncCrypto.unwrap(kit.server.serverId, kit.household, recoveryPackage, kit.recovery, owner.signingPublicKey)
+        val snapshot = Wire.json.decodeFromJsonElement<Snapshot>(created.getValue("snapshot"))
+        val projection = SnapshotCodec.decode(SyncCrypto.open(snapshot.envelope, listKey, owner.signingPublicKey, 10 * 1024 * 1024))
+        check(projection.name == "Our list" && projection.rows.isEmpty())
+        println("PASS: browser household, recovery kit, key packages and initial snapshot verified by native codecs")
     }
 }

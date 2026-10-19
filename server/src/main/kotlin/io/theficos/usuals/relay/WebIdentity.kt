@@ -1,6 +1,8 @@
 package io.theficos.usuals.relay
 
 import io.theficos.usuals.sync.Proof
+import io.theficos.usuals.sync.CreateHousehold
+import io.theficos.usuals.sync.ManifestProof
 import kotlinx.serialization.Serializable
 import java.security.MessageDigest
 import java.sql.Connection
@@ -152,6 +154,32 @@ class WebIdentity internal constructor(
         expect(c.query("SELECT 1 FROM web_device WHERE device=?", id(proof.deviceId)) { true }.isEmpty(), "conflict", 409)
         c.execute("INSERT INTO web_device VALUES (?,?)", id(proof.deviceId), id(caller.user.id))
         c.execute("UPDATE auth_session SET revoked=true WHERE device=?", id(proof.deviceId))
+    }
+    internal fun createHousehold(caller: WebCaller, request: CreateHousehold, relay: Relay): ManifestProof {
+        auth.limit("web-household:${caller.user.id}", 5)
+        return db.transaction { c ->
+            // Serialize quota checks with account disabling and bind before any device session can exist.
+            c.query("SELECT id FROM web_user WHERE id=? FOR UPDATE", id(caller.user.id)) { Unit }
+            current(c, caller)
+            val manifest = ManifestRules.genesis(request.manifest, relay.identity.serverId)
+            val existing = c.query("SELECT w.user_id,h.genesis FROM web_created_household w JOIN household h ON h.id=w.household WHERE w.household=?", id(manifest.householdId)) {
+                it.getObject(1).toString() to io.theficos.usuals.sync.Wire.encode(it.getBytes(2))
+            }.singleOrNull()
+            if (existing != null) {
+                expect(existing.first == caller.user.id && existing.second == request.manifest.hash(), "conflict", 409)
+                val signing = auth.consume(c, request.bootstrapProof, setOf("bootstrap")).second
+                expect(request.bootstrapProof.deviceId == manifest.signer && manifest.members.single().devices.single().signingPublicKey == signing)
+                request.manifest.proof()
+            } else {
+                expect(c.query("SELECT count(*) FROM web_created_household WHERE user_id=?", id(caller.user.id)) { it.getLong(1) }.single() < 10, "quota_exceeded", 429)
+                val keys = listOf(manifest.members.single().devices.single(), manifest.recovery)
+                expect(keys.all { key -> c.query("SELECT 1 FROM principal WHERE id=? OR signing=? OR recipient=?", id(key.id), raw(key.signingPublicKey), raw(key.recipientPublicKey)) { true }.isEmpty() }, "conflict", 409)
+                val proof = relay.create(c, request)
+                c.execute("INSERT INTO web_device VALUES (?,?)", id(manifest.signer), id(caller.user.id))
+                c.execute("INSERT INTO web_created_household VALUES (?,?)", id(manifest.householdId), id(caller.user.id))
+                proof
+            }
+        }
     }
     private fun current(c: Connection, caller: WebCaller): WebCaller {
         val active = c.query("SELECT s.revoked,s.expires,u.disabled,u.issuer FROM web_session s JOIN web_user u ON u.id=s.user_id WHERE s.id=? AND s.user_id=?", id(caller.session), id(caller.user.id)) { !it.getBoolean(1) && it.getLong(2) > clock() && !it.getBoolean(3) && config.accepts(it.getString(4)) }.singleOrNull()

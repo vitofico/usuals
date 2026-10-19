@@ -54,14 +54,14 @@ class RelayIntegrationTest {
         val file = directory.resolve("fence"); val original = uuid()
         java.nio.file.Files.writeString(file, original)
         try {
-            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (4,'future')") }
+            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (5,'future')") }
             assertThat(assertThrows(IllegalStateException::class.java) { db.checkSchema() }.message).isEqualTo("migration_mismatch")
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.readString(file)).isEqualTo(original)
             java.nio.file.Files.delete(file)
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.exists(file)).isFalse()
-            db.transaction { c -> c.execute("DELETE FROM schema_migration WHERE version=4"); c.execute("UPDATE schema_migration SET checksum='changed' WHERE version=1") }
+            db.transaction { c -> c.execute("DELETE FROM schema_migration WHERE version=5"); c.execute("UPDATE schema_migration SET checksum='changed' WHERE version=1") }
             assertThrows(IllegalStateException::class.java) { db.checkSchema() }
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.exists(file)).isFalse()
@@ -318,6 +318,27 @@ class RelayIntegrationTest {
         now += 600001
         val expired = f.next("approve_join", members = f.current.body().members + RosterMember(newMember, "editor", listOf(expiredDevice.keys)), joins = mapOf(pending))
         denied("invalid") { f.membership.change(f.token, f.household, expired) }
+    }
+    @Test fun expiredApprovalWitnessIsOwnerScopedSignedAndSurvivesRequestCleanup() = testApplication {
+        val member = uuid(); val pending = f.join(TestDevice(), member)
+        val witness = f.membership.pending(f.token, f.household).requests.single()
+        denied("membership_conflict") { f.membership.expired(f.token, f.household, pending.first, witness) }
+        application { relayModule(f.relay) }
+        val path = "/v1/households/${f.household}/join-requests/${pending.first}/expired"
+        assertThat(client.post(path) { contentType(ContentType.Application.Json); setBody(encode(witness)) }.status.value).isEqualTo(401)
+        now += 600001
+        // Invitation creation performs TTL cleanup. Recovery must not depend on retained rows.
+        f.membership.invite(f.token, f.household, InviteRequest(uuid(), "editor"))
+        assertThat(db.transaction { c -> c.query("SELECT count(*) FROM join_request") { it.getLong(1) }.single() }).isEqualTo(0)
+        denied("invalid") { f.membership.expired(f.token, f.household, uuid(), witness) }
+        denied("forbidden") { f.membership.expired(f.token, f.household, pending.first, witness.copy(signature = Wire.encode(ByteArray(64)))) }
+        val result = client.post(path) { bearerAuth(f.token); contentType(ContentType.Application.Json); setBody(encode(witness)) }
+        assertThat(result.status.value).isEqualTo(200)
+        assertThat(Wire.json.decodeFromString<JoinPending>(result.bodyAsText())).isEqualTo(JoinPending(pending.first, now - 1))
+        val editor = TestDevice(); val nextMember = uuid(); val accepted = f.join(editor, nextMember)
+        val manifest = f.next("approve_join", members = f.current.body().members + RosterMember(nextMember, "editor", listOf(editor.keys)), joins = mapOf(accepted))
+        f.membership.change(f.token, f.household, manifest)
+        denied("forbidden") { f.membership.expired(f.session(editor), f.household, pending.first, witness) }
     }
     @Test fun intentConflictReturnsOnlyACommittedReceiptEvenWhenTheBatchRollsBack() {
         val list = f.createList(); val original = f.envelope(list)

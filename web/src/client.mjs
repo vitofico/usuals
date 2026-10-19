@@ -36,6 +36,7 @@ import {
   verifyChain,
 } from "./membership.mjs";
 import { reduce, snapshotDecode, canonical } from "./reducer.mjs";
+import * as owner from "./owner.mjs";
 export class RunScope {
   constructor() {
     this.controller = new AbortController();
@@ -84,6 +85,7 @@ export async function request(
     scope = new RunScope(),
     status = 200,
     timeoutMs = 30000,
+    empty = false,
   } = {},
 ) {
   scope.check();
@@ -147,7 +149,7 @@ export async function request(
       } catch {}
       throw new Problem(code);
     }
-    if (status === 204) return null;
+    if (status === 204 || (empty && size === 0)) return null;
     return strictJson(bytes, max, true);
   } catch (error) {
     controller.abort();
@@ -237,6 +239,18 @@ export class HouseholdClient {
     this.scope.stop();
     return this.queue;
   }
+  createHousehold(setup, name) { return this.serial(() => owner.beginCreation(this, setup, name)); }
+  completeCreation() { return this.serial(() => owner.finishCreation(this)); }
+  abandonRejectedCreation() { return this.serial(() => owner.abandonRejectedCreation(this)); }
+  invite(id) { return this.serial(() => owner.invite(this, id)); }
+  applicants(id) { return this.serial(() => owner.applicants(this, id)); }
+  approve(id, pending, trusted) { return this.serial(() => owner.approve(this, id, pending, trusted)); }
+  removeDevice(id, device) { return this.serial(() => owner.remove(this, id, device)); }
+  discardInvalidMembership(id) { return this.serial(() => owner.discardInvalidPending(this, id)); }
+  denyApplicant(id, request) { return this.serial(async () => {
+    await this.refresh(id);
+    return this.authorized(id, `/v1/households/${id}/join-requests/${request}/deny`, { method: "POST", empty: true });
+  }); }
   serial(action) {
     const promise = this.queue.then(() => {
       this.scope.check();
@@ -356,7 +370,7 @@ export class HouseholdClient {
       requireThat(invitation.expiresAt > this.clock(), "invite_expired");
       requireThat(
         !this.vault.read().households[invitation.householdId] &&
-          !this.vault.read().joining,
+          !this.vault.read().joining && !this.vault.read().creating,
         "already_joined",
       );
       const server = await this.info();
@@ -659,7 +673,8 @@ export class HouseholdClient {
     }
     requireThat(head === targetHead, "history_unverifiable");
   }
-  async refresh(id) {
+  async refresh(id, resumePending = true) {
+    if (resumePending) await owner.resumeMembership(this, id);
     let h = this.read(id);
     if (!h.linked) {
       await this.link(id);

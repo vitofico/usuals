@@ -8,8 +8,11 @@ class Relay(val db: Database, val identity: Identity, val auth: Auth) {
     // Invoked only after commit. Socket wakeups are hints, never a source of truth.
     var changed: (String) -> Unit = {}
     fun create(token: String, request: CreateHousehold): ManifestProof = db.transaction { c ->
-        val m = ManifestRules.genesis(request.manifest, identity.serverId)
         auth.consumeBootstrap(c, token)
+        create(c, request)
+    }
+    internal fun create(c: Connection, request: CreateHousehold): ManifestProof {
+        val m = ManifestRules.genesis(request.manifest, identity.serverId)
         val signing = auth.consume(c, request.bootstrapProof, setOf("bootstrap")).second
         expect(request.bootstrapProof.deviceId == m.signer && m.members.single().devices.single().signingPublicKey == signing)
         val digest = request.manifest.hash()
@@ -17,7 +20,7 @@ class Relay(val db: Database, val identity: Identity, val auth: Auth) {
         saveRoster(c, m)
         val proof = request.manifest.proof()
         c.execute("INSERT INTO manifest VALUES (?,1,?)", id(m.householdId), encode(proof))
-        proof
+        return proof
     }
     fun membership(token: String, household: String, after: Long): Membership = db.transaction { c ->
         expect(after >= 0)

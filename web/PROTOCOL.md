@@ -13,19 +13,43 @@ existing signed household membership remains an independent authority.
   HKDF-SHA256 and AES-256-GCM. HPKE follows RFC 9180 base mode and the exact
   existing Tink RAW profile. Byte-level golden vectors and JVM interoperability
   are mandatory before a browser-created ciphertext is accepted as verified.
-- Enrollment accepts an existing Android invitation for this exact HTTPS origin.
+- Enrollment accepts an existing Android or browser-owner invitation for this exact HTTPS origin.
   The browser creates fresh independent device keys. An owner separately checks
   the full reverse fingerprint before approving. The browser verifies genesis,
   every membership transition, inviter fingerprint and its exact approved join
   assertion before accepting keys. SSO never substitutes for this process.
-- The browser is an editor client. Owner actions that rotate all list keys,
-  household bootstrap and household recovery stay in Android for this iteration.
-  Device identities cannot be exported or restored from files, preventing cloned keys and stale reservation counters.
+- An admitted browser account can create a household through CSRF-protected
+  `POST /api/households`. The relay atomically stores genesis, the creating-account
+  association and the fresh owner-device binding. The account row serializes the
+  permanent ten-household quota and disabling; durable attempts are limited to
+  five per minute. Exact genesis retries are idempotent for the same account.
+  Android operator-token creation remains unchanged. No operator token enters
+  the browser.
+- Browser creation requires a downloaded and read-back-verified native-compatible
+  encrypted recovery kit, with a separate random key. Only owner keys and public
+  recovery membership enter the persisted browser vault. Browser owners can
+  invite, approve full fingerprints and remove devices, rotating every list key.
+  Exact snapshots, manifests and reservations persist before network I/O. A
+  verified obsolete change can be discarded; ambiguous committed work is resolved
+  first. Quota-denied creation can be cancelled only after a definitive rejection,
+  and retry revokes that permission before I/O.
+- A pending approval retains the applicant's signed assertion as an expiry witness.
+  Owner-authenticated `POST /v1/households/{h}/join-requests/{r}/expired` verifies
+  its signature, routing, genesis and request ID under the household lock and
+  returns its `requestId`/`expiresAt` only once the server clock reaches expiry.
+  It works after TTL cleanup without changing membership. The browser binds the
+  witness hash to its staged approval and checks for an exact committed manifest
+  both before and after this check before discarding uncommitted keys. Uncertain
+  responses preserve all pending state.
+- Recovery, recovery replacement and ownership transfer remain native actions.
+  Device identities cannot be exported or restored from files, preventing cloned
+  keys and stale reservation counters.
 - A strong user passphrase encrypts the complete local vault, bound to its immutable issuer, subject, account id and exact origin in the encrypted record and associated data, using PBKDF2-SHA256
   (600,000 iterations), fresh 16-byte salt and AES-256-GCM with a 12-byte nonce.
   Only encrypted vault records enter IndexedDB. The passphrase and wrapping key
   remain in memory; locking, logout, page hide and idle timeout discard them.
-  Lost passphrase means joining as a fresh device. No server reset can decrypt it.
+  Lost passphrase means joining as a fresh device, or recovering a browser-owned
+  household in Android with its saved kit. No server reset can decrypt the vault.
 - Web Locks serializes all vault/network mutations across tabs. A tab without
   Web Locks cannot unlock. IndexedDB atomically stores each complete encrypted
   revision. Save a durable per-device/list/epoch/key reservation before every

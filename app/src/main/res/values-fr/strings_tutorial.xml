@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tutorial_replay">Visite guidée</string>
+    <string name="tutorial_skip">Passer la visite</string>
+    <string name="tutorial_back">Retour</string>
+    <string name="tutorial_next">Suivant</string>
+    <string name="tutorial_finish">Commencer ma liste</string>
+    <string name="tutorial_setup_sharing">Configurer le partage</string>
+    <string name="tutorial_step">%1$d sur %2$d</string>
+    <string name="tutorial_welcome_title">Bienvenue dans %1$s.</string>
+    <string name="tutorial_welcome_body">Votre liste de courses fonctionne hors ligne, sans compte ni serveur. Commencez par ce dont vous avez besoin et adaptez-la à vos habitudes.</string>
+    <string name="tutorial_welcome_hint">Vous pouvez rouvrir cette visite dans les Paramètres à tout moment.</string>
+    <string name="tutorial_capture_title">Notez-le sur le moment.</string>
+    <string name="tutorial_capture_body">Touchez le clavier pour ajouter des produits ou maintenez le micro pour parler. Maintenez un produit pour modifier son nom, sa quantité, sa catégorie ou son magasin.</string>
+    <string name="tutorial_capture_hint">L’accès au micro et à la caméra est demandé uniquement lors de leur utilisation.</string>
+    <string name="tutorial_scan_title">Des emballages aux recettes.</string>
+    <string name="tutorial_scan_body">Scannez un code-barres pour ajouter un produit ou partagez un lien de recette pour vérifier ses ingrédients. Vous confirmez chaque nom de produit suggéré.</string>
+    <string name="tutorial_scan_hint">La recherche de produits est facultative dans les Paramètres. L’activer envoie le code à Open Food Facts.</string>
+    <string name="tutorial_shop_title">Un peu moins à retenir.</string>
+    <string name="tutorial_shop_body">Choisissez Commencer les courses et cochez les produits au fil de vos achats. Terminer les courses enregistre les produits cochés dans l’historique ; les autres restent sur la liste.</string>
+    <string name="tutorial_shop_hint">L’historique vous aide à racheter l’essentiel. Les répétitions ajoutent des produits uniquement à la fréquence choisie.</string>
+    <string name="tutorial_share_title">Votre quotidien, ensemble.</string>
+    <string name="tutorial_share_body">Pour faire les courses ensemble, ouvrez Paramètres &gt; Listes partagées. Partagez une liste depuis Android avec l’adresse du serveur et son code à usage unique, ou rejoignez un foyer créé sur le site.</string>
+    <string name="tutorial_share_hint">À la création d’un foyer, enregistrez et vérifiez le kit de récupération. Pour en rejoindre un, ouvrez son invitation et comparez l’empreinte complète de l’appareil avec son propriétaire.</string>
+</resources>

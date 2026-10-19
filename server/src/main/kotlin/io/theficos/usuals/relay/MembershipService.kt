@@ -64,6 +64,18 @@ class MembershipService(private val relay: Relay) {
         c.execute("UPDATE invitation SET consumed=true WHERE id IN (SELECT invite FROM join_request WHERE id=? AND household=?)", id(request), id(household))
         expect(c.execute("UPDATE join_request SET denied=true WHERE invite IN (SELECT invite FROM join_request WHERE id=? AND household=?)", id(request), id(household)) >= 1, "not_found", 404)
     }
+    fun expired(token: String, household: String, request: String, witness: PendingJoin): JoinPending = db.transaction { c ->
+        val state = auth.authorize(c, token, household, owner = true).second
+        val bytes = Wire.decode(witness.assertion)
+        val assertion = JoinAssertion.parse(bytes)
+        expect(witness.requestId == request && assertion.requestId == request && assertion.householdId == household &&
+            assertion.origin == auth.origin && assertion.serverId == relay.identity.serverId && assertion.genesisHash == state.genesis)
+        verify(assertion.device.signingPublicKey, witness.signature, bytes)
+        // The signed witness survives TTL cleanup. The household lock serializes this
+        // server-clock check with a concurrent approval committing before expiry.
+        expect(assertion.expiresAt <= auth.now(), "membership_conflict", 409)
+        JoinPending(request, assertion.expiresAt)
+    }
     fun stage(token: String, household: String, candidate: String, snapshot: Snapshot): SnapshotRef = db.transaction { c ->
         val (caller, state) = auth.authorize(c, token, household, owner = true, recovery = true)
         id(candidate)

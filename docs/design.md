@@ -25,6 +25,22 @@ exports the canonical SVG to Android, the README cover and the store icon; its
 `--check` mode detects drift. Authentik references the same SVG served by the web
 app. The store's PNG is a render of that artwork, not a separate design.
 
+## First-run tour
+
+The first normal Android launch opens a five-step guided tour: the offline list,
+capture, scans/recipes, shopping/history and optional household sharing. Next,
+Back and Skip remain explicit; the final step offers a local start or the sharing
+screen. It scrolls independently of its controls for smaller displays and large
+text. Completion is local to the installation, and Settings can reopen the tour.
+Incoming text shares, invitations and widget launches defer automatic onboarding
+so their requested action can continue.
+
+The web client's four-step tour opens on its first visit, before sign-in. Its
+completion flag is local to the browser, with a Guided tour navigation action for
+replay. Keyboard users can move through the dialog; Escape skips it. An interrupted
+tour can start again. Neither client requests permissions, enables product lookup
+or creates accounts/households through the tutorial.
+
 ## Palettes
 
 Choose a palette in Android **Settings > Appearance**, or use **Appearance** in

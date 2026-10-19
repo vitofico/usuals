@@ -93,6 +93,7 @@ object BrowserPreviewFixture {
     private suspend fun loop(directory: Path, native: HouseholdClient, household: String, list: String, replica: PreviewReplica) {
         val processed = mutableMapOf<String, Pair<JsonObject, JsonObject>>()
         while (!Files.exists(directory.resolve("stop"), LinkOption.NOFOLLOW_LINKS)) {
+            try {
             native.synchronize(household, list, replica)
             writeState(directory, household, list, replica)
             val pendingRequests = native.pending(household)
@@ -130,6 +131,10 @@ object BrowserPreviewFixture {
                 } catch (error: Exception) { buildJsonObject { put("status", "rejected"); put("code", errorCode(error)) } }
                 writePrivate(directory, "native-command-result.json", result)
                 writeState(directory, household, list, replica)
+            }
+            } catch (error: RelayProblem) {
+                // The preview peer shares bounded relay admission with the browser under test.
+                if (error.code !in setOf("unavailable", "offline", "rate_limited")) throw error
             }
             delay(1000)
         }

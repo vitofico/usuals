@@ -72,12 +72,15 @@ class MainActivity : ComponentActivity() {
         if (sharedText != null || (savedInstanceState == null && intent.getBooleanExtra(EXTRA_OPEN_LIST, false))) openListRequest++
         setContent {
             val palette by ServiceLocator.themePreferences.palette.collectAsStateWithLifecycle()
+            val tutorialCompleted by ServiceLocator.tutorialPreferences.completed.collectAsStateWithLifecycle()
             UsualsTheme(palette = palette) {
                 val background = MaterialTheme.colorScheme.background.toArgb()
                 SideEffect { syncSystemBars(background) }
                 UsualsApp(
                     palette = palette,
                     onPaletteChange = ServiceLocator.themePreferences::select,
+                    showTutorial = !tutorialCompleted && allowsTutorial(intent) && sharedText == null && openListRequest == 0,
+                    onTutorialFinished = ServiceLocator.tutorialPreferences::complete,
                     sharedText = sharedText,
                     openListRequest = openListRequest,
                     onSharedTextConsumed = {
@@ -122,6 +125,11 @@ class MainActivity : ComponentActivity() {
 
 /** Where [MainActivity] records that a share has already become items. */
 internal const val STATE_SHARE_CONSUMED = "share_consumed"
+
+// The original entry intent survives recreation even after its text is consumed.
+internal fun allowsTutorial(intent: Intent?): Boolean =
+    intent?.action != Intent.ACTION_SEND && intent?.action != Intent.ACTION_VIEW &&
+        intent?.getBooleanExtra(EXTRA_OPEN_LIST, false) != true
 
 /**
  * What a fresh `onCreate` should hand to the list.
