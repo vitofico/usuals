@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from web/assets/mark.svg by scripts/sync-brand-assets. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- web/assets/mark.svg, positioned within the adaptive icon safe area. -->
-    <group android:translateX="18" android:translateY="18" android:scaleX="1.125" android:scaleY="1.125">
-        <path android:pathData="M21.5,26 v10 a10.5,10.5 0,0 0,21 0 V26"
-            android:fillColor="@android:color/transparent" android:strokeColor="@color/brand_champagne"
-            android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" />
-        <path android:pathData="M45.5,14.5 a3,3 0,1 0,-6 0 a3,3 0,1 0,6 0 Z"
-            android:fillColor="@color/brand_champagne" />
-    </group>
+<group android:translateX="18" android:translateY="18" android:scaleX="1.125" android:scaleY="1.125">
+<path android:pathData="M21.5 26v10a10.5 10.5 0 0 0 21 0V26"
+    android:fillColor="@android:color/transparent" android:strokeColor="@color/brand_champagne"
+    android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" />
+<path android:pathData="M45.5,14.5 a3,3 0,1 0,-6 0 a3,3 0,1 0,6 0 Z" android:fillColor="@color/brand_champagne" />
+</group>
 </vector>

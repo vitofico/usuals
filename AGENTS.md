@@ -43,6 +43,9 @@ JVM. `ServiceLocator` must construct every production component.
   Schemas 1 to 3 were unreleased and may be wiped. From finalized version 4 on,
   every schema change needs a migration and a migration test.
 - Delete code a change makes dead. Comments explain reasons, not mechanics.
+- Brand artwork comes from `web/assets/mark.svg`. Regenerate its Android,
+  README and store exports with `scripts/sync-brand-assets`; use `--check`
+  to verify consistency rather than drawing separate logos.
 - Secrets stay in Keystore and never enter logs. Redact provider diagnostics.
   Third-party reads originate on the device. Recipe text is untrusted data.
 - Use `:emoji: type: subject` commits. No attribution boilerplate in artifacts.

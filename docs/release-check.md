@@ -953,3 +953,37 @@ elapsed household pilot remain separate acceptance gates.
 - Evidence: `/private/tmp/usuals-off-full-gate-final.log`,
   `/private/tmp/usuals-off-native-alignment.log`, and `/private/tmp/usuals-off-qa/`
   (`build-proof.json`, `qa-result.json`, `live-result.json` and screenshots).
+
+## One Usuals icon across surfaces (2026-10-19)
+
+- `web/assets/mark.svg` is the source for Android's brand and launcher vectors,
+  brand colours, README artwork and 512px store icon. All five exports pass
+  `scripts/sync-brand-assets --check`. Widgets reuse the brand drawable;
+  notification and adaptive monochrome layers reuse the launcher foreground.
+- README Android screenshots were recaptured on the emulator with the public
+  local demo fixture and its saved Open Food Facts record. No fresh product
+  request was needed. The current list/product screenshots retain source and
+  licence information and show the dotted U.
+- The final APK's launcher and widget picker preview show the shared artwork
+  on the emulator. No home-screen widget was added. Original emulator database,
+  preferences and private files were restored byte-for-byte after the fixture
+  screenshots; the temporary lookup setting was removed with them.
+- Final Docker gate passed through `scripts/dgradle :app:assembleDebug
+  :app:assembleRelease test lint --no-watch-fs` in 2m36s. It records 876 JUnit
+  cases, zero failures/errors and five intentional live-test skips. Lint has
+  zero errors, 94 existing warnings and 11 informational findings. Both APKs
+  pass ELF/ZIP 16 KB alignment for all 12 native libraries.
+- Debug APK SHA256:
+  `1122e76723a36607c5bddb03020d735418080f76ce249f89a1cfd833f594fd42`.
+  Release APK SHA256:
+  `95d293fbc16da412686ec392e113d4b1d932e04c407a7ed055ef1b5e12c95e5b`.
+- Authentik's existing Usuals application now references the verified web SVG
+  in `meta_icon`. Only this metadata field changed; no deployment or access
+  configuration changed. No source push or store publication occurred.
+- Motorola Edge 40 Neo received the final debug APK with `adb install -r`.
+  Its installed SHA256 matches the debug artifact above, the original
+  first-install time is unchanged and MainActivity launches successfully.
+  No app-data clearing or uninstall was performed.
+- Evidence: `/private/tmp/usuals-brand-everywhere-qa/`, including
+  `android-final-gate.log`, `build-proof.json`, `phone-install.json`, alignment
+  logs and screenshots.
