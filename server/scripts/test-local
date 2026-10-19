@@ -6,7 +6,12 @@ cd "$ROOT"
 TASK_TMP="$(mktemp -d "${TMPDIR:-/tmp}/usuals-relay-test.XXXXXX")"
 chmod 700 "$TASK_TMP"
 CONTAINER="usuals-relay-test-$$"
-cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; rm -rf "$TASK_TMP"; }
+NETWORK="usuals-relay-test-$$"
+cleanup() {
+  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  docker network rm "$NETWORK" >/dev/null 2>&1 || true
+  rm -rf "$TASK_TMP"
+}
 trap cleanup EXIT
 python3 - "$TASK_TMP" <<'PY'
 import sys,secrets
@@ -15,16 +20,17 @@ p=Path(sys.argv[1])/'postgres.env'
 p.write_text('POSTGRES_DB=usuals_test\nPOSTGRES_USER=usuals_test\nPOSTGRES_PASSWORD='+secrets.token_hex(32)+'\n')
 p.chmod(0o600)
 PY
-docker run --rm -d --name "$CONTAINER" --env-file "$TASK_TMP/postgres.env" \
-  -p 127.0.0.1::5432 --tmpfs /var/lib/postgresql/data:rw,size=512m \
+docker network create "$NETWORK" >/dev/null
+docker run --rm -d --name "$CONTAINER" --network "$NETWORK" --network-alias database \
+  --env-file "$TASK_TMP/postgres.env" --tmpfs /var/lib/postgresql/data:rw,size=512m \
   postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea >/dev/null
 for attempt in $(seq 1 30); do
   if docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U usuals_test -d usuals_test >/dev/null 2>&1; then break; fi
   sleep 1
 done
 docker exec "$CONTAINER" pg_isready -h 127.0.0.1 -U usuals_test -d usuals_test >/dev/null
-PORT="$(docker port "$CONTAINER" 5432/tcp | sed 's/.*://')"
-export USUALS_TEST_JDBC_URL="jdbc:postgresql://host.docker.internal:$PORT/usuals_test"
+export USUALS_TEST_DOCKER_NETWORK="$NETWORK"
+export USUALS_TEST_JDBC_URL="jdbc:postgresql://database:5432/usuals_test"
 export USUALS_TEST_DB_USER=usuals_test
 export USUALS_TEST_DB_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$TASK_TMP/postgres.env")"
 scripts/dgradle -p server test verifyWebInterop installDist --no-watch-fs "$@"

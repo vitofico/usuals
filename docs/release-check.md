@@ -1095,3 +1095,25 @@ elapsed household pilot remain separate acceptance gates.
 - The owned production test installation was removed after QA. The existing
   debug installation remains. No phone access or cluster deployment.
 - Evidence: /private/tmp/usuals-public-release/. No cluster deployment.
+
+- Source 2968d12 and tag v2026.10.19.1 are public in vitofico/usuals. All three
+  release assets passed anonymous HTTPS byte comparisons. The production pin and
+  encrypted recovery backup are retained; temporary plaintext signing material
+  was removed after configuring the four GitHub secrets.
+- F-Droid inclusion request: https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283.
+  All nine pipeline jobs passed, including an independent source build and
+  signature-copy verification against the published developer binary. Inclusion
+  awaits maintainer review. Obtainium's public import page resolves successfully.
+- An isolated Linux filesystem probe confirmed root-owned build outputs block
+  runner signing and runner-owned Git checkouts need explicit container trust.
+  The release workflow restores artifact ownership after Docker assembly and
+  trusts only /workspace inside its disposable verifier. Its driver supports
+  immutable earlier release tags. Both repaired ownership probes pass.
+- The first GitHub Android job passed full tests and lint. Its server job
+  exposed Linux's inability to reach a host-loopback PostgreSQL port from the
+  Gradle container. The disposable database now shares an isolated Docker
+  network with the test runner, with no host port. The first signing job also
+  confirmed the build-output ownership failure reproduced above.
+- The repaired network harness passed a forced full run: all 26 Gradle tasks
+  executed, 138 JVM cases and 119 Node tests, zero failures/errors/skips. All
+  22 release-tool checks also passed again. No Android runtime source changed.

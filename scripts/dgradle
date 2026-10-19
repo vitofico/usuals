@@ -46,6 +46,14 @@ if [ -t 0 ] && [ -t 1 ]; then
   RUN_FLAGS+=(-t)
 fi
 
+# The disposable relay database shares a private network with its test runner.
+if [ -n "${USUALS_TEST_DOCKER_NETWORK:-}" ]; then
+  [[ "$USUALS_TEST_DOCKER_NETWORK" =~ ^usuals-relay-test-[0-9]+$ ]] || {
+    echo 'Invalid relay test network' >&2; exit 2;
+  }
+  RUN_FLAGS+=(--network "$USUALS_TEST_DOCKER_NETWORK")
+fi
+
 # Explicit disposable browser QA only. Normal builds expose no host ports.
 if [ -n "${USUALS_PREVIEW_PORT:-}" ]; then
   if ! [[ "$USUALS_PREVIEW_PORT" =~ ^[0-9]{4,5}$ ]] ||

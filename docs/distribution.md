@@ -21,7 +21,7 @@ Add `https://github.com/vitofico/usuals` or use the
 [app link](../distribution/obtainium-link.txt). Only stable `app-release.apk`
 assets are selected. There is no separate Obtainium store submission.
 
-F-Droid inclusion is pending submission/review. Do not interpret the prepared
+F-Droid inclusion is [submitted for review](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283). Do not interpret the prepared
 [metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) as an accepted
 listing. It names the public source/tag, exact version, Java 21/SDK 34 build,
 upstream APK and allowed signing certificate. The recipe requests signature
@@ -45,6 +45,8 @@ continues to use only complete `values-xx/` resources.
 3. Keep the production key outside the checkout. Android assembly is unsigned.
    Start the candidate with `:app:clean :app:assembleRelease` so stale incremental
    compiler outputs from earlier development builds cannot enter a release.
+   On Linux, restore ownership with `sudo chown -R "$(id -u):$(id -g)" app/build`
+   after Docker builds and before signing or restoring a signed candidate.
    `scripts/sign-release /absolute/private/signing-directory` signs in an offline
    read-only container, with no repository or Gradle-cache mount. The signing
    directory contains `usuals-release.keystore`, `keystore-password.txt`,
