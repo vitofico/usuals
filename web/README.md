@@ -5,15 +5,32 @@ build packages only `index.html`, `assets/`, `src/` and `locales/`. No npm insta
 CDN, third-party script or browser provider token is involved.
 
 The browser signs in through a local account or the configured OIDC provider,
-then unlocks its separately encrypted local vault. A household owner approves a
-fresh browser device using an Android invitation and full reverse fingerprint.
-An account administrator cannot grant list keys. Owners continue to create
-households, rotate membership and manage recovery in Android.
+then unlocks its separately encrypted local vault. Create a household here or
+join one through an invitation from an Android or browser owner. Joining devices
+need full fingerprint approval. Account administrators cannot grant list keys.
+Browser owners can invite, approve and remove devices; recovery and advanced
+ownership actions remain available in Android.
 
 ## First household
 
-Signing in with Authentik or a local account opens your account. To use shared
-lists, create the first household in Android and then invite the browser:
+A guided tour opens on the first visit to this browser. Use **Next** and **Back**
+to explore household setup, sign-in, the browser passphrase and shared editing,
+or **Skip tour** to go directly to the app. Completion and skipping are remembered
+in this browser's local storage. If that storage is blocked or cleared, the tour
+may appear again. **Guided tour** in the navigation reopens it at any time.
+It never signs in, changes a permission or creates household membership for you.
+
+Signing in with Authentik or a local account opens your account. Both starting
+on the web and bringing a list from Android are supported.
+
+For a new web household, unlock the browser vault and choose **Create household**.
+Name the initial list, download the encrypted recovery file and save its key
+separately. Select the saved file and enter the saved key to verify both before
+creation. This uses your admitted account, without an operator setup code.
+From Shared lists, invite a device and compare its complete fingerprint before
+approval. Keep the kit for Android recovery if this browser is lost.
+
+To share a list already on your Android phone:
 
 1. Open **Settings > Shared lists > Create a household** in Android. Use the
    same server origin as the web app.
@@ -24,9 +41,15 @@ lists, create the first household in Android and then invite the browser:
    then use **Review requests** in Android to compare the full fingerprint and
    approve the browser.
 
-The signed-in empty state displays this guide and the current server address
-above the invitation form. The invitation is also required for the server
-owner's browser. Account sign-in keeps its existing separate authority.
+The signed-in empty state offers web creation, the Android guide with the current
+server address, and the invitation form. Joining an existing household always
+requires its owner's approval, including for the server administrator.
+
+Interrupted creation retains the exact owner identity and initial list in the
+encrypted vault. Continue setup after reconnecting. A definitive creation-quota
+rejection can be cancelled to join an existing household. Membership work with
+an uncertain outcome is retained. **Discard obsolete change** verifies server
+membership and checkpoints first, preserving shopping edits and history pins.
 
 The editor supports real encrypted list reads, add, check, edit and delete,
 including durable offline pending intents. It reduces every v1 operation from

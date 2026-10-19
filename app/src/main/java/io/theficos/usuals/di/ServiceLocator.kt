@@ -203,6 +203,7 @@ object ServiceLocator {
         RepositoryScanStore(itemRepository, historyRepository, smartStore, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)
     }
     val themePreferences: ThemePreferences by resettable { ThemePreferences(context) }
+    val tutorialPreferences: TutorialPreferences by resettable { TutorialPreferences(context) }
     private val widgetUpdaterField = resettable { WidgetUpdater(context, itemRepository, themePreferences) }
     val widgetUpdater: WidgetUpdater by widgetUpdaterField
 

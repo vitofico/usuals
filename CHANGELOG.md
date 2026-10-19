@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased: web-first households (2026-10-19)
+
+- Create a household and its initial encrypted list in the web app, using an
+  admitted SSO or local account. Save and verify an Android-compatible recovery
+  kit first. Keep the existing Android-list invitation path.
+- Invite, approve full device fingerprints and remove devices as a web owner.
+  Persist exact pending work, rotate keys on membership changes and recover
+  safely from interrupted or obsolete setup.
+- Add an account-bound, CSRF-protected creation endpoint and append-only server
+  migration, with durable attempt limits and per-account creation quotas.
+
+## Unreleased: guided first-run tour (2026-10-19)
+
+- Introduce the Android list, capture, recipes/barcodes, shopping history and
+  optional sharing through a skippable five-step tour. Replay it from Settings.
+- Add a four-step web tour covering household setup, account access, browser
+  passphrases and everyday shared editing. Replay it from Guided tour.
+- Remember completion locally, with complete English, Spanish, Italian, French
+  and German copy. The tour changes no permissions, product-lookup consent or
+  household membership.
+
 ## Unreleased: first household setup (2026-10-19)
 
 - Explain the first-household setup after web sign-in, with Android steps and

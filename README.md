@@ -98,12 +98,13 @@ remain visible to the server.
 | Part | What it does |
 | --- | --- |
 | **Android** | Offline lists, purchase history, capture and shopping tools. Encrypted sharing is optional; everyday use needs no sign-in. |
-| **Web** | Edit a shared list through an encrypted browser vault. Controlled standalone accounts or optional Authentik SSO provide sign-in; the household owner still approves membership. |
+| **Web** | Create a household or join an existing one, then edit its lists through an encrypted browser vault. Standalone accounts or optional Authentik SSO provide sign-in; owners approve joining devices. |
 | **Relay** | A small Kotlin/Ktor service with PostgreSQL, signed authorization, encrypted operations and backup/recovery tools. You run it on your infrastructure. |
 
 Browser encryption trusts the code served by your instance: an operator who
-changes that code could observe an unlocked vault. Owner bootstrap and recovery
-remain on Android. Read the [browser boundary](web/PROTOCOL.md),
+changes that code could observe an unlocked vault. Save and verify the recovery
+kit when creating a household on either platform. Recovery and advanced owner
+actions remain on Android. Read the [browser boundary](web/PROTOCOL.md),
 [Android sharing guide](docs/sync/android-sharing.md) and
 [account/SSO guide](docs/sync/web-identity.md) before inviting a household.
 
@@ -134,6 +135,10 @@ The [hosting plan](docs/hosted-service-plan.md) records the work and launch gate
 See the [security model](docs/security-model.md) for the complete trust boundaries.
 
 ## Get started
+
+The first launch includes a guided tour. Skip it whenever you like and reopen
+it from **Settings > Guided tour** on Android, or **Guided tour** in the web
+navigation. Sharing setup explains the separate account and household steps.
 
 This is a private source preview. Sign in to GitHub with an account that has
 repository access. No signed release APK, store listing or managed service is

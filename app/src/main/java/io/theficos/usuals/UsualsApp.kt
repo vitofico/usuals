@@ -87,7 +87,10 @@ fun UsualsApp(
     onSharedTextConsumed: () -> Unit = {},
     palette: AppPalette = AppPalette.PLUM,
     onPaletteChange: (AppPalette) -> Unit = {},
+    showTutorial: Boolean = false,
+    onTutorialFinished: () -> Unit = {},
 ) {
+    var tutorialRequested by rememberSaveable { mutableStateOf(false) }
     // A camera refusal, remembered above the scan destination. Design section
     // 12 says to fall back to typed entry and not to re-prompt, and the scan
     // screen cannot keep that promise on its own: pressing back pops its entry
@@ -125,6 +128,7 @@ fun UsualsApp(
             val factory = remember(settingsViewModelFactory) { settingsViewModelFactory() }
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() },
+                onOpenTutorial = { tutorialRequested = true },
                 onOpenSharing = { navController.navigate(Routes.SHARING) },
                 palette = palette, onPaletteChange = onPaletteChange)
         }
@@ -177,5 +181,17 @@ fun UsualsApp(
                 )
             }
         }
+    }
+    if (showTutorial || tutorialRequested) {
+        io.theficos.usuals.ui.tutorial.TutorialScreen(
+            onFinish = { sharing ->
+                tutorialRequested = false
+                onTutorialFinished()
+                navController.navigate(if (sharing) Routes.SHARING else Routes.LIST) {
+                    if (!sharing) popUpTo(Routes.LIST) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+        )
     }
 }

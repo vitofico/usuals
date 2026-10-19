@@ -46,7 +46,13 @@ Configuration is environment-based:
 
 Optional local accounts and Authentik SSO, session management and immutable
 browser device binding are described in [web identity](../docs/sync/web-identity.md).
-They are disabled by default and never grant household keys or recovery access.
+They are disabled by default. Sign-in alone grants no household keys or recovery
+access. An admitted account may explicitly create a new household through the
+same-origin CSRF-protected web endpoint; genesis and owner-device account binding
+commit atomically. Creation is limited to five attempts per minute and ten
+permanent created-household associations per account. Existing Android bootstrap
+still uses its one-time operator code. Apply migration 004 before starting this
+version against an existing database.
 
 | Variable | Value |
 |---|---|

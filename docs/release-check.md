@@ -1012,3 +1012,54 @@ elapsed household pilot remain separate acceptance gates.
   gate logs and screenshots. Phone/emulator data and production are untouched.
   No deployment or push. Live Authentik sign-in was reported by the user; this
   change does not claim a new live OIDC verification.
+
+
+## Guided first-run tour and web-owned households (2026-10-19)
+
+- Android has a skippable five-step tour with Settings replay. Web has a
+  four-step tour with navigation replay. Completion stays local. Incoming
+  Android shares, invitations and widgets defer the automatic tour, including
+  consumed-intent recreation. All five UI languages are complete.
+- Admitted SSO/local accounts can create their first household and initial
+  encrypted list in the browser. Creation requires saving and reading back an
+  Android-compatible encrypted recovery kit and its separate key. Existing
+  Android lists still use invitations. Web owners can approve full fingerprints
+  and remove devices with fresh list keys.
+- Creation is CSRF protected, atomically account bound and bounded by durable
+  rate/permanent creation quotas. Migration 004 preserves migration-3 data.
+  Pending identities, ciphertext and reservations survive interruptions. Owner
+  retries resolve exact committed work; safe discard preserves pins and edits.
+  Signed expiry witnesses remain verifiable after request cleanup, with
+  membership resolution before and after the household-locked expiry check.
+  Independent security/source review closed all findings.
+- Final Android gate: `scripts/dgradle :app:assembleDebug test lint
+  --no-watch-fs --no-parallel --max-workers=2`, BUILD SUCCESSFUL. 880 recorded
+  JUnit cases, zero failures/errors, five intentional live-test skips. Lint has
+  zero errors, 94 existing warnings and 11 informational findings, with no
+  tutorial findings. All 12 debug native libraries pass 16 KB alignment.
+  Debug SHA256:
+  `6a9111fcae704b3870a7eb524ae15f9be2d5fa25ca3bea75c0a8c07894b02430`.
+- Final server gate: `server/scripts/test-local --no-daemon --no-parallel
+  --max-workers=2` through `scripts/dgradle`, BUILD SUCCESSFUL. 138 recorded JVM
+  cases and 119 Node tests, zero failures/errors/skips. Browser envelopes,
+  HPKE packages, genesis, recovery kit and initial list snapshot pass native
+  codec checks. All 24 packaged web files match source bytes.
+- Emulator checks passed first run, both final actions, persisted completion,
+  Skip, Settings replay, system Back, incoming-share recreation, German with
+  larger text, light/dark system bars and rotation. Original private files and
+  display/locale/rotation settings were restored exactly. Phone untouched.
+- Disposable localhost browser/emulator verification passed actual recovery
+  download/read-back, clear wrong-key rejection, web-owned creation, full native
+  fingerprint approval, encrypted edits in both directions and Android checks
+  visible on the web. Browser removal rotated keys: Android displayed revoked
+  access, while the owner retained the list. German household/tour layouts were
+  checked at 390px. The viewport and original emulator files were restored.
+- A prolonged automation download timeout exposed an expired-session Unlock
+  button rejection. Route it through the existing account-recovery handler;
+  independent delta review is clear. Forced session expiry on the final build
+  returns Unlock to sign-in with a clear message and no console errors. The final
+  Docker gate passed again with the same counts. No new dependency or wire-version
+  change.
+- Evidence: `/private/tmp/usuals-tutorial-qa/`, including final gate logs,
+  native/runtime/build proofs, restoration logs and screenshots. No push,
+  cluster deployment or new live Authentik verification.

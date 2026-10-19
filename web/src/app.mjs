@@ -16,11 +16,14 @@ import { normalize } from "./identity.mjs";
 import { RefreshLoop } from "./refresh.mjs";
 import { UnlockAttempt } from "./unlock.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
+import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
+import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 const $ = (id) => document.getElementById(id);
 function appearanceStorage() {
   try { return localStorage; } catch { return null; }
 }
 let palette = readPalette(appearanceStorage());
+let tutorialSeen = tutorialCompleted(appearanceStorage()), tutorialActive = false;
 function applyAppearance() {
   document.documentElement.dataset.palette = palette;
   document.querySelector('meta[name="theme-color"]').content =
@@ -156,6 +159,43 @@ function closeDialog() {
   cleanup?.();
   $("dialog").close();
   $("dialog-content").replaceChildren();
+}
+function finishTutorial() {
+  tutorialSeen = true;
+  completeTutorial(appearanceStorage());
+  closeDialog();
+}
+function tutorialDialog() {
+  let page = 0;
+  const steps = ["Welcome", "Household", "Vault", "List"];
+  const symbols = ["✓", "↗", "○", "✓"];
+  function draw() {
+    const last = page === steps.length - 1;
+    $("dialog-content").replaceChildren(
+      el("section", { class: "tutorial" },
+        el("div", { class: "tutorial-top" },
+          el("img", { src: "/assets/mark.svg", alt: "", width: 40, height: 40 }),
+          button(t("tutorialSkip"), finishTutorial, "text-button")),
+        el("p", { class: "eyebrow" }, t("tutorialStep", { current: page + 1, total: steps.length })),
+        el("progress", { class: "tutorial-progress", max: steps.length, value: page + 1,
+          "aria-label": t("tutorialStep", { current: page + 1, total: steps.length }) }),
+        el("div", { class: "tutorial-art", "aria-hidden": "true" }, symbols[page]),
+        el("h2", { id: "tutorial-heading", tabindex: -1 }, t(`tutorial${steps[page]}Title`)),
+        paragraph(`tutorial${steps[page]}Body`),
+        paragraph(`tutorial${steps[page]}Hint`, "helper"),
+        el("div", { class: "button-row tutorial-actions" },
+          page ? button(t("tutorialBack"), () => { page = Math.max(0, page - 1); draw(); }) : null,
+          button(t(last ? "tutorialFinish" : "tutorialNext"), () => {
+            if (last) finishTutorial();
+            else { page = Math.min(steps.length - 1, page + 1); draw(); }
+          }, "primary")),
+      ),
+    );
+    $("tutorial-heading").focus();
+  }
+  openDialog(el("div"), () => { tutorialActive = false; });
+  tutorialActive = true;
+  draw();
 }
 function messageDialog(head, description, confirm) {
   const form = el(
@@ -498,6 +538,7 @@ async function render() {
   const own = generation;
   $("lock").hidden = !client;
   $("refresh").hidden = !client;
+  if (view !== "list") $("sync-status").textContent = t(client ? "vaultUnlocked" : "locked");
   $("section-label").textContent = t(
     view === "list"
       ? "shoppingList"
@@ -931,6 +972,10 @@ async function refreshSelected() {
   }
 }
 function joinPanel() {
+  if (vault.read().creating) return el("section", { class: "paper panel-body" },
+    el("h2", {}, t("creationPending")), paragraph("creationPendingHelp"),
+    button(t("creationResume"), () => act(() => finishHouseholdSetup(c => c.completeCreation())), "primary"), vault.read().creating.rejected ? button(t("creationAbandon"), () =>
+      messageDialog("creationAbandon", "creationAbandonHelp", () => client.abandonRejectedCreation())) : null);
   if (vault.read().joining) return fingerprintPanel();
   const input = el("textarea", {
     id: "invite",
@@ -944,6 +989,8 @@ function joinPanel() {
   return el(
     "div",
     { class: "panel" },
+    el("section", { class: "paper panel-body" }, el("h2", {}, t("createHouseholdTitle")),
+      paragraph("createHouseholdText"), button(t("createHousehold"), () => act(createHouseholdDialog), "primary")),
     Object.keys(vault.read().households).length ? null : firstHouseholdPanel(),
     el(
       "section",
@@ -978,9 +1025,9 @@ function joinPanel() {
 }
 function firstHouseholdPanel() {
   return el(
-    "section",
+    "details",
     { class: "paper panel-body" },
-    el("h2", {}, t("firstHouseholdTitle")),
+    el("summary", {}, t("firstHouseholdTitle")),
     paragraph("firstHouseholdText"),
     el(
       "ol",
@@ -992,6 +1039,83 @@ function firstHouseholdPanel() {
       el("li", {}, t("firstHouseholdInvite")),
     ),
   );
+}
+async function finishHouseholdSetup(start) {
+  const own = generation;
+  try {
+    selected = await start(client); view = "list"; await syncSelected();
+  } catch (error) {
+    if (own === generation) await render();
+    throw error;
+  }
+}
+async function createHouseholdDialog() {
+  const own = generation, active = client;
+  let draft = await prepareHousehold(location.origin, await active.info());
+  if (own !== generation) return;
+  const url = URL.createObjectURL(new Blob([draft.file], { type: "application/json" }));
+  const name = el("input", { id: "new-list-name", class: "field", required: true, maxlength: 100, autocomplete: "off" });
+  const key = el("input", { id: "recovery-key-check", class: "field", type: "password", required: true, autocomplete: "off", spellcheck: false });
+  const file = el("input", { id: "recovery-file-check", type: "file", accept: ".json,application/json", required: true });
+  const saved = el("input", { type: "checkbox", required: true });
+  const error = el("p", { class: "dialog-error", role: "alert" });
+  openDialog(el("form", { onsubmit: event => {
+    event.preventDefault();
+    act(async () => {
+      requireThat(draft && saved.checked && file.files.length === 1 && file.files[0].size <= 8 * 1024 * 1024);
+      error.textContent = "";
+      let verified;
+      try { verified = await verifySavedHousehold(draft, new Uint8Array(await file.files[0].arrayBuffer()), key.value.trim()); }
+      catch { if (own === generation) error.textContent = t("recoveryReadBackError"); return; }
+      if (own !== generation) return;
+      const label = name.value.trim();
+      closeDialog();
+      await finishHouseholdSetup(c => c.createHousehold(verified, label));
+    });
+  } }, el("h2", {}, t("createHouseholdTitle")), paragraph("recoverySaveHelp"),
+  el("label", { class: "label", for: "new-list-name" }, t("listName")), name,
+  el("a", { href: url, download: "usuals-recovery.json", class: "secondary" }, t("recoveryDownload")),
+  el("p", { class: "label" }, t("recoveryKey")), el("p", { class: "fingerprint" }, draft.secret),
+  paragraph("recoveryKeyHelp", "helper"),
+  el("label", { class: "label", for: "recovery-file-check" }, t("recoveryReadBack")), file,
+  el("label", { class: "label", for: "recovery-key-check" }, t("recoveryKeyCheck")), key,
+  el("label", { class: "check-row" }, saved, t("recoverySaved")), error,
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog),
+    el("button", { type: "submit", class: "primary" }, t("createHousehold")))),
+  () => { URL.revokeObjectURL(url); draft = null; key.value = ""; file.value = ""; });
+  name.focus();
+}
+async function invitationDialog(id) {
+  const own = generation, uri = await client.invite(id);
+  if (own !== generation) return;
+  const input = el("textarea", { class: "field", rows: 5, readonly: true, value: uri, spellcheck: false,
+    "aria-label": t("invitation") });
+  openDialog(el("div", {}, el("h2", {}, t("ownerInvite")), paragraph("ownerInviteHelp"), input,
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { input.value = ""; });
+  input.focus(); input.select();
+}
+async function applicantsDialog(id) {
+  const own = generation, requests = await client.applicants(id);
+  if (own !== generation) return;
+  openDialog(el("div", {}, el("h2", {}, t("ownerRequests")), paragraph("ownerApproveHelp"),
+    ...requests.map(r => {
+      const error = el("p", { class: "dialog-error", role: "alert" });
+      const input = el("input", { class: "field", required: true, maxlength: 100, autocomplete: "off", spellcheck: false,
+        "aria-label": t("ownerFingerprintInput") });
+      return el("form", { class: "paper panel-body", onsubmit: event => {
+        event.preventDefault(); const trusted = input.value;
+        act(async () => {
+          error.textContent = "";
+          try { await client.approve(id, r.pending, trusted); closeDialog(); }
+          catch (e) { if (own === generation) error.textContent = t(e.code === "unverified" ? "ownerFingerprintMismatch" : dictionary[e.code] ? e.code : "serverUnavailable"); }
+        });
+      } }, el("p", { class: "fingerprint" }, r.fingerprint.match(/.{1,4}/g).join(" ")),
+      el("label", { class: "label" }, t("ownerFingerprintInput"), input), error,
+      el("div", { class: "button-row" }, button(t("ownerDeny"), () => act(async () => {
+        await client.denyApplicant(id, r.pending.requestId); closeDialog();
+      })), el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
+    }), requests.length ? null : paragraph("ownerNoRequests"),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
 }
 function fingerprintPanel() {
   const value = el("p", {
@@ -1045,6 +1169,7 @@ async function renderSharing(own) {
     panels = [];
   for (const h of Object.values(state.households)) {
     const m = body(h.proofs.at(-1)),
+      isOwner = !h.removed && m.members.some(member => member.role === "owner" && member.devices.some(d => d.id === h.device.publicKeys.id)),
       rows = [];
     for (const member of m.members)
       for (const device of member.devices) {
@@ -1074,6 +1199,8 @@ async function renderSharing(own) {
               ),
             ),
             el("span", { class: "badge" }, t(member.role)),
+            isOwner && device.id !== h.device.publicKeys.id ? button(t("ownerRemove"), () =>
+              messageDialog("ownerRemove", "ownerRemoveHelp", () => client.removeDevice(h.id, device.id))) : null,
           ),
         );
       }
@@ -1087,12 +1214,17 @@ async function renderSharing(own) {
           el("p", { class: "eyebrow" }, t("householdLabel")),
           el("h2", {}, t("householdDevices")),
           ...rows,
-          paragraph("householdHelp", "helper"),
+          paragraph(isOwner ? "ownerHelp" : "householdHelp", "helper"),
+          isOwner ? el("div", { class: "button-row" },
+            button(t("ownerInvite"), () => act(() => invitationDialog(h.id)), "primary"),
+            button(t("ownerRequests"), () => act(() => applicantsDialog(h.id))),
+            h.pendingMembership ? button(t("ownerDiscardObsolete"), () =>
+              messageDialog("ownerDiscardObsolete", "ownerDiscardHelp", () => client.discardInvalidMembership(h.id))) : null) : null,
         ),
       ),
     );
   }
-  if (!panels.length || state.joining) panels.push(joinPanel());
+  panels.push(joinPanel());
   if (own !== generation) return;
   $("content").replaceChildren(
     title("connectTitle", "connectText"),
@@ -1423,8 +1555,10 @@ window.addEventListener("online", () => {
 });
 $("dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
-  closeDialog();
+  if (tutorialActive) finishTutorial();
+  else closeDialog();
 });
+$("tutorial").addEventListener("click", tutorialDialog);
 $("language").addEventListener("click", languageDialog);
 $("appearance").addEventListener("click", appearanceDialog);
 $("lock").addEventListener("click", lock);
@@ -1461,6 +1595,7 @@ for (const event of ["pointerdown", "keydown"])
   }
   $("content").replaceChildren(paragraph("loading"));
   await loadAccount();
+  if (!tutorialSeen) tutorialDialog();
 })().catch(failure);
 
 function passwordValid(value) {
@@ -1763,7 +1898,7 @@ function secretDialog(result) {
 }
 function welcomeActions(signed) {
   if (signed)
-    return [button(t("unlockVault"), () => unlockDialog(), "primary")];
+    return [button(t("unlockVault"), () => unlockDialog().catch(failure), "primary")];
   if (!config?.enabled) return [paragraph("ssoDisabled", "warning-box")];
   const actions = [];
   if (config.localEnabled) {

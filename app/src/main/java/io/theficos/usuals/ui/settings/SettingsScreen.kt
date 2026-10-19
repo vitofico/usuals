@@ -67,6 +67,7 @@ fun SettingsScreen(
     onOpenSharing: () -> Unit = {},
     palette: AppPalette = AppPalette.PLUM,
     onPaletteChange: (AppPalette) -> Unit = {},
+    onOpenTutorial: () -> Unit = {},
 ) {
     val state by vm.state.collectAsState()
 
@@ -98,6 +99,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Spacer(Modifier.height(4.dp))
+            OutlinedButton(onClick = onOpenTutorial) { Text(stringResource(R.string.tutorial_replay)) }
             AppearanceSection(palette, onPaletteChange)
             SectionCard {
                 Text(stringResource(R.string.sharing_title), style = MaterialTheme.typography.titleMedium)

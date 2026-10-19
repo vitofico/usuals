@@ -248,6 +248,24 @@ export function joinBytes(a) {
     uint(a.expiresAt),
   );
 }
+export function parseJoin(input) {
+  requireThat(input instanceof Uint8Array && input.length <= 1536);
+  let at = 0;
+  const take = n => { requireThat(Number.isInteger(n) && n >= 0 && at + n <= input.length);
+    const value = input.slice(at, at + n); at += n; return value; };
+  const prefix = utf8.encode("USUALS/JOIN/1\0");
+  requireThat(equal([...take(prefix.length)], [...prefix]));
+  const lengthBytes = take(4), length = new DataView(lengthBytes.buffer).getUint32(0);
+  requireThat(length >= 1 && length <= 512);
+  const origin = text.decode(take(length)), digest = () => b64(take(32)), id = () => uuidText(take(16));
+  const a = { origin, serverId: digest(), householdId: id(), genesisHash: digest(), inviteId: id(), requestId: id(),
+    memberId: id(), device: { id: id(), signingPublicKey: digest(), recipientPublicKey: digest() },
+    secretHash: digest(), challengeId: id(), nonce: digest() };
+  const stamp = take(8), expiry = new DataView(stamp.buffer).getBigUint64(0);
+  requireThat(expiry <= BigInt(Number.MAX_SAFE_INTEGER) && at === input.length);
+  a.expiresAt = Number(expiry);
+  return a;
+}
 const numberTag = "\u0000usuals.number";
 export function isLiteralNumber(value) {
   return (

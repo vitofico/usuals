@@ -9,7 +9,7 @@ import java.util.UUID
 import javax.sql.DataSource
 
 class Database(val source: DataSource) {
-    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql").mapIndexed { index, name ->
+    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql").mapIndexed { index, name ->
         (index + 1) to checkNotNull(javaClass.getResourceAsStream("/db/$name")).use { it.readBytes() }
     }
     fun <T> transaction(block: (Connection) -> T): T = source.connection.use { c ->
@@ -43,7 +43,7 @@ class Database(val source: DataSource) {
         c.query("SELECT pg_advisory_xact_lock(740520261017)") { Unit }
         val existing = c.query("SELECT server_id,fence FROM relay_meta WHERE singleton=1") { Unit }
         if (existing.isEmpty()) {
-            val tables = listOf("household", "principal", "bootstrap_token", "auth_challenge", "auth_session", "invitation", "join_request", "shared_list", "manifest", "operation", "snapshot_candidate", "published_snapshot", "key_package", "rate_bucket", "web_user", "web_login", "web_session", "web_device", "web_device_session", "local_credential", "local_login")
+            val tables = listOf("household", "principal", "bootstrap_token", "auth_challenge", "auth_session", "invitation", "join_request", "shared_list", "manifest", "operation", "snapshot_candidate", "published_snapshot", "key_package", "rate_bucket", "web_user", "web_login", "web_session", "web_device", "web_device_session", "local_credential", "local_login", "web_created_household")
             val occupied = tables.joinToString(" OR ") { "EXISTS(SELECT 1 FROM $it)" }
             check(c.query("SELECT $occupied") { it.getBoolean(1) }.single().not()) { "missing_restore_metadata" }
             c.execute("INSERT INTO relay_meta VALUES (1,?,?)", Wire.decode(serverId, 32), fence)

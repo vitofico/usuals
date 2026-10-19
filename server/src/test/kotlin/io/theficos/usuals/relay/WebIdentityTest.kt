@@ -57,6 +57,89 @@ class WebIdentityTest {
         val challenge = f.auth.challenge(ChallengeRequest(device.keys.id, "session"), "synthetic-proof")
         return f.proof(device, challenge)
     }
+    private fun webCreation(): Pair<RelayFixture, CreateHousehold> {
+        val fixture = RelayFixture(db, identity) { now }
+        return fixture to fixture.bootstrapRequest().second
+    }
+    private fun freshBootstrap(fixture: RelayFixture, request: CreateHousehold): CreateHousehold {
+        val challenge = auth.challenge(ChallengeRequest(fixture.owner.keys.id, "bootstrap", fixture.owner.keys.signingPublicKey), uuid())
+        return request.copy(bootstrapProof = fixture.proof(fixture.owner, challenge))
+    }
+    @Test fun webCreationIsAtomicBoundIdempotentAndDoesNotConsumeOperatorCodes() = runBlocking {
+        val cookie = login(); val account = caller(cookie)
+        val (fixture, request) = webCreation(); val relay = Relay(db, identity, auth)
+        val count = db.transaction { it.query("SELECT count(*) FROM bootstrap_token") { r -> r.getLong(1) }.single() }
+        val created = web.createHousehold(account, request, relay)
+        assertThat(created.signed().hash()).isEqualTo(request.manifest.hash())
+        assertThat(web.createHousehold(account, freshBootstrap(fixture, request), relay)).isEqualTo(created)
+        assertThat(db.transaction { it.query("SELECT count(*) FROM web_created_household WHERE user_id=?", id(account.user.id)) { r -> r.getLong(1) }.single() }).isEqualTo(1)
+        assertThat(db.transaction { it.query("SELECT count(*) FROM bootstrap_token") { r -> r.getLong(1) }.single() }).isEqualTo(count)
+        denied("unauthenticated") { fixture.session(fixture.owner) }
+        val otherCookie = login("other-subject")
+        denied("conflict") { web.createHousehold(caller(otherCookie), freshBootstrap(fixture, request), relay) }
+        withContext(auth.browserContext(cookie)) {
+            val challenge = auth.challenge(ChallengeRequest(fixture.owner.keys.id, "session"), uuid())
+            val token = auth.session(fixture.proof(fixture.owner, challenge), account.session).token
+            assertThat(relay.lists(token, fixture.household).listIds).isEmpty()
+        }
+    }
+    @Test fun webCreationRejectsUsedKeysTamperingDisabledAndRevokedAccounts() {
+        val cookie = login(); val account = caller(cookie); val relay = Relay(db, identity, auth)
+        val (_, request) = webCreation()
+        denied("forbidden") { web.createHousehold(account, request.copy(manifest = request.manifest.copy(signature = Wire.encode(ByteArray(64)))), relay) }
+        val existing = f.current.body().copy(householdId = uuid())
+        val challenge = auth.challenge(ChallengeRequest(f.owner.keys.id, "bootstrap", f.owner.keys.signingPublicKey), uuid())
+        denied("conflict") { web.createHousehold(account, CreateHousehold(f.signed(existing), f.proof(f.owner, challenge)), relay) }
+        web.logout(account)
+        denied("unauthenticated") { web.createHousehold(account, request, relay) }
+        val fresh = caller(login())
+        db.transaction { it.execute("UPDATE web_user SET disabled=true WHERE id=?", id(fresh.user.id)) }
+        denied("unauthenticated") { web.createHousehold(fresh, request, relay) }
+        assertThat(db.transaction { it.query("SELECT count(*) FROM web_created_household") { r -> r.getLong(1) }.single() }).isEqualTo(0)
+    }
+    @Test fun webCreationRateAndPermanentQuotaAreBoundedPerAccount() {
+        val cookie = login(); val account = caller(cookie); val relay = Relay(db, identity, auth)
+        repeat(5) { val (_, request) = webCreation(); web.createHousehold(account, request, relay) }
+        val (_, limited) = webCreation()
+        denied("rate_limited") { web.createHousehold(account, limited, relay) }
+        now += 60001
+        repeat(5) { val (_, request) = webCreation(); web.createHousehold(account, request, relay) }
+        now += 60001
+        val (_, overflow) = webCreation()
+        denied("quota_exceeded") { web.createHousehold(account, overflow, relay) }
+        assertThat(db.transaction { it.query("SELECT count(*) FROM web_created_household") { r -> r.getLong(1) }.single() }).isEqualTo(10)
+    }
+    @Test fun webCreationHttpRequiresAccountOriginAndCsrfBeforeReadingBody() = testApplication {
+        application { relayModule(Relay(db, identity, auth), webIdentity = web) }
+        val cookie = login(); val me = web.me(cookie)
+        val session = "__Host-usuals-session=$cookie"
+        assertThat(client.post("/api/households") { setBody("bad-body") }.status.value).isEqualTo(401)
+        for ((origin, csrf) in listOf(f.origin to "wrong", "https://other.example" to me.csrfToken, null to me.csrfToken)) {
+            assertThat(client.post("/api/households") {
+                header(HttpHeaders.Cookie, session); if (origin != null) header(HttpHeaders.Origin, origin)
+                header("X-CSRF-Token", csrf); setBody("bad-body")
+            }.status.value).isEqualTo(403)
+        }
+        val (_, request) = webCreation()
+        val response = client.post("/api/households") {
+            header(HttpHeaders.Cookie, session); header(HttpHeaders.Origin, f.origin); header("X-CSRF-Token", me.csrfToken)
+            contentType(ContentType.Application.Json); setBody(Wire.json.encodeToString(CreateHousehold.serializer(), request))
+        }
+        assertThat(response.status.value).isEqualTo(201)
+        assertThat(response.headers[HttpHeaders.CacheControl]).isEqualTo("no-store")
+        assertThat(Wire.json.decodeFromString(ManifestProof.serializer(), response.bodyAsText()).signed().hash()).isEqualTo(request.manifest.hash())
+    }
+    @Test fun webHouseholdMigrationPreservesVersionThreeDataAndIdentityBindings() {
+        val cookie = login(); val account = caller(cookie); web.link(account, proof())
+        val previous = db.transaction { c ->
+            c.execute("DROP TABLE web_created_household"); c.execute("DELETE FROM schema_migration WHERE version=4")
+            c.query("SELECT version,checksum FROM schema_migration ORDER BY version") { it.getInt(1) to it.getString(2) }
+        }
+        db.migrate(); db.migrate(); db.checkSchema()
+        assertThat(db.transaction { it.query("SELECT version,checksum FROM schema_migration WHERE version<4 ORDER BY version") { r -> r.getInt(1) to r.getString(2) } }).isEqualTo(previous)
+        assertThat(web.me(cookie).user.id).isEqualTo(account.user.id)
+        assertThat(db.transaction { it.query("SELECT count(*) FROM web_device") { r -> r.getLong(1) }.single() }).isEqualTo(1)
+    }
     private suspend fun boundSession(token: String, device: TestDevice = f.owner): String = withContext(auth.browserContext(token)) {
         auth.session(proof(device), caller(token).session).token
     }
@@ -185,7 +268,7 @@ class WebIdentityTest {
     }
     @Test fun migrationFromVersionOnePreservesExistingHouseholdsAndChecksums() {
         db.transaction { c ->
-            listOf("local_login", "local_credential", "web_device_session", "web_device", "web_session", "web_login", "web_user").forEach { c.execute("DROP TABLE $it") }
+            listOf("web_created_household", "local_login", "local_credential", "web_device_session", "web_device", "web_session", "web_login", "web_user").forEach { c.execute("DROP TABLE $it") }
             c.execute("DELETE FROM schema_migration WHERE version>=2")
         }
         val checksum = db.transaction { it.query("SELECT checksum FROM schema_migration WHERE version=1") { row -> row.getString(1) }.single() }

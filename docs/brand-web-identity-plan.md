@@ -39,6 +39,47 @@ and SSO with the existing Authentik installation. Work remains local on
   complete English, Spanish, Italian, French and German resource catalogs. Relay
   APIs return structured codes. Adding a locale requires resources, not a registry.
 
+## Web-first household extension, 2026-10-19
+
+Vito explicitly confirmed that both paths must work: sharing an existing Android
+list and creating the first household entirely in the web app. This supersedes
+the earlier restriction that household creation and all owner actions start in
+Android. It does not grant deployment or publication permission.
+
+- Keep Android's offline list and operator-code setup unchanged. Keep the browser
+  invitation path for existing Android households.
+- Let an admitted, signed-in web account create a household through a same-origin,
+  CSRF-protected endpoint. Bind its freshly generated owner device to that account
+  atomically. Bound creation with per-account quotas and durable attempt limits;
+  support idempotent retry without issuing an operator bootstrap secret.
+- Generate owner/recovery keys and the genesis manifest in the browser. Require
+  saving and verifying an encrypted recovery kit compatible with Android before
+  creation. The server receives public membership and encrypted list data only.
+- Support an initial empty shared list and owner invitations, full-fingerprint
+  approval and device removal, using the existing membership/snapshot/key-package
+  protocol. Persist exact pending work and encryption reservations before I/O.
+  Preserve the stronger native client boundary and require fresh devices rather
+  than exporting browser identities.
+- Add an append-only server migration for bounded account-created households;
+  preserve restore fencing. No Android Room or sync framing version change.
+- Update first-run tours and empty-state guidance for both paths in all five
+  languages. Verify native/browser interoperability, recovery-kit interoperability,
+  interrupted creation/membership, account/CSRF/disabled-user boundaries, and real
+  two-client encrypted exchange. Complete an independent security/source review.
+- Work on local feat/smart-list, with Docker checks through scripts/dgradle,
+  emulator/browser verification and commits. Ask before any cluster deployment.
+
+Independent source review covered atomic account binding, CSRF, quotas, recovery
+secrets, membership staging and fingerprints. Closed findings: verified discard
+of obsolete membership work, permanent quota-rejection cancellation, recovery
+after proof persistence followed by a failed key download, and expired approvals
+interrupted before commit. Signed expiry witnesses survive TTL cleanup; checking
+membership before and after server-clock confirmation preserves keys if a
+concurrent approval committed. Approval/removal retries resolve committed work,
+including after invitation expiry. Regression tests cover these cases, ambiguous
+commits and exact ciphertext reuse. Runtime acceptance and
+final Docker evidence are recorded in the release checks after verification.
+
 ## Ordered acceptance gates
 
 | Track | Done when |
