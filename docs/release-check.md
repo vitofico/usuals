@@ -10,6 +10,31 @@ The initial publication changed README assets and documentation. The palette
 follow-up below records verification of the subsequent UI changes. Source
 publication does not publish a signed APK or deploy the cluster service.
 
+## Shared Android and web icon, 2026-10-19
+
+Android now uses the preferred dotted U from `web/assets/mark.svg`, with its
+original aubergine/champagne colours in the list header and empty state. The
+adaptive launcher's monochrome layer and reminder notification reuse the same
+foreground drawable. The obsolete double-line basket asset is removed, and
+the repository-native README cover uses the same mark.
+
+- Docker debug/release builds, `test` and `lint` pass through `scripts/dgradle`
+  in 13m 6s. The reports cover 876 cases, zero failures/errors and five opt-in
+  live skips. App lint retains 94 warnings/11 informational findings, zero errors.
+- Both APKs pass ELF/ZIP 16 KB alignment for all 12 native libraries. Debug
+  SHA256: `8c8ee47d26a8f6022bc72c7118949a970edb69421364f8dbc06b7935ea58bd20`.
+  Release: `01dc5c4aca511238811595c41deaafb451392aeee45c39cbd9ff6504609201a3`.
+- XML/SVG checks confirm matching web glyph paths/colours and adaptive safe-area
+  bounds. Themed icons share the foreground resource, rather than a second copy.
+- Emulator screenshots verify the actual header, empty state and Android-rendered
+  adaptive icon. Its existing Comanda package/data was left intact; the Usuals
+  build was installed separately. The emulator disconnected after visual checks.
+- No schema, permission, language, dependency or server change. The phone also
+  disconnected before installation of this update; reconnection is requested.
+
+Evidence: `/private/tmp/usuals-icon-qa/`, including `build-proof.json`,
+`source-checks.json`, `android-gate.log`, `app.png` and `app-info.png`.
+
 ## Selectable palettes, 2026-10-18
 
 Grove and Tide join the original Plum appearance. Selection applies immediately

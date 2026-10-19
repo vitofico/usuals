@@ -27,6 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -425,7 +426,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
     val colors = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_brand_mark), null, tint = colors.primary,
+            Image(painterResource(R.drawable.ic_brand_mark), null,
                 modifier = Modifier.size(26.dp))
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleSmall,
                 color = colors.primary, modifier = Modifier.weight(1f).padding(start = 10.dp))
@@ -478,11 +479,7 @@ private fun EmptyInstruction() {
         val compact = maxHeight < 280.dp
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(if (compact) 16.dp else 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            if (!compact) Box(Modifier.size(92.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(28.dp)),
-                contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_brand_mark), null, tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(46.dp))
-            }
+            if (!compact) Image(painterResource(R.drawable.ic_brand_mark), null, modifier = Modifier.size(92.dp))
             Text(stringResource(R.string.list_empty_title), style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = if (compact) 0.dp else 20.dp, bottom = 8.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)

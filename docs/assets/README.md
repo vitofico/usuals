@@ -1,7 +1,7 @@
 # README assets
 
-The cover is a repository-native SVG using the app's existing palette and Android
-basket mark. It embeds no font, script or remote resource.
+The cover is a repository-native SVG using the app's palette and dotted U mark
+from `web/assets/mark.svg`. It embeds no font, script or remote resource.
 
 `palettes.svg` illustrates Plum, Grove and Tide with their light/dark colors.
 It is a palette comparison, not an application screenshot.
