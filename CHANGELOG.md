@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased: first household setup (2026-10-19)
+
+- Explain the first-household setup after web sign-in, with Android steps and
+  the current server address above the invitation form in all five languages.
+- Keep the existing invitation and full-fingerprint approval flow for browsers.
+
 ## Unreleased: consistent app icon (2026-10-19)
 
 - Matched Android's launcher, themed icon, list header and empty state to the

@@ -24,6 +24,17 @@ restart and never reset to make a bad response acceptable.
 
 ## Choices and concurrent work
 
+For a first household, open **Settings > Shared lists > Create a household**.
+Enter your server's HTTPS origin and a one-time household setup code supplied
+by its administrator. Prepare, save and verify the recovery kit, then create
+the household. Choose **Share a local list** to make your first shared copy.
+
+To use it in the web app, sign in there, set up its encrypted browser storage
+and paste an invitation from Android's **Invite someone** action. In Android,
+open **Review requests**, compare the full browser fingerprint and approve the
+request. Authentik or local account sign-in alone does not create a household.
+See the [browser guide](../../web/README.md#first-household).
+
 Sharing previews one local list and an initially unticked history option. It
 creates a separate encrypted shared copy and keeps the original local list.
 Joining creates a separate scope. The picker labels local and shared copies.

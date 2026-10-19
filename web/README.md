@@ -10,6 +10,24 @@ fresh browser device using an Android invitation and full reverse fingerprint.
 An account administrator cannot grant list keys. Owners continue to create
 households, rotate membership and manage recovery in Android.
 
+## First household
+
+Signing in with Authentik or a local account opens your account. To use shared
+lists, create the first household in Android and then invite the browser:
+
+1. Open **Settings > Shared lists > Create a household** in Android. Use the
+   same server origin as the web app.
+2. Obtain a one-time household setup code from the server administrator.
+   Prepare, save and verify the recovery kit, then choose **Create household**.
+3. Choose **Share a local list** to create a shared copy of your shopping list.
+4. Choose **Invite someone**. Paste that invitation into the signed-in browser,
+   then use **Review requests** in Android to compare the full fingerprint and
+   approve the browser.
+
+The signed-in empty state displays this guide and the current server address
+above the invitation form. The invitation is also required for the server
+owner's browser. Account sign-in keeps its existing separate authority.
+
 The editor supports real encrypted list reads, add, check, edit and delete,
 including durable offline pending intents. It reduces every v1 operation from
 Android. It retains exact ciphertext for retries, verifies signed membership and

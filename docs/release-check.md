@@ -987,3 +987,28 @@ elapsed household pilot remain separate acceptance gates.
 - Evidence: `/private/tmp/usuals-brand-everywhere-qa/`, including
   `android-final-gate.log`, `build-proof.json`, `phone-install.json`, alignment
   logs and screenshots.
+
+## First-time web household guidance (2026-10-19)
+
+- After successful sign-in and browser vault setup, an empty browser now shows
+  how to create the first household in Android, obtain the operator's one-time
+  setup code, save/verify recovery, share a local list and invite this browser.
+  The current origin is displayed as selectable, wrapping text. All five
+  catalogs contain the complete guide, using the actual Android action names.
+- Account/session access and household membership remain separate. No bootstrap
+  endpoint, admission policy, owner operation or invitation check changed.
+  Browser-only household creation remains outside the current implementation.
+- `server/scripts/test-local` passed through `scripts/dgradle`: 132 recorded JVM
+  cases and 99 Node tests, zero failures/errors/skips, installable distribution
+  and bidirectional JVM/WebCrypto checks. Packaged app/CSS/catalog bytes match
+  the final source files. Android sources are unchanged; the preceding full
+  Android gate still applies.
+- An isolated localhost relay and synthetic account show the guide at desktop
+  and 390px widths, including German. A valid invitation still reaches full
+  fingerprint approval by the native Kotlin owner fixture, then opens the real
+  encrypted sample list. The guide disappears after joining. No browser console
+  errors. Temporary viewport/tab and owned preview/database were cleaned up.
+- Evidence: `/private/tmp/usuals-first-household-qa/`, with build/browser proofs,
+  gate logs and screenshots. Phone/emulator data and production are untouched.
+  No deployment or push. Live Authentik sign-in was reported by the user; this
+  change does not claim a new live OIDC verification.
