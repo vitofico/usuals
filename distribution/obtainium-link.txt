@@ -1,0 +1,1 @@
+obtainium://app/%7B%22id%22%3A%22io.theficos.usuals%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fvitofico%2Fusuals%22%2C%22author%22%3A%22vitofico%22%2C%22name%22%3A%22Usuals%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5Eapp-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22verifyLatestTag%5C%22%3Atrue%7D%22%7D

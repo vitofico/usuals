@@ -1,1 +1,1 @@
-Lista de la compra por voz. Sin rastreadores, sin telemetría, sin cuentas.
+Lista de la compra sin conexión, con memoria y listas compartidas

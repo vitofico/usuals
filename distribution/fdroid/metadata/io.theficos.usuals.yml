@@ -1,0 +1,48 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: Optional recipe parsing can use proprietary model services chosen by the
+      user. Offline lists and local models do not require them.
+Categories:
+  - Shopping List
+License: Apache-2.0
+AuthorName: Vito Fico
+SourceCode: https://github.com/vitofico/usuals
+IssueTracker: https://github.com/vitofico/usuals/issues
+Changelog: https://github.com/vitofico/usuals/blob/HEAD/CHANGELOG.md
+Donate: https://ko-fi.com/vito507767
+
+AutoName: Usuals
+
+RepoType: git
+Repo: https://github.com/vitofico/usuals.git
+Binaries: https://github.com/vitofico/usuals/releases/download/v%v/app-release.apk
+
+Builds:
+  - versionName: 2026.10.19.1
+    versionCode: 26101901
+    commit: v2026.10.19.1
+    subdir: app
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-21-jdk-headless
+      - update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java
+    gradle:
+      - yes
+    prebuild: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+
+AllowedAPKSigningKeys: 2b146331dad6daacb6c547677b72d7e2f87e649b84b5f88c04f438ba3c2df990
+
+MaintainerNotes: |-
+  Android builds independently from the optional server and web client.
+  Release assembly is unsigned. Upstream signs with build-tools 34.0.0 and checks
+  clean APK reproduction with apksigcopier; preserve the developer signature.
+  No Google Play Services or proprietary SDKs are included. Model and catalog
+  requests are opt-in and sent directly by the device. Voice uses the selected
+  Android speech service and can be unavailable; keyboard entry works offline.
+  The recipe names the immutable tag; pin its full source SHA in fdroiddata.
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[1-9][0-9]*$
+UpdateCheckData: gradle.properties|VERSION_CODE=(\d+)|gradle.properties|VERSION_NAME=([\d.]+)
+CurrentVersion: 2026.10.19.1
+CurrentVersionCode: 26101901

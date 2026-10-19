@@ -1063,3 +1063,35 @@ elapsed household pilot remain separate acceptance gates.
 - Evidence: `/private/tmp/usuals-tutorial-qa/`, including final gate logs,
   native/runtime/build proofs, restoration logs and screenshots. No push,
   cluster deployment or new live Authentik verification.
+
+
+## First public Android distribution (2026-10-19)
+
+- Static source version 2026.10.19.1 / 26101901. Android Gradle assembly is
+  unsigned; offline signing verifies the separate Usuals certificate pin and
+  rejects debug signing. Approved encrypted key recovery was decrypted and
+  compared exactly. All four approved GitHub signing secrets are configured.
+- Full Android assembly, tests and lint passed through scripts/dgradle: 880
+  recorded JUnit cases, zero failures/errors and five opt-in live skips. All
+  22 release-tool checks pass. No new runtime dependency was introduced.
+- Server/browser gate passed through scripts/dgradle: 138 recorded JVM cases
+  and 119 Node tests, no failures/errors/skips, plus native/browser crypto,
+  household, recovery-kit and initial-snapshot interoperability.
+- Production APK emulator checks passed first-run onboarding, keyboard capture,
+  persistence across restart and same-key update, three palettes and tour replay.
+  Recipe/scanner entry and camera permission were checked. No optical emulator
+  scan is claimed. Pixel_10's Android services froze during camera preview and
+  required a restart; the phone and existing debug installation were not used.
+- Apache, OpenJDK and font notices are packaged. F-Droid's official metadata
+  formatter/linter passes. Five store catalogs, screenshots, privacy policy and
+  Obtainium stable-APK filtering are complete. The staged credential scan passes;
+  only the exact public certificate fingerprint is allowlisted.
+- Initial comparison caught stale incremental compiler outputs. Release candidates
+  now start with :app:clean. Two clean builds have identical Kotlin class files
+  and R8 mappings; apksigcopier signature-copy verification reproduces the signed
+  APK byte for byte. All 12 native libraries pass 16 KB alignment checks.
+  Signed APK SHA256:
+  `c64d35319635901a59d427b791874564e77085e579aaf3b1849d5abacd6eedfc`.
+- The owned production test installation was removed after QA. The existing
+  debug installation remains. No phone access or cluster deployment.
+- Evidence: /private/tmp/usuals-public-release/. No cluster deployment.

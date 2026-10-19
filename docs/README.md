@@ -10,6 +10,8 @@ is the detailed implementation spec.
 - [Shared lists plan](shared-lists-plan.md): encrypted relay phases, S0 contract and cluster gates.
 - [Paid hosting preparation](hosted-service-plan.md): proposed Usuals Cloud boundary, billing lifecycle and launch gates.
 - [Development](development.md): Docker builds, tests and emulator workflow.
+- [Distribution](distribution.md): verified APKs, signing, Obtainium and F-Droid.
+- [Privacy](../PRIVACY.md): device storage, optional requests and sharing.
 - [Security model](security-model.md): secrets, network paths and backup.
 - [Providers](providers.md): optional model configuration.
 - [Release checks](release-check.md): final local validation and distribution limits.

@@ -78,3 +78,8 @@ subprojects {
         )
     }
 }
+
+tasks.register<Exec>("verifyReleaseTools") {
+    description = "Checks release identity, publication safety and distribution metadata."
+    commandLine("python3", "-m", "unittest", "discover", "-s", "scripts/tests", "-v")
+}

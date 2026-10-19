@@ -43,6 +43,8 @@ regexes = [
     '''^8\.0\.0_r4-robolectric-r1-i6$''',
     '''^13-robolectric-9030017-i6$''',
     '''^14-robolectric-10818077-i6$''',
+    # Public SHA-256 of Usuals' Android release certificate, not a private key.
+    '''^2b146331dad6daacb6c547677b72d7e2f87e649b84b5f88c04f438ba3c2df990$''',
 ]
 # Matched against the secret the rule extracted, not against the whole line, so
 # the anchors mean what they look like they mean: this exact string and no

@@ -1,9 +1,15 @@
-Usuals is an offline Android shopping list with purchase memory that stays on your phone. Add by voice, keyboard, shared text or barcode. Edit quantities, categories, repeat rules and store tags. A home-screen widget shows what is left to buy.
+Usuals is a shopping list that remembers what you buy. Use it offline without an account, server or model.
 
-Finish a shop to save checked rows as a dated trip, with Undo. Unchecked rows stay on the list. Import past lists with a date, share the list as text, and export or restore shopping history through Android's file picker. Suggestions offer staples; inferred interval predictions stay off until real-history evaluation proves them useful. Only explicit repeat rules add automatically.
+Add items by keyboard, voice, shared text or barcode. Edit names, quantities, categories and shop tags. Finish a shop to save checked items in your history, with Undo. Repeat rules add only what you explicitly schedule. Suggestions help you rebuy your usual items.
 
-Share a recipe link to review and add its ingredients. Standard recipe data needs no model. Prose recipes offer an optional model. Barcode naming through Open Food Facts is also optional and off by default; you confirm each name. Without a connection, scans offer manual naming.
+Share a recipe link, review its ingredients and choose what to add. Standard recipe data needs no model. Optional model assistance can use your own local endpoint or a cloud provider.
 
-No account, telemetry, analytics, crash reporting or Play Services. Cloud backup is excluded. Model keys stay in Android Keystore. Recipe reads and opt-in barcode requests go directly from the phone to their sources. No household sync is built.
+Opt-in Open Food Facts lookup identifies scanned packages and shows brand, pack size, ingredients, nutrition grades, declared allergens and traces. You confirm suggested names. Information may be incomplete: check the packaging. Without lookup, name scanned items yourself.
 
-English UI, with English and Spanish input. Apache-2.0. Unpublished development software.
+Optionally share encrypted lists through your own Usuals server and web app. Create a household on Android or the web, save its recovery kit and approve joining devices by their full fingerprints. Web accounts can use local passwords or configured SSO. Android's local lists need no sign-in.
+
+Includes three themes with dark mode, a first-run guided tour, a widget, shopping history export/import and English, Spanish, Italian, French and German interfaces.
+
+No ads, analytics, crash reporting or Google Play Services. Product lookup and models are optional and disabled by default. Voice uses the Android speech service you select, which may process audio remotely; keyboard capture stays offline. Recipe and catalog requests go directly from your device. Cloud backup is excluded; signing keys and model credentials are not part of shopping exports.
+
+Apache-2.0. Optional cloud models may use proprietary services; local models and offline lists do not require them.

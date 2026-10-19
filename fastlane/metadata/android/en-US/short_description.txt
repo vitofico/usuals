@@ -1,1 +1,1 @@
-Voice-first grocery list. No trackers, no telemetry, no account.
+An offline shopping list with a memory and optional shared lists

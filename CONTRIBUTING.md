@@ -31,7 +31,7 @@ Commits use `:emoji: type: subject`, for example:
 
 Do not add attribution boilerplate. Do not use em dashes in prose. During the
 pivot, work on `feat/smart-list`. Publication requires maintainer authorization;
-the initial private GitHub publication was approved on 2026-10-18. Ask before
+public source and Android distribution were approved on 2026-10-19. Ask before
 any cluster deployment.
 
 ## Code of Conduct

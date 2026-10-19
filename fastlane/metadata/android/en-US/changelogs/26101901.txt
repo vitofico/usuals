@@ -1,0 +1,1 @@
+First public release: offline shopping lists, purchase history, repeat rules, recipe import, opt-in product lookup, encrypted household sharing, five UI languages and three themes. Includes first-run tours and web household creation.

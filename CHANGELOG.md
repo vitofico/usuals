@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026.10.19.1: first public Android release
+
+- Publish a production-signed APK with pinned certificate, source identity and checksum.
+- Add Obtainium import configuration and a reproducible F-Droid inclusion recipe.
+- Complete store descriptions and changelogs in all five UI languages.
+- Separate unsigned builds from offline signing; reject missing keys, debug
+  certificates, source/version mismatches and replacement of published bytes.
+- Commit versions before tagging and require a clean rebuild to reproduce the APK.
+
+
 ## Unreleased: web-first households (2026-10-19)
 
 - Create a household and its initial encrypted list in the web app, using an

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+signed=$(realpath "${1:?provide signed APK and rebuilt unsigned APK}")
+unsigned=$(realpath "${2:?provide rebuilt unsigned APK}")
+image="usuals-build:$(shasum -a 256 "$root/Dockerfile" | cut -c1-12)"
+docker run --rm --pull never --platform linux/amd64 \
+  -v "$signed":/signed.apk:ro -v "$unsigned":/unsigned.apk:ro \
+  -v "$root/scripts/reproducibility-requirements.txt":/requirements.txt:ro \
+  -v "$root/scripts/check-apk-reproducibility.py":/check.py:ro \
+  "$image" bash -euo pipefail -c '
+    python3 -m venv /tmp/verify
+    /tmp/verify/bin/pip install --quiet --disable-pip-version-check --only-binary=:all: --require-hashes -r /requirements.txt
+    /tmp/verify/bin/python /check.py /signed.apk /unsigned.apk /opt/android-sdk/build-tools/34.0.0/apksigner
+  '
