@@ -1117,3 +1117,13 @@ elapsed household pilot remain separate acceptance gates.
 - The repaired network harness passed a forced full run: all 26 Gradle tasks
   executed, 138 JVM cases and 119 Node tests, zero failures/errors/skips. All
   22 release-tool checks also passed again. No Android runtime source changed.
+
+- Corrected GitHub runs completed successfully: [Android/server CI](https://github.com/vitofico/usuals/actions/runs/39279639913),
+  [production signing](https://github.com/vitofico/usuals/actions/runs/39279640068)
+  and [CodeQL](https://github.com/vitofico/usuals/actions/runs/39279639930).
+  Completed job logs are authoritative where the status API retained stale
+  queued data. CodeQL has zero open alerts. The fresh runner used the configured
+  signing secrets, reproduced the exact APK and verified that all three release
+  assets were unchanged. All 12 native libraries pass 16 KB checks.
+- Public distribution work is complete. The F-Droid inclusion request remains
+  under maintainer review after all nine independent pipeline jobs passed.
