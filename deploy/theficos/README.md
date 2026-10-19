@@ -120,12 +120,18 @@ cluster repository's conventions. Do not use an unrelated local kubectl context.
 
 ## Remaining operational gates
 
-The data-disk base/WAL backups and encrypted node-local recovery files do not
-protect against losing the entire node. Approval for copying encrypted recovery
-material to `/Users/vito/personal-repos/usuals-operator-backups` is pending. The
-existing Borg repository is node-local; no encrypted off-cluster schedule or
-15-minute RPO/two-hour RTO is claimed. Complete an off-cluster restore and backup
-monitoring before entrusting the service with real shared household data.
+On 2026-10-19 Vito explicitly approved copying encrypted recovery material to
+`/Users/vito/personal-repos/usuals-operator-backups`. The `20261019/` snapshot
+contains the signing identity, service credentials, base/WAL database archive and
+initial administrator activation. All four encrypted files match the node's
+checksum manifest and use the existing age recipient. Local permissions are
+0700 for directories and 0600 for files; nothing was decrypted. A local
+`SHA256SUMS`, recovery note and `backup-info.json` record verification.
+
+This preserves the initial 2026-10-18 snapshot outside the cluster. The existing
+Borg repository is node-local; no recurring off-cluster schedule or 15-minute
+RPO/two-hour RTO is claimed. Complete an isolated off-cluster restore drill and
+backup monitoring before entrusting the service with real shared household data.
 
 Owner sign-in/activation, the physical-device sharing pass, seven-day two-person
 pilot and sustained account-enabled capacity remain open. No commercial hosted
