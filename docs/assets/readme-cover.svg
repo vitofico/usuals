@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="416" viewBox="0 0 1280 416" role="img" aria-labelledby="title description">
   <title id="title">Usuals. Good things, remembered.</title>
-  <desc id="description">Warm ivory, aubergine ink and a champagne basket mark. An editorial cover for a shopping list with a little less to remember.</desc>
+  <desc id="description">Warm ivory, aubergine ink and a champagne dotted U mark. An editorial cover for a shopping list with a little less to remember.</desc>
   <defs>
     <clipPath id="cover"><rect width="1280" height="416" rx="24"/></clipPath>
   </defs>
@@ -17,9 +17,9 @@
     <text x="64" y="288" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="19">Your shopping list. A little more considered.</text>
     <path d="M64 335h60" stroke="#B39568" stroke-width="2"/>
     <text x="64" y="373" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="2">OFFLINE FIRST · SHARED BY CHOICE</text>
-    <g transform="translate(960 78) scale(4.5)" fill="none" stroke="#EFE1CA" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 7V26A14 14 0 0 0 38 26V7" stroke-width="2.4"/>
-      <path d="M18 26A6 6 0 0 0 30 26" stroke-width="2.1"/>
+    <g transform="translate(924 42) scale(4.5)" fill="none" stroke="#EFE1CA" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.5 26v10a10.5 10.5 0 0 0 21 0V26" stroke-width="7"/>
+      <circle cx="42.5" cy="14.5" r="3" fill="#EFE1CA" stroke="none"/>
     </g>
     <text x="1068" y="336" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">MAKE ROOM FOR</text>
     <text x="1068" y="360" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">THE GOOD THINGS</text>

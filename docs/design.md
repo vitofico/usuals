@@ -13,11 +13,13 @@ nontranslatable `app_name` resource. Branded sentences take that resource as a
 format argument in English, Spanish, Italian, French and German, so a name
 change has one source.
 
-The mark is a drawn U with a curved line inside it: a U and a basket in one
-stroke. A champagne mark sits on a solid aubergine launcher background. The
-monochrome adaptive icon uses the same silhouette. The header and empty state
-use a compact vector of the same mark. No bitmap, generated asset or remote
-request is needed. Keep launcher strokes within the adaptive icon safe area.
+The mark is a rounded U with a separate dot above its right stem. The canonical
+artwork is `web/assets/mark.svg`: champagne on a rounded aubergine tile. Android's
+header and empty state retain those brand colours across all palettes. The
+launcher uses the same geometry within the adaptive icon safe area; its monochrome
+layer reuses the foreground drawable so the silhouettes cannot diverge. Android
+controls the launcher's outer mask and themed colours. No bitmap, generated asset
+or remote request is needed.
 
 ## Palettes
 

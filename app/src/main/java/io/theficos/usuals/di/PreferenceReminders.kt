@@ -43,7 +43,7 @@ fun preferenceReminders(context: Context): ReminderController {
                 val open = Intent(context, MainActivity::class.java).putExtra(EXTRA_OPEN_LIST, true)
                 val pending = PendingIntent.getActivity(context, NOTIFICATION, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 val notification = NotificationCompat.Builder(context, CHANNEL)
-                    .setSmallIcon(R.drawable.ic_launcher_monochrome).setContentTitle(context.getString(R.string.reminder_notification_title))
+                    .setSmallIcon(R.drawable.ic_launcher_foreground).setContentTitle(context.getString(R.string.reminder_notification_title))
                     .setContentText(context.getString(R.string.reminder_notification_body))
                     .setContentIntent(pending).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE).build()
                 try { NotificationManagerCompat.from(context).notify(NOTIFICATION, notification) } catch (_: SecurityException) { }

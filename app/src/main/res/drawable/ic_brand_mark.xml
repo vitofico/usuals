@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="32dp" android:height="32dp" android:viewportWidth="48" android:viewportHeight="48">
-    <path android:pathData="M10,7 V26 A14,14 0 0 0 38,26 V7"
-        android:fillColor="@android:color/transparent" android:strokeColor="#000000"
-        android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:pathData="M18,26 A6,6 0 0 0 30,26"
-        android:fillColor="@android:color/transparent" android:strokeColor="#000000"
-        android:strokeWidth="3.5" android:strokeLineCap="round" />
+    android:width="32dp" android:height="32dp" android:viewportWidth="64" android:viewportHeight="64">
+    <!-- web/assets/mark.svg, including its original brand colours. -->
+    <path android:pathData="M20,0 H44 A20,20 0,0 1,64 20 V44 A20,20 0,0 1,44 64 H20 A20,20 0,0 1,0 44 V20 A20,20 0,0 1,20 0 Z"
+        android:fillColor="@color/ic_launcher_background" />
+    <path android:pathData="M21.5,26 v10 a10.5,10.5 0,0 0,21 0 V26"
+        android:fillColor="@android:color/transparent" android:strokeColor="@color/brand_champagne"
+        android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M45.5,14.5 a3,3 0,1 0,-6 0 a3,3 0,1 0,6 0 Z"
+        android:fillColor="@color/brand_champagne" />
 </vector>

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased: consistent app icon (2026-10-19)
+
+- Matched Android's launcher, themed icon, list header and empty state to the
+  web version's dotted U, with the original aubergine and champagne colours.
+- Removed the old basket mark and separate monochrome drawable.
+
 ## Unreleased: selectable palettes (2026-10-18)
 
 - Added Grove, with botanical greens and oat tones, and Tide, with ink blue and
