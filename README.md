@@ -140,9 +140,18 @@ The first launch includes a guided tour. Skip it whenever you like and reopen
 it from **Settings > Guided tour** on Android, or **Guided tour** in the web
 navigation. Sharing setup explains the separate account and household steps.
 
-This is a private source preview. Sign in to GitHub with an account that has
-repository access. No signed release APK, store listing or managed service is
-published yet. To build Android, install Git and Docker, then run:
+Download the signed **[Android APK](https://github.com/vitofico/usuals/releases/latest/download/app-release.apk)** from GitHub Releases, or add
+`https://github.com/vitofico/usuals` to **[Obtainium](https://obtainium.imranr.dev/)**
+for updates. The [one-tap Obtainium import](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522io.theficos.usuals%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Fvitofico%252Fusuals%2522%252C%2522author%2522%253A%2522vitofico%2522%252C%2522name%2522%253A%2522Usuals%2522%252C%2522additionalSettings%2522%253A%2522%257B%255C%2522includePrereleases%255C%2522%253Afalse%252C%255C%2522apkFilterRegEx%255C%2522%253A%255C%2522%255Eapp-release%255C%255C%255C%255C.apk%2524%255C%2522%252C%255C%2522verifyLatestTag%255C%2522%253Atrue%257D%2522%257D) selects only
+stable production APKs. F-Droid inclusion is being submitted; the app is not
+listed there yet. See the [distribution guide](docs/distribution.md) for signatures,
+checksums and the current review status.
+
+Android works offline without an account. Shared lists are optional and use your
+own compatible server. There is no managed hosting subscription in this release.
+Read the [privacy policy](PRIVACY.md) before enabling external services.
+
+To build Android, install Git and Docker, then run:
 
 ```sh
 git clone https://github.com/vitofico/usuals.git

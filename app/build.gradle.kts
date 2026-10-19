@@ -6,7 +6,7 @@ plugins {
 }
 
 // Static version. Source of truth: gradle.properties (VERSION_NAME, VERSION_CODE).
-// CI bumps these on every push to main; local devs see the most recent release.
+// Commit the version before tagging so source builds and published APKs agree.
 val appVersionName: String = project.property("VERSION_NAME") as String
 val appVersionCode: Int = (project.property("VERSION_CODE") as String).toInt()
 
@@ -36,17 +36,6 @@ android {
         includeInApk = false
         includeInBundle = false
     }
-    signingConfigs {
-        create("release") {
-            val storePath = System.getenv("USUALS_RELEASE_KEYSTORE")
-            if (!storePath.isNullOrBlank()) {
-                storeFile = file(storePath)
-                storePassword = System.getenv("USUALS_RELEASE_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("USUALS_RELEASE_KEY_ALIAS")
-                keyPassword = System.getenv("USUALS_RELEASE_KEY_PASSWORD")
-            }
-        }
-    }
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -59,11 +48,8 @@ android {
             // AGP 8.3+ embeds git origin/branch/SHA by default, which breaks
             // F-Droid reproducible builds. The tag already pins the commit.
             vcsInfo.include = false
-            signingConfig =
-                if (System.getenv("USUALS_RELEASE_KEYSTORE").isNullOrBlank())
-                    signingConfigs.getByName("debug")
-                else
-                    signingConfigs.getByName("release")
+            // Production keys never enter Gradle. scripts/sign-release signs offline.
+            signingConfig = null
         }
     }
 }

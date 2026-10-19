@@ -1,0 +1,7 @@
+{
+  "id": "io.theficos.usuals",
+  "url": "https://github.com/vitofico/usuals",
+  "author": "vitofico",
+  "name": "Usuals",
+  "additionalSettings": "{\"includePrereleases\":false,\"apkFilterRegEx\":\"^app-release\\\\.apk$\",\"verifyLatestTag\":true}"
+}

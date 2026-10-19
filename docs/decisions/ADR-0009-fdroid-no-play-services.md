@@ -7,7 +7,8 @@
 
 Usuals should work on Android devices without Google services. The original
 retailer-based rationale is historical; the distribution and dependency decision
-still applies to the smart shopping list. No release or store listing exists yet.
+still applies to the smart shopping list. Public Android distribution was authorized on 2026-10-19; F-Droid inclusion
+requires maintainer acceptance.
 
 ## Decision
 
@@ -16,9 +17,9 @@ add Play Services, Firebase, FCM, ML Kit, analytics or crash-reporting services.
 Barcode decoding uses CameraX and ZXing. Builds use the pinned Docker toolchain
 under ADR-0010. Reproducibility must be checked before claiming an F-Droid release.
 
-No push transport, polling job or foreground shopping service exists in this
-build. A future opt-in local reminder may use WorkManager without Play Services.
-Encrypted sync and its notification behavior need a separate approved design.
+Optional local reminders use WorkManager without Play Services. The approved
+encrypted relay supports household lists on a chosen server; offline lists need
+no server. Android sync catches up by cursor without Firebase or FCM.
 Play distribution remains a separate decision, rather than a current commitment.
 
 ## Consequences

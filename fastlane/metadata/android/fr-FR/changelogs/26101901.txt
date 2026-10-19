@@ -1,0 +1,1 @@
+Première version publique : listes hors ligne, historique, répétitions, recettes, recherche produit facultative, partage chiffré, cinq langues et trois thèmes. Visites guidées et création de foyers depuis le web.

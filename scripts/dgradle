@@ -34,15 +34,7 @@ IMAGE="usuals-build:$DOCKERFILE_SHA"
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "[dgradle] building $IMAGE under linux/amd64 (Rosetta on Apple Silicon, ~5 min)…"
-  # --pull because the base is a moving tag (eclipse-temurin:21-jdk-jammy), so a
-  # laptop holding a months-old copy would otherwise build on an older base than
-  # a fresh CI runner pulls. It closes half the gap: the apt and sdkmanager
-  # fetches inside the Dockerfile are unpinned too, and only a change to the
-  # Dockerfile's own bytes triggers a rebuild at all. Pinning the base by digest
-  # is what would close the rest.
-  #
-  # usuals-build:latest is tagged alongside it so the name the docs use still
-  # points at something, and at the newest build rather than the first one.
+  # Base images are pinned by digest. A changed toolchain gets a new local tag.
   docker build --pull --platform linux/amd64 -t "$IMAGE" -t usuals-build:latest "$ROOT"
 fi
 

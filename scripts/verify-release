@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+tag=${1:?usage: verify-release vYYYY.MM.DD.N}
+image="usuals-build:$(shasum -a 256 "$root/Dockerfile" | cut -c1-12)"
+docker run --rm --pull never --network none --platform linux/amd64 \
+  -v "$root":/workspace "$image" python3 scripts/android-release.py \
+  --tag "$tag" --apk app/build/outputs/apk/release/app-release.apk \
+  --build-tools /opt/android-sdk/build-tools/34.0.0 \
+  --certificate-sha256 scripts/release-certificate-sha256.txt

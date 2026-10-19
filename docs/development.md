@@ -39,7 +39,8 @@ adb -s emulator-5554 shell am start -n io.theficos.usuals.debug/io.theficos.usua
 ```
 
 For the pivot, verify each phase on the emulator, update section 8 of the local
-pivot plan, then commit on `feat/smart-list`. Do not add a remote or push.
+pivot plan, then commit on `feat/smart-list`. Publication follows the maintainer
+authorization and [release process](distribution.md); deployment is separate.
 The debug id is `io.theficos.usuals.debug` and can coexist with a release.
 Unreleased schemas 1 to 3 are destructively replaced by schema 4. Keep exported
 schemas; every schema change after version 4 needs a migration and migration test.
