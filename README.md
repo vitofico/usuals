@@ -192,3 +192,9 @@ Maintained by [@vitofico](https://github.com/vitofico).
 
 [Apache License 2.0](LICENSE). Bundled dependencies and fonts retain their own
 licenses and notices. See the [contribution agreement](CLA.md).
+
+## Support
+
+If Usuals is useful to you and you'd like to chip in, you can buy me a coffee:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/vito507767)
