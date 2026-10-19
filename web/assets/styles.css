@@ -601,6 +601,17 @@ main {
 .panel-body .eyebrow {
   font-size: 9px;
 }
+.setup-steps {
+  display: grid;
+  gap: 14px;
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.server-address {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 .label {
   display: block;
   font-size: 10px;

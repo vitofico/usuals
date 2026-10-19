@@ -942,32 +942,54 @@ function joinPanel() {
     autocomplete: "off",
   });
   return el(
-    "section",
-    { class: "paper panel" },
+    "div",
+    { class: "panel" },
+    Object.keys(vault.read().households).length ? null : firstHouseholdPanel(),
     el(
-      "form",
-      {
-        class: "panel-body",
-        onsubmit: (event) => {
-          event.preventDefault();
-          const value = input.value.trim();
-          input.value = "";
-          act(async () => {
-            await client.requestJoin(value);
-            view = "sharing";
-          });
-        },
-      },
-      el("h2", {}, t("joinTitle")),
-      paragraph("joinText"),
-      el("label", { class: "label", for: "invite" }, t("invitation")),
-      input,
-      paragraph("joinHelp", "helper"),
+      "section",
+      { class: "paper" },
       el(
-        "div",
-        { class: "button-row" },
-        el("button", { type: "submit", class: "primary" }, t("join")),
+        "form",
+        {
+          class: "panel-body",
+          onsubmit: (event) => {
+            event.preventDefault();
+            const value = input.value.trim();
+            input.value = "";
+            act(async () => {
+              await client.requestJoin(value);
+              view = "sharing";
+            });
+          },
+        },
+        el("h2", {}, t("joinTitle")),
+        paragraph("joinText"),
+        el("label", { class: "label", for: "invite" }, t("invitation")),
+        input,
+        paragraph("joinHelp", "helper"),
+        el(
+          "div",
+          { class: "button-row" },
+          el("button", { type: "submit", class: "primary" }, t("join")),
+        ),
       ),
+    ),
+  );
+}
+function firstHouseholdPanel() {
+  return el(
+    "section",
+    { class: "paper panel-body" },
+    el("h2", {}, t("firstHouseholdTitle")),
+    paragraph("firstHouseholdText"),
+    el(
+      "ol",
+      { class: "setup-steps" },
+      el("li", {}, t("firstHouseholdStart"), " ",
+        el("code", { class: "server-address" }, location.origin)),
+      el("li", {}, t("firstHouseholdCode")),
+      el("li", {}, t("firstHouseholdShare")),
+      el("li", {}, t("firstHouseholdInvite")),
     ),
   );
 }
