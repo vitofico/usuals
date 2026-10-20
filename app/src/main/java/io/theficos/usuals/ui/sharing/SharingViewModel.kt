@@ -124,27 +124,24 @@ class SharingViewModel(private val client: HouseholdClient,
     }
     fun resumeBootstrap() = work { client.resumeBootstrap(); reload(); mutable.update { it.copy(message = SharingMessage.CREATED) } }
     fun retryJoin() = work { client.resumeJoin(); reload() }
-    fun scanServer(value: String): Boolean {
+    /** The single scan or link entry point. Previewing a link must not open the private vault or contact a server. */
+    fun scanned(value: String, serverOnly: Boolean = false): Boolean {
         if (state.value.busy) return false
+        val link = try { PairingLink.parse(value.trim()) } catch (_: Exception) {
+            mutable.update { it.copy(problem = SharingProblem.NOT_USUALS) }; return true
+        }
         try {
-            val origin = serverOrigin(value)
-            // Previewing a public link must not open the private vault. Connect validates it again.
-            require(state.value.connection?.origin.let { it == null || it == origin })
-            mutable.update { it.copy(origin = origin, problem = null) }
-        } catch (_: Exception) { mutable.update { it.copy(problem = SharingProblem.VERIFICATION) } }
-        return true
-    }
-    fun scanInvitation(value: String): Boolean {
-        if (state.value.busy) return false
-        try {
-            if (!value.startsWith("usuals://join#")) {
-                val origin = serverOrigin(value)
-                require(connection?.current()?.origin.let { it == null || it == origin })
-                mutable.update { it.copy(origin = origin, problem = null) }
-                return true
+            when (link) {
+                is PairingLink.Server -> {
+                    require(state.value.connection?.origin.let { it == null || it == link.origin })
+                    mutable.update { it.copy(origin = link.origin, problem = null) }
+                }
+                is PairingLink.Invite -> {
+                    require(!serverOnly)
+                    InvitationLink.parse(link.text)
+                    mutable.update { it.copy(invitation = link.text, problem = null) }
+                }
             }
-            InvitationLink.parse(value)
-            mutable.update { it.copy(invitation = value, problem = null) }
         } catch (_: Exception) { mutable.update { it.copy(invitation = "", problem = SharingProblem.VERIFICATION) } }
         return true
     }
@@ -268,7 +265,7 @@ data class SharingState(val origin: String = "", val setupCode: String = "", val
     override fun toString() = "SharingState([redacted])"
 }
 enum class SharingField { ORIGIN, SETUP, INVITATION, RECOVERY, FINGERPRINT }
-enum class SharingProblem { OFFLINE, VERIFICATION, ACCESS, LOCKED_KEYS, RECOVERY, CAPACITY, CHANGED, UPGRADE, HISTORY, ALREADY_JOINED, FILE, FROZEN_KEY }
+enum class SharingProblem { NOT_USUALS, OFFLINE, VERIFICATION, ACCESS, LOCKED_KEYS, RECOVERY, CAPACITY, CHANGED, UPGRADE, HISTORY, ALREADY_JOINED, FILE, FROZEN_KEY }
 enum class SharingMessage { KIT_VERIFIED, CREATED, WAITING, JOINED, APPROVED, RECOVERED, REPLACED, DISCARDED, SHARED, ROTATED, REMOVED, TRANSFERRED, KEYS_RESET, REAPPROVE, COPY_KEPT, COPY_REMOVED, FROZEN_SAVED }
 
 data class SharingList(val id: String, val name: String, val household: String, val shared: Boolean, val accessRemoved: Boolean = false)

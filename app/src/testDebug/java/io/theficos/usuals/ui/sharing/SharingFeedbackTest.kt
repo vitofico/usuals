@@ -74,14 +74,26 @@ class SharingFeedbackTest {
         val uri = InvitationLink(origin = "https://usuals.example", serverId = digest, householdId = id,
             genesisHash = digest, ownerDeviceId = id, ownerFingerprint = digest, inviteId = id,
             memberId = id, role = "editor", secret = digest, expiresAt = Long.MAX_VALUE).uri()
-        vm.scanInvitation(uri)
+        vm.scanned(uri)
         compose.onNodeWithText("Connect to https://usuals.example").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Connect this phone").performScrollTo().assertIsDisplayed()
         assertThat(vm.state.value.joining).isNull()
-        vm.scanInvitation("usuals://device#wrong-qr")
+        vm.scanned("usuals://join#bm90LWpzb24")
         assertThat(vm.state.value.invitation).isEmpty()
         assertThat(vm.state.value.problem).isEqualTo(SharingProblem.VERIFICATION)
         compose.onNodeWithText("Connect this phone").assertDoesNotExist()
+    }
+    @Test fun scannedCodesAreRoutedByKind() {
+        val vm = viewModel()
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
+        compose.waitUntil(5000) { !vm.state.value.busy }
+        vm.scanned("https://usuals.example/connect")
+        assertThat(vm.state.value.origin).isEqualTo("https://usuals.example")
+        assertThat(vm.state.value.problem).isNull()
+        vm.scanned("https://shop.example/product/42")
+        assertThat(vm.state.value.problem).isEqualTo(SharingProblem.NOT_USUALS)
+        assertThat(vm.state.value.origin).isEqualTo("https://usuals.example")
+        compose.onNodeWithText("This QR code is not a Usuals server or invitation.").assertIsDisplayed()
     }
     @Test fun expiredRequestCanBeReplacedOnlyAfterConfirmationWithoutChangingExistingListsOrConnections() {
         val receipt = SyncCrypto.device()
@@ -132,7 +144,7 @@ class SharingFeedbackTest {
         compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.joining != null }
         compose.onNodeWithText("Check approval").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Scan server or invitation QR").performScrollTo().assertIsDisplayed()
-        vm.scanInvitation(invitation.copy(expiresAt = Long.MAX_VALUE).uri())
+        vm.scanned(invitation.copy(expiresAt = Long.MAX_VALUE).uri())
         compose.onNodeWithText("Connect this phone").performScrollTo().performClick()
         compose.onNodeWithText("Replace the pending request?").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()

@@ -107,6 +107,7 @@
     <string name="sharing_remove_copy_help">Delete this list copy and its pending changes from this device? Save unsent work first if you want to keep it. Removing the last list also forgets this device’s local enrollment. Other members keep their shared list.</string>
     <string name="sharing_copy_kept">Independent local copy kept. Unsent requests are still available in Save unsent work.</string>
     <string name="sharing_copy_removed">This device’s list copy was removed.</string>
+    <string name="sharing_not_usuals">This QR code is not a Usuals server or invitation.</string>
     <string name="sharing_file_problem">Could not read or save this file. Choose another file and try again.</string>
     <string name="sharing_pair_title">Connect with QR</string>
     <string name="sharing_pair_help">On the web, open Shared lists &gt; Connect a phone. Create a household there first if needed. Scan its QR to fill in the server for you.</string>

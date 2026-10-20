@@ -108,6 +108,7 @@
     <string name="sharing_remove_copy_help">Diese Listenkopie und ihre ausstehenden Änderungen von diesem Gerät löschen? Speichere zuerst ungesendete Änderungen, wenn du sie behalten möchtest. Das Entfernen der letzten Liste löscht auch die lokale Registrierung dieses Geräts. Andere Mitglieder behalten ihre geteilte Liste.</string>
     <string name="sharing_copy_kept">Unabhängige lokale Kopie behalten. Ungesendete Anfragen sind weiterhin unter Ungesendete Änderungen speichern verfügbar.</string>
     <string name="sharing_copy_removed">Die Listenkopie wurde von diesem Gerät entfernt.</string>
+    <string name="sharing_not_usuals">Dieser QR-Code ist kein Usuals-Server und keine Einladung.</string>
     <string name="sharing_file_problem">Diese Datei konnte nicht gelesen oder gespeichert werden. Wähle eine andere Datei und versuche es erneut.</string>
     <string name="sharing_pair_title">Mit QR verbinden</string>
     <string name="sharing_pair_help">Öffne im Web Geteilte Listen &gt; Telefon verbinden. Erstelle dort bei Bedarf zuerst einen Haushalt. Scanne den QR, um den Server automatisch einzutragen.</string>

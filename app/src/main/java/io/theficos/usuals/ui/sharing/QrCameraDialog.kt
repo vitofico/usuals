@@ -13,12 +13,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import io.theficos.usuals.R
+import io.theficos.usuals.sync.PairingLink
 import io.theficos.usuals.ui.scan.CameraXBarcodeCamera
 
 @Composable
 internal fun QrCameraDialog(joining: Boolean, serverOnly: Boolean = false, onDismiss: () -> Unit, onCode: (String) -> Unit) {
     val context = LocalContext.current
-    val camera = remember(context) { CameraXBarcodeCamera(context, qr = true) }
+    val camera = remember(context, joining) {
+        CameraXBarcodeCamera(context, qrAccept = if (joining) PairingLink::recognize else { text -> text.startsWith("usuals://device#") })
+    }
     var allowed by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
     var refused by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed = it; refused = !it }

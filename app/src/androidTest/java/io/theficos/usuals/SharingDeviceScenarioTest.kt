@@ -46,7 +46,7 @@ class SharingDeviceScenarioTest {
                             activity.setContent { io.theficos.usuals.ui.theme.UsualsTheme { io.theficos.usuals.ui.sharing.SharingScreen(vm, {}) } }
                         }
                         while (vm.state.value.busy) delay(100)
-                        vm.scanInvitation(fixture.getString("invitationUri"))
+                        vm.scanned(fixture.getString("invitationUri"))
                         delay(500)
                         // Only this opt-in synthetic harness permits capture of its public verification QR.
                         scenario.onActivity { it.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }

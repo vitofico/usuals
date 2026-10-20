@@ -2,10 +2,13 @@ package io.theficos.usuals.ui.scan
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Size
 import android.view.ViewOutlineProvider
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview as CameraXPreview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.runtime.Composable
@@ -51,7 +54,7 @@ import java.util.concurrent.Executors
  *   built from an Activity does not pin it; the preview takes its own context
  *   from the composition, where it is the one attached to a window.
  */
-class CameraXBarcodeCamera(context: Context, private val qr: Boolean = false) : BarcodeCamera {
+class CameraXBarcodeCamera(context: Context, private val qrAccept: ((String) -> Boolean)? = null) : BarcodeCamera {
 
     private val appContext = context.applicationContext
 
@@ -76,7 +79,7 @@ class CameraXBarcodeCamera(context: Context, private val qr: Boolean = false) : 
         } else {
             CameraPreviewSurface(
                 onCode = onCode,
-                qr = qr,
+                qrAccept = qrAccept,
                 onFailure = { broken = true },
                 modifier = modifier,
             )
@@ -109,7 +112,7 @@ fun rememberBarcodeCamera(): BarcodeCamera {
  */
 @Composable
 private fun CameraPreviewSurface(
-    qr: Boolean,
+    qrAccept: ((String) -> Boolean)?,
     onCode: (String) -> Unit,
     onFailure: () -> Unit,
     modifier: Modifier,
@@ -138,7 +141,7 @@ private fun CameraPreviewSurface(
     }
 
     DisposableEffect(previewView, lifecycleOwner) {
-        val session = CameraSession(ContextCompat.getMainExecutor(context), qr)
+        val session = CameraSession(ContextCompat.getMainExecutor(context), qrAccept)
         val pendingProvider = ProcessCameraProvider.getInstance(context)
         pendingProvider.addListener(
             {
@@ -177,7 +180,7 @@ private fun CameraPreviewSurface(
  * field and not something atomic, and it is worth stating because the analysis
  * callback in the middle of it very much is not on the main thread.
  */
-private class CameraSession(private val main: Executor, private val qr: Boolean) {
+private class CameraSession(private val main: Executor, private val qrAccept: ((String) -> Boolean)?) {
 
     /**
      * One thread, for decoding.
@@ -215,7 +218,7 @@ private class CameraSession(private val main: Executor, private val qr: Boolean)
         val preview = CameraXPreview.Builder().build()
             .apply { setSurfaceProvider(view.surfaceProvider) }
 
-        val analyzer = if (qr) io.theficos.usuals.capture.QrAnalyzer { code ->
+        val analyzer = if (qrAccept != null) io.theficos.usuals.capture.QrAnalyzer(qrAccept) { code ->
             main.execute { if (open) onCode(code) }
         } else ScanAnalyzer(
             onScanned = { gtin ->
@@ -233,6 +236,12 @@ private class CameraSession(private val main: Executor, private val qr: Boolean)
             // alternative strategy blocks the camera until the decoder catches
             // up, which shows as a preview that freezes.
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .apply {
+                // A pairing QR shown on another screen needs about three pixels
+                // per module; the 640x480 default gives two at arm's length.
+                if (qrAccept != null) setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(
+                    ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)).build())
+            }
             .build()
             .apply { setAnalyzer(analysis, analyzer) }
 

@@ -108,6 +108,7 @@
     <string name="sharing_remove_copy_help">Eliminare da questo dispositivo la copia della lista e le modifiche in sospeso? Salva prima il lavoro non inviato se vuoi conservarlo. La rimozione dell’ultima lista elimina anche la registrazione locale del dispositivo. Gli altri membri conservano la lista condivisa.</string>
     <string name="sharing_copy_kept">Copia locale indipendente conservata. Le richieste non inviate restano disponibili in Salva il lavoro non inviato.</string>
     <string name="sharing_copy_removed">La copia della lista è stata rimossa da questo dispositivo.</string>
+    <string name="sharing_not_usuals">Questo codice QR non è un server né un invito di Usuals.</string>
     <string name="sharing_file_problem">Impossibile leggere o salvare questo file. Scegline un altro e riprova.</string>
     <string name="sharing_pair_title">Connetti con QR</string>
     <string name="sharing_pair_help">Sul web, apri Liste condivise &gt; Collega un telefono. Se necessario, crea prima un gruppo. Scansiona il suo QR per compilare il server.</string>

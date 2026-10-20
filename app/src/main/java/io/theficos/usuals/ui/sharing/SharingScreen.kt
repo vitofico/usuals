@@ -82,7 +82,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
             do { delay(5000); vm.checkJoin() } while (isActive && System.currentTimeMillis() < expiresAt)
         }
     }
-    LaunchedEffect(invitation) { if (invitation != null) { vm.state.first { !it.busy }; if (if (connectionOnly) vm.scanServer(invitation) else vm.scanInvitation(invitation)) onInvitationConsumed() } }
+    LaunchedEffect(invitation) { if (invitation != null) { vm.state.first { !it.busy }; if (vm.scanned(invitation, serverOnly = connectionOnly)) onInvitationConsumed() } }
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.usuals.recovery+json")) { uri ->
         if (uri != null) state.kit?.let { kit -> scope.launch(Dispatchers.IO) {
             runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(kit.file) } ?: error("unavailable") }
@@ -356,7 +356,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         dismissButton = { TextButton(onClick = vm::closeTransfer) { Text(stringResource(R.string.history_dismiss)) } })
     scanning?.let { mode -> QrCameraDialog(joining = mode == SharingScan.JOIN, serverOnly = connectionOnly, onDismiss = { scanning = null }, onCode = { code ->
         scanning = null
-        if (mode == SharingScan.JOIN) { if (connectionOnly) vm.scanServer(code) else vm.scanInvitation(code) }
+        if (mode == SharingScan.JOIN) vm.scanned(code, serverOnly = connectionOnly)
         else state.requests.firstOrNull()?.let { vm.approveQr(it, code) }
     }) }
 }
@@ -376,6 +376,7 @@ private enum class SharingScan { JOIN, VERIFY }
     Image(bitmap.asImageBitmap(), stringResource(label), Modifier.fillMaxWidth().heightIn(max = 300.dp).padding(vertical = 12.dp))
 }
 @Composable private fun sharingProblem(problem: SharingProblem) = stringResource(when (problem) {
+    SharingProblem.NOT_USUALS -> R.string.sharing_not_usuals
     SharingProblem.FILE -> R.string.sharing_file_problem
     SharingProblem.FROZEN_KEY -> R.string.restore_key_help
     SharingProblem.ALREADY_JOINED -> R.string.sharing_already_joined

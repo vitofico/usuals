@@ -108,6 +108,7 @@
     <string name="sharing_remove_copy_help">¿Eliminar de este dispositivo esta copia y sus cambios pendientes? Guarda antes el trabajo sin enviar si quieres conservarlo. Eliminar la última lista también borra la inscripción local de este dispositivo. Los demás miembros conservan su lista compartida.</string>
     <string name="sharing_copy_kept">Copia local independiente conservada. Las solicitudes sin enviar siguen disponibles en Guardar trabajo sin enviar.</string>
     <string name="sharing_copy_removed">Se ha eliminado la copia de la lista de este dispositivo.</string>
+    <string name="sharing_not_usuals">Este código QR no es un servidor ni una invitación de Usuals.</string>
     <string name="sharing_file_problem">No se pudo leer o guardar este archivo. Elige otro archivo y vuelve a intentarlo.</string>
     <string name="sharing_pair_title">Conectar con QR</string>
     <string name="sharing_pair_help">En la web, abre Listas compartidas &gt; Conectar un teléfono. Crea primero un hogar allí si hace falta. Escanea su QR para completar el servidor.</string>
