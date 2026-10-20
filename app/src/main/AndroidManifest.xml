@@ -48,6 +48,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Usuals">
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.imports" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/import_paths" />
+        </provider>
 
         <!--
           Cloud backup is empty under both backup rule formats. Android 12 and

@@ -304,3 +304,22 @@ test("discard survives reload after competing proof is saved but epoch-key downl
   assert.equal((await c.view(selected.household, selected.list)).name, "Our list");
   assert.equal(c.read(selected.household).pendingMembership, null); c.stop();
 });
+
+test("reviewed import batches commit atomically and skip existing or aliased identities", async () => {
+  const f = await fixture(), c = f.client(), selected = await c.createHousehold(await f.setup(), "Imported list");
+  await c.synchronize(selected.household, selected.list);
+  const payload = name => ({ proposedId: crypto.randomUUID(), key: name, name, rawText: name,
+    quantity: null, unit: null, normalizerVersion: 1, createdAt: now, updatedAt: now, position: 0 });
+  const before = f.vault.read().writes;
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("milk"), payload("eggs"), payload("milk")]), 2);
+  assert.equal(f.vault.read().writes, before + 1, "one atomic vault save for all selected rows");
+  const projection = await c.view(selected.household, selected.list);
+  assert.deepEqual(Object.values(projection.rows).map(r => r.facts.name).sort(), ["eggs", "milk"]);
+  const saved = structuredClone(f.vault.read());
+  await assert.rejects(c.enqueueCaptures(selected.household, selected.list, [payload("bread"), { ...payload("bad"), name: "" }]));
+  assert.deepEqual(f.vault.read(), saved, "invalid later rows do not partially queue earlier items");
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("milk"), payload("eggs")]), 0);
+  assert.deepEqual(f.vault.read(), saved, "retrying the same import is a no-op");
+  await f.vault.mutate(state => { state.households[selected.household].lists[selected.list].confirmed.projection.aliases = { dairy: "milk" }; });
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("dairy")]), 0);
+});

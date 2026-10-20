@@ -71,7 +71,8 @@ rejection can be cancelled to join an existing household. Membership work with
 an uncertain outcome is retained. **Discard obsolete change** verifies server
 membership and checkpoints first, preserving shopping edits and history pins.
 
-The editor supports real encrypted list reads, add, check, edit and delete,
+The editor supports real encrypted list reads, Markdown import, optional photo
+import, add, check, edit and delete,
 including durable offline pending intents. It reduces every v1 operation from
 Android. It retains exact ciphertext for retries, verifies signed membership and
 receipt chains, and stops on unsupported versions, rollback or restored/frozen
@@ -119,3 +120,21 @@ Create `stop` with `umask 077; touch <directory>/stop` to cleanly stop the previ
 all fixture input files must have mode0600.
 PostgreSQL and its credentials are removed. Never use this fixture with real
 accounts, household keys or production databases.
+
+## Markdown and photo import
+
+**Import ingredients** reads Markdown locally from text or a UTF-8 file, skips
+completed checkboxes and recipe instructions, and reviews the selected rows.
+Confirmation queues all new rows in one atomic vault save. Existing identities
+and aliases are excluded rather than increasing their quantities.
+
+Photos require an explicit memory-only model connection and a successful image
+compatibility check. The operator must allow exact provider origins and the
+provider must support browser CORS. No photo is sent by selection, preview or
+capture alone. See [provider setup](../docs/providers.md). Camera permission is
+requested only on **Take photo**; cancellation and failures stop the stream.
+
+For isolated browser photo QA, pass `-PpreviewModelOrigin=http://localhost:18748`
+to `server/scripts/preview-local` and run a synthetic provider at that loopback
+origin. This fixture-only option rejects remote hosts and is absent from the
+production startup path. Never use real photos, keys or households in the fixture.

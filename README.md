@@ -73,12 +73,17 @@ and allergens. Product data is credited to Open Food Facts under the ODbL.
 
 ## Recipes, without the busywork
 
-Share a recipe URL into Usuals or paste it in the recipe screen. Structured
+Share a recipe URL into Usuals or paste it in the recipe screen. You can also
+import a Markdown file or paste its list, without a model. Structured
 recipes are read directly on the phone and need no model. Review the ingredients
 before adding them; Usuals preserves your choices and avoids existing list
 items. Sites that block the request show an explanation.
 
-For prose recipes, an optional OpenAI-compatible model can help with extraction.
+An optional OpenAI-compatible model can read prose recipes. With image support,
+it can also read photos of written lists. Photos stay local until you
+request a read and its image check succeeds. Both Android and web offer a
+review before anything is added. See [provider setup](docs/providers.md), including
+the web operator allowlist and CORS requirements.
 It is off by default, runs only after your explicit action and uses the endpoint
 you configure. The everyday list needs no AI service.
 

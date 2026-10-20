@@ -8,6 +8,23 @@ import io.ktor.server.testing.*
 import org.junit.Test
 
 class WebAssetsTest {
+    @Test fun onlyExplicitModelOriginsEnterTheCspAndNoProviderCredentialsArePublished() = testApplication {
+        val config = BrowserModels.fromEnvironment(mapOf("USUALS_WEB_MODEL_ORIGINS" to "[\"https://models.example\"]"))
+        application { routing { webAssets(config) } }
+        assertThat(client.get("/").headers["Content-Security-Policy"]).contains("connect-src 'self' https://models.example;")
+        assertThat(client.get("/").headers["Content-Security-Policy"]).contains("img-src 'self' blob:")
+        assertThat(client.get("/model-origins.json").bodyAsText()).isEqualTo("{\"origins\":[\"https://models.example\"]}")
+    }
+    @Test fun modelOriginsRejectHeaderInjectionCredentialsPathsAndUnencryptedRemoteProviders() {
+        assertThat(BrowserModels.fromEnvironment(emptyMap()).origins).isEmpty()
+        assertThat(BrowserModels(listOf("http://localhost:18748")).origins).containsExactly("http://localhost:18748")
+        for (value in listOf("https://model.example;script-src *", "https://model.example\n", "https://user:password@model.example", "https://model.example/v1",
+            "http://model.example", "https://model.example?key=secret", "https://model.example#fragment", "https://model.example:", "https://model.example:0", "https://model.example:99999")) {
+            var failed = false
+            try { BrowserModels(listOf(value)) } catch (_: IllegalArgumentException) { failed = true }
+            com.google.common.truth.Truth.assertWithMessage(value).that(failed).isTrue()
+        }
+    }
     @Test fun packagedBrowserHasRestrictiveHeadersAndNoRemoteDependencies() = testApplication {
         application { routing { webAssets() } }
         val index = client.get("/")

@@ -29,7 +29,10 @@ android {
     kotlinOptions { jvmTarget = "21" }
     buildFeatures { compose = true }
     androidResources { generateLocaleConfig = true }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { it.jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED") }
+    }
     // Don't embed dependency metadata in the APK. AGP 8.x writes it into the v3
     // signing block and F-Droid's `check apk` rejects it as a privacy leak.
     dependenciesInfo {

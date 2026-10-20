@@ -30,6 +30,7 @@ data class ModelCapabilities(
     val supportsStructuredOutput: Boolean,
     val model: String?,
     val problem: ModelProblem? = null,
+    val supportsImages: Boolean = false,
 )
 
 /**
@@ -114,4 +115,10 @@ interface LlmClient {
      * which the local parser handles for free, and never for a scan.
      */
     suspend fun parseUtterance(utterance: String): List<ParsedItem>
+
+    /** Uses synthetic pixels, never a person's photo, to check image input. */
+    suspend fun probeImages(): ModelCapabilities = ModelCapabilities(false, false, null,
+        ModelProblem(ModelProblem.Kind.IMAGES_UNSUPPORTED))
+
+    suspend fun parseImage(image: ModelImage): List<ParsedItem> = emptyList()
 }

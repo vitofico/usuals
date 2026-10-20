@@ -20,6 +20,7 @@ internal fun modelProblemText(problem: ModelProblem): String = stringResource(
         ModelProblem.Kind.MISSING_ENDPOINT -> R.string.model_problem_endpoint
         ModelProblem.Kind.MISSING_MODEL -> R.string.model_problem_model
         ModelProblem.Kind.INCOMPLETE_CONFIGURATION -> R.string.model_problem_configuration
+        ModelProblem.Kind.IMAGES_UNSUPPORTED -> R.string.recipe_no_images
     },
     problem.httpCode ?: 0,
 )

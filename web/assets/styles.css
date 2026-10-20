@@ -26,6 +26,32 @@
   background: var(--ground);
   font-synthesis: none;
 }
+.import-dialog, .import-dialog section, .import-dialog form {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.import-dialog p { margin: 0; }
+.import-dialog .label { margin: 8px 0 0; }
+.import-dialog .helper { font-size: 12px !important; line-height: 1.6; margin: 0; }
+.import-dialog [hidden] { display: none; }
+.import-preview {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: var(--ground);
+}
+.import-review { list-style: none; padding: 0; margin: 0; }
+.import-review li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.import-review .helper { display: block; overflow-wrap: anywhere; margin-top: 4px; }
+.import-review .check-row { margin: 4px 0; }
+.import-dialog input[type="file"] { max-width: 100%; font: inherit; color: var(--muted); }
+.import-dialog input[type="file"]::file-selector-button {
+  border: 1px solid var(--outline); border-radius: 10px; padding: 10px 14px;
+  color: var(--ink); background: var(--paper); font: inherit; margin-right: 12px;
+}
 
 :root[data-palette="grove"] {
   --ground: #f3f5ed; --paper: #fcfdf8; --ink: #243428; --muted: #53644f;
@@ -273,6 +299,7 @@ main {
   overflow: hidden;
 }
 .paper-header {
+  flex-wrap: wrap;
   padding: 24px 26px;
   border-bottom: 1px solid var(--line);
   display: flex;

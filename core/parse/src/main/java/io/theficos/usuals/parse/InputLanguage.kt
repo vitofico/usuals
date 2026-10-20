@@ -14,6 +14,8 @@ class InputLanguage private constructor(private val data: Properties) {
         word to value
     }
     val pantryStaples: List<String> get() = words("pantry-staples")
+    val ingredientHeadings: List<String> get() = words("ingredient-headings")
+    val ignoredRecipeHeadings: List<String> get() = words("ignored-recipe-headings")
 
     val categorySeeds: Map<String, List<String>>
         get() = data.stringPropertyNames().filter { it.startsWith("category.") }.sorted()

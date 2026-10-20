@@ -29,19 +29,23 @@ object BrowserPreviewFixture {
     @JvmStatic fun main(args: Array<String>) {
         var output: Path? = null
         try {
-            require(args.size == 2)
+            require(args.size in 2..3)
             val port = args[0].toInt().also { require(it in 1024..65535) }
             val directory = Path.of(args[1]).toAbsolutePath().normalize()
             output = directory
             requirePrivateDirectory(directory)
-            runBlocking { preview(port, directory) }
+            val models = args.getOrNull(2)?.let { origin ->
+                require(URI(origin).host in setOf("localhost", "127.0.0.1"))
+                BrowserModels(listOf(origin))
+            } ?: BrowserModels()
+            runBlocking { preview(port, directory, models) }
         } catch (error: Exception) {
             output?.let { runCatching { writePrivate(it, "fixture-status.json", buildJsonObject { put("status", "failed"); put("code", errorCode(error)) }) } }
             System.err.println("browser_preview_failed")
             kotlin.system.exitProcess(1)
         }
     }
-    private suspend fun preview(port: Int, directory: Path) {
+    private suspend fun preview(port: Int, directory: Path, models: BrowserModels) {
         require(listOf("browser-setup.json", "ready.json", "stop", "approve.json", "native-command.json").none { Files.exists(directory.resolve(it), LinkOption.NOFOLLOW_LINKS) })
         val url = checkNotNull(System.getenv("USUALS_TEST_JDBC_URL")) { "missing_test_database" }
         require(!url.contains("currentSchema", ignoreCase = true))
@@ -65,7 +69,7 @@ object BrowserPreviewFixture {
                     val server = embeddedServer(Netty, configure = {
                         connector { host = "0.0.0.0"; this.port = port }
                         connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 4
-                    }) { relayModule(relay, webIdentity = web) }.start(wait = false)
+                    }) { relayModule(relay, webIdentity = web, browserModels = models) }.start(wait = false)
                     try {
                         val store = MemorySyncStore()
                         val list = fresh()

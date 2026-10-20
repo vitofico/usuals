@@ -1,6 +1,6 @@
 # Browser client protocol and security boundary
 
-This client is served by the relay at its own origin. It never uploads shopping
+This client is served by the relay at its own origin. The relay never receives shopping
 plaintext or private household keys. SSO controls account/session access only;
 existing signed household membership remains an independent authority.
 
@@ -134,3 +134,16 @@ Quoted hexadecimal floating-point position values, accepted by Java’s number
 parser, also stop before consumption with a localized number-format capability
 message. Canonical quantity validation still rejects hexadecimal quantity text.
 This avoids a second numeric parser with different rounding behavior.
+
+## Optional photo model boundary
+
+Photo import is an explicit direct request to an operator-allowlisted provider,
+separate from household transport. Selecting or capturing an image makes no
+request. A synthetic image capability check must succeed first; prepared photos
+are sent only on the Read action. Keys and images stay in dialog memory and are
+cleared on dismissal or vault lock. No account cookies or redirect forwarding
+are used. Changing provider fields invalidates the prior connection.
+
+Markdown requires no model. Review confirmation commits selected new capture
+intents atomically, with existing canonical identities excluded. This introduces
+no wire operation, schema, normalizer, framing or encryption change.

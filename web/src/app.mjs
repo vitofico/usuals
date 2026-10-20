@@ -19,6 +19,7 @@ import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 import { qrMatrix, VerificationCamera } from "./qr.mjs";
+import { importDialog } from "./import-dialog.mjs";
 const $ = (id) => document.getElementById(id);
 function appearanceStorage() {
   try { return localStorage; } catch { return null; }
@@ -35,6 +36,12 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", app
 let uiScope = new RunScope();
 const api = (path, options = {}) =>
   request(path, { ...options, scope: uiScope });
+let importResources = null;
+function loadImportResources() {
+  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json")])
+    .catch(error => { importResources = null; throw error; });
+  return importResources;
+}
 let availableLocales = ["en"],
   dictionary = {},
   locale = "en",
@@ -709,6 +716,14 @@ async function render() {
       "div",
       { class: "paper-header" },
       select,
+      button(t("importTitle"), () => act(async () => {
+        const own = generation, active = client, destination = { ...selected };
+        const [packs, modelConfig] = await loadImportResources();
+        if (own !== generation || active !== client) return;
+        importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
+          client: active, destination, valid: () => own === generation && active === client && selected?.household === destination.household && selected?.list === destination.list,
+          finished: async () => { await syncSelected(); await render(); } });
+      }, { rerender: false })),
       el("span", { class: "badge" }, t("privateByDesign")),
     ),
     capture,
@@ -1667,6 +1682,7 @@ for (const event of ["pointerdown", "keydown"])
     if (availableLocales.includes(saved)) preferred = saved;
   } catch {}
   await localeLoad(preferred);
+  loadImportResources().catch(() => {});
   if (location.hash) {
     history.replaceState(null, "", location.pathname + location.search);
   }

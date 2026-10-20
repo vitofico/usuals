@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased: Markdown and photo import
+
+- Import Markdown shopping lists and recipe ingredients locally on Android and web.
+- Read selected or captured photos only with a connected model that passes an image
+  compatibility check. Remove source metadata, bound files and model replies, and
+  count each Android request against the existing daily allowance.
+- Review proposals before adding, exclude existing identities, and save browser
+  selections atomically. Provide complete English, Spanish, Italian, French and
+  German copy. Browser models require an explicit operator origin allowlist.
+
 ## Unreleased: QR connection
 
 - Connect an Android phone from the web app with an expiring invitation QR.

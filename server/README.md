@@ -114,3 +114,11 @@ preparer/verifier, separate identity/migration jobs and a nonsecret inventory
 example. `server/scripts/profile-local` also exercises authenticated near-limit
 snapshot admission using the explicitly invoked wrapper `profileClient` task.
 No preparation command deploys, imports to a cluster or pushes an image.
+
+### Optional browser photo models
+
+`USUALS_WEB_MODEL_ORIGINS` defaults to `[]`. To enable direct browser model
+connections, supply a JSON array of exact HTTPS origins, without paths or
+credentials. The provider must accept the app origin through CORS. This only
+changes the browser CSP and public allowed-origin list; no server model proxy
+or credential store is created. See [provider setup](../docs/providers.md).

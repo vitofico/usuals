@@ -14,13 +14,13 @@
     <string name="recipe_on_list">Déjà sur votre liste</string>
     <string name="recipe_pantry">Produit de base</string>
     <string name="recipe_recent">Acheté dans les 7 derniers jours</string>
-    <string name="recipe_empty">Aucun ingrédient utilisable trouvé. Essayez une autre page ou ajoutez les articles à la main.</string>
+    <string name="recipe_empty">Aucun ingrédient utilisable trouvé. Essayez une autre source ou ajoutez les articles à la main.</string>
     <plurals name="recipe_add">
         <item quantity="one">Ajouter %1$d ingrédient</item>
         <item quantity="other">Ajouter %1$d ingrédients</item>
         <item quantity="many">Ajouter %1$d ingrédients</item>
     </plurals>
-    <string name="recipe_model_missing">Configurez d’abord un modèle facultatif dans les Paramètres, puis réessayez. Aucun texte de la page n’a été envoyé à un modèle.</string>
+    <string name="recipe_model_missing">Configurez d’abord un modèle facultatif dans les Paramètres, puis réessayez. Aucun texte ni photo n’a été envoyé à un modèle.</string>
     <string name="recipe_model_empty">Le modèle n’a renvoyé aucun ingrédient utilisable. Vérifiez la connexion dans les Paramètres ou ajoutez-les à la main.</string>
     <string name="recipe_invalid_url">Saisissez un lien HTTP ou HTTPS de recette valide, sans identifiant ni mot de passe.</string>
     <string name="recipe_blocked">Ce site bloque la lecture automatique. Ouvrez-le dans votre navigateur et ajoutez les ingrédients à la main, ou essayez un autre site.</string>
@@ -30,4 +30,21 @@
     <string name="recipe_too_large">Cette page est trop volumineuse pour être importée. Essayez une autre recette.</string>
     <string name="recipe_not_html">Ce lien n’est pas une page web de recette. Collez un lien de page HTTP ou HTTPS.</string>
     <string name="recipe_failed">Impossible d’importer la recette. Votre liste est toujours là.</string>
+    <string name="recipe_source_url">Lien</string>
+    <string name="recipe_source_markdown">Markdown</string>
+    <string name="recipe_source_photo">Photo</string>
+    <string name="recipe_markdown_help">Collez du Markdown ou ouvrez un fichier UTF-8. Les entrées et ingrédients sont lus localement. Les entrées cochées, les blocs de code et les instructions sont ignorés.</string>
+    <string name="recipe_markdown_text">Texte Markdown</string>
+    <string name="recipe_markdown_file">Ouvrir un fichier Markdown</string>
+    <string name="recipe_read_markdown">Vérifier le Markdown</string>
+    <string name="recipe_photo_help">Choisissez ou prenez une photo nette d’une liste écrite ou des ingrédients. Le modèle est d’abord vérifié avec une image de test. La lecture envoie la photo préparée directement au fournisseur et utilise jusqu’à deux appels au modèle.</string>
+    <string name="recipe_choose_photo">Choisir une photo</string>
+    <string name="recipe_take_photo">Prendre une photo</string>
+    <string name="recipe_photo_preview">Photo préparée pour l’importation</string>
+    <string name="recipe_read_photo">Lire la photo avec mon modèle</string>
+    <string name="recipe_no_images">Le modèle n’a pas réussi le test d’images. Choisissez un modèle compatible dans les paramètres. Cette photo n’a pas été envoyée.</string>
+    <string name="recipe_file_failed">Impossible d’ouvrir ce fichier ou l’appareil photo. Choisissez un autre fichier ou une autre photo.</string>
+    <string name="recipe_file_large">Ce contenu est trop volumineux. Markdown accepte 30 000 caractères et 150 entrées ; les photos sont limitées à 10 Mo.</string>
+    <string name="recipe_image_invalid">Impossible de lire cette image. Choisissez un JPEG, PNG ou une autre photo compatible avec votre appareil.</string>
+    <string name="recipe_markdown_invalid">Ce fichier n’est pas un texte UTF-8. Choisissez un fichier Markdown ou texte.</string>
 </resources>
