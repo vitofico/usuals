@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SharingViewModel(private val client: HouseholdClient,
+    private val connection: ConnectionClient? = null,
+    private val directProvider: () -> String? = { null },
+    private val directProviderKey: () -> String? = { null },
     private val choices: suspend () -> List<SharingList> = { emptyList() },
     private val shareList: suspend (String, String, Boolean) -> Unit = { _, _, _ -> },
     private val retryList: suspend (String, String) -> Unit = { _, _ -> },
@@ -62,9 +65,15 @@ class SharingViewModel(private val client: HouseholdClient,
     fun removeCopy(id: String) = work { removeList(id); mutable.update { it.copy(lists = choices(), message = SharingMessage.COPY_REMOVED) } }
     fun share(household: String, list: String, history: Boolean) = work {
         shareList(household, list, history)
-        mutable.update { it.copy(lists = choices(), message = SharingMessage.SHARED) }
+        client.rememberSharingSource(null)
+        mutable.update { it.copy(lists = choices(), sharingSource = null, message = SharingMessage.SHARED) }
     }
-    fun retryShare(household: String, list: String) = work { retryList(household, list); synchronize() }
+    fun retryShare(household: String, list: String) = work { retryList(household, list); synchronize(); mutable.update { it.copy(sharingSource = client.sharingSource()) } }
+    fun rememberShareSource(source: String?) = work(refresh = false) {
+        val local = source?.takeIf { id -> choices().any { it.id == id && !it.shared } }
+        client.rememberSharingSource(local)
+        mutable.update { it.copy(sharingSource = local) }
+    }
     fun rotate(household: String) = work { client.rotate(household); synchronize(); mutable.update { it.copy(message = SharingMessage.ROTATED) } }
     fun remove(household: String, device: String) = work { client.removeDevice(household, device); synchronize(); mutable.update { it.copy(message = SharingMessage.REMOVED) } }
     fun transfer(household: String, device: String) = work {
@@ -91,21 +100,62 @@ class SharingViewModel(private val client: HouseholdClient,
         resetKeys()
         mutable.update { it.copy(message = SharingMessage.KEYS_RESET) }
     }
+    fun connectServer() = work {
+        requireNotNull(connection).begin(state.value.origin.trim())
+        reloadConnection()
+    }
+    fun checkConnection() = work {
+        requireNotNull(connection).finish()
+        reloadConnection()
+    }
+    fun cancelConnection() { connection?.cancel(); reloadConnection() }
+    fun disconnectServer() = work { requireNotNull(connection).disconnect(); reloadConnection() }
+    fun enableServerAi(enabled: Boolean) { connection?.enableAi(enabled, state.value.ai?.revision); reloadConnection() }
+    fun migrateDirectKey(profile: AiProfileView) = work {
+        require(profile.baseUrl.trimEnd('/') == directProvider()?.trimEnd('/'))
+        val key = requireNotNull(directProviderKey())
+        val settings = requireNotNull(connection).request<AiSettings>("POST", "/v1/ai/settings", AiSelection(profile.id, key = key))
+        connection.enableAi(false); reloadConnection()
+        mutable.update { it.copy(ai = settings) }
+    }
+    fun chooseAi(profile: String?, key: String?) = work {
+        val settings = requireNotNull(connection).request<AiSettings>("POST", "/v1/ai/settings", AiSelection(profile, key = key?.ifBlank { null }))
+        requireNotNull(connection).enableAi(false)
+        reloadConnection()
+        mutable.update { it.copy(ai = settings) }
+    }
+    private fun reloadConnection() {
+        val saved = connection?.current()
+        mutable.update { it.copy(connection = saved, connecting = connection?.pending(), origin = saved?.origin ?: it.origin) }
+    }
+    fun testAi() = work(refresh = false) {
+        val result = requireNotNull(connection).request<AiReply>("POST", "/v1/ai/probe", AiRequest(revision = state.value.ai?.revision))
+        mutable.update { it.copy(aiReady = result.reachable && result.structured && result.problem == null, ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings"), directProviderUrl = directProvider()) }
+    }
+    fun loadAi() = work(refresh = false) { mutable.update { it.copy(ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings"), directProviderUrl = directProvider()) } }
     fun reverseQr(pending: PendingJoinState) = client.reverseQr(pending)
     fun fingerprint(pending: PendingJoinState) = client.applicantFingerprint(pending)
-    fun load() = work { reload(); mutable.update { it.copy(lists = choices()) } }
+    fun load() = work { reload(); mutable.update { it.copy(lists = choices(), sharingSource = client.sharingSource()) } }
     private fun reload() {
+        reloadConnection()
         val households = client.households(); val joining = client.joining(); val bootstrap = client.bootstrapPending()
-        mutable.update { it.copy(households = households, joining = joining, bootstrapPending = bootstrap, members = households.associate { hh -> hh.id to client.members(hh.id) }, devices = households.associate { hh -> hh.id to client.deviceId(hh.id) }, fingerprints = households.associate { hh -> hh.id to client.deviceFingerprints(hh.id) }) }
+        mutable.update { it.copy(households = households, joining = joining, bootstrapPending = bootstrap, shareAttempts = client.pendingShares(), members = households.associate { hh -> hh.id to client.members(hh.id) }, devices = households.associate { hh -> hh.id to client.deviceId(hh.id) }, fingerprints = households.associate { hh -> hh.id to client.deviceFingerprints(hh.id) }) }
     }
     fun resumeBootstrap() = work { client.resumeBootstrap(); reload(); mutable.update { it.copy(message = SharingMessage.CREATED) } }
     fun retryJoin() = work { client.resumeJoin(); reload() }
-    fun scanInvitation(value: String) {
-        if (state.value.busy) return
+    fun scanInvitation(value: String): Boolean {
+        if (state.value.busy) return false
         try {
+            if (!value.startsWith("usuals://join#")) {
+                val origin = serverOrigin(value)
+                require(connection?.current()?.origin.let { it == null || it == origin })
+                mutable.update { it.copy(origin = origin, problem = null) }
+                return true
+            }
             InvitationLink.parse(value)
             mutable.update { it.copy(invitation = value, problem = null) }
         } catch (_: Exception) { mutable.update { it.copy(invitation = "", problem = SharingProblem.VERIFICATION) } }
+        return true
     }
     fun field(field: SharingField, value: String) = mutable.update { when (field) {
         SharingField.ORIGIN -> it.copy(origin = value.take(512))
@@ -135,7 +185,11 @@ class SharingViewModel(private val client: HouseholdClient,
     }
     fun create() = work {
         val replacing = verifiedReplacement != null
-        if (replacing) client.replaceRecovery(requireNotNull(verifiedReplacement)) else client.bootstrap(requireNotNull(verifiedSetup), state.value.setupCode.trim())
+        if (replacing) client.replaceRecovery(requireNotNull(verifiedReplacement)) else {
+            val savedConnection = connection?.current()
+            if (savedConnection != null) client.bootstrapAccount(requireNotNull(verifiedSetup), savedConnection)
+            else client.bootstrap(requireNotNull(verifiedSetup), state.value.setupCode.trim())
+        }
         verifiedSetup = null; verifiedReplacement = null
         mutable.update { it.copy(kit = null, setupCode = "", recoveryKey = "", households = client.households(), message = if (replacing) SharingMessage.REPLACED else SharingMessage.CREATED) }
     }
@@ -155,6 +209,7 @@ class SharingViewModel(private val client: HouseholdClient,
         mutable.update { it.copy(reviewing = household, requests = requests, fingerprint = "") }
     }
     fun closeReview() { mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "") } }
+    fun applicantFingerprint(pending: PendingJoin): String = client.applicantFingerprint(requireNotNull(state.value.reviewing), pending)
     fun approve(pending: PendingJoin) = work {
         val household = requireNotNull(state.value.reviewing)
         val verified = client.verifyApplicant(household, pending, state.value.fingerprint)
@@ -197,7 +252,7 @@ class SharingViewModel(private val client: HouseholdClient,
                 "already_joined" -> SharingProblem.ALREADY_JOINED
                 "history_unverifiable" -> SharingProblem.HISTORY
                 "frozen_key_required" -> SharingProblem.FROZEN_KEY
-                "forbidden" -> SharingProblem.ACCESS
+                "forbidden", "unauthenticated" -> SharingProblem.ACCESS
                 "recovery_required" -> SharingProblem.RECOVERY
                 "quota_exceeded", "too_large", "rate_limited" -> SharingProblem.CAPACITY
                 "membership_conflict", "epoch_stale" -> SharingProblem.CHANGED
@@ -210,6 +265,9 @@ class SharingViewModel(private val client: HouseholdClient,
     }
 }
 data class SharingState(val origin: String = "", val setupCode: String = "", val invitation: String = "", val recoveryKey: String = "",
+    val sharingSource: String? = null,
+    val shareAttempts: List<PendingShare> = emptyList(),
+    val connection: ServerConnection? = null, val connecting: PendingConnection? = null, val ai: AiSettings? = null, val directProviderUrl: String? = null, val aiReady: Boolean? = null,
     val fingerprint: String = "", val bootstrapPending: Boolean = false, val busy: Boolean = false, val problem: SharingProblem? = null, val message: SharingMessage? = null,
     val households: List<HouseholdSummary> = emptyList(), val kit: RecoveryDraft? = null, val saved: Boolean = false, val verified: Boolean = false,
     val backupRequest: ByteArray? = null, val backupFingerprint: String? = null, val pendingExport: ByteArray? = null, val frozenUri: String? = null, val frozenCopy: FrozenCopy? = null,

@@ -127,6 +127,7 @@ object ServiceLocator {
         io.theficos.usuals.sync.ListCheckpoint(0, io.theficos.usuals.sync.Wire.zero,
             io.theficos.usuals.sync.SnapshotCodec.encode(replica.projection(list)))
     } }
+    val connectionClient by resettable { io.theficos.usuals.sync.ConnectionClient(syncState, relayTransport) }
     val householdClient by resettable { io.theficos.usuals.sync.HouseholdClient(syncState, relayTransport, checkpointSource) }
     private val sharingCoordinatorField = resettable { SharingCoordinator(context, householdClient, listRepository, replica, database.syncDao(), relayTransport) }
     val sharingCoordinator by sharingCoordinatorField
@@ -252,7 +253,7 @@ object ServiceLocator {
     }
 
     /** The configured model, or null when no provider is configured. */
-    fun modelClient(): LlmClient? = modelClients.current()
+    fun modelClient(): LlmClient? = if (connectionClient.current()?.aiEnabled == true) io.theficos.usuals.llm.ServerLlmClient(connectionClient) else modelClients.current()
 
     /** *Test connection*, against the endpoint currently on the settings screen. */
     val modelProbe: ModelProbe by resettable {

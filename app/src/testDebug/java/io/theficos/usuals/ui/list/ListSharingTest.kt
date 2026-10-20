@@ -35,13 +35,21 @@ class ListSharingTest {
             item("milk", "milk", Quantity.pieces(2)), item("bread", "bread", checked = true),
         )), LocalUtteranceParser(), FakeSpeechSource())
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
-        compose.onNodeWithContentDescription("Share list").performClick()
+        compose.onNodeWithText("Share list").performClick()
         val chooser = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
         assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)
         val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
         assertThat(send.action).isEqualTo(Intent.ACTION_SEND)
         assertThat(send.type).isEqualTo("text/plain")
         assertThat(send.getStringExtra(Intent.EXTRA_TEXT)).isEqualTo("☐ Milk ×2\n☑ Bread")
+    }
+
+    @Test fun `sharing icon opens household setup while text sharing stays available`() {
+        var opened = false
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource())
+        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}, onOpenSharing = { opened = true }) } }
+        compose.onNodeWithContentDescription("Share a local list").performClick()
+        assertThat(opened).isTrue()
     }
 
     @Test fun `swiping a row invokes removal once`() {

@@ -63,8 +63,8 @@
     <string name="sharing_retry_request">Réessayer la demande d’adhésion</string>
     <string name="sharing_history_unverifiable">Le serveur n’a pas pu prouver qu’il prolonge l’historique enregistré sur cet appareil. Votre liste locale est conservée. Demandez une copie de récupération vérifiée à l’administrateur.</string>
     <string name="sharing_already_joined">Cet appareil a déjà rejoint ce foyer. Actualisez-le. Vos clés et le travail en attente sont conservés.</string>
-    <string name="sharing_scan_invitation">Scanner le QR d’invitation</string>
-    <string name="sharing_invitation_camera_help">Autorisez la caméra pour scanner une invitation privée, ou collez son lien.</string>
+    <string name="sharing_scan_invitation">Scanner le QR du serveur ou d’invitation</string>
+    <string name="sharing_invitation_camera_help">Autorisez la caméra pour scanner un serveur ou une invitation privée, ou collez le lien.</string>
     <string name="sharing_privacy">Lorsque vous activez le partage, les données chiffrées des listes vont au serveur du foyer. Il peut voir les membres, les clés publiques des appareils, les identifiants de listes, les horaires des requêtes et les adresses réseau. Le contenu des courses et les clés privées restent chiffrés. Les recettes et recherches de produits partent toujours directement de votre téléphone.</string>
     <string name="sharing_hide_key">Masquer la clé de récupération</string>
     <string name="sharing_members">Membres et appareils</string>

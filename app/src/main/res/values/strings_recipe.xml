@@ -6,7 +6,7 @@
     <string name="recipe_read">Read recipe</string>
     <string name="recipe_intro">Paste or share a recipe link. %1$s reads the page on your phone and lets you review the ingredients before adding them.</string>
     <string name="recipe_no_structured">This page has no structured ingredients. You can try your optional model or close this sheet and type the ingredients.</string>
-    <string name="recipe_model_privacy">Using the model sends the page text to your configured provider and uses one of today’s model calls.</string>
+    <string name="recipe_model_privacy">Reading with a model sends this recipe text to your chosen direct provider or, with server AI, through your connected server to its displayed provider. It uses a model attempt.</string>
     <string name="recipe_use_model">Read with my model</string>
     <string name="recipe_servings">Recipe yield: %1$s</string>
     <string name="recipe_review_hint">Review the ingredients. Pantry staples and purchases from the last 7 days start unticked. Items already on your list are excluded. The source measures are kept for review.</string>

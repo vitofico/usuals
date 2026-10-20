@@ -37,7 +37,7 @@
     <string name="settings_privacy_title">Datenschutz</string>
     <string name="settings_privacy_kept_title">Was hier bleibt</string>
     <string name="settings_privacy_kept_capture">Deine Einkaufsliste, dein Verlauf und deine Vorschläge werden auf diesem Telefon gespeichert. Tastatureingabe und Kaufgedächtnis funktionieren offline.</string>
-    <string name="settings_privacy_kept_secrets">Dein Modellschlüssel wird mit Android Keystore gespeichert, aus Exporten und Protokollen ausgeschlossen und zur Anmeldung an deinem eingestellten Modellendpunkt verwendet.</string>
+    <string name="settings_privacy_kept_secrets">Ein Schlüssel für direkte Anbieter bleibt im Android Keystore. Ein persönlicher Schlüssel für Server-KI wird an den gewählten Server gesendet und dort verschlüsselt gespeichert. Keiner erscheint in Einkaufsexporten oder Protokollen.</string>
     <string name="settings_privacy_edges_title">Was das Telefon verlässt</string>
     <string name="settings_privacy_edge_voice">Sprache wird nach Möglichkeit auf dem Gerät erkannt. Andernfalls kann der gewählte Android-Sprachdienst Audio vom Telefon senden. Die Tastatureingabe funktioniert offline.</string>
     <string name="settings_privacy_edge_recipe">Beim Lesen eines Rezeptlinks wird die Seiten-URL von deinem Telefon an die Website gesendet. Der Text geht erst an ein Modell, wenn du Mit meinem Modell lesen antippst.</string>

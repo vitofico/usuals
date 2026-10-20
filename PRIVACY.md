@@ -32,7 +32,16 @@ without microphone access. Optional shopping reminders use local notifications.
   Its operator's policies apply. A local endpoint label does not prove encryption
   or an absence of server-side storage.
 
-No relay proxies product lookups, recipe downloads or model requests.
+Product lookups and recipe downloads go directly from the client to those sites.
+With server AI enabled, explicit model inputs go through your selected Usuals
+server to its displayed provider. That server can read these submissions and
+handles provider credentials. Personal provider keys saved there are encrypted
+with a separately managed server wrapping key. They do not enter shopping
+exports or encrypted household sync. Provider changes require renewed confirmation.
+The gateway does not persist inputs, photos or outputs. The server operator and
+provider control their infrastructure and retention policies. In direct native
+mode, the model key stays in Android Keystore and requests go directly to its
+configured endpoint.
 
 ## Optional sharing
 

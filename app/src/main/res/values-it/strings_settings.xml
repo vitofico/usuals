@@ -37,7 +37,7 @@
     <string name="settings_privacy_title">Privacy</string>
     <string name="settings_privacy_kept_title">Cosa resta qui</string>
     <string name="settings_privacy_kept_capture">Lista, cronologia e suggerimenti sono salvati su questo telefono. L’inserimento da tastiera e la memoria degli acquisti funzionano senza connessione.</string>
-    <string name="settings_privacy_kept_secrets">La chiave del modello è salvata con Android Keystore, esclusa da esportazioni e log, e usata per autenticarsi con l’endpoint del modello configurato.</string>
+    <string name="settings_privacy_kept_secrets">La chiave di un fornitore diretto resta in Android Keystore. La chiave personale per l’IA del server viene inviata al server scelto e conservata cifrata. Nessuna entra nelle esportazioni della spesa o nei log.</string>
     <string name="settings_privacy_edges_title">Cosa esce dal telefono</string>
     <string name="settings_privacy_edge_voice">La voce usa il riconoscimento sul dispositivo quando disponibile. Altrimenti il servizio vocale Android selezionato può inviare l’audio fuori dal telefono. La tastiera funziona senza connessione.</string>
     <string name="settings_privacy_edge_recipe">Leggere un link di ricetta invia l’URL al sito dal telefono. Il testo va a un modello solo quando tocchi Leggi con il mio modello.</string>

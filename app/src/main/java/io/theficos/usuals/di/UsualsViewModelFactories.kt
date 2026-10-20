@@ -45,6 +45,9 @@ object UsualsViewModelFactories {
 
     fun sharing(): ViewModelProvider.Factory = viewModelFactory {
         initializer<io.theficos.usuals.ui.sharing.SharingViewModel> { io.theficos.usuals.ui.sharing.SharingViewModel(ServiceLocator.householdClient,
+            connection = ServiceLocator.connectionClient,
+            directProvider = { if (runCatching { ServiceLocator.secretStore.hasModelKey() }.getOrDefault(false)) ServiceLocator.providerSettingsStore.load()?.baseUrl else null },
+            directProviderKey = { ServiceLocator.secretStore.modelKey() },
             choices = {
                 val enrolled = runCatching { ServiceLocator.householdClient.households().map { it.id }.toSet() }.getOrNull()
                 ServiceLocator.listRepository.all().filterNot { it.archived }.map {

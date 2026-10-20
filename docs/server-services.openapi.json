@@ -1,0 +1,1006 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Usuals account connection and optional AI services",
+    "version": "1.0.0",
+    "description": "Additive services alongside the unchanged encrypted shopping protocol. See ADR-0014 for trust boundaries and the native household creation extension."
+  },
+  "paths": {
+    "/v1/instance": {
+      "get": {
+        "description": "Discover only the explicitly chosen instance. No secrets or provider credentials.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connect": {
+      "post": {
+        "description": "Begin a five-minute external-browser approval. Rate limited by trusted client address.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectTicket"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectStart"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connect/{id}": {
+      "get": {
+        "description": "Display the complete device fingerprint for human comparison.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/connect/{id}/approve": {
+      "post": {
+        "description": "Approve only after comparing every fingerprint group with the phone. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/connect/{id}/complete": {
+      "post": {
+        "description": "Poll with both retained secrets. Successful retries keep the same native session and expiry.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectFinish"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/connection/logout": {
+      "post": {
+        "description": "Revoke this native account token. Household membership is independent. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections": {
+      "get": {
+        "description": "List the current account\u2019s active native connections.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeConnections"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/{id}/revoke": {
+      "post": {
+        "description": "Revoke one native connection owned by this account. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/ai/settings": {
+      "get": {
+        "description": "Read approved profiles and current public consent revision. Cookie reads also require Origin and CSRF.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Select a fixed operator profile and optional encrypted personal key. Empty object restores the default and deletes the personal credential. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSelection"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ai/probe": {
+      "post": {
+        "description": "Purpose-specific probe operation. Requires the displayed provider revision. Image extraction additionally requires a recent synthetic vision check. Attempts are counted durably before inference. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReply"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ai/probe-image": {
+      "post": {
+        "description": "Purpose-specific probe-image operation. Requires the displayed provider revision. Image extraction additionally requires a recent synthetic vision check. Attempts are counted durably before inference. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReply"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ai/text": {
+      "post": {
+        "description": "Purpose-specific text operation. Requires the displayed provider revision. Image extraction additionally requires a recent synthetic vision check. Attempts are counted durably before inference. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReply"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ai/image": {
+      "post": {
+        "description": "Purpose-specific image operation. Requires the displayed provider revision. Image extraction additionally requires a recent synthetic vision check. Attempts are counted durably before inference. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "security": [
+          {
+            "nativeAccount": []
+          },
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReply"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/account/households": {
+      "post": {
+        "operationId": "createNativeAccountHousehold",
+        "description": "Create a household for an admitted native account after recovery-kit verification. Uses the existing signed empty-genesis request and receipt contract. Account quota and admission are checked transactionally; no operator bootstrap code or browser device binding is created.",
+        "security": [
+          {
+            "nativeAccount": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "sync/openapi.json#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "sync/openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "sync/openapi.json#/components/schemas/CreateHousehold"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "nativeAccount": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "webAccount": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-usuals-session",
+        "description": "Opaque browser session. Local loopback uses usuals-session. Obtain CSRF from /api/me."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "DeviceKeys": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signingPublicKey": {
+            "type": "string"
+          },
+          "recipientPublicKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "signingPublicKey",
+          "recipientPublicKey"
+        ]
+      },
+      "InstanceInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "server": {
+            "type": "object"
+          },
+          "accounts": {
+            "type": "boolean"
+          },
+          "ai": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "version",
+          "name",
+          "server",
+          "accounts",
+          "ai"
+        ]
+      },
+      "ConnectStart": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "$ref": "#/components/schemas/DeviceKeys"
+          },
+          "verifierHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "verifierHash"
+        ]
+      },
+      "ConnectTicket": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pollToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "pollToken",
+          "expiresAt"
+        ]
+      },
+      "ConnectFinish": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pollToken": {
+            "type": "string"
+          },
+          "verifier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pollToken",
+          "verifier"
+        ]
+      },
+      "ConnectResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "ConnectView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "fingerprint",
+          "expiresAt"
+        ]
+      },
+      "AiProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "model": {
+            "type": "string"
+          },
+          "imageModel": {
+            "type": "string"
+          },
+          "isLocal": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "baseUrl",
+          "model",
+          "imageModel",
+          "isLocal"
+        ]
+      },
+      "AiSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiProfile"
+            }
+          },
+          "selected": {
+            "type": "string"
+          },
+          "personal": {
+            "type": "boolean"
+          },
+          "hasKey": {
+            "type": "boolean"
+          },
+          "dailyLimit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "used": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profiles",
+          "personal",
+          "hasKey",
+          "dailyLimit",
+          "used"
+        ]
+      },
+      "AiSelection": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "writeOnly": true,
+            "maxLength": 4096
+          }
+        },
+        "required": []
+      },
+      "AiRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30000
+          },
+          "image": {
+            "type": "string",
+            "maxLength": 2800000,
+            "contentEncoding": "base64"
+          },
+          "mimeType": {
+            "enum": [
+              "image/jpeg",
+              "image/png"
+            ]
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "AiItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "amount": {
+            "type": "string",
+            "description": "Finite positive decimal quantity, omitted when unspecified."
+          },
+          "unit": {
+            "enum": [
+              "PIECE",
+              "GRAM",
+              "KILOGRAM",
+              "MILLILITRE",
+              "LITRE",
+              "PACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AiReply": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AiItem"
+            }
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "structured": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "problem": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "reachable",
+          "structured",
+          "images"
+        ]
+      },
+      "NativeConnections": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "expiresAt": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "expiresAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "connections"
+        ]
+      }
+    }
+  }
+}
