@@ -22,6 +22,31 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class RepositoryRecipeStoreTest {
+    @Test fun `plain copied lists keep quantities and stay local until confirmed`() = runTest {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), UsualsDatabase::class.java)
+            .allowMainThreadQueries().setQueryExecutor { it.run() }.setTransactionExecutor { it.run() }.build()
+        try {
+            val items = ItemRepository(db)
+            val history = HistoryRepository(db, items)
+            val budget = ModelBudget(1)
+            val store = RepositoryRecipeStore(RecipeFetcher(RecipeJsonLd()), IngredientReviewPlanner(IngredientLineParser(), emptyList()),
+                items, history, { error("Copied lists never need a model") }, budget)
+            val review = store.markdown("# Shopping\n2 l milk\n6 eggs\n2 kg apples") as RecipeLoad.Review
+            assertThat(review.rows.map { it.item.name }).containsExactly("milk", "eggs", "apples").inOrder()
+            assertThat(review.rows.map { it.item.quantity }).containsExactly(Quantity(2.0, MeasureUnit.LITRE),
+                Quantity.pieces(6), Quantity(2.0, MeasureUnit.KILOGRAM)).inOrder()
+            assertThat(items.items()).isEmpty()
+            assertThat(budget.usedToday()).isEqualTo(0)
+            val quick = store.review(LocalUtteranceParser().parse("1,5 l leche, huevos y pan")) as RecipeLoad.Review
+            assertThat(quick.rows.map { it.item.name }).containsExactly("leche", "huevos", "pan").inOrder()
+            assertThat(quick.rows.first().item.quantity).isEqualTo(Quantity(1.5, MeasureUnit.LITRE))
+            assertThat(items.items()).isEmpty()
+            assertThat(store.review(List(MarkdownIngredients.MAX_ITEMS + 1) { ParsedItem("milk") }))
+                .isEqualTo(RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE))
+            store.add(review.rows.take(2).map { it.item })
+            assertThat(items.items().map { it.name }).containsExactly("milk", "eggs")
+        } finally { db.close() }
+    }
     @Test fun `structured reads bypass the model and confirmed add rechecks duplicate identities`() = runTest {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), UsualsDatabase::class.java)
             .allowMainThreadQueries().setQueryExecutor { it.run() }.setTransactionExecutor { it.run() }.build()

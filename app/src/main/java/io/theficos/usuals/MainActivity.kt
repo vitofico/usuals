@@ -146,12 +146,11 @@ internal fun shareConsumedIn(savedInstanceState: Bundle?): Boolean =
     savedInstanceState?.getBoolean(STATE_SHARE_CONSUMED) == true
 
 /**
- * Text shared in, or null. `text/plain` only: this path reads words, and an
- * images are not accepted. Recipe URLs enter ingredient review.
+ * Text shared in, or null. Plain text and Markdown enter import review.
  */
 internal fun sharedTextOf(intent: Intent?): String? =
-    if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
-        intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }
+    if (intent?.action == Intent.ACTION_SEND && intent.type in setOf("text/plain", "text/markdown", "text/x-markdown")) {
+        intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.takeIf { it.isNotBlank() }
     } else if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == "usuals" && intent.data?.host in setOf("join", "connect")) {
         intent.dataString
     } else {

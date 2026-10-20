@@ -3,7 +3,6 @@ package io.theficos.usuals.ui.list
 import android.content.Intent
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import io.theficos.usuals.ui.recipe.RecipeImportSheet
 import io.theficos.usuals.ui.scan.ScanNameSheet
 import androidx.compose.material3.FilterChip
@@ -461,10 +460,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
             Text(subtitle(header), style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant, modifier = Modifier.weight(1f).padding(end = 8.dp))
             if (!actions.shoppingMode) {
-                IconButton(onClick = actions.onOpenRecipe,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.recipe_title), Modifier.size(22.dp))
-                }
+                TextButton(onClick = actions.onOpenRecipe) { Text(stringResource(R.string.recipe_import)) }
                 IconButton(onClick = actions.onOpenHistory,
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))

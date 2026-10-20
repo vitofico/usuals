@@ -73,8 +73,14 @@ and allergens. Product data is credited to Open Food Facts under the ODbL.
 
 ## Recipes, without the busywork
 
-Share a recipe URL into Usuals or paste it in the recipe screen. You can also
-import a Markdown file or paste its list, without a model. Structured
+Tap **Import** to paste a note from Google Keep or another app, or open a plain
+text or Markdown file. Plain lists use one item per line. Bullets, numbered lists
+and checkboxes are supported; completed checkbox entries are skipped. Text is read
+locally, without a model. Review the proposed items and quantities before adding.
+Use a Markdown heading such as `# Weekend shopping` for a custom note title.
+On Android, you can also share the note directly to Usuals for the same review.
+
+Share a recipe URL into Usuals or select **Link** in the import screen. Structured
 recipes are read directly on the phone and need no model. Review the ingredients
 before adding them; Usuals preserves your choices and avoids existing list
 items. Sites that block the request show an explanation.

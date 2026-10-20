@@ -16,7 +16,9 @@ class MergeCaptureTest {
         }
         val store = FakeItemStore()
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), smartStore = smart)
-        vm.onSharedText("1 l whole milk")
+        vm.onCaptureStart()
+        vm.onDraftChange("1 l whole milk")
+        vm.onDraftSubmit()
         assertThat(store.current).isEmpty()
         assertThat(vm.state.value.mergeReview!!.incoming.quantity).isEqualTo(Quantity(1.0, MeasureUnit.LITRE))
         vm.onMergeChoice(false)
