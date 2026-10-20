@@ -116,4 +116,18 @@ class ConnectionTest {
         assertThat(client().sharingSource()).isNull(); assertThat(store.state.pendingShares).isEmpty()
     }
 
+    @Test fun expectedConnectionCannotSendToAReplacementServer() = runBlocking {
+        val store = Store()
+        val saved = ServerConnection("https://usuals.example", pending().info, "user", "synthetic-token", 20000, aiEnabled = true)
+        store.state = ClientState(connection = saved.copy(origin = "https://replacement.example"))
+        var calls = 0
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse { calls++; error("must not send") }
+        }
+        val client = ConnectionClient(store, transport) { 1000 }
+        val failure = runCatching { client.requestBytes("POST", "/v1/ai/text", expected = saved) }.exceptionOrNull()
+        assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(calls).isEqualTo(0)
+    }
+
 }

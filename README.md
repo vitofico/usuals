@@ -84,8 +84,10 @@ it can also read photos of written lists. Photos stay local until you
 request a read and its image check succeeds. Both Android and web offer a
 review before anything is added. See [provider setup](docs/providers.md) for the server gateway and advanced
 direct-provider options.
-It is off by default, runs only after your explicit action and uses the endpoint
-you configure. The everyday list needs no AI service.
+Connect once under **Settings > Server connection** and enable AI assistance.
+Your server supplies the provider setup; model details remain available before
+use. AI is off by default and inputs are sent only after your explicit action.
+The everyday list needs no AI service.
 
 ## Your everyday, together
 

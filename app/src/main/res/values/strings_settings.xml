@@ -47,7 +47,7 @@
     <string name="settings_privacy_edges_title">What does leave</string>
     <string name="settings_privacy_edge_voice">Voice uses on-device recognition when available. Otherwise the selected Android speech service may send audio off this phone. Keyboard entry works offline.</string>
     <string name="settings_privacy_edge_recipe">Reading a recipe link sends the page URL to that site from your phone. The page text goes to a model only when you tap Read with my model.</string>
-    <string name="settings_privacy_edge_cloud">A hosted model receives the recipe text you submit. Check the endpoint you configure.</string>
+    <string name="settings_privacy_edge_cloud">Server AI receives only text or photos you explicitly submit. Direct AI in Advanced uses its configured provider.</string>
     <string name="settings_privacy_local_path">For a model on your network, point an OpenAI-compatible endpoint at your own runtime.</string>
     <string name="settings_privacy_local_now">This endpoint is marked local. Submitted recipe text goes there; its privacy depends on how it is run.</string>
     <string name="settings_privacy_cloud_now">Your provider setting is %1$s and marked hosted. Submitted recipe text goes to that endpoint.</string>

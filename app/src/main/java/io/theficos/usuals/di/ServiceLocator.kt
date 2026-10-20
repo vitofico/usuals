@@ -215,8 +215,8 @@ object ServiceLocator {
         IngredientReviewPlanner(ingredientParser, InputLanguages.available.flatMap { it.pantryStaples })
     }
     val recipeStore: RecipeStore by resettable {
-        RepositoryRecipeStore(recipeFetcher, recipePlanner, itemRepository, historyRepository, ::modelClient, modelBudget,
-            markdown = markdownIngredients, files = recipeImportFiles)
+        RepositoryRecipeStore(recipeFetcher, recipePlanner, itemRepository, historyRepository, { modelAccess()?.client }, modelBudget,
+            markdown = markdownIngredients, files = recipeImportFiles, access = ::modelAccess)
     }
     val markdownIngredients by resettable { io.theficos.usuals.recipe.MarkdownIngredients() }
     val recipeImportFiles by resettable { AndroidRecipeImportFiles(context) }
@@ -253,7 +253,9 @@ object ServiceLocator {
     }
 
     /** The configured model, or null when no provider is configured. */
-    fun modelClient(): LlmClient? = if (connectionClient.current()?.aiEnabled == true) io.theficos.usuals.llm.ServerLlmClient(connectionClient) else modelClients.current()
+    private fun modelAccess(): RecipeModelAccess? = connectedModelAccess(connectionClient::current, modelClients::current) { saved ->
+        io.theficos.usuals.llm.ServerLlmClient(connectionClient, saved)
+    }
 
     /** *Test connection*, against the endpoint currently on the settings screen. */
     val modelProbe: ModelProbe by resettable {

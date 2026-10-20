@@ -19,7 +19,7 @@
         <item quantity="one">%1$d Zutat hinzufügen</item>
         <item quantity="other">%1$d Zutaten hinzufügen</item>
     </plurals>
-    <string name="recipe_model_missing">Richte zuerst ein optionales Modell in den Einstellungen ein und versuche es erneut. Es wurde weder Text noch Foto an ein Modell gesendet.</string>
+    <string name="recipe_model_missing">Verbinde in den Einstellungen einen Server und aktiviere die KI-Unterstützung. Es wurde nichts an ein Modell gesendet.</string>
     <string name="recipe_model_empty">Das Modell hat keine verwendbaren Zutaten geliefert. Prüfe die Verbindung in den Einstellungen oder füge sie von Hand hinzu.</string>
     <string name="recipe_invalid_url">Gib einen gültigen HTTP- oder HTTPS-Rezeptlink ohne Benutzername oder Passwort ein.</string>
     <string name="recipe_blocked">Diese Website blockiert das automatische Lesen. Öffne sie im Browser und füge die Zutaten von Hand hinzu oder versuche eine andere Website.</string>

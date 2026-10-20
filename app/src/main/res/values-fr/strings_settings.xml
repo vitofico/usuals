@@ -41,7 +41,7 @@
     <string name="settings_privacy_edges_title">Ce qui est envoyé</string>
     <string name="settings_privacy_edge_voice">La voix utilise la reconnaissance sur l’appareil si disponible. Sinon, le service vocal Android choisi peut envoyer l’audio hors du téléphone. La saisie au clavier fonctionne hors connexion.</string>
     <string name="settings_privacy_edge_recipe">Lire un lien de recette envoie l’URL au site depuis votre téléphone. Le texte n’est envoyé à un modèle que si vous appuyez sur Lire avec mon modèle.</string>
-    <string name="settings_privacy_edge_cloud">Un modèle hébergé reçoit le texte de recette que vous envoyez. Vérifiez le point d’accès configuré.</string>
+    <string name="settings_privacy_edge_cloud">L’IA du serveur reçoit uniquement le texte ou les photos envoyés explicitement. L’IA directe dans Avancé utilise le fournisseur configuré.</string>
     <string name="settings_privacy_local_path">Pour un modèle sur votre réseau, utilisez un point d’accès compatible OpenAI vers votre propre moteur.</string>
     <string name="settings_privacy_local_now">Ce point d’accès est marqué local. Le texte de recette y est envoyé ; sa confidentialité dépend de son exploitation.</string>
     <string name="settings_privacy_cloud_now">Votre fournisseur est %1$s et est marqué hébergé. Le texte de recette est envoyé à ce point d’accès.</string>
