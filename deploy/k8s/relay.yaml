@@ -69,7 +69,7 @@ spec:
             - {name: secrets, mountPath: /run/secrets, readOnly: true}
             - {name: temporary, mountPath: /tmp}
       volumes:
-        - {name: identity, persistentVolumeClaim: {claimName: usuals-identity}}
+        - {name: identity, persistentVolumeClaim: {claimName: usuals-identity, readOnly: true}}
         - name: secrets
           secret: {secretName: usuals-postgres, defaultMode: 0440, items: [{key: app-password, path: app-password}]}
         - {name: temporary, emptyDir: {sizeLimit: 32Mi}}

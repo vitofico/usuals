@@ -5,9 +5,10 @@ resources:
   - ../k8s
   - local-volumes.yaml
   - oidc-network-policy.yaml
+  - ai-egress.yaml
 images:
   - name: usuals-relay
-    newTag: sha256-f09e84003cdaa689bea6928a090231ba6d722b8405c64284976358bf1a44748e
+    newTag: sha256-20b790f8bfc1102bfb5070c24c3b3ac6464451435e688594c39595b040b304e7
   - name: postgres
     newName: usuals-postgres
     newTag: sha256-1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
