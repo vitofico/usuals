@@ -73,12 +73,17 @@ and allergens. Product data is credited to Open Food Facts under the ODbL.
 
 ## Recipes, without the busywork
 
-Share a recipe URL into Usuals or paste it in the recipe screen. Structured
+Share a recipe URL into Usuals or paste it in the recipe screen. You can also
+import a Markdown file or paste its list, without a model. Structured
 recipes are read directly on the phone and need no model. Review the ingredients
 before adding them; Usuals preserves your choices and avoids existing list
 items. Sites that block the request show an explanation.
 
-For prose recipes, an optional OpenAI-compatible model can help with extraction.
+An optional OpenAI-compatible model can read prose recipes. With image support,
+it can also read photos of written lists. Photos stay local until you
+request a read and its image check succeeds. Both Android and web offer a
+review before anything is added. See [provider setup](docs/providers.md), including
+the web operator allowlist and CORS requirements.
 It is off by default, runs only after your explicit action and uses the endpoint
 you configure. The everyday list needs no AI service.
 
@@ -88,6 +93,11 @@ Use Android alone, or connect a household to your own encrypted relay. Approved
 devices share lists with explicit roles, membership changes and conflict review.
 The relay stores encrypted shopping contents; membership and routing metadata
 remain visible to the server.
+
+Connect a phone from the web with **Shared lists > Connect a phone**. Scan the
+invitation in Android, confirm the server, then scan the phone’s verification QR
+back in the browser. No server address or fingerprint typing is needed. See the
+[QR connection guide](web/README.md#connect-a-phone-with-qr) for camera-free options.
 
 <p align="center">
   <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web editor in dark mode: an encrypted household list, quantities, checked items and account navigation" width="100%"></a>
@@ -143,9 +153,13 @@ navigation. Sharing setup explains the separate account and household steps.
 Download the signed **[Android APK](https://github.com/vitofico/usuals/releases/latest/download/app-release.apk)** from GitHub Releases, or add
 `https://github.com/vitofico/usuals` to **[Obtainium](https://obtainium.imranr.dev/)**
 for updates. The [one-tap Obtainium import](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522io.theficos.usuals%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Fvitofico%252Fusuals%2522%252C%2522author%2522%253A%2522vitofico%2522%252C%2522name%2522%253A%2522Usuals%2522%252C%2522additionalSettings%2522%253A%2522%257B%255C%2522includePrereleases%255C%2522%253Afalse%252C%255C%2522apkFilterRegEx%255C%2522%253A%255C%2522%255Eapp-release%255C%255C%255C%255C.apk%2524%255C%2522%252C%255C%2522verifyLatestTag%255C%2522%253Atrue%257D%2522%257D) selects only
-stable production APKs. F-Droid inclusion is being submitted; the app is not
-listed there yet. See the [distribution guide](docs/distribution.md) for signatures,
-checksums and the current review status.
+stable production APKs. Usuals is not available on F-Droid; the
+[initial submission was closed](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283)
+because the project is too new and other inclusion concerns remain.
+See the [distribution guide](docs/distribution.md) for signatures,
+checksums and the inclusion status.
+The [corrected F-Droid draft](distribution/fdroid/README.md) remains unsubmitted while
+the maintenance requirement is unmet; no resubmission is scheduled.
 
 Android works offline without an account. Shared lists are optional and use your
 own compatible server. There is no managed hosting subscription in this release.

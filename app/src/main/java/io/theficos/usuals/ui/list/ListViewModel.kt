@@ -296,14 +296,32 @@ class ListViewModel(
     }
     fun onDismissRecipe() { recipeJob?.cancel(); screen.update { it.copy(recipe = null) } }
     fun onRecipeUrl(url: String) { screen.update { it.copy(recipe = it.recipe?.copy(url = url, result = null, selected = emptySet())) } }
+    fun onRecipeSource(source: io.theficos.usuals.ui.recipe.RecipeSource) {
+        if (screen.value.recipe?.busy != false) return
+        recipeJob?.cancel()
+        screen.update { it.copy(recipe = it.recipe?.copy(source = source, result = null, selected = emptySet())) }
+    }
+    fun onRecipeMarkdown(text: String) { screen.update { it.copy(recipe = it.recipe?.copy(markdown = text.take(30_001), result = null, selected = emptySet())) } }
+    fun onReadRecipeMarkdown() { val text = screen.value.recipe?.markdown ?: return; runRecipe { recipeStore.markdown(text) } }
+    fun onRecipeMarkdownFile(uri: String) { if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.MARKDOWN) runRecipe { recipeStore.markdownFile(uri) } }
+    fun onRecipePhoto(uri: String) {
+        if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.PHOTO) runRecipe { recipeStore.photoPreview(uri) }
+        else recipeStore.releaseCamera(uri)
+    }
+    fun createRecipePhoto(): String? = try { recipeStore.cameraUri() } catch (_: Exception) { onRecipeFileFailure(); null }
+    fun releaseRecipePhoto(uri: String) { recipeStore.releaseCamera(uri) }
+    fun onRecipeFileFailure() { screen.update { it.copy(recipe = it.recipe?.copy(result = RecipeLoad.Failed(importProblem = io.theficos.usuals.ui.recipe.ImportProblem.READ))) } }
 
     fun onReadRecipe() {
         val state = screen.value.recipe ?: return
         runRecipe { recipeStore.read(state.url.trim()) }
     }
     fun onRecipeModel() {
-        val source = screen.value.recipe?.result as? RecipeLoad.Unstructured ?: return
-        runRecipe { recipeStore.model(source.url, source.text) }
+        when (val source = screen.value.recipe?.result) {
+            is RecipeLoad.Unstructured -> runRecipe { recipeStore.model(source.url, source.text) }
+            is RecipeLoad.Photo -> runRecipe { recipeStore.photo(source.image) }
+            else -> Unit
+        }
     }
     private fun runRecipe(read: suspend () -> RecipeLoad) {
         if (screen.value.recipe?.busy != false) return

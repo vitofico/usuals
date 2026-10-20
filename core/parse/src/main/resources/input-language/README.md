@@ -36,3 +36,8 @@ Adding capture vocabulary must preserve existing identities; changing those
 fields requires a normalizer version/migration decision and regression evidence.
 The regression test compares every existing number/unit/multiplier mapping and
 all normalization fields against the original English/Spanish packs.
+
+`ingredient-headings` and `ignored-recipe-headings` identify Markdown ingredient
+sections and instructions/notes. Use comma-separated heading phrases; comparison
+folds case and accents. The web build packages the same vocabulary together with
+numbers, units, recipe measures and connectors, without a second registry.

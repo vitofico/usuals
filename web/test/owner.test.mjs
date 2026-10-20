@@ -137,7 +137,7 @@ for (const committed of [false, true]) test(`expired prepared approval resolves 
   await c.synchronize(selected.household, selected.list);
   assert.equal((await c.view(selected.household, selected.list)).name, "Our list"); c.stop();
 });
-test("web owner verifies native join framing and a full fingerprint before approving, then rotates removed-device keys", async () => {
+for (const mode of ["fingerprint", "qr"]) test(`web owner verifies native join framing by ${mode}, resumes approval and rotates removed-device keys`, async () => {
   const f = await fixture(); let c = f.client();
   const selected = await c.createHousehold(await f.setup(), "Our list");
   await c.synchronize(selected.household, selected.list);
@@ -156,11 +156,23 @@ test("web owner verifies native join framing and a full fingerprint before appro
   f.remote.requests = [pending];
   const [applicant] = await c.applicants(selected.household);
   await assert.rejects(c.approve(selected.household, pending, "0".repeat(64)), e => e.code === "unverified");
+  const uri = "usuals://device#" + b64(jsonBytes(pending));
+  await assert.rejects(c.approveQr(selected.household, uri, { ...link, inviteId: crypto.randomUUID() }), e => e.code === "unverified");
+  await assert.rejects(c.approveQr(selected.household, "usuals://device#" + b64(jsonBytes({ ...pending, signature: b64(random(64)) })), link));
+  for (const mutation of [{ memberId: crypto.randomUUID() }, { secretHash: b64(random(32)) }, { expiresAt: assertion.expiresAt + 1 },
+    { inviteId: crypto.randomUUID() }, { householdId: crypto.randomUUID() }, { serverId: b64(random(32)) }]) {
+    const altered = joinBytes({ ...assertion, ...mutation });
+    const alteredQr = "usuals://device#" + b64(jsonBytes({ requestId: pending.requestId, assertion: b64(altered), signature: await sign(device, altered) }));
+    await assert.rejects(c.approveQr(selected.household, alteredQr, link), e => e.code === "unverified");
+    assert.equal(c.read(selected.household).pendingMembership, null);
+  }
+  const approve = () => mode === "qr" ? c.approveQr(selected.household, uri, link)
+    : c.approve(selected.household, pending, applicant.fingerprint);
   assert.equal(f.remote.proofs.length, 2);
   f.remote.fail = "commit";
-  await assert.rejects(c.approve(selected.household, pending, applicant.fingerprint), e => e.code === "unavailable");
+  await assert.rejects(approve(), e => e.code === "unavailable");
   c.stop(); c = f.client(() => now + 700000);
-  await c.approve(selected.household, pending, applicant.fingerprint);
+  await approve();
   assert.equal(f.remote.proofs.length, 3, "the committed approval resolves after reload and invitation expiry");
   assert.equal(c.read(selected.household).pendingMembership, null);
   const recipient = await fingerprint(f.server.serverId, selected.household, device.publicKeys);
@@ -175,7 +187,7 @@ test("web owner verifies native join framing and a full fingerprint before appro
   assert.equal(f.remote.lastSigned.packages.some(p => p.recipientFingerprint === recipient), false);
   assert.notEqual(c.read(selected.household).keys[`${selected.list}:4`], b64(key));
   assert.equal(body(f.remote.proofs.at(-1)).action, "remove");
-  await assert.rejects(c.approve(selected.household, pending, applicant.fingerprint), e => e.code === "invite_expired");
+  await assert.rejects(approve(), e => e.code === "invite_expired");
   assert.equal(c.read(selected.household).pendingMembership, null);
   c.stop();
 });
@@ -291,4 +303,23 @@ test("discard survives reload after competing proof is saved but epoch-key downl
   await c.synchronize(selected.household, selected.list);
   assert.equal((await c.view(selected.household, selected.list)).name, "Our list");
   assert.equal(c.read(selected.household).pendingMembership, null); c.stop();
+});
+
+test("reviewed import batches commit atomically and skip existing or aliased identities", async () => {
+  const f = await fixture(), c = f.client(), selected = await c.createHousehold(await f.setup(), "Imported list");
+  await c.synchronize(selected.household, selected.list);
+  const payload = name => ({ proposedId: crypto.randomUUID(), key: name, name, rawText: name,
+    quantity: null, unit: null, normalizerVersion: 1, createdAt: now, updatedAt: now, position: 0 });
+  const before = f.vault.read().writes;
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("milk"), payload("eggs"), payload("milk")]), 2);
+  assert.equal(f.vault.read().writes, before + 1, "one atomic vault save for all selected rows");
+  const projection = await c.view(selected.household, selected.list);
+  assert.deepEqual(Object.values(projection.rows).map(r => r.facts.name).sort(), ["eggs", "milk"]);
+  const saved = structuredClone(f.vault.read());
+  await assert.rejects(c.enqueueCaptures(selected.household, selected.list, [payload("bread"), { ...payload("bad"), name: "" }]));
+  assert.deepEqual(f.vault.read(), saved, "invalid later rows do not partially queue earlier items");
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("milk"), payload("eggs")]), 0);
+  assert.deepEqual(f.vault.read(), saved, "retrying the same import is a no-op");
+  await f.vault.mutate(state => { state.households[selected.household].lists[selected.list].confirmed.projection.aliases = { dairy: "milk" }; });
+  assert.equal(await c.enqueueCaptures(selected.household, selected.list, [payload("dairy")]), 0);
 });

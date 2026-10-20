@@ -100,6 +100,13 @@ class SharingViewModel(private val client: HouseholdClient,
     }
     fun resumeBootstrap() = work { client.resumeBootstrap(); reload(); mutable.update { it.copy(message = SharingMessage.CREATED) } }
     fun retryJoin() = work { client.resumeJoin(); reload() }
+    fun scanInvitation(value: String) {
+        if (state.value.busy) return
+        try {
+            InvitationLink.parse(value)
+            mutable.update { it.copy(invitation = value, problem = null) }
+        } catch (_: Exception) { mutable.update { it.copy(invitation = "", problem = SharingProblem.VERIFICATION) } }
+    }
     fun field(field: SharingField, value: String) = mutable.update { when (field) {
         SharingField.ORIGIN -> it.copy(origin = value.take(512))
         SharingField.SETUP -> it.copy(setupCode = value.take(100))

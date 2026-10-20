@@ -1,6 +1,6 @@
 # Browser client protocol and security boundary
 
-This client is served by the relay at its own origin. It never uploads shopping
+This client is served by the relay at its own origin. The relay never receives shopping
 plaintext or private household keys. SSO controls account/session access only;
 existing signed household membership remains an independent authority.
 
@@ -18,6 +18,18 @@ existing signed household membership remains an independent authority.
   the full reverse fingerprint before approving. The browser verifies genesis,
   every membership transition, inviter fingerprint and its exact approved join
   assertion before accepting keys. SSO never substitutes for this process.
+- A web owner can display the existing one-use invitation as a locally generated
+  QR. Scanning it on Android fills the invitation, then requires explicit server
+  confirmation before network access. Reverse QR approval decodes the exact
+  native `PendingJoin`, verifies its signed assertion and invitation ID, and uses
+  the existing membership transition and lost-acknowledgement recovery. There is
+  no new bearer token, enrollment endpoint or framing version. A QR from another
+  invitation, household, server or device cannot authorize the displayed request.
+  Browser camera access is same-origin, video-only and requested on a button
+  press. Frames are bounded to 800 pixels per side, decoded locally and cleared
+  on close, expiry, lock, page hiding, failure or successful capture. Microphone,
+  geolocation and payment permissions remain disabled. Manual full-fingerprint
+  approval remains available without camera permission.
 - An admitted browser account can create a household through CSRF-protected
   `POST /api/households`. The relay atomically stores genesis, the creating-account
   association and the fresh owner-device binding. The account row serializes the
@@ -122,3 +134,16 @@ Quoted hexadecimal floating-point position values, accepted by Java’s number
 parser, also stop before consumption with a localized number-format capability
 message. Canonical quantity validation still rejects hexadecimal quantity text.
 This avoids a second numeric parser with different rounding behavior.
+
+## Optional photo model boundary
+
+Photo import is an explicit direct request to an operator-allowlisted provider,
+separate from household transport. Selecting or capturing an image makes no
+request. A synthetic image capability check must succeed first; prepared photos
+are sent only on the Read action. Keys and images stay in dialog memory and are
+cleared on dismissal or vault lock. No account cookies or redirect forwarding
+are used. Changing provider fields invalidates the prior connection.
+
+Markdown requires no model. Review confirmation commits selected new capture
+intents atomically, with existing canonical identities excluded. This introduces
+no wire operation, schema, normalizer, framing or encryption change.

@@ -9,7 +9,7 @@ import {
   isLiteralNumber,
 } from "./wire.mjs";
 import { Vault, openStorage } from "./vault.mjs";
-import { HouseholdClient, RunScope, request } from "./client.mjs";
+import { HouseholdClient, RunScope, request, parseInvitation } from "./client.mjs";
 import { body } from "./membership.mjs";
 import { canonical, decimal } from "./reducer.mjs";
 import { normalize } from "./identity.mjs";
@@ -18,6 +18,8 @@ import { UnlockAttempt } from "./unlock.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
+import { qrMatrix, VerificationCamera } from "./qr.mjs";
+import { importDialog } from "./import-dialog.mjs";
 const $ = (id) => document.getElementById(id);
 function appearanceStorage() {
   try { return localStorage; } catch { return null; }
@@ -34,6 +36,12 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", app
 let uiScope = new RunScope();
 const api = (path, options = {}) =>
   request(path, { ...options, scope: uiScope });
+let importResources = null;
+function loadImportResources() {
+  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json")])
+    .catch(error => { importResources = null; throw error; });
+  return importResources;
+}
 let availableLocales = ["en"],
   dictionary = {},
   locale = "en",
@@ -150,6 +158,7 @@ function title(main, subtitle, extra = null) {
 function openDialog(content, cleanup = null) {
   closeDialog();
   dialogCleanup = cleanup;
+  $("dialog").classList.toggle("pairing", content.classList.contains("pair-device"));
   $("dialog-content").replaceChildren(content);
   $("dialog").showModal();
 }
@@ -707,6 +716,14 @@ async function render() {
       "div",
       { class: "paper-header" },
       select,
+      button(t("importTitle"), () => act(async () => {
+        const own = generation, active = client, destination = { ...selected };
+        const [packs, modelConfig] = await loadImportResources();
+        if (own !== generation || active !== client) return;
+        importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
+          client: active, destination, valid: () => own === generation && active === client && selected?.household === destination.household && selected?.list === destination.list,
+          finished: async () => { await syncSelected(); await render(); } });
+      }, { rerender: false })),
       el("span", { class: "badge" }, t("privateByDesign")),
     ),
     capture,
@@ -1086,13 +1103,88 @@ async function createHouseholdDialog() {
   name.focus();
 }
 async function invitationDialog(id) {
-  const own = generation, uri = await client.invite(id);
+  const own = generation, active = client, uri = await active.invite(id);
   if (own !== generation) return;
+  const invite = parseInvitation(uri, location.origin);
   const input = el("textarea", { class: "field", rows: 5, readonly: true, value: uri, spellcheck: false,
     "aria-label": t("invitation") });
-  openDialog(el("div", {}, el("h2", {}, t("ownerInvite")), paragraph("ownerInviteHelp"), input,
-    el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { input.value = ""; });
-  input.focus(); input.select();
+  const qr = invitationQr(uri), status = el("p", { class: "helper", role: "status" });
+  const error = el("p", { class: "dialog-error", role: "alert" });
+  const video = el("video", { class: "verification-camera", playsinline: true, muted: true, hidden: true });
+  const canvas = el("canvas");
+  let camera = null, closed = false;
+  const stopCamera = () => { camera?.stop(); camera = null; video.hidden = true; };
+  const scan = button(t("pairScanVerification"), async () => {
+    if (Date.now() >= invite.expiresAt || closed || camera) return;
+    error.textContent = ""; video.hidden = false; scan.disabled = true;
+    camera = new VerificationCamera(video, canvas, code => {
+      video.hidden = true;
+      if (busy) { stopCamera(); scan.disabled = false; return; }
+      act(async () => {
+        try {
+          if (closed || own !== generation || Date.now() >= invite.expiresAt) return;
+          await active.approveQr(id, code, invite);
+          if (closed || own !== generation) return;
+          closeDialog(); notice("pairApproved");
+        } catch (problem) {
+          if (!closed && own === generation) {
+            error.textContent = t(problem.code === "unverified" ? "pairWrongQr" : dictionary[problem.code] ? problem.code : "serverUnavailable");
+            stopCamera(); scan.disabled = Date.now() >= invite.expiresAt;
+          }
+        }
+      });
+    }, () => {
+      if (!closed && own === generation) {
+        video.hidden = true; camera = null; scan.disabled = Date.now() >= invite.expiresAt;
+        error.textContent = t("pairCameraUnavailable");
+      }
+    });
+    await camera.start();
+  }, "primary");
+  const copy = button(t("pairCopy"), async () => {
+    if (closed || Date.now() >= invite.expiresAt) return;
+    try {
+      await navigator.clipboard.writeText(uri);
+      if (!closed) status.textContent = t("pairCopied");
+    } catch { if (!closed) { input.parentElement.open = true; input.focus(); input.select(); status.textContent = t("pairCopyHelp"); } }
+  });
+  const refresh = button(t("pairNewCode"), () => {
+    closeDialog(); act(() => invitationDialog(id));
+  });
+  const updateExpiry = () => {
+    const expired = Date.now() >= invite.expiresAt;
+    refresh.hidden = !expired;
+    if (expired) {
+      qr.replaceChildren(); input.value = ""; copy.disabled = scan.disabled = true;
+      stopCamera(); status.textContent = t("pairExpired");
+    } else status.textContent = t("pairExpires", { time: new Date(invite.expiresAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) });
+  };
+  const timer = setInterval(updateExpiry, 1000);
+  const heading = el("h2", { tabindex: -1 }, t("pairTitle"));
+  openDialog(el("div", { class: "pair-device" }, heading,
+    paragraph("pairIntro"), el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "pair-layout" }, el("div", {}, qr, status),
+      el("div", { class: "pair-instructions" },
+        el("ol", { class: "setup-steps" }, el("li", {}, t("pairStepScan")), el("li", {}, t("pairStepConnect")), el("li", {}, t("pairStepVerify"))),
+        scan, video, error, paragraph("pairCameraPrivacy", "helper"))),
+    el("details", {}, el("summary", {}, t("pairManual")), paragraph("ownerInviteHelp", "helper"), input, copy,
+      paragraph("pairManualHelp", "helper")),
+    el("div", { class: "button-row" }, refresh, button(t("close"), closeDialog))), () => {
+      closed = true; clearInterval(timer); stopCamera(); qr.replaceChildren(); input.value = "";
+    });
+  updateExpiry(); heading.focus();
+}
+function invitationQr(uri) {
+  const matrix = qrMatrix(uri), size = matrix.length + 8, ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`); svg.setAttribute("class", "pair-qr");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", t("pairQr"));
+  const background = document.createElementNS(ns, "rect");
+  background.setAttribute("width", String(size)); background.setAttribute("height", String(size)); background.setAttribute("fill", "#fff");
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("fill", "#000");
+  path.setAttribute("d", matrix.flatMap((row, y) => row.flatMap((dark, x) => dark ? [`M${x + 4},${y + 4}h1v1h-1z`] : [])).join(""));
+  svg.append(background, path); return svg;
 }
 async function applicantsDialog(id) {
   const own = generation, requests = await client.applicants(id);
@@ -1216,7 +1308,7 @@ async function renderSharing(own) {
           ...rows,
           paragraph(isOwner ? "ownerHelp" : "householdHelp", "helper"),
           isOwner ? el("div", { class: "button-row" },
-            button(t("ownerInvite"), () => act(() => invitationDialog(h.id)), "primary"),
+            button(t("pairTitle"), () => act(() => invitationDialog(h.id)), "primary"),
             button(t("ownerRequests"), () => act(() => applicantsDialog(h.id))),
             h.pendingMembership ? button(t("ownerDiscardObsolete"), () =>
               messageDialog("ownerDiscardObsolete", "ownerDiscardHelp", () => client.discardInvalidMembership(h.id))) : null) : null,
@@ -1590,6 +1682,7 @@ for (const event of ["pointerdown", "keydown"])
     if (availableLocales.includes(saved)) preferred = saved;
   } catch {}
   await localeLoad(preferred);
+  loadImportResources().catch(() => {});
   if (location.hash) {
     history.replaceState(null, "", location.pathname + location.search);
   }

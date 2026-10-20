@@ -21,9 +21,23 @@ Add `https://github.com/vitofico/usuals` or use the
 [app link](../distribution/obtainium-link.txt). Only stable `app-release.apk`
 assets are selected. There is no separate Obtainium store submission.
 
-F-Droid inclusion is pending submission/review. Do not interpret the prepared
-[metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) as an accepted
-listing. It names the public source/tag, exact version, Java 21/SDK 34 build,
+F-Droid [closed the initial submission on 2026-10-19](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283),
+citing the requirement for more than three months of maintenance, failure to
+follow its merge request template, and insufficient unique features. The
+maintainer has paused resubmission because Usuals does not meet the maintenance
+requirement. Passing the build pipeline does not establish inclusion eligibility.
+Any future submission must also address the template and distinctiveness feedback;
+reaching the maintenance threshold alone does not guarantee acceptance.
+
+[Local feedback corrections and a template-based draft](../distribution/fdroid/README.md)
+are prepared without posting to GitLab. The conservative earliest reconsideration
+is **2027-01-20**, based on the public release on 2026-10-19, with continued
+maintenance and a fresh policy/release review. Nothing submits automatically.
+The overall policy and future pipeline checkboxes remain unchecked.
+
+Usuals is not listed on F-Droid. The prepared
+[metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) is retained for
+future consideration. It pins the release’s full source hash, exact version, Java 21/SDK 34 build,
 upstream APK and allowed signing certificate. The recipe requests signature
 preservation through reproducible builds. Optional proprietary model services
 are declared as `NonFreeNet`; offline lists and local models need none.
@@ -36,7 +50,9 @@ continues to use only complete `values-xx/` resources.
 ## Prepare a release
 
 1. Commit `VERSION_NAME` and a strictly increasing `VERSION_CODE` in
-   `gradle.properties`, the five changelogs and the F-Droid recipe. Use
+   `gradle.properties` and the five changelogs. Keep the paused F-Droid recipe
+   pinned to an existing published release; refresh it after publication when
+   preparing a separately authorized future inclusion request. Use
    `YYYY.MM.DD.N` and tag `vYYYY.MM.DD.N`. CI never rewrites the source version.
 2. Run `scripts/dgradle verifyReleaseTools :app:assembleDebug :app:assembleRelease
    test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2` and the
@@ -45,6 +61,8 @@ continues to use only complete `values-xx/` resources.
 3. Keep the production key outside the checkout. Android assembly is unsigned.
    Start the candidate with `:app:clean :app:assembleRelease` so stale incremental
    compiler outputs from earlier development builds cannot enter a release.
+   On Linux, restore ownership with `sudo chown -R "$(id -u):$(id -g)" app/build`
+   after Docker builds and before signing or restoring a signed candidate.
    `scripts/sign-release /absolute/private/signing-directory` signs in an offline
    read-only container, with no repository or Gradle-cache mount. The signing
    directory contains `usuals-release.keystore`, `keystore-password.txt`,

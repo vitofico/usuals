@@ -13,10 +13,10 @@ Run the real PostgreSQL integration suite and build the distribution:
 server/scripts/test-local
 ```
 
-The helper creates a disposable loopback-only PostgreSQL container with an
-in-memory disk, generates temporary credentials and invokes
-`scripts/dgradle -p server test installDist --no-watch-fs`.
-Cleanup removes the container and credentials even after a failed test. Tests
+The helper creates a disposable PostgreSQL container on a private Docker network,
+with an in-memory disk and temporary credentials. It invokes
+`scripts/dgradle -p server test verifyWebInterop installDist --no-watch-fs`.
+Cleanup removes the container, network and credentials even after a failed test. Tests
 fail rather than silently skip if PostgreSQL configuration is missing. The helper does not regenerate locks by default; pass `--write-locks`
 only when intentionally updating dependencies.
 
@@ -114,3 +114,11 @@ preparer/verifier, separate identity/migration jobs and a nonsecret inventory
 example. `server/scripts/profile-local` also exercises authenticated near-limit
 snapshot admission using the explicitly invoked wrapper `profileClient` task.
 No preparation command deploys, imports to a cluster or pushes an image.
+
+### Optional browser photo models
+
+`USUALS_WEB_MODEL_ORIGINS` defaults to `[]`. To enable direct browser model
+connections, supply a JSON array of exact HTTPS origins, without paths or
+credentials. The provider must accept the app origin through CORS. This only
+changes the browser CSP and public allowed-origin list; no server model proxy
+or credential store is created. See [provider setup](../docs/providers.md).

@@ -20,7 +20,7 @@ Binaries: https://github.com/vitofico/usuals/releases/download/v%v/app-release.a
 Builds:
   - versionName: 2026.10.19.1
     versionCode: 26101901
-    commit: v2026.10.19.1
+    commit: 2968d12f300ecf6c075c789e51b7984ae9d900a6
     subdir: app
     sudo:
       - apt-get update
@@ -39,7 +39,8 @@ MaintainerNotes: |-
   No Google Play Services or proprietary SDKs are included. Model and catalog
   requests are opt-in and sent directly by the device. Voice uses the selected
   Android speech service and can be unavailable; keyboard entry works offline.
-  The recipe names the immutable tag; pin its full source SHA in fdroiddata.
+  The build pins the full source hash of v2026.10.19.1. Refresh this reference
+  to the latest verified release before any future inclusion request.
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[1-9][0-9]*$

@@ -14,12 +14,12 @@
     <string name="recipe_on_list">Already on your list</string>
     <string name="recipe_pantry">Pantry staple</string>
     <string name="recipe_recent">Bought in the last 7 days</string>
-    <string name="recipe_empty">No usable ingredients were found. Try another page or add the items by hand.</string>
+    <string name="recipe_empty">No usable ingredients were found. Try another source or add the items by hand.</string>
     <plurals name="recipe_add">
         <item quantity="one">Add %1$d ingredient</item>
         <item quantity="other">Add %1$d ingredients</item>
     </plurals>
-    <string name="recipe_model_missing">Configure an optional model in Settings first, then try again. No page text has been sent to a model.</string>
+    <string name="recipe_model_missing">Configure an optional model in Settings first, then try again. No source text or photo has been sent to a model.</string>
     <string name="recipe_model_empty">The model returned no usable ingredients. Check the connection in Settings or add them by hand.</string>
     <string name="recipe_invalid_url">Enter a valid HTTP or HTTPS recipe link without a username or password.</string>
     <string name="recipe_blocked">This site blocks automatic page reads. Open it in your browser and add the ingredients by hand, or try another site.</string>
@@ -29,4 +29,21 @@
     <string name="recipe_too_large">This page is too large to import. Try another recipe.</string>
     <string name="recipe_not_html">This link is not a recipe web page. Paste an HTTP or HTTPS page link.</string>
     <string name="recipe_failed">Could not import the recipe. Your list is still here.</string>
+    <string name="recipe_source_url">Link</string>
+    <string name="recipe_source_markdown">Markdown</string>
+    <string name="recipe_source_photo">Photo</string>
+    <string name="recipe_markdown_help">Paste Markdown or open a UTF-8 file. List entries and recipe ingredients are read locally. Checked entries, code blocks and instructions are skipped.</string>
+    <string name="recipe_markdown_text">Markdown text</string>
+    <string name="recipe_markdown_file">Open Markdown file</string>
+    <string name="recipe_read_markdown">Review Markdown</string>
+    <string name="recipe_photo_help">Choose or take a clear photo of a written list or recipe ingredients. Your configured model is checked with a test image first. Reading sends the prepared photo directly to that provider and uses up to two model calls.</string>
+    <string name="recipe_choose_photo">Choose photo</string>
+    <string name="recipe_take_photo">Take photo</string>
+    <string name="recipe_photo_preview">Photo prepared for import</string>
+    <string name="recipe_read_photo">Read photo with my model</string>
+    <string name="recipe_no_images">The model did not pass the image check. Choose an image-capable model in Settings. This photo was not sent.</string>
+    <string name="recipe_file_failed">Could not open this file or camera. Choose another file or photo.</string>
+    <string name="recipe_file_large">This source is too large. Markdown supports 30,000 characters and 150 entries; photos must be at most 10 MB.</string>
+    <string name="recipe_image_invalid">Could not read this image. Choose a JPEG, PNG or another photo supported by your device.</string>
+    <string name="recipe_markdown_invalid">This is not a UTF-8 text file. Choose a Markdown or plain text file.</string>
 </resources>

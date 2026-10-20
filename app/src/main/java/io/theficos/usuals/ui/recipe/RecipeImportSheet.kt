@@ -10,7 +10,22 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.graphics.BitmapFactory
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -23,7 +38,26 @@ import io.theficos.usuals.ui.list.quantityText
 
 @Composable
 fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () -> Unit, onModel: () -> Unit,
-                      onToggle: (Int) -> Unit, onAdd: () -> Unit, onDismiss: () -> Unit) {
+                      onToggle: (Int) -> Unit, onAdd: () -> Unit, onDismiss: () -> Unit,
+                      onSource: (RecipeSource) -> Unit = {}, onMarkdown: (String) -> Unit = {},
+                      onReadMarkdown: () -> Unit = {}, onMarkdownFile: (String) -> Unit = {},
+                      onPhoto: (String) -> Unit = {}, cameraUri: () -> String? = { null },
+                      releasePhoto: (String) -> Unit = {}, onFileFailure: () -> Unit = {}) {
+    val context = LocalContext.current
+    var capture by rememberSaveable { mutableStateOf<String?>(null) }
+    val photo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { onPhoto(it.toString()) } }
+    val markdown = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { onMarkdownFile(it.toString()) } }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        capture?.let { if (ok) onPhoto(it) else releasePhoto(it) }; capture = null
+    }
+    fun takePhoto() {
+        val uri = cameraUri() ?: return
+        capture = uri
+        try { camera.launch(Uri.parse(uri)) } catch (_: Exception) { releasePhoto(uri); capture = null; onFileFailure() }
+    }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) takePhoto() else onFileFailure()
+    }
     val adding = state.busy && state.result is RecipeLoad.Review
     ModalBottomSheet(onDismissRequest = { if (!adding) onDismiss() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -34,20 +68,55 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                 Text(stringResource(R.string.recipe_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = onDismiss, enabled = !adding) { Text(stringResource(R.string.recipe_close)) }
             }
-            if (state.result !is RecipeLoad.Review) {
-                OutlinedTextField(state.url, onUrl, label = { Text(stringResource(R.string.recipe_url)) }, singleLine = true,
-                    enabled = !state.busy, modifier = Modifier.fillMaxWidth())
-                Button(onClick = onRead, enabled = state.url.isNotBlank() && !state.busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.recipe_read)) }
-            }
             if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            when (val result = state.result) {
-                null -> Text(stringResource(R.string.recipe_intro, stringResource(R.string.app_name)), style = MaterialTheme.typography.bodyMedium)
-                is RecipeLoad.Failed -> Text(recipeProblem(result), color = MaterialTheme.colorScheme.error)
-                is RecipeLoad.Unstructured -> {
-                    Text(stringResource(R.string.recipe_no_structured))
-                    Text(stringResource(R.string.recipe_model_privacy), style = MaterialTheme.typography.bodySmall)
-                    Button(onClick = onModel, enabled = !state.busy && result.text.isNotBlank()) { Text(stringResource(R.string.recipe_use_model)) }
+            if (state.result !is RecipeLoad.Review) Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RecipeSource.entries.forEach { source -> FilterChip(selected = state.source == source, enabled = !state.busy,
+                        onClick = { onSource(source) }, label = { Text(stringResource(when (source) {
+                            RecipeSource.URL -> R.string.recipe_source_url
+                            RecipeSource.MARKDOWN -> R.string.recipe_source_markdown
+                            RecipeSource.PHOTO -> R.string.recipe_source_photo
+                        })) }) }
                 }
+                when (state.source) {
+                    RecipeSource.URL -> {
+                        OutlinedTextField(state.url, onUrl, label = { Text(stringResource(R.string.recipe_url)) }, singleLine = true,
+                            enabled = !state.busy, modifier = Modifier.fillMaxWidth())
+                        Button(onClick = onRead, enabled = state.url.isNotBlank() && !state.busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.recipe_read)) }
+                    }
+                    RecipeSource.MARKDOWN -> {
+                        Text(stringResource(R.string.recipe_markdown_help))
+                        OutlinedTextField(state.markdown, onMarkdown, label = { Text(stringResource(R.string.recipe_markdown_text)) }, minLines = 4, maxLines = 7,
+                            enabled = !state.busy, modifier = Modifier.fillMaxWidth())
+                        OutlinedButton(enabled = !state.busy, onClick = { markdown.launch(arrayOf("text/*", "application/octet-stream")) }) { Text(stringResource(R.string.recipe_markdown_file)) }
+                        Button(enabled = !state.busy && state.markdown.isNotBlank(), onClick = onReadMarkdown) { Text(stringResource(R.string.recipe_read_markdown)) }
+                    }
+                    RecipeSource.PHOTO -> {
+                        Text(stringResource(R.string.recipe_photo_help))
+                        OutlinedButton(enabled = !state.busy, onClick = { photo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) { Text(stringResource(R.string.recipe_choose_photo)) }
+                        OutlinedButton(enabled = !state.busy, onClick = {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) takePhoto()
+                            else permission.launch(Manifest.permission.CAMERA)
+                        }) { Text(stringResource(R.string.recipe_take_photo)) }
+                    }
+                }
+                when (val result = state.result) {
+                    null -> if (state.source == RecipeSource.URL) Text(stringResource(R.string.recipe_intro, stringResource(R.string.app_name)))
+                    is RecipeLoad.Failed -> Text(recipeProblem(result), color = MaterialTheme.colorScheme.error)
+                    is RecipeLoad.Unstructured -> {
+                        Text(stringResource(R.string.recipe_no_structured))
+                        Text(stringResource(R.string.recipe_model_privacy), style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = onModel, enabled = !state.busy && result.text.isNotBlank()) { Text(stringResource(R.string.recipe_use_model)) }
+                    }
+                    is RecipeLoad.Photo -> {
+                        val bitmap = remember(result.image) { result.image.bytes().let { BitmapFactory.decodeByteArray(it, 0, it.size).asImageBitmap() } }
+                        Image(bitmap, stringResource(R.string.recipe_photo_preview), Modifier.fillMaxWidth().height(180.dp))
+                        Button(enabled = !state.busy, onClick = onModel) { Text(stringResource(R.string.recipe_read_photo)) }
+                    }
+                    is RecipeLoad.Review -> Unit
+                }
+            }
+            when (val result = state.result) {
                 is RecipeLoad.Review -> {
                     result.title?.let { Text(it, style = MaterialTheme.typography.headlineSmall) }
                     result.servings?.let { Text(stringResource(R.string.recipe_servings, it)) }
@@ -81,16 +150,26 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                         Text(pluralStringResource(R.plurals.recipe_add, state.selected.size, state.selected.size))
                     }
                 }
+                else -> Unit
             }
         }
     }
 }
 
 @Composable
-private fun recipeProblem(result: RecipeLoad.Failed): String = stringResource(when (result.modelProblem) {
+private fun recipeProblem(result: RecipeLoad.Failed): String {
+    result.importProblem?.let { return stringResource(when (it) {
+        ImportProblem.READ -> R.string.recipe_file_failed
+        ImportProblem.TOO_LARGE -> R.string.recipe_file_large
+        ImportProblem.INVALID_IMAGE -> R.string.recipe_image_invalid
+        ImportProblem.INVALID_MARKDOWN -> R.string.recipe_markdown_invalid
+    }) }
+    return stringResource(when (result.modelProblem) {
     RecipeModelProblem.NOT_CONFIGURED -> R.string.recipe_model_missing
     RecipeModelProblem.BUDGET -> R.string.model_problem_budget
     RecipeModelProblem.EMPTY -> R.string.recipe_model_empty
+    RecipeModelProblem.NOT_CONNECTED -> R.string.model_problem_unreachable
+    RecipeModelProblem.NO_IMAGES -> R.string.recipe_no_images
     null -> when (result.problem) {
         RecipeProblem.INVALID_URL -> R.string.recipe_invalid_url
         RecipeProblem.BLOCKED -> R.string.recipe_blocked
@@ -102,3 +181,4 @@ private fun recipeProblem(result: RecipeLoad.Failed): String = stringResource(wh
         null -> R.string.recipe_failed
     }
 }, result.httpCode ?: 0)
+}

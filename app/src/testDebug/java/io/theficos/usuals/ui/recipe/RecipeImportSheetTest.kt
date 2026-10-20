@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -30,5 +31,20 @@ class RecipeImportSheetTest {
         }
         compose.onNodeWithText("Close").assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Import recipe").assertDoesNotExist()
+    }
+    @Test fun `Markdown and photo both require an explicit review action`() {
+        var state by mutableStateOf(RecipeUiState(source = RecipeSource.MARKDOWN, markdown = "- milk"))
+        var reads = 0
+        compose.setContent { UsualsTheme {
+            RecipeImportSheet(state, onUrl = {}, onRead = {}, onModel = { reads++ }, onToggle = {}, onAdd = {}, onDismiss = {},
+                onSource = { state = state.copy(source = it) }, onReadMarkdown = { reads++ })
+        } }
+        compose.onNodeWithText("Review Markdown").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.runOnIdle { assert(reads == 1); state = state.copy(source = RecipeSource.PHOTO,
+            result = RecipeLoad.Photo(io.theficos.usuals.llm.VisionChallenge.create().image)) }
+        compose.onNodeWithText("Read photo with my model").performScrollTo().assertIsEnabled()
+        compose.runOnIdle { assert(reads == 1) }
+        compose.onNodeWithText("Read photo with my model").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.runOnIdle { assert(reads == 2) }
     }
 }

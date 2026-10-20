@@ -55,4 +55,21 @@ class RecipeViewModelTest {
         assertThat((vm.state.value.recipe!!.result as RecipeLoad.Review).title).isEqualTo("Next recipe")
         assertThat(items.current).isEmpty()
     }
+    @Test fun `photo selection stays local and nothing is added until the reviewed proposal is confirmed`() = runTest(main.dispatcher) {
+        var calls = 0; var added = emptyList<ParsedItem>()
+        val image = io.theficos.usuals.llm.ModelImage("image/png", byteArrayOf(1))
+        val row = IngredientReview("onion", "onion", ParsedItem("onion"), IngredientReason.NONE)
+        val recipe = object : RecipeStore by NoRecipeStore {
+            override suspend fun photoPreview(uri: String) = RecipeLoad.Photo(image)
+            override suspend fun photo(image: io.theficos.usuals.llm.ModelImage): RecipeLoad { calls++; return RecipeLoad.Review("", null, null, listOf(row), true) }
+            override suspend fun add(items: List<ParsedItem>) { added = items }
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        vm.onOpenRecipe(); vm.onRecipeSource(RecipeSource.PHOTO); vm.onRecipePhoto("content://test/photo")
+        assertThat(vm.state.value.recipe!!.result).isInstanceOf(RecipeLoad.Photo::class.java)
+        assertThat(calls).isEqualTo(0); assertThat(added).isEmpty()
+        vm.onRecipeModel()
+        assertThat(calls).isEqualTo(1); assertThat(added).isEmpty()
+        vm.onAddRecipe(); assertThat(added).containsExactly(ParsedItem("onion"))
+    }
 }

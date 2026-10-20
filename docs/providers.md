@@ -1,8 +1,8 @@
 # Optional model providers
 
 The list works without a model. Settings can save an endpoint, model identifier,
-network-local flag and model key, and test the connection. Prose recipe parsing is
-the only feature that uses a configured model.
+network-local flag and model key, and test the connection. Prose recipes and photos of written shopping lists or ingredient lists can use
+a configured model. Markdown and structured recipe pages work locally.
 
 The client supports OpenAI-compatible chat completions, including Ollama.
 The Anthropic option reports that this build does not support its protocol.
@@ -38,3 +38,40 @@ connection probes receive a final answer rather than spending their output
 allowance on a reasoning trace. This uses Ollama's documented
 [OpenAI compatibility thinking control](https://docs.ollama.com/api/openai-compatibility).
 The provider's usual compatibility behavior applies to other endpoints.
+
+## Photos of written lists
+
+Choose **Photo** in Android recipe import, then select a photo or use the camera.
+The preview is local. **Read photo with my model** first submits a randomized
+six-colour test image to the currently configured endpoint. Only a correct
+structured answer enables submitting the prepared photo. Text-only, unavailable
+or unsupported providers leave the list untouched. Each request consumes one
+Android daily-budget attempt, including failed probes. Reading normally takes
+two attempts. Cancelling closes the underlying request.
+
+Android and web remove source metadata by re-encoding oriented pixels as JPEG,
+limit source files to 10 MiB and 48 million pixels, and reduce the longest edge
+to at most 2048 pixels. Prepared uploads are limited to approximately 2 MiB.
+A model proposes only visible written items, without guessing from dishes or
+packages. Always check names and quantities in the review before adding them.
+The capability test is a compatibility check, not an accuracy guarantee.
+
+## Browser model connection
+
+An operator must set `USUALS_WEB_MODEL_ORIGINS` to a JSON array of exact origins,
+for example `["https://models.example.org"]`. The default is `[]`, which leaves
+photo import unavailable. HTTPS is required except for localhost loopback QA.
+Wildcards, credentials and paths are rejected. This sets the browser CSP and
+public `/model-origins.json`; it never configures server-side model calls.
+
+The provider must allow the web app origin through CORS and implement the
+OpenAI-compatible Chat Completions image content format. In **Import ingredients
+> Photo**, enter its base endpoint, model and optional key. A synthetic image
+check must succeed before choosing or capturing a photo. Changing any connection
+field disconnects the previous provider. Keys and photos are held only for the
+open dialog, cleared on close or vault lock, and never enter IndexedDB or the
+relay. The request cap counts attempts for that connection, including probes;
+it is a client guard and not a billing limit. Use a restricted provider key
+suitable for browser access. Markdown import needs no provider connection.
+
+The wire format follows the official [OpenAI image input guide](https://developers.openai.com/api/docs/guides/images-vision).

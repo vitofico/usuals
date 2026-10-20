@@ -12,13 +12,21 @@ installed Android app has the stronger operator boundary. See the
 [browser protocol](../web/PROTOCOL.md) and [identity guide](sync/web-identity.md)
 for enrollment, session, password and restore details.
 
+The web **Connect a phone** action renders a private one-use invitation QR
+locally. Android asks for confirmation of the server before contacting it.
+The owner scans the phone’s signed verification QR back in the browser; approval
+checks the complete original invitation and existing signed membership protocol.
+Browser camera permission is requested only for that action. Frames stay on the
+device and the camera stops with the dialog, invitation or unlocked session.
+Manual full-fingerprint verification remains available.
+
 ## Secrets and external data
 
 The model key is stored through Android Keystore-backed encrypted preferences.
 It is never logged, displayed back to the user, or included in an export.
 It is sent to the configured model endpoint for authentication when required.
 Provider diagnostics redact the key, bound response excerpts and avoid dumping
-full third-party bodies. A hosted model receives the text submitted to it.
+full third-party bodies. A hosted model receives explicitly submitted recipe text or prepared photos.
 Selecting a local endpoint is a statement about the user's network, not proof
 that a server stores nothing.
 
@@ -79,7 +87,7 @@ a readable file at the location the person chose.
 The isolated Ktor/PostgreSQL relay, Android Keystore keys, verified joining and
 shopping transport are implemented locally. The relay stores ciphertext plus
 public membership/routing metadata. It cannot read shopping names, quantities
-or history. Recipe, catalog and model reads still originate on each phone.
+or history. Recipe, catalog and model reads still originate on the device or browser.
 No application server enters any third-party read path.
 
 The [v1 contract](sync/security-v1.md) covers signed membership, per-list keys,
@@ -108,3 +116,20 @@ and due time reject stale/duplicate delivery. Consumption is persisted before
 posting: a process crash at that boundary can skip one reminder rather than
 repeat it. Delivery time is approximate. Zone changes re-plan on app opening or
 when pending work wakes; no background timezone listener is installed.
+
+## Written-list import
+
+Markdown is bounded source text, never rendered HTML or fetched links. Recipe
+sections and unchecked entries are parsed locally using the input-language packs.
+Photo import accepts bounded raster files and re-encodes oriented pixels to remove
+source metadata before an explicit model action. Synthetic image probes never
+include the selected photo; rejected probes cannot enable a photo upload. All
+output remains untrusted and requires the existing review/add confirmation.
+
+Browser model connections are exact operator-approved CSP origins, empty by
+default. Their keys live only in the import dialog memory, with no relay proxy,
+ambient account credentials, redirect following or vault persistence. A failed
+replacement disconnects the old provider. Native requests and browser requests
+are cancellable and response-bounded. Camera streams stop on dismissal, lock,
+late permission completion and capture errors. These controls do not guarantee
+that a model identifies ingredients or quantities correctly.

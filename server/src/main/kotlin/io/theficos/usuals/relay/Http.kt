@@ -19,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetrics(relay.db), ingress: TrustedIngress = TrustedIngress(), webIdentity: WebIdentity? = null) {
+fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetrics(relay.db), ingress: TrustedIngress = TrustedIngress(), webIdentity: WebIdentity? = null,
+    browserModels: BrowserModels = BrowserModels()) {
     val service = MembershipService(relay)
     val io = Dispatchers.IO.limitedParallelism(4)
     val identityIo = Dispatchers.IO.limitedParallelism(1)
@@ -85,7 +86,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         }
     }
     routing {
-        webAssets()
+        webAssets(browserModels)
         get("/healthz") { call.respondText("ok") }
         get("/readyz") { run { val ready = relay.db.ready(); call.respondText(if (ready) "ok" else "unavailable", status = if (ready) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable) } }
         get("/v1/server-info") { call.json(relay.identity.info()) }

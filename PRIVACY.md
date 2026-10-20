@@ -11,7 +11,7 @@ exports are readable files at the location you choose. Android cloud backup is
 excluded; device transfer and exports exclude model credentials and sync keys.
 Model credentials and device keys use Android Keystore-backed protection.
 
-Camera access is requested for scanning and microphone access for voice capture.
+Camera access is requested for scanning and optional list-photo capture and microphone access for voice capture.
 Barcode decoding runs on the device. Voice uses your selected Android speech
 service, preferring on-device recognition when available. That service may send
 audio to its provider; Usuals cannot attest its processing. Keyboard entry works
@@ -25,7 +25,10 @@ without microphone access. Optional shopping reminders use local notifications.
 - Sharing a recipe URL fetches that page directly from your device. The website
   sees the URL and connection metadata. Structured recipe parsing is local.
 - Model assistance is optional and disabled by default. An explicit model action
-  sends recipe text and any configured API credential to your selected endpoint.
+  sends recipe text or a prepared photo and any configured API credential to your
+  selected endpoint. Photo reading first sends a synthetic image compatibility
+  check. Source photos are decoded locally, resized and re-encoded without source
+  metadata. Selection and preview alone send no photo. Markdown parsing is local.
   Its operator's policies apply. A local endpoint label does not prove encryption
   or an absence of server-side storage.
 
@@ -46,7 +49,13 @@ in does not grant list keys. Household creation and invitations establish
 membership separately. Save the encrypted recovery kit and its key separately.
 
 The browser encrypts its local keys and saved shopping state under a separate
-passphrase, and locks on leaving the page or after inactivity. Browsers trust
+passphrase. When you choose **Scan phone verification**, it requests camera
+access to verify your Android device. Frames are decoded locally, never uploaded,
+and discarded when scanning ends. Camera access stops when the dialog closes,
+the invitation expires or the browser vault locks. Microphone access is not used
+by the browser. You can approve using a full fingerprint without a camera.
+
+It locks on leaving the page or after inactivity. Browsers trust
 code delivered by their server; a malicious server can change that code. The
 independently installed Android app has the stronger operator boundary.
 
@@ -59,3 +68,10 @@ and backup retention. This repository does not operate a paid hosting service.
 
 Report security issues using the [security policy](SECURITY.md).
 See the [security model](docs/security-model.md) for protocol limits.
+
+Browser photo import additionally requires an operator-approved model origin.
+Model calls go directly from the browser, without account cookies or redirects.
+The connection key and photo remain in memory only until the import dialog
+closes or the vault locks; they are never stored in the relay or encrypted vault.
+The provider receives the photo pixels and network metadata when you explicitly
+read it. A model may make mistakes, so every proposal needs review.

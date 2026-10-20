@@ -1,0 +1,3 @@
+# Preserve the pinned upstream QR release bytes, including their whitespace.
+web/src/vendor/*.mjs -whitespace
+web/assets/jsqr-LICENSE.txt -whitespace

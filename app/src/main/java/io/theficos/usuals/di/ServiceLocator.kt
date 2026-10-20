@@ -214,8 +214,11 @@ object ServiceLocator {
         IngredientReviewPlanner(ingredientParser, InputLanguages.available.flatMap { it.pantryStaples })
     }
     val recipeStore: RecipeStore by resettable {
-        RepositoryRecipeStore(recipeFetcher, recipePlanner, itemRepository, historyRepository, ::modelClient, modelBudget)
+        RepositoryRecipeStore(recipeFetcher, recipePlanner, itemRepository, historyRepository, ::modelClient, modelBudget,
+            markdown = markdownIngredients, files = recipeImportFiles)
     }
+    val markdownIngredients by resettable { io.theficos.usuals.recipe.MarkdownIngredients() }
+    val recipeImportFiles by resettable { AndroidRecipeImportFiles(context) }
 
     val speechSource: SpeechSource by resettable { AndroidSpeechSource(context) }
 

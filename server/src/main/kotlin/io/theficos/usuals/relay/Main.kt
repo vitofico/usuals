@@ -49,12 +49,13 @@ fun main(args: Array<String>) {
         val relay = Relay(db, identity, auth)
         val ingress = TrustedIngress(System.getenv("USUALS_TRUSTED_PROXY_CIDRS")?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty())
         val operations = RelayMetrics(db)
+        val browserModels = BrowserModels.fromEnvironment()
         val monitor = operations.listen(System.getenv("USUALS_OPS_BIND") ?: "127.0.0.1", System.getenv("USUALS_OPS_PORT")?.toInt() ?: 9090)
         Runtime.getRuntime().addShutdownHook(Thread { monitor.stop(0) })
         embeddedServer(Netty, configure = {
             connector { host = if (local) "127.0.0.1" else "0.0.0.0"; port = System.getenv("PORT")?.toInt() ?: 8080 }
             connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 4
-        }) { relayModule(relay, operations, ingress, webIdentity) }.start(wait = true)
+        }) { relayModule(relay, operations, ingress, webIdentity, browserModels) }.start(wait = true)
     }
 }
 private fun required(name: String) = requireNotNull(System.getenv(name)) { "missing_config:$name" }.also { require(it.isNotBlank()) }

@@ -18,6 +18,8 @@ class RepositoryRecipeStore(
     private val client: () -> LlmClient?,
     private val budget: ModelBudget,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val markdown: MarkdownIngredients = MarkdownIngredients(),
+    private val files: RecipeImportFiles = NoRecipeImportFiles,
 ) : RecipeStore {
     override suspend fun read(url: String): RecipeLoad = when (val result = fetcher.fetch(url)) {
         is RecipeFetch.Failed -> RecipeLoad.Failed(result.problem, httpCode = result.httpCode)
@@ -35,6 +37,33 @@ class RepositoryRecipeStore(
         return RecipeLoad.Review(url, null, null,
             planner.planParsed(parsed.map { it.name to it }, history.snapshot(), items.items(), clock()), viaModel = true)
     }
+
+    override suspend fun markdown(text: String): RecipeLoad = try {
+        val document = markdown.read(text)
+        RecipeLoad.Review("", document.title, null,
+            planner.plan(document.ingredients, history.snapshot(), items.items(), clock()))
+    } catch (_: IllegalArgumentException) { RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE) }
+
+    override suspend fun markdownFile(uri: String): RecipeLoad = importing { markdown(files.markdown(uri)) }
+    override suspend fun photoPreview(uri: String): RecipeLoad = importing {
+        try { RecipeLoad.Photo(files.photo(uri)) } finally { files.releaseCamera(uri) }
+    }
+    override fun cameraUri(): String = files.cameraUri()
+    override fun releaseCamera(uri: String) = files.releaseCamera(uri)
+    override suspend fun photo(image: io.theficos.usuals.llm.ModelImage): RecipeLoad {
+        val model = client() ?: return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
+        if (!budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
+        val capability = model.probeImages()
+        if (!capability.reachable) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED)
+        if (!capability.supportsImages || !capability.supportsStructuredOutput) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NO_IMAGES)
+        if (!budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
+        val parsed = model.parseImage(image)
+        if (parsed.isEmpty()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.EMPTY)
+        return RecipeLoad.Review("", null, null,
+            planner.planParsed(parsed.map { it.name to it }, history.snapshot(), items.items(), clock()), viaModel = true)
+    }
+    private suspend fun importing(read: suspend () -> RecipeLoad): RecipeLoad = try { read() }
+        catch (problem: ImportFailure) { RecipeLoad.Failed(importProblem = problem.problem) }
 
     override suspend fun add(items: List<ParsedItem>) {
         this.items.transaction {

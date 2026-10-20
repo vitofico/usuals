@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
@@ -53,6 +55,7 @@ tasks.register<JavaExec>("browserPreview") {
     doFirst {
         args(requireNotNull(providers.gradleProperty("previewPort").orNull),
             requireNotNull(providers.gradleProperty("previewOutput").orNull))
+        providers.gradleProperty("previewModelOrigin").orNull?.let { args(it) }
     }
 }
 
@@ -60,12 +63,21 @@ tasks.register<JavaExec>("browserPreview") {
 // Ship only the self-contained browser runtime, never test fixtures or sources of secrets.
 val stageWebAssets by tasks.registering(Sync::class) {
     from("../web") { include("index.html", "assets/**", "src/**", "locales/**") }
+    inputs.dir("../core/parse/src/main/resources/input-language")
     into(layout.buildDirectory.dir("generated/web-resources/web"))
     doLast {
         val codes = rootProject.file("../web/locales").listFiles().orEmpty()
             .filter { it.extension == "json" }.map { it.nameWithoutExtension }.sorted()
         check("en" in codes && codes.all { Regex("[a-z]{2,3}(?:-[A-Z]{2})?").matches(it) }) { "invalid_web_locales" }
         destinationDir.resolve("locales.json").writeText(codes.joinToString(",", "[", "]") { "\"$it\"" } + "\n")
+        fun quote(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
+        val keys = listOf("ingredient-headings", "ignored-recipe-headings", "numbers", "multipliers", "units", "recipe-measures", "connectors")
+        val packs = fileTree("../core/parse/src/main/resources/input-language") { include("*.properties") }.files.sorted().map { file ->
+            val values = Properties().apply { file.reader(Charsets.UTF_8).use { load(it) } }
+            keys.joinToString(",", "{", "}") { quote(it) + ":" + quote(values.getProperty(it, "")) }
+        }
+        destinationDir.resolve("assets/import-language.json").writeText(packs.joinToString(",", "[", "]") + "\n")
     }
 }
 sourceSets.main { resources.srcDir(layout.buildDirectory.dir("generated/web-resources")) }

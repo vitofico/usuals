@@ -1095,3 +1095,119 @@ elapsed household pilot remain separate acceptance gates.
 - The owned production test installation was removed after QA. The existing
   debug installation remains. No phone access or cluster deployment.
 - Evidence: /private/tmp/usuals-public-release/. No cluster deployment.
+
+- Source 2968d12 and tag v2026.10.19.1 are public in vitofico/usuals. All three
+  release assets passed anonymous HTTPS byte comparisons. The production pin and
+  encrypted recovery backup are retained; temporary plaintext signing material
+  was removed after configuring the four GitHub secrets.
+- F-Droid inclusion request: https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283.
+  All nine pipeline jobs passed, including an independent source build and
+  signature-copy verification against the published developer binary. The request
+  was subsequently closed; see the policy outcome below. Obtainium's public import
+  page resolves successfully.
+- An isolated Linux filesystem probe confirmed root-owned build outputs block
+  runner signing and runner-owned Git checkouts need explicit container trust.
+  The release workflow restores artifact ownership after Docker assembly and
+  trusts only /workspace inside its disposable verifier. Its driver supports
+  immutable earlier release tags. Both repaired ownership probes pass.
+- The first GitHub Android job passed full tests and lint. Its server job
+  exposed Linux's inability to reach a host-loopback PostgreSQL port from the
+  Gradle container. The disposable database now shares an isolated Docker
+  network with the test runner, with no host port. The first signing job also
+  confirmed the build-output ownership failure reproduced above.
+- The repaired network harness passed a forced full run: all 26 Gradle tasks
+  executed, 138 JVM cases and 119 Node tests, zero failures/errors/skips. All
+  22 release-tool checks also passed again. No Android runtime source changed.
+
+- Corrected GitHub runs completed successfully: [Android/server CI](https://github.com/vitofico/usuals/actions/runs/39279639913),
+  [production signing](https://github.com/vitofico/usuals/actions/runs/39279640068)
+  and [CodeQL](https://github.com/vitofico/usuals/actions/runs/39279639930).
+  Completed job logs are authoritative where the status API retained stale
+  queued data. CodeQL has zero open alerts. The fresh runner used the configured
+  signing secrets, reproduced the exact APK and verified that all three release
+  assets were unchanged. All 12 native libraries pass 16 KB checks.
+- GitHub Releases and Obtainium distribution are complete. F-Droid closed the
+  initial request on 2026-10-19 despite all nine pipeline jobs passing. The closure
+  cites the requirement for more than three months of maintenance, the merge
+  request template not being followed, and insufficient unique features. Vito
+  instructed us not to resubmit because the maintenance requirement is unmet.
+  No replacement request was opened. Future consideration must address all
+  closure reasons, not only project age. This status correction changes no APK,
+  source tag, signing identity or release asset.
+
+## Local F-Droid feedback corrections (2026-10-20)
+
+- Prepared the [corrected local draft](../distribution/fdroid/merge-request-draft.md)
+  against the current official App inclusion template. Exact headings/checklist
+  wording and order are verified. Age eligibility and future CI remain unchecked.
+  Added released-source evidence and qualified similar-app comparisons; acceptance
+  of distinctiveness remains F-Droid's decision.
+- The reference recipe pins the full source SHA of v2026.10.19.1, with matching
+  tag, source version/code and signing certificate. Verified all eight linked
+  source/screenshot paths at that revision. No published artifact was rebuilt.
+- scripts/dgradle passed 22 release-tool checks and official fdroidserver 2.4.5
+  lint --format against an isolated copy; the Docker evidence check also passed.
+  Logs: /private/tmp/usuals-fdroid-feedback-20261020/. Runtime build/emulator
+  evidence is reused because Android/server inputs are unchanged.
+- Resubmission remains paused. Earliest reconsideration is 2027-01-20 with
+  ongoing-maintenance evidence and fresh policy/release review. No GitLab write,
+  replacement MR, CI trigger, automatic follow-up, push or deployment occurred.
+
+## QR phone connection (2026-10-19 to 2026-10-20)
+
+- The web owner can show an expiring, one-use invitation QR, copy a private link
+  or use full-fingerprint approval. Android puts scanning first, displays the
+  destination before connecting and checks approval while the screen is resumed.
+- Reverse QR approval preserves the exact native signed assertion and checks the
+  complete displayed invitation before staging membership. Independent review
+  closed the missing member/secret-hash/expiry binding. Re-signed mutations,
+  invalid signatures, foreign pins and committed-approval retries after expiry
+  have regression coverage. No sync framing or database migration changed.
+- Final Docker Android assembly, instrumentation assembly, tests and lint passed
+  through scripts/dgradle: 882 recorded JUnit cases, no failures/errors, five
+  intentional live-test skips and 22 release-tool checks. The affected final
+  server/browser gate passed 138 JVM and 126 Node tests with no failures/skips,
+  including native/browser crypto and recovery interoperability.
+- The 16 KB emulator ran the production sharing factory against disposable local
+  PostgreSQL/HTTP: server confirmation, reverse verification QR, automatic join
+  completion and shared-list discovery. Full-fingerprint approval exercised the
+  camera-free fallback. A browser-created encrypted item reached Android after
+  an explicit harness sync. QR image decoding and camera cleanup use automated
+  generated-frame tests; no live physical-camera scan is claimed.
+- Expired pending requests retain the connection controls. Robolectric and
+  emulator checks verify preview/cancel preserves the pending identity and
+  explicit replacement sends one fresh request. Existing household identities
+  and saved list choices have regression coverage.
+- Visual QA corrected the web navigation label and dialog focus/layout. All five
+  language catalogs remain complete. Original emulator data was restored and
+  byte-verified; the test forwarding was removed. No phone or cluster access.
+  The published Android APK and its immutable tag remain unchanged.
+- Evidence: /private/tmp/usuals-qr-android-final.log,
+  /private/tmp/usuals-qr-server-final.log and /private/tmp/usuals-qr-qa/.
+
+## Approved server publication and rollout (2026-10-20)
+
+- Vito explicitly requested pushing and deploying the new version. Published
+  through `9729d7c` to `main` and `feat/smart-list` with normal fast-forwards.
+  No release tag, Android asset or F-Droid request was changed.
+- Runtime source `a16ca3c` reuses its successful full Docker Android/server/web
+  gates and independent source review. The source-bound bundle, uploaded archive,
+  imported platform manifest and running container configuration digests matched.
+- A fresh pre-upgrade base backup passed `pg_verifybackup`, then base/WAL were
+  streamed directly into encryption. Checksum-verified encrypted recovery files
+  are retained at the previously approved operator-backup destination.
+- With relay traffic stopped, the explicit migration Job applied 004, then the
+  guarded image patch rolled out successfully. Identity/fence hashes and existing
+  Authentik/local-account settings are unchanged. PostgreSQL configuration is
+  unchanged and WAL archiving reports zero failures. The former schema003 binary
+  is not a compatible image-only rollback target after this migration.
+- Base checks and the updated overlay render pass. The guarded patch/migration
+  and final overlay pass server-side dry-run. Live TLS/readiness, ten exact source
+  assets, security/no-store headers, both auth providers, closed anonymous APIs,
+  private metrics and the empty browser model-origin allowlist pass.
+- Desktop and 16 KB emulator Chrome display the updated app. Authentik reaches
+  its normal owner login form. Authenticated production flows require owner
+  sign-in; disposable local household/QR/import test evidence remains applicable.
+  No phone or owner credentials were used.
+- See the [deployment record](../deploy/theficos/README.md) for source/image,
+  backup and recovery details. Private evidence: `/private/tmp/usuals-upgrade-20261020/`.

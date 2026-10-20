@@ -245,6 +245,7 @@ export class HouseholdClient {
   invite(id) { return this.serial(() => owner.invite(this, id)); }
   applicants(id) { return this.serial(() => owner.applicants(this, id)); }
   approve(id, pending, trusted) { return this.serial(() => owner.approve(this, id, pending, trusted)); }
+  approveQr(id, uri, invitation) { return this.serial(() => owner.approveQr(this, id, uri, invitation)); }
   removeDevice(id, device) { return this.serial(() => owner.remove(this, id, device)); }
   discardInvalidMembership(id) { return this.serial(() => owner.discardInvalidPending(this, id)); }
   denyApplicant(id, request) { return this.serial(async () => {
@@ -1100,6 +1101,29 @@ export class HouseholdClient {
         s.lists[list].pending.push({ intent, envelope: null, blocked: null });
       });
       return intent;
+    });
+  }
+  enqueueCaptures(id, list, payloads) {
+    const captured = structuredClone(payloads);
+    return this.serial(async () => {
+      requireThat(Array.isArray(captured) && captured.length <= 150, "too_large");
+      const household = this.read(id);
+      requireThat(!household.removed && household.lists[list]?.confirmed, "not_found");
+      let projection = await this.view(id, list);
+      const intents = [];
+      for (const payload of captured) {
+        const key = canonical(payload.key, projection.aliases);
+        if (Object.values(projection.rows).some(row => !row.archived && !projection.tombstones[row.id] && canonical(row.facts.key, projection.aliases) === key)) continue;
+        const intent = { id: crypto.randomUUID(), listId: list, kind: "capture", payload, schema: 1, normalizer: 1 };
+        const result = await this.scope.wait(reduce(projection, intent));
+        requireThat(["APPLIED", "MERGED"].includes(result.outcome), result.reason ?? "invalid");
+        projection = result.projection; intents.push(intent);
+      }
+      if (intents.length) await this.save(id, state => {
+        requireThat(state.lists[list].pending.length + intents.length <= 1000, "quota_exceeded");
+        state.lists[list].pending.push(...intents.map(intent => ({ intent, envelope: null, blocked: null })));
+      });
+      return intents.length;
     });
   }
   async view(id, list) {

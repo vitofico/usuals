@@ -159,6 +159,14 @@ data class ListActions(
     val onRecipeUrl: (String) -> Unit = {},
     val onReadRecipe: () -> Unit = {},
     val onRecipeModel: () -> Unit = {},
+    val onRecipeSource: (io.theficos.usuals.ui.recipe.RecipeSource) -> Unit = {},
+    val onRecipeMarkdown: (String) -> Unit = {},
+    val onReadRecipeMarkdown: () -> Unit = {},
+    val onRecipeMarkdownFile: (String) -> Unit = {},
+    val onRecipePhoto: (String) -> Unit = {},
+    val onCreateRecipePhoto: () -> String? = { null },
+    val onReleaseRecipePhoto: (String) -> Unit = {},
+    val onRecipeFileFailure: () -> Unit = {},
     val onRecipeToggle: (Int) -> Unit = {},
     val onAddRecipe: () -> Unit = {},
     val onDismissRecipe: () -> Unit = {},
@@ -296,6 +304,14 @@ fun ListScreen(
             onRecipeUrl = vm::onRecipeUrl,
             onReadRecipe = vm::onReadRecipe,
             onRecipeModel = vm::onRecipeModel,
+            onRecipeSource = vm::onRecipeSource,
+            onRecipeMarkdown = vm::onRecipeMarkdown,
+            onReadRecipeMarkdown = vm::onReadRecipeMarkdown,
+            onRecipeMarkdownFile = vm::onRecipeMarkdownFile,
+            onRecipePhoto = vm::onRecipePhoto,
+            onCreateRecipePhoto = vm::createRecipePhoto,
+            onReleaseRecipePhoto = vm::releaseRecipePhoto,
+            onRecipeFileFailure = vm::onRecipeFileFailure,
             onRecipeToggle = vm::onRecipeToggle,
             onAddRecipe = vm::onAddRecipe,
             onDismissRecipe = vm::onDismissRecipe,
@@ -360,7 +376,9 @@ fun ListContent(
             { actions.onDismissProduct(); actions.onOpenSettings() }, actions.onDismissProduct)
     }
     state.recipe?.let { RecipeImportSheet(it, actions.onRecipeUrl, actions.onReadRecipe, actions.onRecipeModel,
-        actions.onRecipeToggle, actions.onAddRecipe, actions.onDismissRecipe) }
+        actions.onRecipeToggle, actions.onAddRecipe, actions.onDismissRecipe,
+        actions.onRecipeSource, actions.onRecipeMarkdown, actions.onReadRecipeMarkdown, actions.onRecipeMarkdownFile,
+        actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure) }
     if (state.productInfo == null && state.recipe == null && state.editing == null && state.mergeReview == null && state.scanMerge == null) state.scanNames.firstOrNull()?.let {
         ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.id, name) },
             { actions.onSkipScanName(it.id) }, actions.onSkipScanNames)

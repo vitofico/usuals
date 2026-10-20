@@ -22,11 +22,13 @@ class DistributionTest(unittest.TestCase):
         self.assertEqual(json.loads(unquote(link.removeprefix("obtainium://app/"))), config)
         self.assertNotRegex(link.lower(), r"token|password|authorization")
 
-    def test_fdroid_uses_the_actual_version_and_signing_identity(self):
-        properties = dict(re.findall(r"(?m)^(VERSION_NAME|VERSION_CODE)=(.+)$", (ROOT / "gradle.properties").read_text()))
+    def test_fdroid_reference_is_versioned_pinned_and_uses_the_signing_identity(self):
         recipe = (ROOT / "distribution/fdroid/metadata/io.theficos.usuals.yml").read_text()
-        version, code = properties["VERSION_NAME"], properties["VERSION_CODE"]
-        for text in [f"versionName: {version}", f"versionCode: {code}", f"commit: v{version}",
+        # The paused recipe references a released APK while main can advance.
+        version = re.search(r"(?m)^  - versionName: ([0-9.]+)$", recipe).group(1)
+        code = re.search(r"(?m)^    versionCode: ([1-9][0-9]*)$", recipe).group(1)
+        self.assertRegex(recipe, r"(?m)^    commit: [0-9a-f]{40}$")
+        for text in [f"versionName: {version}", f"versionCode: {code}",
                      f"CurrentVersion: {version}", f"CurrentVersionCode: {code}"]:
             self.assertIn(text, recipe)
         pin = (ROOT / "scripts/release-certificate-sha256.txt").read_text().strip()
@@ -37,8 +39,11 @@ class DistributionTest(unittest.TestCase):
         for rejected in ["main", "v" + version + "-debug", "v" + version + "-rc1"]:
             self.assertIsNone(re.fullmatch(pattern, rejected))
         data = re.search(r"(?m)^UpdateCheckData: (.+)$", recipe).group(1).split("|")
-        self.assertEqual(re.search(data[1], (ROOT / data[0]).read_text()).group(1), code)
-        self.assertEqual(re.search(data[3], (ROOT / data[2]).read_text()).group(1), version)
+        self.assertEqual(data[0], "gradle.properties")
+        self.assertEqual(data[2], "gradle.properties")
+        candidate_properties = f"VERSION_NAME={version}\nVERSION_CODE={code}\n"
+        self.assertEqual(re.search(data[1], candidate_properties).group(1), code)
+        self.assertEqual(re.search(data[3], candidate_properties).group(1), version)
 
     def test_all_store_locales_are_complete_and_within_catalog_limits(self):
         code = re.search(r"(?m)^VERSION_CODE=(\d+)$", (ROOT / "gradle.properties").read_text()).group(1)
