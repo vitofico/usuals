@@ -6,8 +6,8 @@ The approved implementation covers Android and web. It adds a public server-link
 and QR handoff, admitted-account household creation, full-code device comparison,
 a retained source-list action, and the server AI default with optional personal
 credentials for operator-approved profiles. Shopping encryption and Room's
-released schema remain unchanged. No cluster deployment, publication or real
-provider call was performed.
+released schema remain unchanged. Initial implementation verification used disposable local fixtures. Subsequent
+explicitly authorized publication and live deployment are recorded below.
 
 ## Automated checks
 
@@ -78,3 +78,33 @@ Final unsigned release APK SHA-256:
 Local evidence: `/private/tmp/usuals-connection-qa/`,
 `/private/tmp/usuals-connection-android-tests.log`, and
 `/private/tmp/usuals-connection-server-tests.log`.
+
+## Authorized publication and Theficos verification
+
+PR #6 merged after all CI checks passed. Its source `72719fb` includes the
+independently reviewed internal-HTTP/cloud-disclosure fix and two additional
+configuration tests. The complete local server gate passed 79 tests, 144 browser
+tests and crypto interoperability; Android inputs retained their prior 914-test
+verification and passed fresh PR CI. CodeQL reported no open findings for the PR.
+
+The approved rollout deployed the verified merged-source image with migration 005,
+a fresh verified and encrypted off-node database backup, separate encrypted
+credential-key escrow and tested read-only mount permissions. Independent review
+covered the runtime/network configuration and operator scripts. It found and
+resolved a local-PV `fsGroup` permission issue and strengthened the synthetic-account
+cleanup guard before use.
+
+The user chose the cluster's existing Ollama cloud service, clearly disclosed as
+external processing. Actual synthetic text and vision calls passed through the
+production gateway. A temporary ordinary account verified browser activation,
+full-code handoff and native bearer authorization, encrypted credential storage
+and reset, text extraction from both native requests and the shipped web
+`ServerModel`, randomized vision probing, written-list photo extraction, browser
+revocation of native access and logout. A blank fixture correctly returned no
+items; a readable synthetic list then produced milk and rice. The account and
+all its sessions/AI rows were removed. No owner credentials or household content
+were used. HTTPS, 14 packaged source assets, no-store/security headers and
+anonymous access restrictions also passed.
+
+See [the deployment record](../../deploy/theficos/README.md) for the image digest,
+model selections, recovery paths, rollback boundary and remaining pilot gates.

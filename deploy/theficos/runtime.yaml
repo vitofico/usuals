@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: usuals-relay
   annotations:
-    usuals.io/source-commit: a16ca3c9be200a69cff49f1b3010257aa18d9a22
+    usuals.io/source-commit: 72719fb5294755dc4bada760c66f94baa36ce143
 spec:
   template:
     spec:
@@ -17,6 +17,10 @@ spec:
             requests: {memory: 384Mi}
             limits: {memory: 768Mi}
           env:
+            - {"name":"USUALS_AI_PROFILES","value":"[{\"id\":\"theficos-ollama\",\"label\":\"Theficos Ollama cloud\",\"baseUrl\":\"http://ollama.ollama.svc.cluster.local:11434/v1\",\"model\":\"gpt-oss:20b-cloud\",\"imageModel\":\"gemma4:31b-cloud\",\"kind\":\"OLLAMA\",\"isLocal\":false,\"allowHttp\":true}]"}
+            - {"name":"USUALS_AI_DEFAULT","value":"theficos-ollama"}
+            - {"name":"USUALS_AI_DAILY_LIMIT","value":"20"}
+            - {"name":"USUALS_AI_KEY_FILE","value":"/identity/ai-wrap.key"}
             - {name: USUALS_TRUSTED_PROXY_CIDRS, value: '10.1.41.64/26,10.1.41.128/26'}
             - {name: USUALS_LOCAL_AUTH_ENABLED, value: 'true'}
             - {name: USUALS_OIDC_ENABLED, value: 'true'}

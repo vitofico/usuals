@@ -3,9 +3,64 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `a16ca3c`, deployed with Vito's explicit
-approval on 2026-10-20. The initial deployment used source `9c3bd57`.
-No application source was changed for either deployment.
+current server/web image is built from `72719fb`, merged in PR #6 and deployed
+with Vito's explicit approval on 2026-10-20. The initial deployment used source `9c3bd57`.
+The current upgrade includes the simpler server connection and server AI gateway.
+
+## 2026-10-20 server connection and AI gateway
+
+[PR #6](https://github.com/vitofico/usuals/pull/6) merged as `da580bc` after Android,
+server, credential-scan and CodeQL checks passed. The deployed source is its
+preserved head `72719fb5294755dc4bada760c66f94baa36ce143`; its complete Git tree
+was verified identical to the merge. The source-bound image and platform digest
+are `usuals-relay:sha256-20b790f8bfc1102bfb5070c24c3b3ac6464451435e688594c39595b040b304e7`.
+The verified local bundle is `/private/tmp/usuals-gateway-bundle-72719fb`.
+
+Vito selected the existing Ollama cloud service. The fixed internal destination is
+`http://ollama.ollama.svc.cluster.local:11434/v1`, with `gpt-oss:20b-cloud` for text
+and `gemma4:31b-cloud` for images. Both clients disclose external processing:
+`isLocal` is false; operator-only `allowHttp` permits the internal proxy hop.
+There is no general internet egress from the relay. AI remains an explicit
+account choice and import action, bounded to 20 attempts per account per UTC day.
+The profile uses Ollama's existing cloud connection. Additional personal-provider
+destinations need an operator-approved profile and narrowly scoped egress.
+
+`ai-egress.yaml` is part of this overlay. Apply `ollama-ingress.yaml` separately,
+with its explicit `ollama` namespace: including it under this Kustomization would
+rewrite its namespace to `usuals`. Both rules restrict namespaces, pod labels and
+TCP 11434; other Ollama clients and existing identity/database rules are unchanged.
+
+A separate operator pod created the credential wrapping key exclusively as a
+UID 10001, mode 0600 regular file on the retained identity PVC. Its SOPS/age escrow
+was decrypted only into hashing and matched the live key; plaintext was not
+written or transferred. A probe using the final read-only PVC source and mount
+confirmed 0600 permissions before migration. Runtime and migration PVC sources
+are read-only to prevent local-volume `fsGroup` handling widening permissions.
+
+With relay traffic stopped, `usuals-preai-20261020` created a fresh base backup;
+both the job and an independent `pg_verifybackup` passed. The encrypted database
+backup and separate wrapping-key escrow were copied to
+`/Users/vito/personal-repos/usuals-operator-backups/20261020-server-ai/` and matched
+the node's checksums. Existing encrypted identity/service escrow remains separate.
+`usuals-migrate-connection-ai` explicitly applied migration 005 before rollout.
+The older four-migration image cannot be used for an image-only rollback. Use a
+compatible binary for forward recovery or the fenced database restore procedure.
+
+The final runtime exactly matches the reviewed image, four AI settings and
+read-only identity PVC source. PostgreSQL configuration, receipt identity and
+fence hashes are unchanged. Live checks passed HTTPS/readiness, 14 source-identical
+browser assets, security headers, authentication and anonymous API restrictions.
+A temporary ordinary account passed activation, full-code phone approval,
+native bearer text extraction, personal credential wrapping/reset, the shipped
+web text adapter, randomized vision verification, written-list photo extraction,
+revocation and logout. The account and its sessions/AI records were removed.
+No owner credentials or existing household data were used. The replica remained
+ready without restarts after these requests.
+
+Private node evidence is in `~/usuals/deployments/20261020-server-ai/`; local
+evidence is in `/private/tmp/usuals-gateway-deploy/`. Longer household/load pilots,
+physical camera scanning and recurring off-cluster backup monitoring remain the
+separate operational gates below. This rollout does not claim they are complete.
 
 ## 2026-10-20 upgrade
 
@@ -78,7 +133,7 @@ documents the subsequent explicit approval and successful deployment.
 - Dedicated namespace, database roles and independently retained identity PVC.
   Three static local PVs use `/mnt/cluster-data/usuals/{postgres,identity,backups}`
   on the 3.7 TiB data disk. All use `Retain`, node affinity and private ownership
-  (UID70 for PostgreSQL/backups, UID10001 for identity). Capacity declarations
+  (UID70 for PostgreSQL/backups, UID 10001 for identity). Capacity declarations
   do not enforce filesystem quotas. No NFS export or other service changed.
 - PostgreSQL requests 150m CPU/512Mi; relay requests 100m/384Mi and is limited to
   one CPU/768Mi. Backup jobs request 50m. Existing reservations prevented the
@@ -157,7 +212,7 @@ URLs, screenshots, job logs or Git. Run identity initialization only once;
   page with both sign-in options. Existing native emulator data and phone remain
   untouched. Full sign-in with the owner's credentials is still an owner action.
 - An untrusted temporary pod could not reach relay 8080, metrics 9090 or database
-  5432. Relay general internet egress was denied. UID10001, read-only application
+  5432. Relay general internet egress was denied. UID 10001, read-only application
   filesystem and read-only identity/fence mounts were confirmed. Temporary storage
   and network-probe Jobs were removed after verification.
 - Database and relay restarts completed; identity/fence hashes stayed identical.
@@ -201,5 +256,6 @@ backup monitoring before entrusting the service with real shared household data.
 
 Owner sign-in/activation, the physical-device sharing pass, seven-day two-person
 pilot and sustained account-enabled capacity remain open. No commercial hosted
-service, billing, paid tenant provisioning or public APK release was enabled.
+service, billing or paid tenant provisioning was enabled. Android publication
+follows the automatic release workflow.
 See the [runbook](../../docs/sync/runbook.md) for restore fencing and pilot gates.

@@ -1,0 +1,20 @@
+# Apply separately: the Usuals Kustomization must not rewrite this namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-usuals
+  namespace: ollama
+spec:
+  podSelector:
+    matchLabels:
+      app: ollama
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: usuals
+          podSelector:
+            matchLabels:
+              app: usuals-relay
+      ports: [{protocol: TCP, port: 11434}]
