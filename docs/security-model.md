@@ -12,6 +12,14 @@ installed Android app has the stronger operator boundary. See the
 [browser protocol](../web/PROTOCOL.md) and [identity guide](sync/web-identity.md)
 for enrollment, session, password and restore details.
 
+The web **Connect a phone** action renders a private one-use invitation QR
+locally. Android asks for confirmation of the server before contacting it.
+The owner scans the phone’s signed verification QR back in the browser; approval
+checks the complete original invitation and existing signed membership protocol.
+Browser camera permission is requested only for that action. Frames stay on the
+device and the camera stops with the dialog, invitation or unlocked session.
+Manual full-fingerprint verification remains available.
+
 ## Secrets and external data
 
 The model key is stored through Android Keystore-backed encrypted preferences.

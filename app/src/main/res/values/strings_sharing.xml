@@ -15,16 +15,13 @@
     <string name="sharing_verify_file">Verify saved file</string>
     <string name="sharing_create">Create household</string>
     <string name="sharing_cancel">Cancel</string>
-    <string name="sharing_join_title">Join someone</string>
     <string name="sharing_invitation">Invitation link</string>
-    <string name="sharing_request">Request to join</string>
     <string name="sharing_invite">Invite someone</string>
     <string name="sharing_invite_help">Send this invitation privately, or let them scan the QR. It expires in 10 minutes.</string>
     <string name="sharing_share_invite">Share invitation</string>
     <string name="sharing_show_qr">Show QR</string>
     <string name="sharing_qr">Invitation QR</string>
     <string name="sharing_reverse_qr">Your device verification QR</string>
-    <string name="sharing_waiting_help">Ask the person inviting you to scan this code or compare the entire fingerprint through a trusted channel.</string>
     <string name="sharing_check_approval">Check approval</string>
     <string name="sharing_review_requests">Review requests</string>
     <string name="sharing_requests_title">Verify their device</string>
@@ -111,4 +108,15 @@
     <string name="sharing_copy_kept">Independent local copy kept. Unsent requests are still available in Save unsent work.</string>
     <string name="sharing_copy_removed">This device’s list copy was removed.</string>
     <string name="sharing_file_problem">Could not read or save this file. Choose another file and try again.</string>
+    <string name="sharing_pair_title">Connect with QR</string>
+    <string name="sharing_pair_help">On the web, open Shared lists &gt; Connect a phone. Create a household there first if needed. Scan its QR to fill in the server for you.</string>
+    <string name="sharing_pair_paste">Paste an invitation instead</string>
+    <string name="sharing_pair_server">Connect to %1$s</string>
+    <string name="sharing_pair_connect">Connect this phone</string>
+    <string name="sharing_pair_verify_title">Verify this phone</string>
+    <string name="sharing_pair_verify_help">In the web app, choose Scan phone verification and point the computer’s camera at this QR. Without a camera, use Review join requests and compare the full fingerprint below.</string>
+    <string name="sharing_pair_waiting">Approval is checked automatically while the invitation is valid. Your local lists are kept.</string>
+    <string name="sharing_replace_request_title">Replace the pending request?</string>
+    <string name="sharing_replace_request_help">The previous request might already be approved. Check approval first. Replacing it starts a fresh request and needs approval again. Your saved lists and existing connections are kept.</string>
+    <string name="sharing_replace_request">Replace request</string>
 </resources>

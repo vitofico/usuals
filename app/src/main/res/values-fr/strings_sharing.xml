@@ -16,16 +16,13 @@
     <string name="sharing_verify_file">Vérifier le fichier enregistré</string>
     <string name="sharing_create">Créer le foyer</string>
     <string name="sharing_cancel">Annuler</string>
-    <string name="sharing_join_title">Rejoindre quelqu’un</string>
     <string name="sharing_invitation">Lien d’invitation</string>
-    <string name="sharing_request">Demander à rejoindre</string>
     <string name="sharing_invite">Inviter quelqu’un</string>
     <string name="sharing_invite_help">Envoyez cette invitation en privé ou faites scanner le QR. Elle expire dans 10 minutes.</string>
     <string name="sharing_share_invite">Partager l’invitation</string>
     <string name="sharing_show_qr">Afficher le QR</string>
     <string name="sharing_qr">QR d’invitation</string>
     <string name="sharing_reverse_qr">QR de vérification de votre appareil</string>
-    <string name="sharing_waiting_help">Demandez à la personne qui vous invite de scanner ce code ou de comparer l’empreinte entière via un canal de confiance.</string>
     <string name="sharing_check_approval">Vérifier l’approbation</string>
     <string name="sharing_review_requests">Vérifier les demandes</string>
     <string name="sharing_requests_title">Vérifier son appareil</string>
@@ -112,4 +109,15 @@
     <string name="sharing_copy_kept">Copie locale indépendante conservée. Les demandes non envoyées restent disponibles dans Enregistrer le travail non envoyé.</string>
     <string name="sharing_copy_removed">La copie de la liste a été supprimée de cet appareil.</string>
     <string name="sharing_file_problem">Impossible de lire ou d’enregistrer ce fichier. Choisissez un autre fichier et réessayez.</string>
+    <string name="sharing_pair_title">Connexion par QR</string>
+    <string name="sharing_pair_help">Sur le web, ouvrez Listes partagées &gt; Connecter un téléphone. Créez d’abord un foyer si nécessaire. Scannez son QR pour renseigner le serveur.</string>
+    <string name="sharing_pair_paste">Coller une invitation</string>
+    <string name="sharing_pair_server">Se connecter à %1$s</string>
+    <string name="sharing_pair_connect">Connecter ce téléphone</string>
+    <string name="sharing_pair_verify_title">Vérifier ce téléphone</string>
+    <string name="sharing_pair_verify_help">Sur le web, choisissez Scanner la vérification du téléphone et dirigez la caméra de l’ordinateur vers ce QR. Sans caméra, utilisez Examiner les demandes et comparez l’empreinte complète ci-dessous.</string>
+    <string name="sharing_pair_waiting">L’approbation est vérifiée automatiquement tant que l’invitation est valide. Vos listes locales sont conservées.</string>
+    <string name="sharing_replace_request_title">Remplacer la demande en attente ?</string>
+    <string name="sharing_replace_request_help">La demande précédente est peut-être déjà approuvée. Vérifiez d’abord l’approbation. La remplacer crée une nouvelle demande qui doit être approuvée à nouveau. Vos listes enregistrées et vos connexions existantes sont conservées.</string>
+    <string name="sharing_replace_request">Remplacer la demande</string>
 </resources>

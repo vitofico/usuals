@@ -137,7 +137,7 @@ for (const committed of [false, true]) test(`expired prepared approval resolves 
   await c.synchronize(selected.household, selected.list);
   assert.equal((await c.view(selected.household, selected.list)).name, "Our list"); c.stop();
 });
-test("web owner verifies native join framing and a full fingerprint before approving, then rotates removed-device keys", async () => {
+for (const mode of ["fingerprint", "qr"]) test(`web owner verifies native join framing by ${mode}, resumes approval and rotates removed-device keys`, async () => {
   const f = await fixture(); let c = f.client();
   const selected = await c.createHousehold(await f.setup(), "Our list");
   await c.synchronize(selected.household, selected.list);
@@ -156,11 +156,23 @@ test("web owner verifies native join framing and a full fingerprint before appro
   f.remote.requests = [pending];
   const [applicant] = await c.applicants(selected.household);
   await assert.rejects(c.approve(selected.household, pending, "0".repeat(64)), e => e.code === "unverified");
+  const uri = "usuals://device#" + b64(jsonBytes(pending));
+  await assert.rejects(c.approveQr(selected.household, uri, { ...link, inviteId: crypto.randomUUID() }), e => e.code === "unverified");
+  await assert.rejects(c.approveQr(selected.household, "usuals://device#" + b64(jsonBytes({ ...pending, signature: b64(random(64)) })), link));
+  for (const mutation of [{ memberId: crypto.randomUUID() }, { secretHash: b64(random(32)) }, { expiresAt: assertion.expiresAt + 1 },
+    { inviteId: crypto.randomUUID() }, { householdId: crypto.randomUUID() }, { serverId: b64(random(32)) }]) {
+    const altered = joinBytes({ ...assertion, ...mutation });
+    const alteredQr = "usuals://device#" + b64(jsonBytes({ requestId: pending.requestId, assertion: b64(altered), signature: await sign(device, altered) }));
+    await assert.rejects(c.approveQr(selected.household, alteredQr, link), e => e.code === "unverified");
+    assert.equal(c.read(selected.household).pendingMembership, null);
+  }
+  const approve = () => mode === "qr" ? c.approveQr(selected.household, uri, link)
+    : c.approve(selected.household, pending, applicant.fingerprint);
   assert.equal(f.remote.proofs.length, 2);
   f.remote.fail = "commit";
-  await assert.rejects(c.approve(selected.household, pending, applicant.fingerprint), e => e.code === "unavailable");
+  await assert.rejects(approve(), e => e.code === "unavailable");
   c.stop(); c = f.client(() => now + 700000);
-  await c.approve(selected.household, pending, applicant.fingerprint);
+  await approve();
   assert.equal(f.remote.proofs.length, 3, "the committed approval resolves after reload and invitation expiry");
   assert.equal(c.read(selected.household).pendingMembership, null);
   const recipient = await fingerprint(f.server.serverId, selected.household, device.publicKeys);
@@ -175,7 +187,7 @@ test("web owner verifies native join framing and a full fingerprint before appro
   assert.equal(f.remote.lastSigned.packages.some(p => p.recipientFingerprint === recipient), false);
   assert.notEqual(c.read(selected.household).keys[`${selected.list}:4`], b64(key));
   assert.equal(body(f.remote.proofs.at(-1)).action, "remove");
-  await assert.rejects(c.approve(selected.household, pending, applicant.fingerprint), e => e.code === "invite_expired");
+  await assert.rejects(approve(), e => e.code === "invite_expired");
   assert.equal(c.read(selected.household).pendingMembership, null);
   c.stop();
 });

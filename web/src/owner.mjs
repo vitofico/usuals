@@ -4,6 +4,7 @@ import { random, sign, verify, seal, hpkeSeal } from "./crypto.mjs";
 import { body, owners, devices, genesis, transition, verifyChain } from "./membership.mjs";
 import { emptyProjection, snapshotDecode } from "./reducer.mjs";
 import { packageContext, packageBytes } from "./wire.mjs";
+import { verificationQr } from "./qr.mjs";
 
 function owner(h) {
   const m = body(h.proofs.at(-1));
@@ -242,6 +243,18 @@ export async function applicants(c, id) {
   const result = await c.authorized(id, `/v1/households/${id}/join-requests`);
   requireThat(Array.isArray(result.requests) && result.requests.length <= 10);
   return c.scope.wait(Promise.all(result.requests.map(p => validateApplicant(c, id, p))));
+}
+export async function approveQr(c, id, uri, invitation) {
+  const pending = verificationQr(uri);
+  const verified = await validateApplicant(c, id, pending, false), a = verified.assertion, h = c.read(id);
+  requireThat(invitation.version === 1 && invitation.role === "editor" &&
+    invitation.origin === c.origin && invitation.serverId === h.server.serverId && invitation.householdId === id &&
+    invitation.genesisHash === await manifestHash(h.proofs[0]) && invitation.ownerDeviceId === h.device.publicKeys.id &&
+    invitation.ownerFingerprint === await fingerprint(h.server.serverId, id, h.device.publicKeys) &&
+    a.inviteId === invitation.inviteId && a.memberId === invitation.memberId && a.expiresAt === invitation.expiresAt &&
+    a.secretHash === await hash(unb64(invitation.secret, 32)), "unverified");
+  // Authenticate the exact assertion scanned from the phone, not a relay-provided fingerprint.
+  return approve(c, id, pending, verified.fingerprint);
 }
 export async function approve(c, id, pending, trusted) {
   const h = await c.refresh(id), m = owner(h), verified = await validateApplicant(c, id, pending, false), a = verified.assertion;

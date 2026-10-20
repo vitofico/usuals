@@ -32,13 +32,13 @@ private suspend fun ApplicationCall.browserAsset(path: String) {
     }
     val bytes = if (type == null) null else BrowserAssetCache.read(path)
     if (bytes == null) { respond(HttpStatusCode.NotFound); return }
-    response.headers.append("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'")
+    response.headers.append("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self' blob:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'")
     response.headers.append("Referrer-Policy", "no-referrer")
     response.headers.append("X-Content-Type-Options", "nosniff")
     response.headers.append("X-Frame-Options", "DENY")
     response.headers.append("Cross-Origin-Resource-Policy", "same-origin")
     response.headers.append("Cross-Origin-Opener-Policy", "same-origin")
-    response.headers.append("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+    response.headers.append("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()")
     response.headers.append(HttpHeaders.CacheControl, "no-store")
     respondBytes(bytes, requireNotNull(type))
 }

@@ -1134,3 +1134,35 @@ elapsed household pilot remain separate acceptance gates.
   No replacement request was opened. Future consideration must address all
   closure reasons, not only project age. This status correction changes no APK,
   source tag, signing identity or release asset.
+
+## QR phone connection (2026-10-19 to 2026-10-20)
+
+- The web owner can show an expiring, one-use invitation QR, copy a private link
+  or use full-fingerprint approval. Android puts scanning first, displays the
+  destination before connecting and checks approval while the screen is resumed.
+- Reverse QR approval preserves the exact native signed assertion and checks the
+  complete displayed invitation before staging membership. Independent review
+  closed the missing member/secret-hash/expiry binding. Re-signed mutations,
+  invalid signatures, foreign pins and committed-approval retries after expiry
+  have regression coverage. No sync framing or database migration changed.
+- Final Docker Android assembly, instrumentation assembly, tests and lint passed
+  through scripts/dgradle: 882 recorded JUnit cases, no failures/errors, five
+  intentional live-test skips and 22 release-tool checks. The affected final
+  server/browser gate passed 138 JVM and 126 Node tests with no failures/skips,
+  including native/browser crypto and recovery interoperability.
+- The 16 KB emulator ran the production sharing factory against disposable local
+  PostgreSQL/HTTP: server confirmation, reverse verification QR, automatic join
+  completion and shared-list discovery. Full-fingerprint approval exercised the
+  camera-free fallback. A browser-created encrypted item reached Android after
+  an explicit harness sync. QR image decoding and camera cleanup use automated
+  generated-frame tests; no live physical-camera scan is claimed.
+- Expired pending requests retain the connection controls. Robolectric and
+  emulator checks verify preview/cancel preserves the pending identity and
+  explicit replacement sends one fresh request. Existing household identities
+  and saved list choices have regression coverage.
+- Visual QA corrected the web navigation label and dialog focus/layout. All five
+  language catalogs remain complete. Original emulator data was restored and
+  byte-verified; the test forwarding was removed. No phone or cluster access.
+  The published Android APK and its immutable tag remain unchanged.
+- Evidence: /private/tmp/usuals-qr-android-final.log,
+  /private/tmp/usuals-qr-server-final.log and /private/tmp/usuals-qr-qa/.

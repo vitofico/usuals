@@ -34,8 +34,36 @@ class SharingDeviceScenarioTest {
         val history = ServiceLocator.historyRepository
         fun write(name: String, value: String) { File(directory, name).apply { writeText(value); android.system.Os.chmod(path, 384) } }
         val result = JSONObject()
-        withTimeout(if (fixture.getString("action") == "recovery-ui") 600_000 else 120_000) {
+        withTimeout(if (fixture.getString("action") in setOf("recovery-ui", "pairing-ui")) 600_000 else 120_000) {
             when (fixture.getString("action")) {
+                "pairing-ui" -> {
+                    val invitation = InvitationLink.parse(fixture.getString("invitationUri"))
+                    require(invitation.origin == "http://localhost:${origin.port}")
+                    androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                        lateinit var vm: io.theficos.usuals.ui.sharing.SharingViewModel
+                        scenario.onActivity { activity ->
+                            vm = androidx.lifecycle.ViewModelProvider(activity, io.theficos.usuals.di.UsualsViewModelFactories.sharing())[io.theficos.usuals.ui.sharing.SharingViewModel::class.java]
+                            activity.setContent { io.theficos.usuals.ui.theme.UsualsTheme { io.theficos.usuals.ui.sharing.SharingScreen(vm, {}) } }
+                        }
+                        while (vm.state.value.busy) delay(100)
+                        vm.scanInvitation(fixture.getString("invitationUri"))
+                        delay(500)
+                        // Only this opt-in synthetic harness permits capture of its public verification QR.
+                        scenario.onActivity { it.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+                        write("ui-ready", "ready")
+                        var request: String? = null
+                        while (!File(directory, "ui-done").isFile) {
+                            vm.state.value.joining?.let { pending ->
+                                if (request != pending.assertion.requestId) {
+                                    request = pending.assertion.requestId
+                                    write("verification-qr", vm.reverseQr(pending))
+                                }
+                            }
+                            if (vm.state.value.households.any { it.id == invitation.householdId }) write("paired-ready", invitation.householdId)
+                            delay(200)
+                        }
+                    }
+                }
                 "await-item", "send-measure" -> {
                     val coordinator = ServiceLocator.sharingCoordinator
                     coordinator.foreground(true)

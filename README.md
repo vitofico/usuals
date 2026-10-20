@@ -89,6 +89,11 @@ devices share lists with explicit roles, membership changes and conflict review.
 The relay stores encrypted shopping contents; membership and routing metadata
 remain visible to the server.
 
+Connect a phone from the web with **Shared lists > Connect a phone**. Scan the
+invitation in Android, confirm the server, then scan the phone’s verification QR
+back in the browser. No server address or fingerprint typing is needed. See the
+[QR connection guide](web/README.md#connect-a-phone-with-qr) for camera-free options.
+
 <p align="center">
   <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web editor in dark mode: an encrypted household list, quantities, checked items and account navigation" width="100%"></a>
 </p>

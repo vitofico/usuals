@@ -46,7 +46,13 @@ in does not grant list keys. Household creation and invitations establish
 membership separately. Save the encrypted recovery kit and its key separately.
 
 The browser encrypts its local keys and saved shopping state under a separate
-passphrase, and locks on leaving the page or after inactivity. Browsers trust
+passphrase. When you choose **Scan phone verification**, it requests camera
+access to verify your Android device. Frames are decoded locally, never uploaded,
+and discarded when scanning ends. Camera access stops when the dialog closes,
+the invitation expires or the browser vault locks. Microphone access is not used
+by the browser. You can approve using a full fingerprint without a camera.
+
+It locks on leaving the page or after inactivity. Browsers trust
 code delivered by their server; a malicious server can change that code. The
 independently installed Android app has the stronger operator boundary.
 

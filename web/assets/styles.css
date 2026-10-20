@@ -1106,3 +1106,40 @@ summary { cursor: pointer; font-weight: 600; }
   [data-preview-palette="tide"] { --preview-primary: #a7d6e5; --preview-secondary: #2c443e; --preview-ground: #151f27; }
 }
 #appearance { min-width: 44px; min-height: 44px; font-size: 20px; padding: 4px; }
+.pair-qr {
+  display: block;
+  width: min(100%, 25rem);
+  height: auto;
+  margin: 1.25rem auto;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #fff;
+  shape-rendering: crispEdges;
+}
+.verification-camera {
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  object-fit: contain;
+  margin-block: 1rem;
+  border-radius: 0.75rem;
+  background: #111;
+}
+.verification-camera[hidden] { display: none; }
+.pair-device details { margin-block: 1rem; }
+.pair-device summary { cursor: pointer; margin-bottom: 0.75rem; }
+dialog.pairing { max-width: 760px; }
+.pair-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  margin-block: 1.25rem;
+}
+.pair-layout .pair-qr { margin: 0 auto 0.75rem; }
+.pair-layout .setup-steps { margin-top: 0; }
+.pair-layout .verification-camera { max-height: 14rem; }
+@media (max-width: 600px) {
+  .pair-layout { display: flex; flex-direction: column; align-items: stretch; }
+  .pair-instructions { order: -1; }
+}

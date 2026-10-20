@@ -33,6 +33,10 @@ Additional runtime components:
   - AndroidX WorkManager (Apache-2.0), used for optional local reminders.
   - Manrope by Mikhail Sharanda and contributors (SIL Open Font License 1.1).
     The font license is included with Android and web assets.
+  - Project Nayuki QR Code generator 1.8.0 (MIT), used by the browser to generate
+    invitation codes locally. Its copyright and license are in the module header.
+  - jsQR 1.4.0 (Apache-2.0), used by the browser to scan device verification codes
+    locally. Its license is included with web assets.
 
 Optional Open Food Facts data is attributed in the product sheet under ODbL.
 Product records are fetched by the device after opt-in and are not bundled as

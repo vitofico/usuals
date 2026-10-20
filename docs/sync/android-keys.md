@@ -10,6 +10,18 @@ Settings opens household enrollment. Invitation links and QR codes enter this
 screen without entering grocery capture. Verification QR decoding is separate
 from GTIN decoding and never inserts an item.
 
+Android offers **Scan invitation QR** first. A web owner opens **Shared lists >
+Connect a phone** to show a private, one-use invitation QR. Android displays its
+server address and requires **Connect this phone** before making requests. The
+web owner then scans Android’s reverse verification QR with the computer camera;
+the browser binds its exact signed assertion to the household and original
+invitation before approval. Manual links and full-fingerprint approval remain
+available. Android checks for approval every five seconds while the sharing
+screen is resumed, stopping after invitation expiry or successful enrollment.
+Scanning or pasting another invitation preserves the pending device identity.
+Replacing that request requires confirmation, with **Check approval** still
+available in case the previous request was already approved.
+
 ## Private state
 
 A platform Keystore AES-GCM key wraps private device signing/HPKE keys, list

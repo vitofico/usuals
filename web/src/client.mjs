@@ -245,6 +245,7 @@ export class HouseholdClient {
   invite(id) { return this.serial(() => owner.invite(this, id)); }
   applicants(id) { return this.serial(() => owner.applicants(this, id)); }
   approve(id, pending, trusted) { return this.serial(() => owner.approve(this, id, pending, trusted)); }
+  approveQr(id, uri, invitation) { return this.serial(() => owner.approveQr(this, id, uri, invitation)); }
   removeDevice(id, device) { return this.serial(() => owner.remove(this, id, device)); }
   discardInvalidMembership(id) { return this.serial(() => owner.discardInvalidPending(this, id)); }
   denyApplicant(id, request) { return this.serial(async () => {
