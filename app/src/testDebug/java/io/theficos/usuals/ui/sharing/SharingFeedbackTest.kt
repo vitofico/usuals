@@ -71,9 +71,7 @@ class SharingFeedbackTest {
         compose.onNodeWithText("Scan server or invitation QR").assertIsDisplayed()
         val id = "00000000-0000-4000-8000-000000000001"
         val digest = Wire.encode(ByteArray(32))
-        val uri = InvitationLink(origin = "https://usuals.example", serverId = digest, householdId = id,
-            genesisHash = digest, ownerDeviceId = id, ownerFingerprint = digest, inviteId = id,
-            memberId = id, role = "editor", secret = digest, expiresAt = Long.MAX_VALUE).uri()
+        val uri = InviteCode("https://usuals.example", id, InviteKey.random(), ByteArray(16)).appLink()
         vm.scanned(uri)
         compose.onNodeWithText("Connect to https://usuals.example").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Connect this phone").performScrollTo().assertIsDisplayed()
@@ -120,10 +118,15 @@ class SharingFeedbackTest {
         val store = memoryStore(before)
         val lists = listOf(SharingList(id, "Saved groceries", household, true))
         val requests = java.util.concurrent.atomic.AtomicInteger()
+        val replacement = "00000000-0000-4000-8000-000000000003"
+        val descriptor = Wire.json.encodeToString(InviteDescriptor(origin = origin, serverId = server.serverId, householdId = id, genesisHash = digest,
+            ownerDeviceId = id, ownerFingerprint = digest, memberId = id, role = "editor")).toByteArray()
+        val code = InviteCode(origin, replacement, InviteKey.random(), Pairing.descriptorAnchor(descriptor))
         val transport = object : RelayTransport {
             override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
                 val response = when (path) {
                     "/v1/server-info" -> Wire.json.encodeToString(server)
+                    "/v1/invites/$replacement/open" -> Wire.json.encodeToString(OpenedInvite(Wire.encode(descriptor), Long.MAX_VALUE))
                     "/v1/devices/challenge" -> {
                         val request = Wire.json.decodeFromString<ChallengeRequest>(requireNotNull(body).toString(Charsets.UTF_8))
                         Wire.json.encodeToString(Challenge(id, digest, server.serverId, Long.MAX_VALUE, request.purpose))
@@ -144,7 +147,7 @@ class SharingFeedbackTest {
         compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.joining != null }
         compose.onNodeWithText("Check approval").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Scan server or invitation QR").performScrollTo().assertIsDisplayed()
-        vm.scanned(invitation.copy(expiresAt = Long.MAX_VALUE).uri())
+        vm.scanned(code.link())
         compose.onNodeWithText("Connect this phone").performScrollTo().performClick()
         compose.onNodeWithText("Replace the pending request?").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()

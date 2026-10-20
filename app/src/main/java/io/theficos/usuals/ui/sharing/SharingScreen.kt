@@ -32,7 +32,7 @@ import kotlinx.coroutines.isActive
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import io.theficos.usuals.sync.InvitationLink
+import io.theficos.usuals.sync.InviteCode
 import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -155,18 +155,14 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
                 Text(stringResource(R.string.sharing_pair_verify_title), style = MaterialTheme.typography.titleLarge)
                 Text(pending.invitation.origin, style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.connection_compare))
-                var showVerificationQr by remember(pending.assertion.requestId) { mutableStateOf(false) }
-                TextButton(onClick = { showVerificationQr = !showVerificationQr }) { Text(stringResource(R.string.sharing_reverse_qr)) }
-                if (showVerificationQr) QrCode(vm.reverseQr(pending), R.string.sharing_reverse_qr)
-                val fp = vm.fingerprint(pending)
-                SelectionContainer { Text(fp.chunked(8).joinToString(" "), style = MaterialTheme.typography.bodySmall) }
+                vm.joinCode(pending)?.let { code -> SelectionContainer { Text(code, style = MaterialTheme.typography.headlineMedium) } }
                 Text(stringResource(R.string.sharing_pair_waiting), style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(enabled = !state.busy, onClick = vm::retryJoin) { Text(stringResource(R.string.sharing_retry_request)) }
                 TextButton(enabled = !state.busy, onClick = vm::checkJoin) { Text(stringResource(R.string.sharing_check_approval)) }
             }
             if (state.kit == null) SectionCard {
                 Text(stringResource(R.string.sharing_pair_title), style = MaterialTheme.typography.titleLarge)
-                val origin = remember(state.invitation) { runCatching { InvitationLink.parse(state.invitation.trim()).origin }.getOrNull() }
+                val origin = remember(state.invitation) { runCatching { InviteCode.parse(state.invitation.trim()).origin }.getOrNull() }
                 if (origin == null) Text(stringResource(R.string.sharing_pair_help))
                 else {
                     Text(stringResource(R.string.sharing_pair_server, origin), style = MaterialTheme.typography.bodyMedium)
@@ -279,9 +275,9 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
     state.outgoing?.let { invite -> AlertDialog(onDismissRequest = vm::closeInvitation,
         title = { Text(stringResource(R.string.sharing_invite)) }, text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.sharing_invite_help))
-            if (showInviteQr) QrCode(invite.uri(), R.string.sharing_qr)
+            if (showInviteQr) QrCode(invite.link(), R.string.sharing_qr)
             else TextButton(onClick = { showInviteQr = true }) { Text(stringResource(R.string.sharing_show_qr)) }
-            TextButton(onClick = { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, invite.uri()) }, null)) }) { Text(stringResource(R.string.sharing_share_invite)) }
+            TextButton(onClick = { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, invite.link()) }, null)) }) { Text(stringResource(R.string.sharing_share_invite)) }
         } }, confirmButton = { TextButton(onClick = vm::closeInvitation) { Text(stringResource(R.string.history_dismiss)) } }) }
     state.reviewing?.let { AlertDialog(onDismissRequest = vm::closeReview,
         title = { Text(stringResource(R.string.sharing_requests_title)) }, text = { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -290,12 +286,10 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
             state.problem?.let { Text(sharingProblem(it), color = MaterialTheme.colorScheme.error) }
             if (state.requests.isEmpty()) Text(stringResource(R.string.sharing_no_requests))
             state.requests.firstOrNull()?.let { pending ->
-                val code = remember(pending) { runCatching { vm.applicantFingerprint(pending) }.getOrNull() }
-                var compared by remember(pending) { mutableStateOf(false) }
-                Text(code.orEmpty().chunked(8).joinToString(" "), style = MaterialTheme.typography.bodySmall)
+                var compared by remember(pending.requestId) { mutableStateOf(false) }
+                Text(pending.code.orEmpty(), style = MaterialTheme.typography.headlineMedium)
                 Row { Checkbox(compared, { compared = it }); Text(stringResource(R.string.connection_compare)) }
-                TextButton(enabled = !state.busy, onClick = { scanning = SharingScan.VERIFY }) { Text(stringResource(R.string.sharing_scan_verification)) }
-                Button(enabled = !state.busy && compared && code != null, onClick = { vm.field(SharingField.FINGERPRINT, requireNotNull(code)); vm.approve(pending) }) { Text(stringResource(R.string.sharing_approve)) }
+                Button(enabled = !state.busy && compared && pending.verified != null, onClick = { vm.approve(pending) }) { Text(stringResource(R.string.sharing_approve)) }
                 TextButton(enabled = !state.busy, onClick = { vm.deny(pending) }) { Text(stringResource(R.string.sharing_deny)) }
             }
         } }, confirmButton = { TextButton(onClick = vm::closeReview) { Text(stringResource(R.string.history_dismiss)) } }) }
@@ -354,13 +348,12 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         text = { Text(stringResource(R.string.sharing_transfer_file_help)) },
         confirmButton = { TextButton(onClick = { saveTransfer.launch("usuals-transfer.json") }) { Text(stringResource(R.string.sharing_save_transfer)) } },
         dismissButton = { TextButton(onClick = vm::closeTransfer) { Text(stringResource(R.string.history_dismiss)) } })
-    scanning?.let { mode -> QrCameraDialog(joining = mode == SharingScan.JOIN, serverOnly = connectionOnly, onDismiss = { scanning = null }, onCode = { code ->
+    scanning?.let { QrCameraDialog(joining = true, serverOnly = connectionOnly, onDismiss = { scanning = null }, onCode = { code ->
         scanning = null
-        if (mode == SharingScan.JOIN) vm.scanned(code, serverOnly = connectionOnly)
-        else state.requests.firstOrNull()?.let { vm.approveQr(it, code) }
+        vm.scanned(code, serverOnly = connectionOnly)
     }) }
 }
-private enum class SharingScan { JOIN, VERIFY }
+private enum class SharingScan { JOIN }
 @Composable private fun SharingField(value: String, label: Int, busy: Boolean, secret: Boolean = false, change: (String) -> Unit) {
     OutlinedTextField(value, change, Modifier.fillMaxWidth(), enabled = !busy, singleLine = true, label = { Text(stringResource(label)) },
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(

@@ -114,8 +114,7 @@ class SharingViewModel(private val client: HouseholdClient,
         mutable.update { it.copy(connection = saved, connecting = connection?.pending(), origin = saved?.origin ?: it.origin) }
     }
     fun loadAi() = work(refresh = false) { mutable.update { it.copy(ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings")) } }
-    fun reverseQr(pending: PendingJoinState) = client.reverseQr(pending)
-    fun fingerprint(pending: PendingJoinState) = client.applicantFingerprint(pending)
+    fun joinCode(pending: PendingJoinState) = client.joinCode(pending)
     fun load() = work { reload(); mutable.update { it.copy(lists = choices(), sharingSource = client.sharingSource()) } }
     private fun reload() {
         reloadConnection()
@@ -138,7 +137,7 @@ class SharingViewModel(private val client: HouseholdClient,
                 }
                 is PairingLink.Invite -> {
                     require(!serverOnly)
-                    InvitationLink.parse(link.text)
+                    InviteCode.parse(link.text)
                     mutable.update { it.copy(invitation = link.text, problem = null) }
                 }
             }
@@ -197,22 +196,14 @@ class SharingViewModel(private val client: HouseholdClient,
         mutable.update { it.copy(reviewing = household, requests = requests, fingerprint = "") }
     }
     fun closeReview() { mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "") } }
-    fun applicantFingerprint(pending: PendingJoin): String = client.applicantFingerprint(requireNotNull(state.value.reviewing), pending)
-    fun approve(pending: PendingJoin) = work {
+    fun approve(candidate: JoinCandidate) = work {
         val household = requireNotNull(state.value.reviewing)
-        val verified = client.verifyApplicant(household, pending, state.value.fingerprint)
-        client.approve(household, verified)
+        client.approve(household, requireNotNull(candidate.verified))
         val households = client.households()
         mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "", households = households, message = SharingMessage.APPROVED) }
     }
-    fun approveQr(pending: PendingJoin, uri: String) = work {
-        val household = requireNotNull(state.value.reviewing)
-        client.approve(household, client.verifyReverseQr(household, pending, uri))
-        val households = client.households()
-        mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "", households = households, message = SharingMessage.APPROVED) }
-    }
-    fun deny(pending: PendingJoin) = work {
-        val household = requireNotNull(state.value.reviewing); client.deny(household, pending.requestId)
+    fun deny(candidate: JoinCandidate) = work {
+        val household = requireNotNull(state.value.reviewing); client.deny(household, candidate.requestId)
         mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "") }
     }
     fun recover(bytes: ByteArray) = work {
@@ -261,7 +252,7 @@ data class SharingState(val origin: String = "", val setupCode: String = "", val
     val backupRequest: ByteArray? = null, val backupFingerprint: String? = null, val pendingExport: ByteArray? = null, val frozenUri: String? = null, val frozenCopy: FrozenCopy? = null,
     val lists: List<SharingList> = emptyList(), val members: Map<String, List<RosterMember>> = emptyMap(), val devices: Map<String, String> = emptyMap(), val fingerprints: Map<String, Map<String, String>> = emptyMap(),
     val transferFile: ByteArray? = null, val transferReview: TransferReview? = null,
-    val outgoing: InvitationLink? = null, val joining: PendingJoinState? = null, val reviewing: String? = null, val requests: List<PendingJoin> = emptyList()) {
+    val outgoing: InviteCode? = null, val joining: PendingJoinState? = null, val reviewing: String? = null, val requests: List<JoinCandidate> = emptyList()) {
     override fun toString() = "SharingState([redacted])"
 }
 enum class SharingField { ORIGIN, SETUP, INVITATION, RECOVERY, FINGERPRINT }

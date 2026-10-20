@@ -37,7 +37,7 @@ class SharingDeviceScenarioTest {
         withTimeout(if (fixture.getString("action") in setOf("recovery-ui", "pairing-ui")) 600_000 else 120_000) {
             when (fixture.getString("action")) {
                 "pairing-ui" -> {
-                    val invitation = InvitationLink.parse(fixture.getString("invitationUri"))
+                    val invitation = InviteCode.parse(fixture.getString("invitationUri"))
                     require(invitation.origin == "http://localhost:${origin.port}")
                     androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                         lateinit var vm: io.theficos.usuals.ui.sharing.SharingViewModel
@@ -48,7 +48,7 @@ class SharingDeviceScenarioTest {
                         while (vm.state.value.busy) delay(100)
                         vm.scanned(fixture.getString("invitationUri"))
                         delay(500)
-                        // Only this opt-in synthetic harness permits capture of its public verification QR.
+                        // Only this opt-in synthetic harness permits capture of its join code screen.
                         scenario.onActivity { it.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
                         write("ui-ready", "ready")
                         var request: String? = null
@@ -56,10 +56,10 @@ class SharingDeviceScenarioTest {
                             vm.state.value.joining?.let { pending ->
                                 if (request != pending.assertion.requestId) {
                                     request = pending.assertion.requestId
-                                    write("verification-qr", vm.reverseQr(pending))
+                                    write("join-code", vm.joinCode(pending).orEmpty())
                                 }
                             }
-                            if (vm.state.value.households.any { it.id == invitation.householdId }) write("paired-ready", invitation.householdId)
+                            vm.state.value.households.firstOrNull()?.let { write("paired-ready", it.id) }
                             delay(200)
                         }
                     }
@@ -140,17 +140,17 @@ class SharingDeviceScenarioTest {
                 }
                 "invite" -> {
                     val household = client.households().single().id
-                    write("invitation", client.invitation(household).uri())
+                    write("invitation", client.invitation(household).link())
                     result.put("household", household)
                 }
                 "request" -> {
-                    val pending = client.requestJoin(fixture.getString("invitation"))
-                    write("verification", client.reverseQr(pending))
+                    write("join-code", client.joinCode(client.requestJoin(fixture.getString("invitation"))).orEmpty())
                 }
                 "approve" -> {
                     val household = client.households().single().id
-                    val pending = client.pending(household).single()
-                    client.approve(household, client.verifyReverseQr(household, pending, fixture.getString("verification")))
+                    val candidate = client.pending(household).single()
+                    require(candidate.code == fixture.getString("joinCode"))
+                    client.approve(household, requireNotNull(candidate.verified))
                 }
                 "complete" -> { assertNotNull(client.completeJoin()); assertFalse(ServiceLocator.sharingCoordinator.syncOnce()) }
                 "sync" -> { assertFalse(ServiceLocator.sharingCoordinator.syncOnce()) }

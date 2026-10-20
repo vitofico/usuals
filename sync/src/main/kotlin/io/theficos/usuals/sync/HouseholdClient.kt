@@ -1,5 +1,6 @@
 package io.theficos.usuals.sync
 
+import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -118,21 +119,35 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         refresh(household)
         return household
     }
-    suspend fun invitation(household: String, member: String = UUID.randomUUID().toString(), role: String = "editor"): InvitationLink = mutex.withLock {
+    suspend fun invitation(household: String, member: String = UUID.randomUUID().toString(), role: String = "editor"): InviteCode = mutex.withLock {
         val saved = refresh(household); val body = saved.current.signed().body()
         require(body.members.any { it.role == "owner" && it.devices.any { d -> d.id == saved.device.publicKeys.id } })
         val token = session(saved)
-        val invite = call<Invite>(saved.origin, "POST", "/v1/households/$household/invites", InviteRequest(member, role), token)
-        InvitationLink(origin = saved.origin, serverId = saved.server.serverId, householdId = household, genesisHash = saved.genesisHash,
-            ownerDeviceId = saved.device.publicKeys.id, ownerFingerprint = Wire.fingerprint(saved.server.serverId, household,
-                saved.device.publicKeys.signingPublicKey, saved.device.publicKeys.recipientPublicKey), inviteId = invite.inviteId,
-            memberId = member, role = role, secret = requireNotNull(invite.secret), expiresAt = invite.expiresAt)
+        val key = InviteKey.random()
+        val descriptor = Wire.json.encodeToString(InviteDescriptor.serializer(), InviteDescriptor(origin = saved.origin, serverId = saved.server.serverId,
+            householdId = household, genesisHash = saved.genesisHash, ownerDeviceId = saved.device.publicKeys.id, ownerFingerprint = Wire.fingerprint(
+                saved.server.serverId, household, saved.device.publicKeys.signingPublicKey, saved.device.publicKeys.recipientPublicKey),
+            memberId = member, role = role)).toByteArray()
+        val invite = call<Invite>(saved.origin, "POST", "/v1/households/$household/invites", InviteRequest(member, role, Wire.hash(key.admit()), Wire.encode(descriptor)), token)
+        require(invite.secret == null)
+        store.update { state -> state.copy(invites = state.invites.filterValues { it.expiresAt > clock() } +
+            (invite.inviteId to OutgoingInvite(household, key.encoded(), member, role, invite.expiresAt))) }
+        InviteCode(saved.origin, invite.inviteId, key, Pairing.descriptorAnchor(descriptor))
     }
-    suspend fun requestJoin(uri: String): PendingJoinState = mutex.withLock {
-        val invitation = InvitationLink.parse(uri)
-        if (store.read().households.containsKey(invitation.householdId)) throw RelayProblem("already_joined")
-        val server = info(invitation.origin)
-        require(server.serverId == invitation.serverId && invitation.expiresAt > clock())
+    /** Opens any form of invite link; the same link again resumes the attempt already waiting for approval. */
+    suspend fun requestJoin(text: String): PendingJoinState = mutex.withLock {
+        val code = InviteCode.parse(text)
+        store.read().joining?.takeIf { it.invitation.inviteId == code.inviteId }?.let { sendJoin(it); return@withLock it }
+        val admit = Wire.encode(code.key.admit())
+        val opened = call<OpenedInvite>(code.origin, "POST", "/v1/invites/${code.inviteId}/open", InviteOpen(admit))
+        val bytes = Wire.decode(opened.descriptor)
+        require(MessageDigest.isEqual(Pairing.descriptorAnchor(bytes), code.anchor))
+        val d = Wire.json.decodeFromJsonElement(InviteDescriptor.serializer(), Wire.strictJson(bytes, 2048)).validate(code.origin)
+        if (store.read().households.containsKey(d.householdId)) throw RelayProblem("already_joined")
+        val server = info(code.origin)
+        require(server.serverId == d.serverId && opened.expiresAt > clock())
+        val invitation = InvitationLink(2, code.origin, d.serverId, d.householdId, d.genesisHash, d.ownerDeviceId, d.ownerFingerprint, code.inviteId,
+            d.memberId, d.role, admit, opened.expiresAt, code.key.encoded())
         val device = SyncCrypto.device()
         val challenge = call<Challenge>(invitation.origin, "POST", "/v1/devices/challenge", ChallengeRequest(device.publicKeys.id, "join", device.publicKeys.signingPublicKey))
         require(challenge.serverId == server.serverId && challenge.purpose == "join")
@@ -146,15 +161,16 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     }
     suspend fun resumeJoin(): PendingJoinState = mutex.withLock { (store.read().joining ?: throw RelayProblem("not_found")).also { sendJoin(it) } }
     private suspend fun sendJoin(pending: PendingJoinState) {
+        val mac = pending.invitation.key?.let { Pairing.joinMac(InviteKey(Wire.decode(it, 32)).macKey(), pending.assertion.bytes()) }
         val response = call<JoinPending>(pending.invitation.origin, "POST", "/v1/join-requests", JoinRequest(pending.invitation.secret,
-            Wire.encode(pending.assertion.bytes()), pending.signature), expected = 202)
+            Wire.encode(pending.assertion.bytes()), pending.signature, mac), expected = 202)
         require(response.requestId == pending.assertion.requestId && response.expiresAt == pending.assertion.expiresAt)
     }
     fun bootstrapPending(): Boolean = store.read().bootstrap != null
     fun joining(): PendingJoinState? = store.read().joining
-    fun applicantFingerprint(pending: PendingJoinState): String = fingerprint(pending.assertion)
-    fun reverseQr(pending: PendingJoinState): String = "usuals://device#" + Wire.encode(Wire.json.encodeToString(PendingJoin.serializer(),
-        PendingJoin(pending.assertion.requestId, Wire.encode(pending.assertion.bytes()), pending.signature)).toByteArray())
+    /** The six digits the owner sees beside this request; null for a legacy join that has no invite key. */
+    fun joinCode(pending: PendingJoinState): String? =
+        pending.invitation.key?.let { Pairing.joinCode(InviteKey(Wire.decode(it, 32)).macKey(), pending.assertion.bytes()) }
     suspend fun completeJoin(): String? = mutex.withLock {
         val pending = store.read().joining ?: return@withLock null
         val invite = pending.invitation; val server = info(invite.origin)
@@ -181,23 +197,22 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         }
         saved.id
     }
-    suspend fun pending(household: String): List<PendingJoin> = mutex.withLock {
-        val saved = refresh(household)
-        call<PendingRequests>(saved.origin, "GET", "/v1/households/$household/join-requests", token = session(saved)).requests.onEach { validateApplicant(saved, it) }
+    /** Every waiting request; only those whose MAC proves they hold this device's invite key come back verified. */
+    suspend fun pending(household: String): List<JoinCandidate> = mutex.withLock {
+        val saved = refresh(household); val invites = store.read().invites
+        call<PendingRequests>(saved.origin, "GET", "/v1/households/$household/join-requests", token = session(saved)).requests.map { request ->
+            val verified = runCatching {
+                val assertion = validateApplicant(saved, request)
+                val invite = requireNotNull(invites[assertion.inviteId])
+                val key = InviteKey(Wire.decode(invite.key, 32))
+                require(invite.household == household && invite.memberId == assertion.memberId && invite.expiresAt == assertion.expiresAt &&
+                    assertion.secretHash == Wire.hash(key.admit()) && Pairing.verifyJoinMac(key.macKey(), assertion.bytes(), requireNotNull(request.mac)))
+                VerifiedApplicant(request, assertion, invite.role, Pairing.joinCode(key.macKey(), assertion.bytes()))
+            }.getOrNull()
+            JoinCandidate(request.requestId, verified?.code, verified)
+        }
     }
-    fun verifyApplicant(household: String, pending: PendingJoin, trustedFingerprint: String): VerifiedApplicant {
-        val saved = saved(household); val assertion = validateApplicant(saved, pending)
-        require(trustedFingerprint.filterNot(Char::isWhitespace).lowercase() == fingerprint(assertion))
-        return VerifiedApplicant(pending, assertion)
-    }
-    fun verifyReverseQr(household: String, pending: PendingJoin, uri: String): VerifiedApplicant {
-        require(uri.startsWith("usuals://device#") && uri.length <= 4096)
-        val qr = Wire.json.decodeFromJsonElement(PendingJoin.serializer(), Wire.strictJson(Wire.decode(uri.substringAfter('#')), 3072))
-        require(qr == pending)
-        val assertion = validateApplicant(saved(household), qr)
-        return VerifiedApplicant(qr, assertion)
-    }
-    suspend fun approve(household: String, verified: VerifiedApplicant, role: String = "editor") = mutex.withLock {
+    suspend fun approve(household: String, verified: VerifiedApplicant, role: String = verified.role) = mutex.withLock {
         val saved = refresh(household); val assertion = validateApplicant(saved, verified.pending)
         val before = saved.current.signed().body()
         val exists = before.members.firstOrNull { it.id == assertion.memberId }
@@ -205,6 +220,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         val members = if (exists == null) before.members + RosterMember(assertion.memberId, role, listOf(assertion.device)) else
             before.members.map { if (it.id == exists.id) it.copy(devices = it.devices + assertion.device) else it }
         change(saved, "approve_join", members, joins = mapOf(assertion.requestId to Wire.hash(assertion.bytes())))
+        store.update { it.copy(invites = it.invites - assertion.inviteId) }
     }
     suspend fun deny(household: String, request: String) = mutex.withLock {
         val saved = refresh(household); Wire.uuid(request)
@@ -343,9 +359,6 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         true
     }
     private fun saved(household: String) = store.read().households[household] ?: throw RelayProblem("not_found")
-    private fun fingerprint(a: JoinAssertion) = Wire.decode(Wire.fingerprint(a.serverId, a.householdId, a.device.signingPublicKey, a.device.recipientPublicKey), 32)
-        .joinToString("") { "%02x".format(it.toInt() and 255) }
-    fun applicantFingerprint(household: String, pending: PendingJoin): String = fingerprint(validateApplicant(saved(household), pending))
     private fun validateApplicant(saved: SavedHousehold, p: PendingJoin): JoinAssertion {
         val a = JoinAssertion.parse(Wire.decode(p.assertion))
         require(a.requestId == p.requestId && a.origin == saved.origin && a.serverId == saved.server.serverId && a.householdId == saved.id && a.genesisHash == saved.genesisHash)
@@ -632,6 +645,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         is Proof -> Wire.json.encodeToString(value)
         is CreateHousehold -> Wire.json.encodeToString(value)
         is InviteRequest -> Wire.json.encodeToString(value)
+        is InviteOpen -> Wire.json.encodeToString(value)
         is JoinRequest -> Wire.json.encodeToString(value)
         is Snapshot -> Wire.json.encodeToString(value)
         is SignedManifest -> Wire.json.encodeToString(value)
@@ -726,7 +740,8 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     override fun toString() = "HouseholdClient([redacted])"
 }
 data class HouseholdSummary(val id: String, val origin: String, val role: String?, val epoch: Long, val lists: List<String>, val removed: Boolean, val pending: Boolean)
-class VerifiedApplicant internal constructor(internal val pending: PendingJoin, internal val assertion: JoinAssertion) {
+class JoinCandidate(val requestId: String, val code: String?, val verified: VerifiedApplicant?)
+class VerifiedApplicant internal constructor(internal val pending: PendingJoin, internal val assertion: JoinAssertion, internal val role: String, val code: String) {
     override fun toString() = "VerifiedApplicant([redacted])"
 }
 

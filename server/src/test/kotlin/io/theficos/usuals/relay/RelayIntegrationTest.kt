@@ -335,6 +335,95 @@ class RelayIntegrationTest {
         f.membership.deny(f.token, f.household, f.membership.pending(f.token, f.household).requests.single().requestId)
         denied("not_found") { f.membership.open(invite.inviteId, InviteOpen(secret), "open-6") }
     }
+    private val pairingSource = CheckpointSource { _, _ -> ListCheckpoint(0, Wire.zero, SnapshotCodec.encode(Projection(name = "Pairing"))) }
+    private fun ApplicationTestBuilder.pairingTransport(sent: MutableList<String> = mutableListOf(), rewrite: (String, ByteArray) -> ByteArray = { _, bytes -> bytes }) =
+        object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                sent += "$method $path"
+                val response = client.request(path) {
+                    this.method = HttpMethod.parse(method)
+                    if (token != null) bearerAuth(token)
+                    if (body != null) { contentType(ContentType.Application.Json); setBody(body) }
+                }
+                return WireResponse(response.status.value, rewrite(path, response.bodyAsText().toByteArray()).also { require(it.size <= maxResponse) })
+            }
+        }
+    private class PairingOwner(val client: HouseholdClient, val state: MemorySyncStore, val household: String)
+    private suspend fun pairingOwner(transport: RelayTransport): PairingOwner {
+        val state = MemorySyncStore(); val client = HouseholdClient(state, transport, pairingSource) { now }
+        val setup = client.prepare(f.origin)
+        return PairingOwner(client, state, client.bootstrap(setup.verifySaved(setup.file, setup.secret), f.auth.bootstrapToken()))
+    }
+    @Test fun relaySubstitutedApplicantKeysAreNotVerified() = testApplication {
+        application { relayModule(f.relay) }
+        var substitute = false
+        val transport = pairingTransport { path, bytes ->
+            if (!substitute || !path.endsWith("/join-requests")) bytes else {
+                val requests = Wire.json.decodeFromString(PendingRequests.serializer(), bytes.toString(Charsets.UTF_8)).requests.map { request ->
+                    val relay = SyncCrypto.device()
+                    val swapped = JoinAssertion.parse(Wire.decode(request.assertion)).copy(device = relay.publicKeys)
+                    request.copy(assertion = Wire.encode(swapped.bytes()), signature = SyncCrypto.sign(relay, swapped.bytes()))
+                }
+                Wire.json.encodeToString(PendingRequests.serializer(), PendingRequests(requests)).toByteArray()
+            }
+        }
+        val owner = pairingOwner(transport)
+        HouseholdClient(MemorySyncStore(), transport, pairingSource) { now }.requestJoin(owner.client.invitation(owner.household).link())
+        substitute = true
+        val forged = owner.client.pending(owner.household).single()
+        assertThat(forged.verified).isNull(); assertThat(forged.code).isNull()
+        substitute = false
+        assertThat(owner.client.pending(owner.household).single().verified).isNotNull()
+    }
+    @Test fun inviteFromAnotherOwnerDeviceIsShownButNotApprovable() = testApplication {
+        application { relayModule(f.relay) }
+        val transport = pairingTransport()
+        val owner = pairingOwner(transport)
+        val second = HouseholdClient(MemorySyncStore(), transport, pairingSource) { now }
+        second.requestJoin(owner.client.invitation(owner.household, role = "owner").link())
+        owner.client.approve(owner.household, requireNotNull(owner.client.pending(owner.household).single().verified))
+        assertThat(owner.state.read().invites).isEmpty()
+        assertThat(second.completeJoin()).isEqualTo(owner.household)
+        assertThat(second.members(owner.household).single { it.devices.any { d -> d.id == second.deviceId(owner.household) } }.role).isEqualTo("owner")
+        val applicant = HouseholdClient(MemorySyncStore(), transport, pairingSource) { now }
+        val pending = applicant.requestJoin(owner.client.invitation(owner.household).link())
+        val elsewhere = second.pending(owner.household).single()
+        assertThat(elsewhere.requestId).isEqualTo(pending.assertion.requestId)
+        assertThat(elsewhere.code).isNull(); assertThat(elsewhere.verified).isNull()
+        assertThat(owner.client.pending(owner.household).single().code).isEqualTo(applicant.joinCode(pending))
+    }
+    @Test fun tamperedDescriptorIsRejectedBeforeJoining() = testApplication {
+        application { relayModule(f.relay) }
+        val sent = mutableListOf<String>()
+        val transport = pairingTransport(sent) { path, bytes ->
+            if (!path.endsWith("/open")) bytes else {
+                val opened = Wire.json.decodeFromString(OpenedInvite.serializer(), bytes.toString(Charsets.UTF_8))
+                val descriptor = Wire.json.decodeFromString(InviteDescriptor.serializer(), Wire.decode(opened.descriptor).toString(Charsets.UTF_8))
+                val relay = SyncCrypto.device().publicKeys
+                val forged = descriptor.copy(ownerFingerprint = Wire.fingerprint(descriptor.serverId, descriptor.householdId, relay.signingPublicKey, relay.recipientPublicKey))
+                Wire.json.encodeToString(OpenedInvite.serializer(), opened.copy(descriptor = Wire.encode(Wire.json.encodeToString(InviteDescriptor.serializer(), forged).toByteArray()))).toByteArray()
+            }
+        }
+        val owner = pairingOwner(transport)
+        val link = owner.client.invitation(owner.household).link()
+        val applicantState = MemorySyncStore(); val applicant = HouseholdClient(applicantState, transport, pairingSource) { now }
+        sent.clear()
+        try { applicant.requestJoin(link); error("A descriptor the link does not anchor must not be trusted") } catch (_: IllegalArgumentException) { }
+        assertThat(sent.filter { it.startsWith("POST /v1/invites/") }).hasSize(1)
+        assertThat(sent.filter { "/join-requests" in it || "/devices/challenge" in it }).isEmpty()
+        assertThat(applicantState.read().joining).isNull()
+        assertThat(owner.client.pending(owner.household)).isEmpty()
+    }
+    @Test fun expiredOutgoingInvitesArePruned() = testApplication {
+        application { relayModule(f.relay) }
+        val owner = pairingOwner(pairingTransport())
+        val first = owner.client.invitation(owner.household)
+        assertThat(owner.state.read().invites.keys).containsExactly(first.inviteId)
+        now += 86_400_001
+        val second = owner.client.invitation(owner.household)
+        assertThat(owner.state.read().invites.keys).containsExactly(second.inviteId)
+        assertThat(owner.state.read().invites.values.single().toString()).doesNotContain(second.key.encoded())
+    }
     @Test fun inviteOpenRouteAndJoinPageAreServed() = testApplication {
         val member = uuid(); val key = InviteKey.random(); val invite = inviteV2(member, key)
         application { relayModule(f.relay) }
@@ -528,7 +617,7 @@ class RelayIntegrationTest {
         }
     }
 
-    @Test fun realClientsVerifyJoinFingerprintsRotateKeysAndResolveALostMembershipAck() = testApplication {
+    @Test fun realClientsJoinWithAnInviteLinkAndOneApprovalRotateKeysAndResolveALostMembershipAck() = testApplication {
         application { relayModule(f.relay) }
         var loseOperationAck = false
         var truncateAfterAppend = false
@@ -622,12 +711,13 @@ class RelayIntegrationTest {
         appendSynthetic()
         val invitation = owner.invitation(household)
         val applicantState = MemorySyncStore(); val applicant = HouseholdClient(applicantState, transport, source) { now }
-        val pending = applicant.requestJoin(invitation.uri())
+        val pending = applicant.requestJoin(invitation.link())
+        assertThat(applicant.requestJoin(invitation.appLink()).assertion.requestId).isEqualTo(pending.assertion.requestId)
         applicant.resumeJoin()
         val requests = owner.pending(household)
         assertThat(requests).hasSize(1)
-        assertThrows(IllegalArgumentException::class.java) { owner.verifyApplicant(household, requests.single(), "0".repeat(64)) }
-        val verified = owner.verifyReverseQr(household, requests.single(), applicant.reverseQr(pending))
+        assertThat(requests.single().code).isEqualTo(applicant.joinCode(pending))
+        val verified = requireNotNull(requests.single().verified)
         afterStage = { appendSynthetic() }
         try { owner.approve(household, verified); error("Concurrent append must invalidate the snapshot") }
         catch (problem: RelayProblem) { assertThat(problem.code).isEqualTo("membership_conflict") }
@@ -645,8 +735,8 @@ class RelayIntegrationTest {
         assertThat(applicant.joining()).isNotNull()
         assertThat(applicant.completeJoin()).isEqualTo(household)
         val beforeDuplicateJoin = applicantState.read()
-        try { applicant.requestJoin(invitation.uri()); error("An existing local identity must not be overwritten") }
-        catch (problem: RelayProblem) { assertThat(problem.code).isEqualTo("already_joined") }
+        try { applicant.requestJoin(invitation.link()); error("A used invitation must not overwrite the joined identity") }
+        catch (problem: RelayProblem) { assertThat(problem.code).isEqualTo("not_found") }
         assertThat(applicantState.read()).isEqualTo(beforeDuplicateJoin)
         val beforeRenewal = applicantState.read().households.getValue(household)
         resumed.rotate(household); resumed.rotate(household); resumed.resume(household)

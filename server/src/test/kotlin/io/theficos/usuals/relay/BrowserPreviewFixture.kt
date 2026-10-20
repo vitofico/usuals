@@ -83,7 +83,7 @@ object BrowserPreviewFixture {
                         val invitation = native.invitation(household)
                         writePrivate(directory, "browser-setup.json", buildJsonObject {
                             put("origin", origin); put("username", "syntheticpreview_admin"); put("setupToken", operator.getValue("setupToken"))
-                            put("expiresAt", operator.getValue("expiresAt")); put("invitationUri", invitation.uri()); put("householdId", household); put("listId", list)
+                            put("expiresAt", operator.getValue("expiresAt")); put("invitationUri", invitation.link()); put("householdId", household); put("listId", list)
                         })
                         writeState(directory, household, list, replica)
                         writePrivate(directory, "ready.json", buildJsonObject { put("status", "ready"); put("synthetic", true); put("origin", origin) })
@@ -107,12 +107,12 @@ object BrowserPreviewFixture {
             if (Files.exists(directory.resolve("approve.json"), LinkOption.NOFOLLOW_LINKS)) {
                 val result = try {
                     val command = takeCommand(directory, "approve.json")
-                    require(command.keys == setOf("requestId", "fingerprint"))
+                    require(command.keys == setOf("requestId", "code"))
                     val request = command.getValue("requestId").jsonPrimitive.content.also { Wire.uuid(it) }
-                    val fingerprint = command.getValue("fingerprint").jsonPrimitive.content.also { require(it.length <= 128) }
-                    val pending = native.pending(household).single { it.requestId == request }
-                    val verified = native.verifyApplicant(household, pending, fingerprint)
-                    native.approve(household, verified)
+                    val code = command.getValue("code").jsonPrimitive.content
+                    val candidate = native.pending(household).single { it.requestId == request }
+                    require(candidate.code == code)
+                    native.approve(household, requireNotNull(candidate.verified))
                     buildJsonObject { put("status", "approved"); put("requestId", request) }
                 } catch (error: Exception) { buildJsonObject { put("status", "rejected"); put("code", errorCode(error)) } }
                 writePrivate(directory, "approval-result.json", result)
