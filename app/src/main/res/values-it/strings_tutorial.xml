@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Scegli Inizia la spesa e spunta i prodotti mentre li acquisti. Concludi la spesa salva quelli spuntati nella cronologia; gli altri rimangono nella lista.</string>
     <string name="tutorial_shop_hint">La cronologia ti aiuta a ricomprare l’essenziale. Le ripetizioni aggiungono prodotti solo con la frequenza che scegli.</string>
     <string name="tutorial_share_title">Il quotidiano, insieme.</string>
-    <string name="tutorial_share_body">Per fare la spesa insieme, apri Impostazioni &gt; Liste condivise. Condividi una lista da Android con l’indirizzo del server e il codice monouso, oppure unisciti a un gruppo creato sul web.</string>
+    <string name="tutorial_share_body">Per fare la spesa insieme, tocca l’icona di condivisione della lista. Scansiona il QR del server o incolla il link, accedi e approva la connessione. Crea una famiglia o apri un invito.</string>
     <string name="tutorial_share_hint">Quando crei un gruppo, salva e verifica il kit di recupero. Per unirti a un gruppo, apri il suo invito e confronta l’impronta completa del dispositivo con il proprietario.</string>
 </resources>

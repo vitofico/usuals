@@ -12,3 +12,5 @@ data class ModelProblem(
         MISSING_MODEL, INCOMPLETE_CONFIGURATION, BUDGET_EXHAUSTED, IMAGES_UNSUPPORTED,
     }
 }
+
+class ModelCallException(val problem: ModelProblem) : RuntimeException(problem.kind.name)

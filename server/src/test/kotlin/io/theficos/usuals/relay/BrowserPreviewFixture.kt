@@ -69,7 +69,7 @@ object BrowserPreviewFixture {
                     val server = embeddedServer(Netty, configure = {
                         connector { host = "0.0.0.0"; this.port = port }
                         connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 4
-                    }) { relayModule(relay, webIdentity = web, browserModels = models) }.start(wait = false)
+                    }) { relayModule(relay, webIdentity = web, browserModels = models, ai = AiGateway(db, AiConfiguration(models.origins.map { AiProvider("preview", "Preview", it.replace("://localhost:", "://host.docker.internal:").replace("://127.0.0.1:", "://host.docker.internal:") + "/v1", "scripted", isLocal = true) }, wrappingKey = ByteArray(32) { 7 }))) }.start(wait = false)
                     try {
                         val store = MemorySyncStore()
                         val list = fresh()

@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Choisissez Commencer les courses et cochez les produits au fil de vos achats. Terminer les courses enregistre les produits cochés dans l’historique ; les autres restent sur la liste.</string>
     <string name="tutorial_shop_hint">L’historique vous aide à racheter l’essentiel. Les répétitions ajoutent des produits uniquement à la fréquence choisie.</string>
     <string name="tutorial_share_title">Votre quotidien, ensemble.</string>
-    <string name="tutorial_share_body">Pour faire les courses ensemble, ouvrez Paramètres &gt; Listes partagées. Partagez une liste depuis Android avec l’adresse du serveur et son code à usage unique, ou rejoignez un foyer créé sur le site.</string>
+    <string name="tutorial_share_body">Pour faire les courses ensemble, touchez le partage sur votre liste. Scannez le QR du serveur ou collez son lien, connectez-vous et approuvez. Créez un foyer ou ouvrez une invitation.</string>
     <string name="tutorial_share_hint">À la création d’un foyer, enregistrez et vérifiez le kit de récupération. Pour en rejoindre un, ouvrez son invitation et comparez l’empreinte complète de l’appareil avec son propriétaire.</string>
 </resources>

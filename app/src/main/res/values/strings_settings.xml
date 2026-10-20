@@ -43,7 +43,7 @@
     <string name="settings_privacy_title">Privacy</string>
     <string name="settings_privacy_kept_title">What stays here</string>
     <string name="settings_privacy_kept_capture">Your shopping list, history and suggestions are stored on this phone. Keyboard capture and purchase memory work offline.</string>
-    <string name="settings_privacy_kept_secrets">Your model key is stored with Android Keystore, excluded from exports and logs, and used to authenticate with the model endpoint you configure.</string>
+    <string name="settings_privacy_kept_secrets">A direct-provider key stays in Android Keystore. A personal key saved for server AI is sent to your chosen server and stored encrypted there. Neither enters shopping exports or logs.</string>
     <string name="settings_privacy_edges_title">What does leave</string>
     <string name="settings_privacy_edge_voice">Voice uses on-device recognition when available. Otherwise the selected Android speech service may send audio off this phone. Keyboard entry works offline.</string>
     <string name="settings_privacy_edge_recipe">Reading a recipe link sends the page URL to that site from your phone. The page text goes to a model only when you tap Read with my model.</string>

@@ -26,10 +26,11 @@ Start with an invitation-only pilot; public signup is a later acceptance gate.
 | Self-hosted Usuals | Existing relay, encrypted sharing, browser client, local accounts and optional OIDC | Operator controls access; no commercial dependency |
 | Usuals Cloud, proposed | Managed relay, browser access, backups, upgrades and support | Hosting subscription; household membership remains separately approved |
 
-The service sells hosting and operations. Shopping intelligence remains on the
-phone. Open Food Facts reads, recipe fetching and optional model calls retain
-their existing device-origin boundary. Do not add model credits, a product-data
-proxy, paid barcode access or an operator copy of shopping plaintext.
+The service sells hosting and operations. Shopping memory remains on the phone.
+Open Food Facts reads and recipe fetching retain their client-origin boundary.
+ADR-0014 permits optional server-routed model calls on explicit text/photo inputs.
+This does not add model credits, a product-data proxy, paid barcode access or an
+operator copy of encrypted shopping plaintext.
 
 The current Apache-2.0 core license stays unchanged. Keep proprietary service
 code, prices, payment integrations and customer operations in a separate private

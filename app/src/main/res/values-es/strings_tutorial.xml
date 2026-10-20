@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Elige Empezar compra y marca los productos que vayas comprando. Terminar compra guarda los marcados en el historial; los demás siguen en la lista.</string>
     <string name="tutorial_shop_hint">El historial te ayuda a volver a comprar lo esencial. Las repeticiones añaden productos solo con la frecuencia que tú eliges.</string>
     <string name="tutorial_share_title">El día a día, en compañía.</string>
-    <string name="tutorial_share_body">Para comprar en compañía, abre Ajustes &gt; Listas compartidas. Comparte una lista desde Android con la dirección del servidor y su código de un solo uso, o únete a un hogar creado en la web.</string>
+    <string name="tutorial_share_body">Para comprar juntos, toca el icono de compartir en tu lista. Escanea el QR de un servidor o pega su enlace, inicia sesión y aprueba la conexión. Crea un hogar o abre una invitación.</string>
     <string name="tutorial_share_hint">Al crear un hogar, guarda y verifica el kit de recuperación. Para unirte a uno, abre su invitación y compara la huella completa del dispositivo con su propietario.</string>
 </resources>

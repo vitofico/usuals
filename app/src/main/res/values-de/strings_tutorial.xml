@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Wähle Einkauf starten und hake Artikel beim Einkaufen ab. Einkauf abschließen speichert abgehakte Artikel im Verlauf; die anderen bleiben auf der Liste.</string>
     <string name="tutorial_shop_hint">Der Verlauf hilft dir, Wichtiges erneut zu kaufen. Wiederholungsregeln fügen Artikel nur nach deinem Zeitplan hinzu.</string>
     <string name="tutorial_share_title">Dein Alltag, gemeinsam.</string>
-    <string name="tutorial_share_body">Öffne Einstellungen &gt; Geteilte Listen, um gemeinsam einzukaufen. Teile eine Android-Liste mit Serveradresse und einmaligem Einrichtungscode oder tritt einem im Web erstellten Haushalt bei.</string>
+    <string name="tutorial_share_body">Tippe zum gemeinsamen Einkaufen auf das Teilen-Symbol der Liste. Scanne den Server-QR-Code oder füge den Link ein, melde dich an und bestätige die Verbindung. Erstelle einen Haushalt oder öffne eine Einladung.</string>
     <string name="tutorial_share_hint">Speichere und überprüfe beim Erstellen eines Haushalts das Wiederherstellungspaket. Öffne zum Beitreten eine Einladung und vergleiche den vollständigen Gerätefingerabdruck mit der besitzenden Person.</string>
 </resources>

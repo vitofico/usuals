@@ -48,14 +48,14 @@ keys, membership, sync routing/state and product cache. The
 
 ## Trust boundary
 
-No server participates in third-party reads. A model probe contacts only the
-configured provider from the phone. Scanning writes the barcode immediately,
-then independently offers a name from an opt-in device request or manual entry.
-Queued reads wait for the shared limiter and recheck consent before sending.
-Recipe reads also originate on the device. Encrypted shared shopping uses a
-separate relay and never proxies those reads. Cluster deployment requires
-separate approval.
-See [security-model.md](security-model.md) and [ADR-0012](decisions/ADR-0012-smart-shopping-list.md).
+Recipe-page and Open Food Facts reads originate on the client. The optional
+model can use an explicitly configured direct native provider or the chosen
+server's authenticated AI gateway. The gateway receives only explicitly submitted
+recipe text or prepared photos; encrypted shopping transport remains separate.
+Its provider revisions, credential encryption, image checks and resource isolation
+are described in [ADR-0014](decisions/ADR-0014-server-connection-and-ai.md).
+Cluster deployment requires separate approval.
+See [security-model.md](security-model.md) and the [connection guide](server-connection.md).
 
 ## Day-one memory
 

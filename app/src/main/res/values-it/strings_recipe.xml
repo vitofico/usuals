@@ -6,7 +6,7 @@
     <string name="recipe_read">Leggi ricetta</string>
     <string name="recipe_intro">Incolla o condividi il link di una ricetta. %1$s legge la pagina sul telefono e ti permette di rivedere gli ingredienti prima di aggiungerli.</string>
     <string name="recipe_no_structured">Questa pagina non contiene ingredienti strutturati. Puoi provare il modello facoltativo o chiudere questa schermata e digitare gli ingredienti.</string>
-    <string name="recipe_model_privacy">Usare il modello invia il testo della pagina al fornitore configurato e consuma una delle chiamate di oggi.</string>
+    <string name="recipe_model_privacy">La lettura con un modello invia il testo al fornitore diretto scelto oppure, con l’IA del server, tramite il server connesso al fornitore mostrato. Consuma un tentativo.</string>
     <string name="recipe_use_model">Leggi con il mio modello</string>
     <string name="recipe_servings">Resa della ricetta: %1$s</string>
     <string name="recipe_review_hint">Rivedi gli ingredienti. Gli alimenti di base e gli acquisti degli ultimi 7 giorni partono non selezionati. Gli articoli già in lista sono esclusi. Le misure originali sono conservate per la verifica.</string>

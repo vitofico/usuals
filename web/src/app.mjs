@@ -4,6 +4,7 @@ import {
   fingerprint,
   hex,
   unb64,
+  b64,
   primitive,
   number,
   isLiteralNumber,
@@ -20,6 +21,12 @@ import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 import { qrMatrix, VerificationCamera } from "./qr.mjs";
 import { importDialog } from "./import-dialog.mjs";
+let pendingConnectionId = null;
+try {
+  const candidate = new URL(location.href).searchParams.get("connect");
+  if (candidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(candidate)) sessionStorage.setItem("usuals-connect-request", candidate);
+  pendingConnectionId = sessionStorage.getItem("usuals-connect-request");
+} catch { pendingConnectionId = new URL(location.href).searchParams.get("connect"); }
 const $ = (id) => document.getElementById(id);
 function appearanceStorage() {
   try { return localStorage; } catch { return null; }
@@ -38,7 +45,7 @@ const api = (path, options = {}) =>
   request(path, { ...options, scope: uiScope });
 let importResources = null;
 function loadImportResources() {
-  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json")])
+  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
     .catch(error => { importResources = null; throw error; });
   return importResources;
 }
@@ -575,6 +582,10 @@ async function render() {
     $("navigation").append(adminButton);
   }
   if (!account?.user.admin) adminButton?.remove();
+  const connectingId = pendingConnectionId;
+  if (account && connectingId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(connectingId)) {
+    await renderConnectionApproval(own, connectingId); return;
+  }
   if (view === "account") {
     await renderAccount(own);
     return;
@@ -718,9 +729,10 @@ async function render() {
       select,
       button(t("importTitle"), () => act(async () => {
         const own = generation, active = client, destination = { ...selected };
-        const [packs, modelConfig] = await loadImportResources();
+        const [packs, modelConfig, instance] = await loadImportResources();
         if (own !== generation || active !== client) return;
         importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
+          server: instance.ai ? { csrf: account.csrfToken } : null,
           client: active, destination, valid: () => own === generation && active === client && selected?.household === destination.household && selected?.list === destination.list,
           finished: async () => { await syncSelected(); await render(); } });
       }, { rerender: false })),
@@ -1166,6 +1178,7 @@ async function invitationDialog(id) {
     el("div", { class: "pair-layout" }, el("div", {}, qr, status),
       el("div", { class: "pair-instructions" },
         el("ol", { class: "setup-steps" }, el("li", {}, t("pairStepScan")), el("li", {}, t("pairStepConnect")), el("li", {}, t("pairStepVerify"))),
+        button(t("ownerRequests"), () => act(() => applicantsDialog(id)), "primary"),
         scan, video, error, paragraph("pairCameraPrivacy", "helper"))),
     el("details", {}, el("summary", {}, t("pairManual")), paragraph("ownerInviteHelp", "helper"), input, copy,
       paragraph("pairManualHelp", "helper")),
@@ -1192,17 +1205,16 @@ async function applicantsDialog(id) {
   openDialog(el("div", {}, el("h2", {}, t("ownerRequests")), paragraph("ownerApproveHelp"),
     ...requests.map(r => {
       const error = el("p", { class: "dialog-error", role: "alert" });
-      const input = el("input", { class: "field", required: true, maxlength: 100, autocomplete: "off", spellcheck: false,
-        "aria-label": t("ownerFingerprintInput") });
+      const input = el("input", { type: "checkbox", required: true });
       return el("form", { class: "paper panel-body", onsubmit: event => {
-        event.preventDefault(); const trusted = input.value;
+        event.preventDefault(); requireThat(input.checked); const trusted = r.fingerprint;
         act(async () => {
           error.textContent = "";
           try { await client.approve(id, r.pending, trusted); closeDialog(); }
           catch (e) { if (own === generation) error.textContent = t(e.code === "unverified" ? "ownerFingerprintMismatch" : dictionary[e.code] ? e.code : "serverUnavailable"); }
         });
       } }, el("p", { class: "fingerprint" }, r.fingerprint.match(/.{1,4}/g).join(" ")),
-      el("label", { class: "label" }, t("ownerFingerprintInput"), input), error,
+      el("label", { class: "label" }, input, t("connectionCompared")), error,
       el("div", { class: "button-row" }, button(t("ownerDeny"), () => act(async () => {
         await client.denyApplicant(id, r.pending.requestId); closeDialog();
       })), el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
@@ -1337,6 +1349,63 @@ const date = (n) =>
     : t("dateUnknown");
 const accountLabel = (user) =>
   user.displayName || user.username || user.email || user.subject;
+function clearConnectionRequest() {
+  pendingConnectionId = null;
+  try { sessionStorage.removeItem("usuals-connect-request"); } catch {}
+  history.replaceState(null, "", "/");
+}
+async function renderConnectionApproval(own, id) {
+  let ticket;
+  try { ticket = await api("/api/connect/" + id); }
+  catch (error) {
+    if (own === generation && ["not_found", "invalid"].includes(error.code)) {
+      clearConnectionRequest(); notice("pairExpired", true); await render(); return;
+    }
+    throw error;
+  }
+  if (own !== generation) return;
+  const compare = el("input", { type: "checkbox", required: true });
+  $("content").replaceChildren(title("connectionTitle", "connectionCompare"),
+    el("form", { class: "paper panel-body", onsubmit: event => { event.preventDefault(); act(async () => {
+      requireThat(compare.checked && Date.now() < ticket.expiresAt);
+      await api("/api/connect/" + id + "/approve", { method: "POST", csrf: account.csrfToken });
+      clearConnectionRequest(); notice("connectionApproved");
+    }); } }, el("p", { class: "server-address" }, location.origin),
+      el("p", { class: "fingerprint" }, ticket.fingerprint.match(/.{1,8}/g).join(" ")),
+      el("label", { class: "check-row" }, compare, t("connectionCompared")),
+      el("button", { type: "submit", class: "primary" }, t("ownerApprove")),
+      button(t("cancel"), () => { clearConnectionRequest(); render().catch(failure); })));
+}
+async function connectedPhonesDialog() {
+  const own = generation, value = await api("/api/connections");
+  if (own !== generation) return;
+  openDialog(el("div", {}, el("h2", {}, t("connectionSessions")),
+    ...value.connections.map(phone => el("section", { class: "panel-body" }, el("p", {}, phone.id.slice(-6) + " · " + date(phone.expiresAt)),
+      button(t("connectionRevoke"), () => act(async () => { await api("/api/connections/" + phone.id + "/revoke", { method: "POST", csrf: account.csrfToken }); closeDialog(); })))),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
+async function serverSettingsDialog() {
+  const own = generation, settings = await api("/v1/ai/settings", { csrf: account.csrfToken });
+  if (own !== generation) return;
+  const key = el("input", { type: "password", class: "field", autocomplete: "off", maxlength: 4096, "aria-label": t("importModelKey") });
+  const selected = settings.profiles.find(p => p.id === settings.selected);
+  openDialog(el("div", {}, el("h2", {}, t("serverAiTitle")), paragraph("serverAiPrivacy"),
+    selected ? el("p", {}, selected.label + " · " + selected.model + " · " + selected.imageModel + " · " + selected.baseUrl,
+      el("span", { class: "helper" }, t(selected.isLocal ? "serverAiLocal" : "serverAiExternal"))) : paragraph("ai_unavailable"),
+    el("p", { class: "helper" }, t("serverAiUsage", { used: settings.used, limit: settings.dailyLimit })),
+    button(t("serverAiDefault"), () => act(async () => { await api("/v1/ai/settings", { method: "POST", csrf: account.csrfToken, body: {} }); closeDialog(); })),
+    el("label", { class: "label" }, t("serverAiPersonal"), key), paragraph("serverAiKeyHelp", "helper"),
+    ...settings.profiles.map(p => button(p.label + " · " + p.model, () => act(async () => {
+      const draft = key.value; key.value = "";
+      await api("/v1/ai/settings", { method: "POST", csrf: account.csrfToken, body: { profile: p.id, ...(draft ? { key: draft } : {}) } }); closeDialog();
+    }))), el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { key.value = ""; });
+}
+function serverConnectionDialog() {
+  openDialog(el("div", { class: "pair-device" }, el("h2", {}, t("connectionTitle")), paragraph("connectionLinkHelp"),
+    el("p", { class: "server-address" }, location.origin + "/connect"), invitationQr(location.origin + "/connect"),
+    el("a", { class: "primary", href: "usuals://connect#" + b64(new TextEncoder().encode(location.origin)) }, t("connectionTitle")),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
 async function renderAccount(own) {
   if (!account) {
     $("content").replaceChildren(welcome());
@@ -1379,6 +1448,9 @@ async function renderAccount(own) {
           ...(user.issuer === "urn:usuals:local"
             ? [button(t("changePassword"), passwordDialog)]
             : []),
+          button(t("connectionTitle"), serverConnectionDialog),
+          button(t("connectionSessions"), () => act(connectedPhonesDialog, { rerender: false })),
+          button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
           button(t("signOut"), () =>
             act(async () => {
               const csrf = account.csrfToken;

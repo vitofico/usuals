@@ -14,6 +14,7 @@ is the detailed implementation spec.
 - [Privacy](../PRIVACY.md): device storage, optional requests and sharing.
 - [Security model](security-model.md): secrets, network paths and backup.
 - [Providers](providers.md): optional model configuration.
+- [Server connection](server-connection.md): link or QR setup, account approval and server AI.
 - [Release checks](release-check.md): final local validation and distribution limits.
 - [Known issues](known-issues.md): current limitations.
 - [Decisions](decisions/README.md): current and historical ADRs.

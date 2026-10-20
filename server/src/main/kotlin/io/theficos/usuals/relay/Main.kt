@@ -39,6 +39,9 @@ fun main(args: Array<String>) {
         if (args.size == 3 && args[0] == "recovery-export") {
             FrozenExporter(db, identity, origin).export(Path.of(args[1]), Path.of(args[2])); return
         }
+        if (args.size == 3 && args[0] == "ai-rewrap") {
+            AiGateway(db, AiConfiguration(wrappingKey = AiConfiguration.readKey(Path.of(args[1])))).rewrap(AiConfiguration.readKey(Path.of(args[2]))); return
+        }
         val identityConfig = WebIdentityConfig.fromEnvironment(origin)
         val auth = Auth(db, identity, origin, webIssuer = identityConfig?.oidc?.issuer, localIdentity = identityConfig?.localEnabled == true)
         val webIdentity = identityConfig?.let { WebIdentity.create(it, db, auth) }
@@ -55,7 +58,7 @@ fun main(args: Array<String>) {
         embeddedServer(Netty, configure = {
             connector { host = if (local) "127.0.0.1" else "0.0.0.0"; port = System.getenv("PORT")?.toInt() ?: 8080 }
             connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 4
-        }) { relayModule(relay, operations, ingress, webIdentity, browserModels) }.start(wait = true)
+        }) { relayModule(relay, operations, ingress, webIdentity, browserModels, AiGateway(db, AiConfiguration.fromEnvironment())) }.start(wait = true)
     }
 }
 private fun required(name: String) = requireNotNull(System.getenv(name)) { "missing_config:$name" }.also { require(it.isNotBlank()) }

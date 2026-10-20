@@ -15,10 +15,14 @@ class ListRepository(private val database: UsualsDatabase, private val newId: ()
         database.listDao().select(ListSelectionEntity(listId = id))
         id
     }
-    suspend fun prepareShare(household: String, source: String, includeHistory: Boolean, replica: LocalReplica): String = database.withTransaction {
+    suspend fun prepareShare(household: String, source: String, includeHistory: Boolean, replica: LocalReplica, target: String = newId()): String = database.withTransaction {
+        database.listDao().find(target)?.let { existing ->
+            require(existing.shared && existing.householdId == household)
+            return@withTransaction target
+        }
         val original = requireNotNull(database.listDao().find(source))
         require(!original.shared && !original.archived)
-        val id = newId()
+        val id = target
         database.listDao().household(HouseholdEntity(household, shared = true))
         database.listDao().insert(ListEntity(id, household, original.name, shared = true))
         replica.copyTo(source, id, includeHistory)

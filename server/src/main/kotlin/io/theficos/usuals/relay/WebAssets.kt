@@ -8,6 +8,7 @@ import io.ktor.server.routing.*
 /** Only packaged browser assets are public. Never fall back to HTML for API paths. */
 internal fun Route.webAssets(models: BrowserModels = BrowserModels()) {
     get("/") { call.browserAsset("index.html", models) }
+    get("/connect") { call.browserAsset("index.html", models) }
     get("/locales.json") { call.browserAsset("locales.json", models) }
     get("/model-origins.json") {
         call.response.headers.append(HttpHeaders.CacheControl, "no-store")

@@ -82,8 +82,8 @@ items. Sites that block the request show an explanation.
 An optional OpenAI-compatible model can read prose recipes. With image support,
 it can also read photos of written lists. Photos stay local until you
 request a read and its image check succeeds. Both Android and web offer a
-review before anything is added. See [provider setup](docs/providers.md), including
-the web operator allowlist and CORS requirements.
+review before anything is added. See [provider setup](docs/providers.md) for the server gateway and advanced
+direct-provider options.
 It is off by default, runs only after your explicit action and uses the endpoint
 you configure. The everyday list needs no AI service.
 
@@ -95,8 +95,9 @@ The relay stores encrypted shopping contents; membership and routing metadata
 remain visible to the server.
 
 Connect a phone from the web with **Shared lists > Connect a phone**. Scan the
-invitation in Android, confirm the server, then scan the phone’s verification QR
-back in the browser. No server address or fingerprint typing is needed. See the
+invitation in Android, confirm the server, then compare every group of the full
+device code in Review requests and approve. No return camera or fingerprint typing
+is needed. See the
 [QR connection guide](web/README.md#connect-a-phone-with-qr) for camera-free options.
 
 <p align="center">
@@ -135,7 +136,8 @@ The [hosting plan](docs/hosted-service-plan.md) records the work and launch gate
   site. Enabled barcode lookup sends the code to Open Food Facts, not your list
   or purchase history. No application server proxies either read.
 - **Your model, your choice.** Recipe text reaches the configured model only
-  after an explicit action. The provider key stays in Android Keystore.
+  after an explicit action. Direct-provider keys stay in Android Keystore. Personal server-AI keys are
+  sent to your chosen server and stored encrypted there.
 - **Speech follows Android's service.** Availability and audio processing depend
   on the selected speech service; keyboard capture works offline.
 - **Portable shopping data.** Export/import and Android device transfer preserve

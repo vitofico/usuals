@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_title">Serververbindung</string>
+    <string name="connection_intro">Einmal verbinden, um Listen zu teilen und die optionale Server-KI zu nutzen. Serverlink einfügen oder unten den QR-Code scannen.</string>
+    <string name="connection_link">Serverlink</string>
+    <string name="connection_connect">Diesen Server verbinden</string>
+    <string name="connection_compare">Vergleiche vor der Freigabe alle Gruppen dieses Codes mit dem Browser.</string>
+    <string name="connection_signin">Im Browser anmelden</string>
+    <string name="connection_waiting">Warte auf Freigabe im Browser…</string>
+    <string name="connection_cancel">Verbindung abbrechen</string>
+    <string name="connection_disconnect">Kontodienste trennen</string>
+    <string name="connection_ai">Server-KI verwenden</string>
+    <string name="connection_privacy">Nur ausdrücklich gesendete Texte oder Fotos erreichen diesen Server und seinen Anbieter. Einkaufslisten bleiben verschlüsselt.</string>
+    <string name="connection_local">Der Betreiber erklärt die Verarbeitung auf eigener Infrastruktur.</string>
+    <string name="connection_external">Die Verarbeitung nutzt einen externen Anbieter.</string>
+    <string name="connection_usage">%1$d von %2$d täglichen Versuchen verwendet</string>
+    <string name="connection_default">Servervorgabe verwenden</string>
+    <string name="connection_personal">Eigenen Anbieter verwenden</string>
+    <string name="connection_key">Persönlicher Anbieterschlüssel</string>
+    <string name="connection_key_help">Beim Speichern wird der Schlüssel an den gewählten Server gesendet und dort verschlüsselt gespeichert. Ein leeres Feld nutzt die Betreiberkonfiguration.</string>
+    <string name="connection_choose">%1$s verwenden</string>
+    <string name="connection_migrate">Meinen gespeicherten direkten Anbieterschlüssel für %1$s an diesen Server senden</string>
+    <string name="connection_share_source">„%1$s“ ist zum Teilen bereit. Verbinde dich und erstelle einen Haushalt oder wähle einen bestehenden aus, um fortzufahren.</string>
+    <string name="connection_retry_copy">Der erneute Versuch sendet die bereits vorbereitete Kopie mit derselben Verlaufsauswahl. Spätere Änderungen bleiben in deiner lokalen Liste.</string>
+</resources>

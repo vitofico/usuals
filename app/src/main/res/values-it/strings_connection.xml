@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_title">Connessione al server</string>
+    <string name="connection_intro">Connettiti una volta per condividere liste e usare l’IA facoltativa del server. Incolla un link o scansiona il QR qui sotto.</string>
+    <string name="connection_link">Link del server</string>
+    <string name="connection_connect">Connetti questo server</string>
+    <string name="connection_compare">Confronta tutti i gruppi di questo codice con il browser prima di approvare.</string>
+    <string name="connection_signin">Accedi nel browser</string>
+    <string name="connection_waiting">In attesa dell’approvazione nel browser…</string>
+    <string name="connection_cancel">Annulla connessione</string>
+    <string name="connection_disconnect">Disconnetti i servizi dell’account</string>
+    <string name="connection_ai">Usa IA del server</string>
+    <string name="connection_privacy">Solo il testo o le foto inviati esplicitamente raggiungono il server e il suo fornitore. Le liste restano cifrate.</string>
+    <string name="connection_local">Il gestore dichiara l’elaborazione sulla propria infrastruttura.</string>
+    <string name="connection_external">L’elaborazione usa un fornitore esterno.</string>
+    <string name="connection_usage">Usati %1$d di %2$d tentativi giornalieri</string>
+    <string name="connection_default">Usa impostazioni del server</string>
+    <string name="connection_personal">Usa il mio fornitore</string>
+    <string name="connection_key">Chiave personale del fornitore</string>
+    <string name="connection_key_help">Il salvataggio invia la chiave al server scelto, che la conserva cifrata. Una chiave vuota usa la configurazione del gestore.</string>
+    <string name="connection_choose">Usa %1$s</string>
+    <string name="connection_migrate">Invia la chiave salvata del fornitore diretto a questo server per %1$s</string>
+    <string name="connection_share_source">Pronto a condividere “%1$s”. Collegati e crea una famiglia, oppure scegline una esistente, per continuare.</string>
+    <string name="connection_retry_copy">Il nuovo tentativo invia la copia già preparata, con la stessa scelta della cronologia. Le modifiche successive restano nella lista locale.</string>
+</resources>
