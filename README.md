@@ -158,6 +158,8 @@ stable production APKs. Usuals is not available on F-Droid; the
 because the project is too new and other inclusion concerns remain.
 See the [distribution guide](docs/distribution.md) for signatures,
 checksums and the inclusion status.
+The [corrected F-Droid draft](distribution/fdroid/README.md) remains unsubmitted while
+the maintenance requirement is unmet; no resubmission is scheduled.
 
 Android works offline without an account. Shared lists are optional and use your
 own compatible server. There is no managed hosting subscription in this release.

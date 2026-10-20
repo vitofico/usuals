@@ -29,9 +29,15 @@ requirement. Passing the build pipeline does not establish inclusion eligibility
 Any future submission must also address the template and distinctiveness feedback;
 reaching the maintenance threshold alone does not guarantee acceptance.
 
+[Local feedback corrections and a template-based draft](../distribution/fdroid/README.md)
+are prepared without posting to GitLab. The conservative earliest reconsideration
+is **2027-01-20**, based on the public release on 2026-10-19, with continued
+maintenance and a fresh policy/release review. Nothing submits automatically.
+The overall policy and future pipeline checkboxes remain unchecked.
+
 Usuals is not listed on F-Droid. The prepared
 [metadata](../distribution/fdroid/metadata/io.theficos.usuals.yml) is retained for
-future consideration. It names the public source/tag, exact version, Java 21/SDK 34 build,
+future consideration. It pins the release’s full source hash, exact version, Java 21/SDK 34 build,
 upstream APK and allowed signing certificate. The recipe requests signature
 preservation through reproducible builds. Optional proprietary model services
 are declared as `NonFreeNet`; offline lists and local models need none.
@@ -44,7 +50,9 @@ continues to use only complete `values-xx/` resources.
 ## Prepare a release
 
 1. Commit `VERSION_NAME` and a strictly increasing `VERSION_CODE` in
-   `gradle.properties`, the five changelogs and the F-Droid recipe. Use
+   `gradle.properties` and the five changelogs. Keep the paused F-Droid recipe
+   pinned to an existing published release; refresh it after publication when
+   preparing a separately authorized future inclusion request. Use
    `YYYY.MM.DD.N` and tag `vYYYY.MM.DD.N`. CI never rewrites the source version.
 2. Run `scripts/dgradle verifyReleaseTools :app:assembleDebug :app:assembleRelease
    test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2` and the

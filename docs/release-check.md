@@ -1135,6 +1135,24 @@ elapsed household pilot remain separate acceptance gates.
   closure reasons, not only project age. This status correction changes no APK,
   source tag, signing identity or release asset.
 
+## Local F-Droid feedback corrections (2026-10-20)
+
+- Prepared the [corrected local draft](../distribution/fdroid/merge-request-draft.md)
+  against the current official App inclusion template. Exact headings/checklist
+  wording and order are verified. Age eligibility and future CI remain unchecked.
+  Added released-source evidence and qualified similar-app comparisons; acceptance
+  of distinctiveness remains F-Droid's decision.
+- The reference recipe pins the full source SHA of v2026.10.19.1, with matching
+  tag, source version/code and signing certificate. Verified all eight linked
+  source/screenshot paths at that revision. No published artifact was rebuilt.
+- scripts/dgradle passed 22 release-tool checks and official fdroidserver 2.4.5
+  lint --format against an isolated copy; the Docker evidence check also passed.
+  Logs: /private/tmp/usuals-fdroid-feedback-20261020/. Runtime build/emulator
+  evidence is reused because Android/server inputs are unchanged.
+- Resubmission remains paused. Earliest reconsideration is 2027-01-20 with
+  ongoing-maintenance evidence and fresh policy/release review. No GitLab write,
+  replacement MR, CI trigger, automatic follow-up, push or deployment occurred.
+
 ## QR phone connection (2026-10-19 to 2026-10-20)
 
 - The web owner can show an expiring, one-use invitation QR, copy a private link

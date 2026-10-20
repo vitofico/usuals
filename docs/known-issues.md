@@ -35,6 +35,8 @@ follow-up. See the extended QA record in [release checks](release-check.md).
 Signed APKs are distributed through GitHub Releases and Obtainium. F-Droid
 closed the initial submission, including because Usuals has not been maintained
 for more than three months. Resubmission is paused; see the
-[distribution guide](distribution.md) for all closure feedback.
+[distribution guide](distribution.md) for all closure feedback and the corrected
+local draft. Earliest reconsideration is 2027-01-20 with evidence of continued
+maintenance and a fresh review. No resubmission is scheduled.
 Docker builds remain required under ADR-0010. See
 [release checks](release-check.md) for the verified local scope.
