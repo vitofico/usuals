@@ -143,8 +143,8 @@ class AppWiringTest {
     fun invitations_open_verification_instead_of_becoming_items() {
         launchApp("usuals://join#synthetic-invitation")
         compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.SHARING }
-        compose.onNodeWithText("Shared lists").assertIsDisplayed()
-        compose.onNodeWithText("Create a household").assertExists()
+        compose.onNodeWithText("Server and sharing").assertIsDisplayed()
+        compose.onNodeWithText("Join with an invite").assertExists()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
         assertThat(currentRoute()).isEqualTo(Routes.LIST)
@@ -178,10 +178,11 @@ class AppWiringTest {
         launchApp()
         goTo(Routes.SETTINGS)
         compose.onNodeWithText("Test connection").assertDoesNotExist()
-        compose.onNodeWithText("Server connection").performClick()
-        assertThat(currentRoute()).isEqualTo(Routes.CONNECTION)
-        compose.onNodeWithText("Create a household").assertDoesNotExist()
-        compose.onNodeWithText("Scan server QR").assertExists()
+        compose.onNodeWithText("Not set up").assertExists()
+        compose.onNodeWithText("Start sharing").performClick()
+        assertThat(currentRoute()).isEqualTo(Routes.SHARING)
+        compose.onNodeWithText("Scan the server’s QR code").assertExists()
+        compose.onNodeWithText("Join with an invite").assertExists()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Privacy").performClick()
         compose.onNodeWithText("Privacy details").performClick()
@@ -194,10 +195,14 @@ class AppWiringTest {
         compose.onNodeWithText("Test connection").assertExists()
     }
 
-    @Test fun server_links_open_the_focused_connection_route() {
+    @Test fun shared_https_invite_links_open_sharing_instead_of_becoming_items() {
+        launchApp("https://usuals.example/join#2.synthetic")
+        compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.SHARING }
+    }
+
+    @Test fun server_links_open_the_sharing_route() {
         launchApp("usuals://connect#" + io.theficos.usuals.sync.Wire.encode("https://usuals.example".toByteArray()))
-        compose.waitUntil(5000) { currentRoute() == Routes.CONNECTION }
-        compose.onNodeWithText("Create a household").assertDoesNotExist()
+        compose.waitUntil(5000) { currentRoute() == Routes.SHARING }
         compose.waitUntil(5000) { compose.onAllNodesWithText("https://usuals.example").fetchSemanticsNodes().isNotEmpty() }
     }
 

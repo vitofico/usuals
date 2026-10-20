@@ -103,7 +103,13 @@ object UsualsViewModelFactories {
                 modelProbe = ServiceLocator.modelProbe,
                 budget = ServiceLocator.modelBudget,
                 info = ServiceLocator.appInfo,
-                currentServerOrigin = { ServiceLocator.connectionClient.current()?.origin },
+                sharingSummary = {
+                    val client = ServiceLocator.householdClient
+                    val households = client.households().filter { !it.removed }
+                    (ServiceLocator.connectionClient.current()?.origin ?: households.firstOrNull()?.origin)?.let { origin ->
+                        io.theficos.usuals.ui.settings.SharingSummary(java.net.URI(origin).host, households.sumOf { household -> client.members(household.id).sumOf { it.devices.size } })
+                    }
+                },
             )
         }
     }

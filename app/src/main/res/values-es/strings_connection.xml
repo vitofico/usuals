@@ -4,7 +4,7 @@
     <string name="connection_intro">Conecta una vez para compartir listas y usar la IA opcional del servidor. Pega un enlace o escanea su QR abajo.</string>
     <string name="connection_link">Enlace del servidor</string>
     <string name="connection_connect">Conectar este servidor</string>
-    <string name="connection_compare">Compara todos los grupos de este código con el navegador antes de aprobar.</string>
+    <string name="connection_compare">Comprueba que tu navegador muestra el mismo código antes de aprobar.</string>
     <string name="connection_signin">Iniciar sesión en el navegador</string>
     <string name="connection_waiting">Esperando la aprobación del navegador…</string>
     <string name="connection_cancel">Cancelar conexión</string>

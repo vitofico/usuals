@@ -4,7 +4,7 @@
     <string name="connection_intro">Einmal verbinden, um Listen zu teilen und die optionale Server-KI zu nutzen. Serverlink einfügen oder unten den QR-Code scannen.</string>
     <string name="connection_link">Serverlink</string>
     <string name="connection_connect">Diesen Server verbinden</string>
-    <string name="connection_compare">Vergleiche vor der Freigabe alle Gruppen dieses Codes mit dem Browser.</string>
+    <string name="connection_compare">Prüfe vor der Freigabe, dass dein Browser denselben Code zeigt.</string>
     <string name="connection_signin">Im Browser anmelden</string>
     <string name="connection_waiting">Warte auf Freigabe im Browser…</string>
     <string name="connection_cancel">Verbindung abbrechen</string>

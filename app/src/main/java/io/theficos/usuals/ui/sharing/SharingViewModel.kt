@@ -98,13 +98,17 @@ class SharingViewModel(private val client: HouseholdClient,
         resetKeys()
         mutable.update { it.copy(message = SharingMessage.KEYS_RESET) }
     }
+    /** "Start sharing": sign in to the server first, then draft the household and its recovery kit. */
+    fun startSharing() { if (connection?.current() != null) prepare() else connectServer() }
     fun connectServer() = work {
         requireNotNull(connection).begin(state.value.origin.trim())
         reloadConnection()
     }
     fun checkConnection() = work {
-        requireNotNull(connection).finish()
+        val saved = requireNotNull(connection).finish()
         reloadConnection()
+        // Only the poll that saw the approval drafts a household, so a recreated screen never drafts a second one.
+        if (saved != null && client.households().none { !it.removed } && state.value.kit == null) newKit(client.prepare(saved.origin))
     }
     fun cancelConnection() { connection?.cancel(); reloadConnection() }
     fun disconnectServer() = work { requireNotNull(connection).disconnect(); reloadConnection() }
@@ -115,7 +119,10 @@ class SharingViewModel(private val client: HouseholdClient,
     }
     fun loadAi() = work(refresh = false) { mutable.update { it.copy(ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings")) } }
     fun joinCode(pending: PendingJoinState) = client.joinCode(pending)
-    fun load() = work { reload(); mutable.update { it.copy(lists = choices(), sharingSource = client.sharingSource()) } }
+    fun load() = work {
+        reload(); mutable.update { it.copy(lists = choices(), sharingSource = client.sharingSource()) }
+        if (client.joining() != null) completeJoin()
+    }
     private fun reload() {
         reloadConnection()
         val households = client.households(); val joining = client.joining(); val bootstrap = client.bootstrapPending()
@@ -124,24 +131,23 @@ class SharingViewModel(private val client: HouseholdClient,
     fun resumeBootstrap() = work { client.resumeBootstrap(); reload(); mutable.update { it.copy(message = SharingMessage.CREATED) } }
     fun retryJoin() = work { client.resumeJoin(); reload() }
     /** The single scan or link entry point. Previewing a link must not open the private vault or contact a server. */
-    fun scanned(value: String, serverOnly: Boolean = false): Boolean {
+    fun scanned(value: String): Boolean {
         if (state.value.busy) return false
         val link = try { PairingLink.parse(value.trim()) } catch (_: Exception) {
             mutable.update { it.copy(problem = SharingProblem.NOT_USUALS) }; return true
         }
-        try {
-            when (link) {
-                is PairingLink.Server -> {
-                    require(state.value.connection?.origin.let { it == null || it == link.origin })
-                    mutable.update { it.copy(origin = link.origin, problem = null) }
-                }
-                is PairingLink.Invite -> {
-                    require(!serverOnly)
-                    InviteCode.parse(link.text)
-                    mutable.update { it.copy(invitation = link.text, problem = null) }
-                }
+        when (link) {
+            is PairingLink.Server -> {
+                val current = state.value.connection?.origin ?: state.value.households.firstOrNull { !it.removed }?.origin
+                if (current != null && current != link.origin) mutable.update { it.copy(problem = SharingProblem.WRONG_SERVER) }
+                else mutable.update { it.copy(origin = link.origin, problem = null) }
             }
-        } catch (_: Exception) { mutable.update { it.copy(invitation = "", problem = SharingProblem.VERIFICATION) } }
+            is PairingLink.Invite -> {
+                val problem = try { InviteCode.parse(link.text); null }
+                    catch (_: UnsupportedWireVersion) { SharingProblem.UPGRADE } catch (_: Exception) { SharingProblem.VERIFICATION }
+                mutable.update { it.copy(invitation = if (problem == null) link.text else "", problem = problem) }
+            }
+        }
         return true
     }
     fun field(field: SharingField, value: String) = mutable.update { when (field) {
@@ -149,26 +155,23 @@ class SharingViewModel(private val client: HouseholdClient,
         SharingField.SETUP -> it.copy(setupCode = value.take(100))
         SharingField.INVITATION -> it.copy(invitation = value.take(4096))
         SharingField.RECOVERY -> it.copy(recoveryKey = value.take(100))
-        SharingField.FINGERPRINT -> it.copy(fingerprint = value.take(100))
     } }
-    fun prepare() = work {
-        val kit = client.prepare(state.value.origin.trim())
-        verifiedSetup = null
-        mutable.update { it.copy(kit = kit, saved = false, verified = false, recoveryKey = "", message = null) }
-    }
-    fun prepareReplacement(household: String) = work {
-        val kit = client.prepareReplacement(household)
+    fun prepare() = work { newKit(client.prepare(connection?.current()?.origin ?: state.value.origin.trim())) }
+    fun prepareReplacement(household: String) = work { newKit(client.prepareReplacement(household)) }
+    private fun newKit(kit: RecoveryDraft) {
         verifiedSetup = null; verifiedReplacement = null
-        mutable.update { it.copy(kit = kit, saved = false, verified = false, recoveryKey = "", message = null) }
+        mutable.update { it.copy(kit = kit, verified = false, recoveryKey = "", message = null) }
     }
-    fun markSaved() { mutable.update { it.copy(saved = true) } }
-    fun verifyFile(bytes: ByteArray) = work {
-        when (val kit = requireNotNull(state.value.kit)) {
-            is NewHousehold -> verifiedSetup = kit.verifySaved(bytes, state.value.recoveryKey.trim())
-            is ReplacementKit -> verifiedReplacement = kit.verifySaved(bytes, state.value.recoveryKey.trim())
-            else -> throw IllegalArgumentException("invalid")
-        }
-        mutable.update { it.copy(verified = true, recoveryKey = "", message = SharingMessage.KIT_VERIFIED) }
+    /** [written] is what the screen read back after saving, so the kit is checked against its own key with nothing to paste. */
+    fun saveKit(written: ByteArray) = work(refresh = false) {
+        try {
+            when (val kit = requireNotNull(state.value.kit)) {
+                is NewHousehold -> verifiedSetup = kit.verifySaved(written, kit.secret)
+                is ReplacementKit -> verifiedReplacement = kit.verifySaved(written, kit.secret)
+                else -> throw IllegalArgumentException("invalid")
+            }
+            mutable.update { it.copy(verified = true, message = SharingMessage.KIT_VERIFIED) }
+        } catch (_: Exception) { mutable.update { it.copy(verified = false, problem = SharingProblem.FILE) } }
     }
     fun create() = work {
         val replacing = verifiedReplacement != null
@@ -180,31 +183,43 @@ class SharingViewModel(private val client: HouseholdClient,
         verifiedSetup = null; verifiedReplacement = null
         mutable.update { it.copy(kit = null, setupCode = "", recoveryKey = "", households = client.households(), message = if (replacing) SharingMessage.REPLACED else SharingMessage.CREATED) }
     }
-    fun cancelSetup() { verifiedSetup = null; verifiedReplacement = null; mutable.update { it.copy(kit = null, setupCode = "", recoveryKey = "", verified = false, saved = false) } }
-    fun invite(household: String) = work { val invite = client.invitation(household); mutable.update { it.copy(outgoing = invite) } }
-    fun closeInvitation() { mutable.update { it.copy(outgoing = null) } }
+    fun cancelSetup() { verifiedSetup = null; verifiedReplacement = null; mutable.update { it.copy(kit = null, setupCode = "", recoveryKey = "", verified = false) } }
+    fun invite(household: String) = work { val invite = client.invitation(household); mutable.update { it.copy(outgoing = invite, inviting = household) } }
+    fun closeInvitation() { mutable.update { it.copy(outgoing = null, inviting = null) } }
     fun join() = work {
         val pending = client.requestJoin(state.value.invitation.trim())
         mutable.update { it.copy(joining = pending, invitation = "", message = SharingMessage.WAITING) }
     }
-    fun checkJoin() = work {
+    fun checkJoin() = work { completeJoin() }
+    private suspend fun completeJoin() {
         val joined = client.completeJoin()
         mutable.update { it.copy(joining = client.joining(), households = client.households(), message = if (joined == null) SharingMessage.WAITING else SharingMessage.JOINED) }
     }
-    fun pending(household: String) = work {
-        val requests = client.pending(household)
-        mutable.update { it.copy(reviewing = household, requests = requests, fingerprint = "") }
+    /** Polled while the screen is visible; quiet, so a dropped poll never hides what the person is doing. */
+    fun pollRequests(household: String) {
+        if (state.value.busy) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val requests = try { client.pending(household) } catch (error: Exception) { if (error is kotlinx.coroutines.CancellationException) throw error; return@launch }
+            mutable.update { if (it.busy) it else it.copy(requests = it.requests + (household to requests)) }
+        }
     }
-    fun closeReview() { mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "") } }
-    fun approve(candidate: JoinCandidate) = work {
-        val household = requireNotNull(state.value.reviewing)
-        client.approve(household, requireNotNull(candidate.verified))
-        val households = client.households()
-        mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "", households = households, message = SharingMessage.APPROVED) }
+    private fun householdOf(candidate: JoinCandidate) = state.value.requests.entries.firstOrNull { (_, list) -> list.any { it.requestId == candidate.requestId } }?.key
+    /** Only the device holding the invite key can approve; any other owner device points the person there. */
+    fun approve(candidate: JoinCandidate) {
+        val verified = candidate.verified ?: return mutable.update { it.copy(problem = SharingProblem.OTHER_DEVICE, message = null) }
+        val household = householdOf(candidate) ?: return
+        work {
+            client.approve(household, verified)
+            mutable.update { it.copy(requests = it.requests - household, households = client.households(), message = SharingMessage.APPROVED,
+                outgoing = if (it.inviting == household) null else it.outgoing, inviting = if (it.inviting == household) null else it.inviting) }
+        }
     }
-    fun deny(candidate: JoinCandidate) = work {
-        val household = requireNotNull(state.value.reviewing); client.deny(household, candidate.requestId)
-        mutable.update { it.copy(reviewing = null, requests = emptyList(), fingerprint = "") }
+    fun deny(candidate: JoinCandidate) {
+        val household = householdOf(candidate) ?: return
+        work {
+            client.deny(household, candidate.requestId)
+            mutable.update { it.copy(requests = it.requests + (household to it.requests[household].orEmpty().filter { r -> r.requestId != candidate.requestId })) }
+        }
     }
     fun recover(bytes: ByteArray) = work {
         client.recover(bytes, state.value.recoveryKey.trim())
@@ -247,16 +262,16 @@ data class SharingState(val origin: String = "", val setupCode: String = "", val
     val sharingSource: String? = null,
     val shareAttempts: List<PendingShare> = emptyList(),
     val connection: ServerConnection? = null, val connecting: PendingConnection? = null, val ai: AiSettings? = null,
-    val fingerprint: String = "", val bootstrapPending: Boolean = false, val busy: Boolean = false, val problem: SharingProblem? = null, val message: SharingMessage? = null,
-    val households: List<HouseholdSummary> = emptyList(), val kit: RecoveryDraft? = null, val saved: Boolean = false, val verified: Boolean = false,
+    val bootstrapPending: Boolean = false, val busy: Boolean = false, val problem: SharingProblem? = null, val message: SharingMessage? = null,
+    val households: List<HouseholdSummary> = emptyList(), val kit: RecoveryDraft? = null, val verified: Boolean = false,
     val backupRequest: ByteArray? = null, val backupFingerprint: String? = null, val pendingExport: ByteArray? = null, val frozenUri: String? = null, val frozenCopy: FrozenCopy? = null,
     val lists: List<SharingList> = emptyList(), val members: Map<String, List<RosterMember>> = emptyMap(), val devices: Map<String, String> = emptyMap(), val fingerprints: Map<String, Map<String, String>> = emptyMap(),
     val transferFile: ByteArray? = null, val transferReview: TransferReview? = null,
-    val outgoing: InviteCode? = null, val joining: PendingJoinState? = null, val reviewing: String? = null, val requests: List<JoinCandidate> = emptyList()) {
+    val outgoing: InviteCode? = null, val inviting: String? = null, val joining: PendingJoinState? = null, val requests: Map<String, List<JoinCandidate>> = emptyMap()) {
     override fun toString() = "SharingState([redacted])"
 }
-enum class SharingField { ORIGIN, SETUP, INVITATION, RECOVERY, FINGERPRINT }
-enum class SharingProblem { NOT_USUALS, OFFLINE, VERIFICATION, ACCESS, LOCKED_KEYS, RECOVERY, CAPACITY, CHANGED, UPGRADE, HISTORY, ALREADY_JOINED, FILE, FROZEN_KEY }
+enum class SharingField { ORIGIN, SETUP, INVITATION, RECOVERY }
+enum class SharingProblem { NOT_USUALS, WRONG_SERVER, OTHER_DEVICE, OFFLINE, VERIFICATION, ACCESS, LOCKED_KEYS, RECOVERY, CAPACITY, CHANGED, UPGRADE, HISTORY, ALREADY_JOINED, FILE, FROZEN_KEY }
 enum class SharingMessage { KIT_VERIFIED, CREATED, WAITING, JOINED, APPROVED, RECOVERED, REPLACED, DISCARDED, SHARED, ROTATED, REMOVED, TRANSFERRED, KEYS_RESET, REAPPROVE, COPY_KEPT, COPY_REMOVED, FROZEN_SAVED }
 
 data class SharingList(val id: String, val name: String, val household: String, val shared: Boolean, val accessRemoved: Boolean = false)

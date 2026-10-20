@@ -12,6 +12,9 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import com.google.common.truth.Truth.assertThat
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.sync.*
@@ -49,16 +52,24 @@ class SharingFeedbackTest {
     @Test fun incomingServerHandoffPrefillsConnectionAfterInitialLoad() {
         val vm = viewModel(); var consumed = false
         val link = "usuals://connect#" + Wire.encode("https://usuals.example".toByteArray())
-        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = link, onInvitationConsumed = { consumed = true }, connectionOnly = true) } }
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = link, onInvitationConsumed = { consumed = true }) } }
         compose.waitUntil(5000) { consumed && vm.state.value.origin == "https://usuals.example" }
         assertThat(vm.state.value.invitation).isEmpty()
         assertThat(vm.state.value.joining).isNull()
-        compose.onNodeWithText("Connect this server").assertIsDisplayed()
+        compose.onNodeWithText("Continue").assertIsDisplayed()
+    }
+    @Test fun returningFromBrowserSignInIsConsumedWithoutAProblem() {
+        val vm = viewModel(); var consumed = false
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = "usuals://connected", onInvitationConsumed = { consumed = true }) } }
+        compose.waitUntil(5000) { consumed && !vm.state.value.busy }
+        assertThat(vm.state.value.problem).isNull()
+        assertThat(vm.state.value.origin).isEmpty()
     }
     @Test fun recoveryFailureRemainsVisibleAfterScrollingToTheFilePicker() {
         val vm = viewModel()
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
         compose.waitUntil(5000) { !vm.state.value.busy }
+        compose.onNodeWithText("Advanced").performScrollTo().performClick()
         compose.onNodeWithText("Open recovery file").performScrollTo().assertIsDisplayed()
         vm.recover(byteArrayOf(1))
         compose.waitUntil(5000) { vm.state.value.problem != null }
@@ -68,18 +79,17 @@ class SharingFeedbackTest {
         val vm = viewModel()
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
         compose.waitUntil(5000) { !vm.state.value.busy }
-        compose.onNodeWithText("Scan server or invitation QR").assertIsDisplayed()
+        compose.onNodeWithText("Scan the server’s QR code").assertIsDisplayed()
         val id = "00000000-0000-4000-8000-000000000001"
-        val digest = Wire.encode(ByteArray(32))
         val uri = InviteCode("https://usuals.example", id, InviteKey.random(), ByteArray(16)).appLink()
         vm.scanned(uri)
-        compose.onNodeWithText("Connect to https://usuals.example").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Connect this phone").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Join the household on https://usuals.example?").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Join").performScrollTo().assertIsDisplayed()
         assertThat(vm.state.value.joining).isNull()
         vm.scanned("usuals://join#bm90LWpzb24")
         assertThat(vm.state.value.invitation).isEmpty()
         assertThat(vm.state.value.problem).isEqualTo(SharingProblem.VERIFICATION)
-        compose.onNodeWithText("Connect this phone").assertDoesNotExist()
+        compose.onNodeWithText("Join").assertDoesNotExist()
     }
     @Test fun scannedCodesAreRoutedByKind() {
         val vm = viewModel()
@@ -146,15 +156,14 @@ class SharingFeedbackTest {
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
         compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.joining != null }
         compose.onNodeWithText("Check approval").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Scan server or invitation QR").performScrollTo().assertIsDisplayed()
         vm.scanned(code.link())
-        compose.onNodeWithText("Connect this phone").performScrollTo().performClick()
+        compose.onNodeWithText("Join").performScrollTo().performClick()
         compose.onNodeWithText("Replace the pending request?").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNode(hasText("Cancel") and hasAnyAncestor(isDialog())).performClick()
         assertThat(store.read()).isEqualTo(before)
         assertThat(vm.state.value.joining).isEqualTo(pending)
         assertThat(requests.get()).isEqualTo(0)
-        compose.onNodeWithText("Connect this phone").performScrollTo().performClick()
+        compose.onNodeWithText("Join").performScrollTo().performClick()
         compose.onNodeWithText("Replace request").performClick()
         compose.waitUntil(5000) { !vm.state.value.busy && requests.get() == 1 }
         assertThat(store.read().joining!!.assertion.requestId).isNotEqualTo(pending.assertion.requestId)
@@ -170,11 +179,10 @@ class SharingFeedbackTest {
             override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = throw RelayProblem("unavailable", 503)
         }
         val vm = SharingViewModel(HouseholdClient(store, transport, CheckpointSource { _, _ -> error("unused") }), connection = ConnectionClient(store, transport))
-        compose.setContent { UsualsTheme { SharingScreen(vm, {}, connectionOnly = true) } }
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}) } }
         compose.waitUntil(5000) { vm.state.value.connection != null && !vm.state.value.busy }
-        compose.onNode(isToggleable()).assertIsOn().assertIsEnabled().performClick()
+        compose.onNode(isToggleable()).performScrollTo().assertIsOn().assertIsEnabled().performClick()
         compose.waitUntil(5000) { store.read().connection?.aiEnabled == false }
-        compose.onNodeWithText("Create a household").assertDoesNotExist()
     }
     private fun memoryStore(initial: ClientState = ClientState()): SyncStateStore = object : SyncStateStore {
             private var value = initial

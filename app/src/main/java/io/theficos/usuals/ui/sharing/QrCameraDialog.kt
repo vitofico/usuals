@@ -17,19 +17,17 @@ import io.theficos.usuals.sync.PairingLink
 import io.theficos.usuals.ui.scan.CameraXBarcodeCamera
 
 @Composable
-internal fun QrCameraDialog(joining: Boolean, serverOnly: Boolean = false, onDismiss: () -> Unit, onCode: (String) -> Unit) {
+internal fun QrCameraDialog(onDismiss: () -> Unit, onCode: (String) -> Unit) {
     val context = LocalContext.current
-    val camera = remember(context, joining) {
-        CameraXBarcodeCamera(context, qrAccept = if (joining) PairingLink::recognize else { text -> text.startsWith("usuals://device#") })
-    }
+    val camera = remember(context) { CameraXBarcodeCamera(context, qrAccept = PairingLink::recognize) }
     var allowed by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
     var refused by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed = it; refused = !it }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(if (serverOnly) R.string.settings_scan_server else if (joining) R.string.sharing_scan_invitation else R.string.sharing_scan_verification)) }, text = {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.sharing_scan_invitation)) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (allowed && camera.isAvailable) camera.Preview(onCode, Modifier.fillMaxWidth().height(320.dp))
             else {
-                Text(stringResource(if (serverOnly) R.string.settings_scan_server_help else if (joining) R.string.sharing_invitation_camera_help else R.string.sharing_camera_help))
+                Text(stringResource(R.string.sharing_invitation_camera_help))
                 if (!refused && camera.isAvailable) TextButton(onClick = { permission.launch(Manifest.permission.CAMERA) }) { Text(stringResource(R.string.sharing_allow_camera)) }
             }
         }

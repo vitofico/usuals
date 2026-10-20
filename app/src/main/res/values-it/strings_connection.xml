@@ -4,7 +4,7 @@
     <string name="connection_intro">Connettiti una volta per condividere liste e usare l’IA facoltativa del server. Incolla un link o scansiona il QR qui sotto.</string>
     <string name="connection_link">Link del server</string>
     <string name="connection_connect">Connetti questo server</string>
-    <string name="connection_compare">Confronta tutti i gruppi di questo codice con il browser prima di approvare.</string>
+    <string name="connection_compare">Controlla che il browser mostri lo stesso codice prima di approvare.</string>
     <string name="connection_signin">Accedi nel browser</string>
     <string name="connection_waiting">In attesa dell’approvazione nel browser…</string>
     <string name="connection_cancel">Annulla connessione</string>

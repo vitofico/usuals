@@ -37,7 +37,6 @@ import io.theficos.usuals.ui.theme.AppPalette
 object Routes {
     const val LIST = "list"
     const val SETTINGS = "settings"
-    const val CONNECTION = "connection"
     const val ADVANCED = "advanced-settings"
     const val SCAN = "scan"
     const val HISTORY = "history"
@@ -52,7 +51,7 @@ object Routes {
      * nothing, so their buttons navigated to a destination that popped itself
      * before drawing a frame, while every unit test stayed green.
      */
-    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, SHARING, CONNECTION, ADVANCED)
+    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, SHARING, ADVANCED)
 }
 
 /**
@@ -110,9 +109,10 @@ fun UsualsApp(
         }
     }
 
-    val invitation = sharedText?.takeIf { it.startsWith("usuals:") }
+    // Server, invite and sign-in-return links all open the one sharing screen; any other shared text is for the list.
+    val invitation = sharedText?.takeIf { it.startsWith("usuals:") || runCatching { io.theficos.usuals.sync.PairingLink.parse(it.trim()) is io.theficos.usuals.sync.PairingLink.Invite }.getOrDefault(false) }
     LaunchedEffect(invitation) {
-        if (invitation != null) navController.navigate(if (invitation.startsWith("usuals://connect#")) Routes.CONNECTION else Routes.SHARING) { launchSingleTop = true }
+        if (invitation != null) navController.navigate(Routes.SHARING) { launchSingleTop = true }
     }
     NavHost(navController = navController, startDestination = Routes.LIST) {
 
@@ -133,7 +133,7 @@ fun UsualsApp(
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() },
                 onOpenTutorial = { tutorialRequested = true },
-                onOpenSharing = { navController.navigate(Routes.CONNECTION) },
+                onOpenSharing = { navController.navigate(Routes.SHARING) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
                 palette = palette, onPaletteChange = onPaletteChange)
         }
@@ -142,11 +142,6 @@ fun UsualsApp(
             val factory = remember(settingsViewModelFactory) { settingsViewModelFactory() }
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() }, advanced = true)
-        }
-        composable(Routes.CONNECTION) {
-            val factory = remember(sharingViewModelFactory) { sharingViewModelFactory() }
-            val vm: io.theficos.usuals.ui.sharing.SharingViewModel = viewModel(factory = factory)
-            io.theficos.usuals.ui.sharing.SharingScreen(vm, { navController.popBackStack() }, invitation = invitation, onInvitationConsumed = onSharedTextConsumed, connectionOnly = true)
         }
         composable(Routes.SHARING) {
             val factory = remember(sharingViewModelFactory) { sharingViewModelFactory() }

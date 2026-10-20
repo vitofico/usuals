@@ -39,7 +39,7 @@ class ConnectionDeviceScenarioTest {
         val publicTicket = File(context.filesDir, "connection-qa.json")
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
-            scenario.onActivity { activity -> activity.setContent { UsualsTheme { SharingScreen(vm, {}, connectionOnly = true) } } }
+            scenario.onActivity { activity -> activity.setContent { UsualsTheme { SharingScreen(vm, {}) } } }
             withContext(Dispatchers.Main) { vm.field(SharingField.ORIGIN, origin) }
             withTimeout(10000) { while (vm.state.value.busy) delay(100) }
             withContext(Dispatchers.Main) { vm.connectServer() }

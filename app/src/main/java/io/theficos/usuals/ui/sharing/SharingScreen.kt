@@ -1,10 +1,7 @@
 package io.theficos.usuals.ui.sharing
 
-import android.content.Intent
-import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -13,33 +10,34 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
-import kotlinx.coroutines.flow.first
-import io.theficos.usuals.R
-import io.theficos.usuals.ui.components.SectionCard
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import io.theficos.usuals.R
 import io.theficos.usuals.sync.InviteCode
-import java.io.ByteArrayOutputStream
+import io.theficos.usuals.sync.ReplacementKit
+import io.theficos.usuals.ui.components.SectionCard
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+
+/** The browser's "Return to Usuals" link: it only brings the person back, the sign-in poll does the rest. */
+internal const val RETURNED_FROM_SIGN_IN = "usuals://connected"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier = Modifier, invitation: String? = null, onInvitationConsumed: () -> Unit = {},
-    sourceList: String? = null, onSourceConsumed: () -> Unit = {}, connectionOnly: Boolean = false) {
+    sourceList: String? = null, onSourceConsumed: () -> Unit = {}) {
     val state by vm.state.collectAsState()
+    val stage = sharingStage(state)
     val context = LocalContext.current
     DisposableEffect(context) {
         val window = (context as? android.app.Activity)?.window
@@ -48,16 +46,12 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         onDispose { if (!wasSecure) window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
     }
     val scope = rememberCoroutineScope()
-    var showKey by remember { mutableStateOf(false) }
-    var showInviteQr by remember { mutableStateOf(false) }
     var removingCopy by remember { mutableStateOf<String?>(null) }
-    var resetting by remember { mutableStateOf(false) }
     var sharing by remember { mutableStateOf<String?>(null) }
     var memberHousehold by remember { mutableStateOf<String?>(null) }
     var confirmRemoval by remember { mutableStateOf<Pair<String, String>?>(null) }
     var history by remember { mutableStateOf(false) }
-    var scanning by remember { mutableStateOf<SharingScan?>(null) }
-    var pasteInvitation by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf(false) }
     var replacingJoin by remember(state.joining?.assertion?.requestId, state.invitation) { mutableStateOf(false) }
     LaunchedEffect(vm) { vm.load() }
     LaunchedEffect(vm, sourceList) {
@@ -68,69 +62,48 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
             if (vm.state.first { !it.busy }.problem == null) onSourceConsumed()
         }
     }
-    val shareOwners = state.households.filter { it.role == "owner" && !it.removed }
-    LaunchedEffect(state.sharingSource, state.busy, state.kit, shareOwners.map { it.id }) {
-        if (!connectionOnly && !state.busy && state.sharingSource != null && state.kit == null && shareOwners.size == 1) {
-            sharing = shareOwners.single().id
+    val owners = state.households.filter { it.role == "owner" && !it.removed }.map { it.id }
+    LaunchedEffect(state.sharingSource, state.busy, state.kit, owners) {
+        if (!state.busy && state.sharingSource != null && state.kit == null && owners.size == 1) {
+            sharing = owners.single()
             history = state.shareAttempts.firstOrNull { it.household == sharing && it.source == state.sharingSource }?.includeHistory ?: false
         }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(vm, lifecycle, state.joining?.assertion?.requestId) {
         val expiresAt = state.joining?.invitation?.expiresAt ?: return@LaunchedEffect
-        if (state.joining != null) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             do { delay(5000); vm.checkJoin() } while (isActive && System.currentTimeMillis() < expiresAt)
         }
     }
-    LaunchedEffect(invitation) { if (invitation != null) { vm.state.first { !it.busy }; if (vm.scanned(invitation, serverOnly = connectionOnly)) onInvitationConsumed() } }
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.usuals.recovery+json")) { uri ->
-        if (uri != null) state.kit?.let { kit -> scope.launch(Dispatchers.IO) {
-            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(kit.file) } ?: error("unavailable") }
-                .onSuccess { vm.markSaved() }.onFailure { vm.fileFailure() }
-        } }
-    }
-    fun read(uri: android.net.Uri?, action: (ByteArray) -> Unit) {
-        if (uri == null) return
-        scope.launch(Dispatchers.IO) {
-            runCatching { context.contentResolver.openInputStream(uri)?.use { input ->
-                val bytes = ByteArrayOutputStream(); val buffer = ByteArray(8192)
-                while (true) { val n = input.read(buffer); if (n < 0) break; require(bytes.size() + n <= 8 * 1024 * 1024); bytes.write(buffer, 0, n) }
-                bytes.toByteArray()
-            } ?: error("unavailable") }.onSuccess(action).onFailure { vm.fileFailure() }
+    // Requests show up while the invite sheet is open, and later on this screen.
+    LaunchedEffect(vm, lifecycle, owners, stage, state.inviting) {
+        if (stage == SharingStage.READY && owners.isNotEmpty()) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                vm.state.first { !it.busy }
+                owners.forEach(vm::pollRequests)
+                delay(if (state.inviting != null) 3000 else 15000)
+            }
         }
     }
-    val requestKit = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::prepareBackupRequest) }
-    val saveRequest = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        val bytes = state.backupRequest
-        if (uri != null && bytes != null) scope.launch(Dispatchers.IO) {
-            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("unavailable") }.onFailure { vm.fileFailure() }
-            vm.clearBackupRequest()
-        } else vm.clearBackupRequest()
+    LaunchedEffect(invitation) {
+        if (invitation == null) return@LaunchedEffect
+        if (invitation.startsWith(RETURNED_FROM_SIGN_IN)) return@LaunchedEffect onInvitationConsumed()
+        vm.state.first { !it.busy }
+        if (vm.scanned(invitation)) onInvitationConsumed()
     }
-    LaunchedEffect(state.backupRequest) { if (state.backupRequest != null) saveRequest.launch("usuals-backup-request.json") }
-    val frozenFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.selectFrozen(it.toString()) } }
-    val frozenKit = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::frozenKit) }
-    val verify = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::verifyFile) }
-    val pendingExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        val bytes = state.pendingExport
-        if (uri != null && bytes != null) scope.launch(Dispatchers.IO) {
-            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("unavailable") }
-                .onFailure { vm.fileFailure() }
-            vm.clearPendingExport()
-        } else vm.clearPendingExport()
+    val saveKit = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.usuals.recovery+json")) { uri ->
+        val kit = state.kit
+        if (uri != null && kit != null) scope.launch(Dispatchers.IO) {
+            // Reading the saved file back proves the storage kept it intact.
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(kit.file) } ?: error("unavailable")
+                readLimited(context, uri)
+            }.onSuccess(vm::saveKit).onFailure { vm.fileFailure() }
+        }
     }
-    LaunchedEffect(state.pendingExport) { if (state.pendingExport != null) pendingExport.launch("usuals-pending-work.json") }
-    val saveTransfer = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.usuals.transfer+json")) { uri ->
-        if (uri != null) state.transferFile?.let { bytes -> scope.launch(Dispatchers.IO) {
-            runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("unavailable") }
-                .onFailure { vm.fileFailure() }
-        } }
-    }
-    val reviewTransfer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::reviewTransfer) }
-    val finishTransfer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::completeTransfer) }
-    val recover = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::recover) }
     Scaffold(modifier = modifier, containerColor = MaterialTheme.colorScheme.background, topBar = {
-        TopAppBar(title = { Text(stringResource(if (connectionOnly) R.string.settings_server else R.string.sharing_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
+        TopAppBar(title = { Text(stringResource(R.string.settings_server), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.settings_back)) }
         })
     }, bottomBar = {
@@ -143,156 +116,80 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         }
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            ConnectionPanel(state, vm, showHouseholdSetup = !connectionOnly) { scanning = SharingScan.JOIN }
-            if (!connectionOnly) {
             state.lists.firstOrNull { it.id == state.sharingSource }?.let { source ->
                 Text(stringResource(R.string.connection_share_source, source.name.ifBlank { context.getString(R.string.household_fallback_name) }))
                 TextButton(enabled = !state.busy, onClick = { vm.rememberShareSource(null) }) { Text(stringResource(R.string.sharing_cancel)) }
             }
-            Text(stringResource(R.string.sharing_intro), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (state.joining != null) SectionCard {
-                val pending = requireNotNull(state.joining)
-                Text(stringResource(R.string.sharing_pair_verify_title), style = MaterialTheme.typography.titleLarge)
-                Text(pending.invitation.origin, style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.connection_compare))
-                vm.joinCode(pending)?.let { code -> SelectionContainer { Text(code, style = MaterialTheme.typography.headlineMedium) } }
-                Text(stringResource(R.string.sharing_pair_waiting), style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(enabled = !state.busy, onClick = vm::retryJoin) { Text(stringResource(R.string.sharing_retry_request)) }
-                TextButton(enabled = !state.busy, onClick = vm::checkJoin) { Text(stringResource(R.string.sharing_check_approval)) }
-            }
-            if (state.kit == null) SectionCard {
-                Text(stringResource(R.string.sharing_pair_title), style = MaterialTheme.typography.titleLarge)
-                val origin = remember(state.invitation) { runCatching { InviteCode.parse(state.invitation.trim()).origin }.getOrNull() }
-                if (origin == null) Text(stringResource(R.string.sharing_pair_help))
-                else {
-                    Text(stringResource(R.string.sharing_pair_server, origin), style = MaterialTheme.typography.bodyMedium)
-                    Button(enabled = !state.busy, onClick = {
-                        if (state.joining != null) replacingJoin = true else vm.join()
-                    }) { Text(stringResource(R.string.sharing_pair_connect)) }
-                }
-                TextButton(enabled = !state.busy, onClick = { pasteInvitation = !pasteInvitation }) { Text(stringResource(R.string.sharing_pair_paste)) }
-                if (pasteInvitation) {
-                    SharingField(state.invitation, R.string.sharing_invitation, state.busy, secret = true) { vm.field(SharingField.INVITATION, it) }
-                }
-            }
-            OutlinedButton(enabled = !state.busy, onClick = vm::preparePendingExport) { Text(stringResource(R.string.sharing_export_pending)) }
-            OutlinedButton(enabled = !state.busy, onClick = { frozenFile.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.restore_open)) }
-            if (state.frozenUri != null) SectionCard {
-                Text(stringResource(R.string.restore_title), style = MaterialTheme.typography.titleLarge)
-                val preview = state.frozenCopy
-                if (preview == null) {
-                    Text(stringResource(R.string.restore_key_help))
-                    SharingField(state.recoveryKey, R.string.sharing_recovery_key, state.busy, secret = true) { vm.field(SharingField.RECOVERY, it) }
-                    OutlinedButton(enabled = !state.busy && state.recoveryKey.isNotBlank(), onClick = { frozenKit.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.restore_open_kit)) }
-                } else {
-                    Text(preview.name.ifBlank { stringResource(R.string.household_fallback_name) })
-                    Text(androidx.compose.ui.res.pluralStringResource(R.plurals.restore_items, preview.items, preview.items))
-                    Text(androidx.compose.ui.res.pluralStringResource(R.plurals.restore_purchases, preview.purchases, preview.purchases))
-                    Text(stringResource(R.string.restore_copy_help))
-                    if (preview.older) Text(stringResource(R.string.restore_older), color = MaterialTheme.colorScheme.error)
-                    if (preview.ancestryUnverifiable) Text(stringResource(R.string.restore_ancestry), color = MaterialTheme.colorScheme.error)
-                    Button(enabled = !state.busy, onClick = { vm.saveFrozenCopy(copyName(context, preview.name, state.lists)) }) { Text(stringResource(R.string.restore_save)) }
-                }
-                TextButton(enabled = !state.busy, onClick = vm::closeFrozen) { Text(stringResource(R.string.sharing_cancel)) }
-            }
-            if (state.problem == SharingProblem.LOCKED_KEYS) OutlinedButton(enabled = !state.busy, onClick = { resetting = true }) { Text(stringResource(R.string.sharing_reset_keys)) }
             if (state.bootstrapPending) OutlinedButton(enabled = !state.busy, onClick = vm::resumeBootstrap) { Text(stringResource(R.string.sharing_retry_creation)) }
-            state.households.forEach { household -> SectionCard {
-                Text(stringResource(R.string.sharing_household, household.id.takeLast(6)), style = MaterialTheme.typography.titleLarge)
-                Text(household.origin, style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(if (household.role == "owner") R.string.sharing_owner else R.string.sharing_editor))
-                if (household.removed) Text(stringResource(R.string.sharing_access))
-                TextButton(enabled = !state.busy, onClick = { memberHousehold = household.id }) { Text(stringResource(R.string.sharing_members)) }
-                if (household.role == "owner" && !household.removed) {
-                    TextButton(enabled = !state.busy, onClick = {
-                        sharing = household.id
-                        history = state.shareAttempts.firstOrNull { it.household == household.id && it.source == state.sharingSource }?.includeHistory ?: false
-                    }) { Text(stringResource(R.string.sharing_share_list)) }
-                    TextButton(enabled = !state.busy, onClick = { vm.rotate(household.id) }) { Text(stringResource(R.string.sharing_rotate)) }
-                    TextButton(enabled = !state.busy, onClick = { finishTransfer.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.sharing_finish_transfer)) }
-                    state.lists.filter { it.shared && it.household == household.id && it.id !in household.lists }.forEach { list ->
-                        TextButton(enabled = !state.busy, onClick = { vm.retryShare(household.id, list.id) }) { Text(stringResource(R.string.sharing_retry_list, list.name)) }
+            when (stage) {
+                SharingStage.START -> {
+                    Text(stringResource(R.string.sharing_intro), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SectionCard {
+                        Text(stringResource(R.string.sharing_start_title), style = MaterialTheme.typography.titleLarge)
+                        val saved = state.connection
+                        if (saved == null) {
+                            Text(stringResource(R.string.sharing_start_help))
+                            ServerAddress(state, vm, R.string.sharing_continue, vm::startSharing) { scanning = true }
+                        } else {
+                            Text(stringResource(R.string.sharing_start_connected, saved.info.name))
+                            Button(enabled = !state.busy, onClick = vm::startSharing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sharing_start_title)) }
+                        }
                     }
-                    TextButton(enabled = !state.busy, onClick = { showInviteQr = false; vm.invite(household.id) }) { Text(stringResource(R.string.sharing_invite)) }
-                    TextButton(enabled = !state.busy, onClick = { vm.prepareReplacement(household.id) }) { Text(stringResource(R.string.sharing_replace_kit)) }
-                    TextButton(enabled = !state.busy, onClick = { vm.pending(household.id) }) { Text(stringResource(R.string.sharing_review_requests)) }
+                    JoinCard(state, vm) { scanning = true }
+                    ServerCard(state, vm)
+                    Text(stringResource(R.string.settings_offline), style = MaterialTheme.typography.bodySmall)
                 }
-                if (household.pending) TextButton(enabled = !state.busy, onClick = { vm.discardInvalid(household.id) }) { Text(stringResource(R.string.sharing_discard_invalid)) }
-                if (household.pending) TextButton(enabled = !state.busy, onClick = { vm.resume(household.id) }) { Text(stringResource(R.string.sharing_resume)) }
-            } }
-                state.lists.filter { it.shared && it.accessRemoved }.forEach { list ->
-                    Text(stringResource(R.string.sharing_unavailable_list, list.name.ifBlank { context.getString(R.string.household_fallback_name) }))
-                    Text(stringResource(R.string.sharing_retained_help), style = MaterialTheme.typography.bodySmall)
-                    TextButton(enabled = !state.busy, onClick = {
-                        vm.retain(list.id, copyName(context, list.name, state.lists))
-                    }) { Text(stringResource(R.string.sharing_retain_copy)) }
-                    TextButton(enabled = !state.busy, onClick = { removingCopy = list.id }) { Text(stringResource(R.string.sharing_remove_copy)) }
-                }
-            OutlinedButton(enabled = !state.busy, onClick = { reviewTransfer.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.sharing_review_transfer)) }
-            if (state.kit != null) SectionCard {
-                val kit = requireNotNull(state.kit)
-                Text(stringResource(R.string.sharing_kit_title), style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.sharing_kit_help))
-                if (showKey) {
-                    SelectionContainer { Text(kit.secret, style = MaterialTheme.typography.bodySmall) }
-                    TextButton(onClick = { showKey = false }) { Text(stringResource(R.string.sharing_hide_key)) }
-                    TextButton(onClick = { (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(
-                        android.content.ClipData.newPlainText(context.getString(R.string.sharing_recovery_key), kit.secret).apply {
-                            description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                        }) }) { Text(stringResource(R.string.sharing_copy_key)) }
-                } else TextButton(onClick = { showKey = true }) { Text(stringResource(R.string.sharing_show_key)) }
-                OutlinedButton(enabled = !state.busy, onClick = { save.launch("usuals-recovery.json") }) { Text(stringResource(R.string.sharing_save_kit)) }
-                if (state.saved) {
-                    Text(stringResource(R.string.sharing_verify_help))
-                    SharingField(state.recoveryKey, R.string.sharing_recovery_key, state.busy, secret = true) { vm.field(SharingField.RECOVERY, it) }
-                    OutlinedButton(enabled = !state.busy && state.recoveryKey.isNotBlank(), onClick = { verify.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.sharing_verify_file)) }
-                }
-                Button(enabled = !state.busy && state.verified, onClick = { showKey = false; vm.create() }) { Text(stringResource(if (state.kit is io.theficos.usuals.sync.ReplacementKit) R.string.sharing_replace_kit else R.string.sharing_create)) }
-                TextButton(onClick = { showKey = false; vm.cancelSetup() }) { Text(stringResource(R.string.sharing_cancel)) }
-            } else {
-                SectionCard {
-                    Text(stringResource(R.string.sharing_create_title), style = MaterialTheme.typography.titleLarge)
-                    if (state.connection == null) {
-                        SharingField(state.origin, R.string.sharing_origin, state.busy) { vm.field(SharingField.ORIGIN, it) }
-                        SharingField(state.setupCode, R.string.sharing_setup_code, state.busy, secret = true) { vm.field(SharingField.SETUP, it) }
+                SharingStage.SIGN_IN -> SignInStep(state, vm)
+                SharingStage.PROTECT -> ProtectStep(state, vm) { saveKit.launch("usuals-recovery.json") }
+                SharingStage.JOINING -> SectionCard {
+                    val pending = requireNotNull(state.joining)
+                    Text(stringResource(R.string.sharing_joining_title), style = MaterialTheme.typography.titleLarge)
+                    Text(pending.invitation.origin, style = MaterialTheme.typography.bodySmall)
+                    vm.joinCode(pending)?.let { code ->
+                        Text(stringResource(R.string.sharing_joining_code))
+                        Text(spaced(code), style = MaterialTheme.typography.headlineMedium)
                     }
-                    Button(enabled = !state.busy && state.origin.isNotBlank() && (state.connection != null || state.setupCode.isNotBlank()), onClick = vm::prepare) { Text(stringResource(R.string.sharing_prepare)) }
+                    Text(stringResource(R.string.sharing_pair_waiting), style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(enabled = !state.busy, onClick = vm::retryJoin) { Text(stringResource(R.string.sharing_retry_request)) }
+                    TextButton(enabled = !state.busy, onClick = vm::checkJoin) { Text(stringResource(R.string.sharing_check_approval)) }
                 }
-                SectionCard {
-                    Text(stringResource(R.string.sharing_recover_title), style = MaterialTheme.typography.titleLarge)
-                    Text(stringResource(R.string.sharing_recover_help))
-                    SharingField(state.recoveryKey, R.string.sharing_recovery_key, state.busy, secret = true) { vm.field(SharingField.RECOVERY, it) }
-                    OutlinedButton(enabled = !state.busy && state.recoveryKey.isNotBlank(), onClick = { recover.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.sharing_open_recovery)) }
-                    Text(stringResource(R.string.restore_request_help), style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(enabled = !state.busy && state.recoveryKey.isNotBlank(), onClick = { requestKit.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.restore_request)) }
-                    state.backupFingerprint?.let { fingerprint -> SelectionContainer { Text(stringResource(R.string.restore_fingerprint, fingerprint), style = MaterialTheme.typography.bodySmall) } }
+                SharingStage.READY -> {
+                    state.households.forEach { household -> SectionCard {
+                        Text(stringResource(R.string.sharing_household, household.id.takeLast(6)), style = MaterialTheme.typography.titleLarge)
+                        Text(household.origin, style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(if (household.role == "owner") R.string.sharing_owner else R.string.sharing_editor))
+                        if (household.removed) Text(stringResource(R.string.sharing_access))
+                        if (household.role == "owner" && !household.removed) {
+                            Button(enabled = !state.busy, onClick = { vm.invite(household.id) }) { Text(stringResource(R.string.sharing_invite)) }
+                            state.requests[household.id].orEmpty().forEach { RequestRow(it, state.busy, vm) }
+                            TextButton(enabled = !state.busy, onClick = {
+                                sharing = household.id
+                                history = state.shareAttempts.firstOrNull { it.household == household.id && it.source == state.sharingSource }?.includeHistory ?: false
+                            }) { Text(stringResource(R.string.sharing_share_list)) }
+                            state.lists.filter { it.shared && it.household == household.id && it.id !in household.lists }.forEach { list ->
+                                TextButton(enabled = !state.busy, onClick = { vm.retryShare(household.id, list.id) }) { Text(stringResource(R.string.sharing_retry_list, list.name)) }
+                            }
+                        }
+                        TextButton(enabled = !state.busy, onClick = { memberHousehold = household.id }) { Text(stringResource(R.string.sharing_members)) }
+                        if (household.pending) TextButton(enabled = !state.busy, onClick = { vm.discardInvalid(household.id) }) { Text(stringResource(R.string.sharing_discard_invalid)) }
+                        if (household.pending) TextButton(enabled = !state.busy, onClick = { vm.resume(household.id) }) { Text(stringResource(R.string.sharing_resume)) }
+                    } }
+                    ServerCard(state, vm)
                 }
             }
+            // A link that arrives mid-way (another invite, or one opened while signing in) still gets its Join step.
+            if (stage != SharingStage.START && invitedOrigin(state.invitation) != null) JoinCard(state, vm, onJoin = { if (state.joining != null) replacingJoin = true else vm.join() }) { scanning = true }
+            state.lists.filter { it.shared && it.accessRemoved }.forEach { list ->
+                Text(stringResource(R.string.sharing_unavailable_list, list.name.ifBlank { context.getString(R.string.household_fallback_name) }))
+                Text(stringResource(R.string.sharing_retained_help), style = MaterialTheme.typography.bodySmall)
+                TextButton(enabled = !state.busy, onClick = { vm.retain(list.id, copyName(context, list.name, state.lists)) }) { Text(stringResource(R.string.sharing_retain_copy)) }
+                TextButton(enabled = !state.busy, onClick = { removingCopy = list.id }) { Text(stringResource(R.string.sharing_remove_copy)) }
             }
+            if (stage != SharingStage.JOINING) AdvancedSharing(state, vm, stage) { scanning = true }
             Spacer(Modifier.height(24.dp))
         }
     }
-    state.outgoing?.let { invite -> AlertDialog(onDismissRequest = vm::closeInvitation,
-        title = { Text(stringResource(R.string.sharing_invite)) }, text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-            Text(stringResource(R.string.sharing_invite_help))
-            if (showInviteQr) QrCode(invite.link(), R.string.sharing_qr)
-            else TextButton(onClick = { showInviteQr = true }) { Text(stringResource(R.string.sharing_show_qr)) }
-            TextButton(onClick = { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, invite.link()) }, null)) }) { Text(stringResource(R.string.sharing_share_invite)) }
-        } }, confirmButton = { TextButton(onClick = vm::closeInvitation) { Text(stringResource(R.string.history_dismiss)) } }) }
-    state.reviewing?.let { AlertDialog(onDismissRequest = vm::closeReview,
-        title = { Text(stringResource(R.string.sharing_requests_title)) }, text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-            Text(stringResource(R.string.sharing_requests_help))
-            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            state.problem?.let { Text(sharingProblem(it), color = MaterialTheme.colorScheme.error) }
-            if (state.requests.isEmpty()) Text(stringResource(R.string.sharing_no_requests))
-            state.requests.firstOrNull()?.let { pending ->
-                var compared by remember(pending.requestId) { mutableStateOf(false) }
-                Text(pending.code.orEmpty(), style = MaterialTheme.typography.headlineMedium)
-                Row { Checkbox(compared, { compared = it }); Text(stringResource(R.string.connection_compare)) }
-                Button(enabled = !state.busy && compared && pending.verified != null, onClick = { vm.approve(pending) }) { Text(stringResource(R.string.sharing_approve)) }
-                TextButton(enabled = !state.busy, onClick = { vm.deny(pending) }) { Text(stringResource(R.string.sharing_deny)) }
-            }
-        } }, confirmButton = { TextButton(onClick = vm::closeReview) { Text(stringResource(R.string.history_dismiss)) } }) }
+    state.outgoing?.let { invite -> InviteSheet(invite, state.requests[state.inviting].orEmpty(), state, vm) }
     if (replacingJoin) AlertDialog(onDismissRequest = { replacingJoin = false }, title = { Text(stringResource(R.string.sharing_replace_request_title)) },
         text = { Text(stringResource(R.string.sharing_replace_request_help)) },
         confirmButton = { TextButton(enabled = !state.busy, onClick = { replacingJoin = false; vm.join() }) { Text(stringResource(R.string.sharing_replace_request)) } },
@@ -301,10 +198,6 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         text = { Text(stringResource(R.string.sharing_remove_copy_help)) },
         confirmButton = { TextButton(onClick = { val id = requireNotNull(removingCopy); removingCopy = null; vm.removeCopy(id) }) { Text(stringResource(R.string.sharing_remove_copy)) } },
         dismissButton = { TextButton(onClick = { removingCopy = null }) { Text(stringResource(R.string.sharing_cancel)) } })
-    if (resetting) AlertDialog(onDismissRequest = { resetting = false }, title = { Text(stringResource(R.string.sharing_reset_keys)) },
-        text = { Text(stringResource(R.string.sharing_reset_keys_help)) },
-        confirmButton = { TextButton(onClick = { resetting = false; vm.resetUnavailable() }) { Text(stringResource(R.string.sharing_reset_keys)) } },
-        dismissButton = { TextButton(onClick = { resetting = false }) { Text(stringResource(R.string.sharing_cancel)) } })
     sharing?.let { household -> AlertDialog(onDismissRequest = { sharing = null; vm.rememberShareSource(null) }, title = { Text(stringResource(R.string.sharing_share_list)) },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.sharing_preview))
@@ -340,36 +233,67 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         text = { Text(stringResource(R.string.sharing_remove_help, state.fingerprints[household]?.get(device).orEmpty().chunked(8).joinToString(" "))) },
         confirmButton = { TextButton(onClick = { confirmRemoval = null; vm.remove(household, device) }) { Text(stringResource(R.string.sharing_remove_device)) } },
         dismissButton = { TextButton(onClick = { confirmRemoval = null }) { Text(stringResource(R.string.sharing_cancel)) } }) }
-    if (state.transferReview != null) AlertDialog(onDismissRequest = vm::closeTransfer, title = { Text(stringResource(R.string.sharing_transfer)) },
-        text = { Column { Text(stringResource(R.string.sharing_accept_help)); state.problem?.let { Text(sharingProblem(it), color = MaterialTheme.colorScheme.error) } } },
-        confirmButton = { TextButton(enabled = !state.busy, onClick = vm::acceptTransfer) { Text(stringResource(R.string.sharing_accept_transfer)) } },
-        dismissButton = { TextButton(onClick = vm::closeTransfer) { Text(stringResource(R.string.sharing_cancel)) } })
-    if (state.transferFile != null) AlertDialog(onDismissRequest = vm::closeTransfer, title = { Text(stringResource(R.string.sharing_transfer)) },
-        text = { Text(stringResource(R.string.sharing_transfer_file_help)) },
-        confirmButton = { TextButton(onClick = { saveTransfer.launch("usuals-transfer.json") }) { Text(stringResource(R.string.sharing_save_transfer)) } },
-        dismissButton = { TextButton(onClick = vm::closeTransfer) { Text(stringResource(R.string.history_dismiss)) } })
-    scanning?.let { QrCameraDialog(joining = true, serverOnly = connectionOnly, onDismiss = { scanning = null }, onCode = { code ->
-        scanning = null
-        vm.scanned(code, serverOnly = connectionOnly)
-    }) }
+    if (scanning) QrCameraDialog(onDismiss = { scanning = false }, onCode = { code -> scanning = false; vm.scanned(code) })
 }
-private enum class SharingScan { JOIN }
-@Composable private fun SharingField(value: String, label: Int, busy: Boolean, secret: Boolean = false, change: (String) -> Unit) {
+
+/** Scan or paste an invite; once it parses, one Join tap sends the request. */
+@Composable
+internal fun JoinCard(state: SharingState, vm: SharingViewModel, onJoin: () -> Unit = vm::join, onScan: () -> Unit) {
+    var paste by rememberSaveable { mutableStateOf(false) }
+    SectionCard {
+        Text(stringResource(R.string.sharing_join_title), style = MaterialTheme.typography.titleLarge)
+        val origin = remember(state.invitation) { invitedOrigin(state.invitation) }
+        if (origin == null) {
+            Text(stringResource(R.string.sharing_join_help))
+            OutlinedButton(enabled = !state.busy, onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sharing_scan_invite)) }
+            TextButton(enabled = !state.busy, onClick = { paste = !paste }) { Text(stringResource(R.string.sharing_paste_invite)) }
+            if (paste) SharingField(state.invitation, R.string.sharing_invitation, state.busy, secret = true) { vm.field(SharingField.INVITATION, it) }
+        } else {
+            Text(stringResource(R.string.sharing_join_server, origin))
+            Button(enabled = !state.busy, onClick = onJoin, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sharing_join)) }
+            TextButton(enabled = !state.busy, onClick = { vm.field(SharingField.INVITATION, "") }) { Text(stringResource(R.string.sharing_cancel)) }
+        }
+    }
+}
+
+internal fun invitedOrigin(text: String): String? = runCatching { InviteCode.parse(text.trim()).origin }.getOrNull()
+
+/** The recovery file is saved and read back automatically; the key is copied and confirmed by the person. */
+@Composable
+private fun ProtectStep(state: SharingState, vm: SharingViewModel, onSave: () -> Unit) {
+    val context = LocalContext.current
+    val kit = requireNotNull(state.kit)
+    var stored by remember(kit) { mutableStateOf(false) }
+    SectionCard {
+        Text(stringResource(R.string.sharing_kit_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.sharing_kit_help))
+        if (state.verified) Text(stringResource(R.string.sharing_kit_verified), color = MaterialTheme.colorScheme.primary)
+        else Button(enabled = !state.busy, onClick = onSave, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sharing_save_kit)) }
+        Text(stringResource(R.string.sharing_recovery_key), style = MaterialTheme.typography.labelLarge)
+        SelectionContainer { Text(kit.secret, style = MaterialTheme.typography.bodyLarge) }
+        TextButton(onClick = { (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(
+            android.content.ClipData.newPlainText(context.getString(R.string.sharing_recovery_key), kit.secret).apply {
+                description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+            }) }) { Text(stringResource(R.string.sharing_copy_key)) }
+        Row { Checkbox(stored, { stored = it }); Text(stringResource(R.string.sharing_kit_stored)) }
+        Button(enabled = !state.busy && state.verified && stored, onClick = vm::create, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(if (kit is ReplacementKit) R.string.sharing_replace_kit else R.string.sharing_create))
+        }
+        TextButton(onClick = vm::cancelSetup) { Text(stringResource(R.string.sharing_cancel)) }
+    }
+}
+
+@Composable internal fun SharingField(value: String, label: Int, busy: Boolean, secret: Boolean = false, change: (String) -> Unit) {
     OutlinedTextField(value, change, Modifier.fillMaxWidth(), enabled = !busy, singleLine = true, label = { Text(stringResource(label)) },
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
             keyboardType = if (secret) androidx.compose.ui.text.input.KeyboardType.Password else if (label == R.string.sharing_origin) androidx.compose.ui.text.input.KeyboardType.Uri else androidx.compose.ui.text.input.KeyboardType.Ascii,
             autoCorrectEnabled = false),
         visualTransformation = if (secret) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None)
 }
-@Composable private fun QrCode(value: String, label: Int) {
-    val bitmap = remember(value) {
-        val matrix = QRCodeWriter().encode(value, BarcodeFormat.QR_CODE, 600, 600, mapOf(EncodeHintType.MARGIN to 3))
-        Bitmap.createBitmap(600, 600, Bitmap.Config.ARGB_8888).apply { setPixels(IntArray(600 * 600) { if (matrix[it % 600, it / 600]) android.graphics.Color.BLACK else android.graphics.Color.WHITE }, 0, 600, 0, 0, 600, 600) }
-    }
-    Image(bitmap.asImageBitmap(), stringResource(label), Modifier.fillMaxWidth().heightIn(max = 300.dp).padding(vertical = 12.dp))
-}
-@Composable private fun sharingProblem(problem: SharingProblem) = stringResource(when (problem) {
+@Composable internal fun sharingProblem(problem: SharingProblem) = stringResource(when (problem) {
     SharingProblem.NOT_USUALS -> R.string.sharing_not_usuals
+    SharingProblem.WRONG_SERVER -> R.string.sharing_wrong_server
+    SharingProblem.OTHER_DEVICE -> R.string.sharing_other_device
     SharingProblem.FILE -> R.string.sharing_file_problem
     SharingProblem.FROZEN_KEY -> R.string.restore_key_help
     SharingProblem.ALREADY_JOINED -> R.string.sharing_already_joined
@@ -402,11 +326,3 @@ private enum class SharingScan { JOIN }
     SharingMessage.REPLACED -> R.string.sharing_replaced
     SharingMessage.RECOVERED -> R.string.sharing_recovered
 })
-
-private fun copyName(context: android.content.Context, base: String, lists: List<SharingList>): String {
-    var number = 1
-    while (true) {
-        val name = context.getString(R.string.sharing_local_copy_name, number++, base.ifBlank { context.getString(R.string.household_fallback_name) }).take(100)
-        if (lists.none { it.name == name }) return name
-    }
-}
