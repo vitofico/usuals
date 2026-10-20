@@ -1013,6 +1013,56 @@
           }
         ]
       }
+    },
+    "/v1/invites/{i}/open": {
+      "post": {
+        "operationId": "openInvite",
+        "description": "Pairing v2. Returns the descriptor of an unexpired, unconsumed v2 invite whose admission secret matches; every other case is the same 404.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "i",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteOpen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenedInvite"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1464,7 +1514,8 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]+$",
             "minLength": 43,
-            "maxLength": 43
+            "maxLength": 43,
+            "description": "Pairing v1 only. A v2 invite has no relay-chosen secret."
           },
           "expiresAt": {
             "type": "integer",
@@ -1474,7 +1525,6 @@
         },
         "required": [
           "inviteId",
-          "secret",
           "expiresAt"
         ]
       },
@@ -1492,6 +1542,19 @@
               "editor",
               "owner"
             ]
+          },
+          "secretHash": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43,
+            "description": "Pairing v2: SHA-256 of the link-derived admission secret. Requires descriptor."
+          },
+          "descriptor": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "maxLength": 2732,
+            "description": "Pairing v2: exact descriptor JSON bytes that the invite link anchors, at most 2048 bytes."
           }
         },
         "required": [
@@ -1519,6 +1582,13 @@
             "pattern": "^[A-Za-z0-9_-]+$",
             "minLength": 86,
             "maxLength": 86
+          },
+          "mac": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43,
+            "description": "Pairing v2: HMAC of the exact assertion under the link-only MAC key. Required for v2 invites."
           }
         },
         "required": [
@@ -1689,6 +1759,13 @@
             "pattern": "^[A-Za-z0-9_-]+$",
             "minLength": 86,
             "maxLength": 86
+          },
+          "mac": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43,
+            "description": "Pairing v2 MAC, returned verbatim for the owner to verify."
           }
         },
         "required": [
@@ -1809,6 +1886,41 @@
         "required": [
           "manifestBytes",
           "signature"
+        ]
+      },
+      "InviteOpen": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "secret": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          }
+        },
+        "required": [
+          "secret"
+        ]
+      },
+      "OpenedInvite": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "descriptor": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "maxLength": 2732
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "descriptor",
+          "expiresAt"
         ]
       }
     }

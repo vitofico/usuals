@@ -137,9 +137,12 @@ data class Envelope(val header: String, val ciphertext: String, val signature: S
     fun hash() = Wire.hash(signingBytes() + Wire.decode(signature, 64))
 }
 @Serializable data class CreateHousehold(val manifest: SignedManifest, val bootstrapProof: Proof)
-@Serializable data class InviteRequest(val memberId: String, val role: String)
-@Serializable data class Invite(val inviteId: String, val secret: String, val expiresAt: Long) { override fun toString() = "Invite([redacted])" }
-@Serializable data class JoinRequest(val secret: String, val assertion: String, val signature: String) { override fun toString() = "JoinRequest([redacted])" }
+/** Pairing v2 sends the hash of the link-derived admission secret and the exact descriptor bytes; v1 lets the relay choose a secret. */
+@Serializable data class InviteRequest(val memberId: String, val role: String, val secretHash: String? = null, val descriptor: String? = null)
+@Serializable data class Invite(val inviteId: String, val secret: String? = null, val expiresAt: Long) { override fun toString() = "Invite([redacted])" }
+@Serializable data class InviteOpen(val secret: String) { override fun toString() = "InviteOpen([redacted])" }
+@Serializable data class OpenedInvite(val descriptor: String, val expiresAt: Long)
+@Serializable data class JoinRequest(val secret: String, val assertion: String, val signature: String, val mac: String? = null) { override fun toString() = "JoinRequest([redacted])" }
 @Serializable data class JoinPending(val requestId: String, val expiresAt: Long)
 
 @Serializable data class Snapshot(val envelope: Envelope, val seq: Long, val head: String)
@@ -149,7 +152,7 @@ data class Envelope(val header: String, val ciphertext: String, val signature: S
 @Serializable data class Membership(val manifests: List<ManifestProof>, val nextEpoch: Long)
 @Serializable data class Lists(val listIds: List<String>)
 @Serializable data class KeyPackages(val packages: List<KeyPackage>)
-@Serializable data class PendingJoin(val requestId: String, val assertion: String, val signature: String)
+@Serializable data class PendingJoin(val requestId: String, val assertion: String, val signature: String, val mac: String? = null)
 @Serializable data class PendingRequests(val requests: List<PendingJoin>)
 
 /** Detect duplicate decoded keys before kotlinx.serialization can collapse them. */

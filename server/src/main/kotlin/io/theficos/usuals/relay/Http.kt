@@ -225,6 +225,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         }
         post("/v1/households") { run(bulk = true) { call.json(relay.create(call.bearer(), call.body(8 * 1024 * 1024)).response(), HttpStatusCode.Created) } }
         post("/v1/households/{h}/invites") { run { call.json(service.invite(call.bearer(), call.routeId("h"), call.body())) } }
+        post("/v1/invites/{i}/open") { run { call.privateResponse(); call.json(service.open(call.routeId("i"), call.body(1024), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
         post("/v1/join-requests") { run { call.json(service.join(call.body(), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty())), HttpStatusCode.Accepted) } }
         get("/v1/households/{h}/join-requests") { run { call.json(service.pending(call.bearer(), call.routeId("h"))) } }
         post("/v1/households/{h}/join-requests/{r}/deny") { run { service.deny(call.bearer(), call.routeId("h"), call.routeId("r")); call.respond(HttpStatusCode.OK) } }

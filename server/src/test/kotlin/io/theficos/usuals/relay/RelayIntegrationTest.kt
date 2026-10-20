@@ -54,7 +54,7 @@ class RelayIntegrationTest {
         val file = directory.resolve("fence"); val original = uuid()
         java.nio.file.Files.writeString(file, original)
         try {
-            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (6,'future')") }
+            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (7,'future')") }
             assertThat(assertThrows(IllegalStateException::class.java) { db.checkSchema() }.message).isEqualTo("migration_mismatch")
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.readString(file)).isEqualTo(original)
@@ -297,6 +297,54 @@ class RelayIntegrationTest {
         denied("forbidden") { f.session(f.recovery, "recovery") }
         assertThat(f.session(replacement, "recovery")).isNotEmpty()
     }
+    private fun descriptor(member: String, role: String = "editor", household: String = f.household) = Wire.json.encodeToString(InviteDescriptor.serializer(),
+        InviteDescriptor(origin = f.origin, serverId = identity.serverId, householdId = household, genesisHash = f.current.hash(),
+            ownerDeviceId = f.owner.keys.id, ownerFingerprint = Wire.fingerprint(identity.serverId, household, f.owner.keys.signingPublicKey, f.owner.keys.recipientPublicKey),
+            memberId = member, role = role)).toByteArray()
+    private fun inviteV2(member: String, key: InviteKey, bytes: ByteArray = descriptor(member)) =
+        f.membership.invite(f.token, f.household, InviteRequest(member, "editor", Wire.hash(key.admit()), Wire.encode(bytes)))
+    @Test fun pairingV2InviteOpensOnlyWithItsSecretForADay() {
+        val member = uuid(); val key = InviteKey.random(); val bytes = descriptor(member)
+        val invite = inviteV2(member, key, bytes)
+        assertThat(invite.secret).isNull()
+        assertThat(invite.expiresAt).isEqualTo(now + 86_400_000)
+        val opened = f.membership.open(invite.inviteId, InviteOpen(Wire.encode(key.admit())), "open-1")
+        assertThat(Wire.decode(opened.descriptor).toList()).isEqualTo(bytes.toList())
+        assertThat(opened.expiresAt).isEqualTo(invite.expiresAt)
+        denied("not_found") { f.membership.open(invite.inviteId, InviteOpen(Wire.encode(InviteKey.random().admit())), "open-2") }
+        denied("not_found") { f.membership.open(uuid(), InviteOpen(Wire.encode(key.admit())), "open-3") }
+        val legacy = f.membership.invite(f.token, f.household, InviteRequest(uuid(), "editor"))
+        denied("not_found") { f.membership.open(legacy.inviteId, InviteOpen(requireNotNull(legacy.secret)), "open-4") }
+        assertThat(legacy.expiresAt).isEqualTo(now + 600_000)
+        now += 86_400_001
+        denied("not_found") { f.membership.open(invite.inviteId, InviteOpen(Wire.encode(key.admit())), "open-5") }
+    }
+    @Test fun pairingV2DescriptorMustDescribeThisInvite() {
+        val member = uuid(); val key = InviteKey.random()
+        for (bytes in listOf(descriptor(uuid()), descriptor(member, role = "owner"), descriptor(member, household = uuid()), "not json".toByteArray(), ByteArray(2049) { 32 }))
+            denied("invalid") { inviteV2(member, key, bytes) }
+        denied("invalid") { f.membership.invite(f.token, f.household, InviteRequest(member, "editor", Wire.hash(key.admit()))) }
+    }
+    @Test fun pairingV2JoinRequiresAMacThatPendingReturnsVerbatim() {
+        val member = uuid(); val key = InviteKey.random(); val invite = inviteV2(member, key)
+        val secret = Wire.encode(key.admit())
+        denied("invalid") { f.requestJoin(invite, TestDevice(), member, secret) }
+        val mac = Wire.encode(ByteArray(32) { 7 })
+        f.requestJoin(invite, TestDevice(), member, secret, mac)
+        assertThat(f.membership.pending(f.token, f.household).requests.single().mac).isEqualTo(mac)
+        f.membership.deny(f.token, f.household, f.membership.pending(f.token, f.household).requests.single().requestId)
+        denied("not_found") { f.membership.open(invite.inviteId, InviteOpen(secret), "open-6") }
+    }
+    @Test fun inviteOpenRouteAndJoinPageAreServed() = testApplication {
+        val member = uuid(); val key = InviteKey.random(); val invite = inviteV2(member, key)
+        application { relayModule(f.relay) }
+        val opened = client.post("/v1/invites/${invite.inviteId}/open") { contentType(ContentType.Application.Json); setBody(Wire.json.encodeToString(InviteOpen.serializer(), InviteOpen(Wire.encode(key.admit())))) }
+        assertThat(opened.status.value).isEqualTo(200)
+        assertThat(opened.headers["Cache-Control"]).contains("no-store")
+        val wrong = client.post("/v1/invites/${invite.inviteId}/open") { contentType(ContentType.Application.Json); setBody(Wire.json.encodeToString(InviteOpen.serializer(), InviteOpen(Wire.encode(ByteArray(32))))) }
+        assertThat(wrong.status.value).isEqualTo(404)
+        assertThat(client.get("/join").headers["Content-Type"]).contains("text/html")
+    }
     @Test fun denyingOneApplicantInvalidatesAllRequestsForTheConsumedInvitation() {
         val member = uuid(); val invite = f.membership.invite(f.token, f.household, InviteRequest(member, "editor"))
         val first = f.requestJoin(invite, TestDevice(), member)
@@ -356,7 +404,7 @@ class RelayIntegrationTest {
         application { relayModule(f.relay) }
         val list = f.createList()
         val api = Wire.json.parseToJsonElement(java.io.File(System.getProperty("usuals.root"), "docs/sync/openapi.json").readText()).jsonObject
-        val public = setOf("/healthz", "/readyz", "/v1/server-info", "/v1/devices/challenge", "/v1/devices/session", "/v1/join-requests")
+        val public = setOf("/healthz", "/readyz", "/v1/server-info", "/v1/devices/challenge", "/v1/devices/session", "/v1/join-requests", "/v1/invites/{i}/open")
         for ((path, methods) in api.getValue("paths").jsonObject) {
             if (path in public || path == "/v1/changes") continue
             val resolved = path.replace("{h}", f.household).replace("{l}", list).replace("{r}", uuid()).replace("{i}", uuid()).replace("{c}", uuid())

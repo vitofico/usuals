@@ -126,7 +126,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         InvitationLink(origin = saved.origin, serverId = saved.server.serverId, householdId = household, genesisHash = saved.genesisHash,
             ownerDeviceId = saved.device.publicKeys.id, ownerFingerprint = Wire.fingerprint(saved.server.serverId, household,
                 saved.device.publicKeys.signingPublicKey, saved.device.publicKeys.recipientPublicKey), inviteId = invite.inviteId,
-            memberId = member, role = role, secret = invite.secret, expiresAt = invite.expiresAt)
+            memberId = member, role = role, secret = requireNotNull(invite.secret), expiresAt = invite.expiresAt)
     }
     suspend fun requestJoin(uri: String): PendingJoinState = mutex.withLock {
         val invitation = InvitationLink.parse(uri)
