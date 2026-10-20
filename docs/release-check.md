@@ -1184,3 +1184,30 @@ elapsed household pilot remain separate acceptance gates.
   The published Android APK and its immutable tag remain unchanged.
 - Evidence: /private/tmp/usuals-qr-android-final.log,
   /private/tmp/usuals-qr-server-final.log and /private/tmp/usuals-qr-qa/.
+
+## Approved server publication and rollout (2026-10-20)
+
+- Vito explicitly requested pushing and deploying the new version. Published
+  through `9729d7c` to `main` and `feat/smart-list` with normal fast-forwards.
+  No release tag, Android asset or F-Droid request was changed.
+- Runtime source `a16ca3c` reuses its successful full Docker Android/server/web
+  gates and independent source review. The source-bound bundle, uploaded archive,
+  imported platform manifest and running container configuration digests matched.
+- A fresh pre-upgrade base backup passed `pg_verifybackup`, then base/WAL were
+  streamed directly into encryption. Checksum-verified encrypted recovery files
+  are retained at the previously approved operator-backup destination.
+- With relay traffic stopped, the explicit migration Job applied 004, then the
+  guarded image patch rolled out successfully. Identity/fence hashes and existing
+  Authentik/local-account settings are unchanged. PostgreSQL configuration is
+  unchanged and WAL archiving reports zero failures. The former schema003 binary
+  is not a compatible image-only rollback target after this migration.
+- Base checks and the updated overlay render pass. The guarded patch/migration
+  and final overlay pass server-side dry-run. Live TLS/readiness, ten exact source
+  assets, security/no-store headers, both auth providers, closed anonymous APIs,
+  private metrics and the empty browser model-origin allowlist pass.
+- Desktop and 16 KB emulator Chrome display the updated app. Authentik reaches
+  its normal owner login form. Authenticated production flows require owner
+  sign-in; disposable local household/QR/import test evidence remains applicable.
+  No phone or owner credentials were used.
+- See the [deployment record](../deploy/theficos/README.md) for source/image,
+  backup and recovery details. Private evidence: `/private/tmp/usuals-upgrade-20261020/`.

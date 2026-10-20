@@ -2,9 +2,67 @@
 
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
-The Android/server/web image source is the published Usuals root `9c3bd57`.
-This overlay records the live configuration; it contains no credentials.
-No application source was changed for deployment.
+This overlay records the live configuration; it contains no credentials. The
+current server/web image is built from `a16ca3c`, deployed with Vito's explicit
+approval on 2026-10-20. The initial deployment used source `9c3bd57`.
+No application source was changed for either deployment.
+
+## 2026-10-20 upgrade
+
+Published source commits through `9729d7c` to `main` and `feat/smart-list` using
+normal fast-forwards. Runtime source is `a16ca3c9be200a69cff49f1b3010257aa18d9a22`;
+the following F-Droid commit changes only documentation, metadata and its tests.
+The new relay image and amd64 platform manifest are:
+
+`usuals-relay:sha256-f09e84003cdaa689bea6928a090231ba6d722b8405c64284976358bf1a44748e`.
+
+The source-bound bundle at `/private/tmp/usuals-import-deploy-a16ca3c` passed
+integrity verification. Its archive SHA256 was checked again on the node before
+import through the group-authorized containerd socket. The actual runtime
+manifest digest matched, and the image patch/migration Job passed API dry-run.
+Only the existing relay image and source annotation changed. Live comparison
+confirmed its Authentik, local accounts, resources, secret mounts and storage
+configuration were preserved. The generic candidate manifests were not applied.
+
+With the relay stopped, `usuals-preupgrade-20261020` created a fresh base backup.
+Both the job and an independent `pg_verifybackup` succeeded. Base backups and WAL
+were streamed directly into SOPS encryption with the existing age recipient.
+The checksum-verified encrypted archive, existing identity escrow and service
+credentials are retained in the previously approved private destination
+`/Users/vito/personal-repos/usuals-operator-backups/20261020/`. No plaintext was
+transferred or decrypted. This does not complete the separate restore drill or
+configure recurring off-cluster backups.
+
+Explicit job `usuals-migrate-a16ca3c` applied migration 004 before rollout. The
+relay is ready, and identity/fence file hashes are unchanged. This migration adds
+web household ownership. The old `9c3bd57` binary rejects a four-entry migration
+ledger, so it is not an application-only rollback target after this upgrade.
+Use a tested four-migration-compatible image for forward recovery; database
+restoration requires the runbook's fencing and reconciliation procedure.
+
+The live version includes web-first household creation without an invitation,
+phone QR pairing and Markdown/photo import. Browser image-model origins remain
+empty; enabling a suitable provider still requires intentional configuration.
+Photos are read directly by the configured provider after explicit verification
+and consent, never through the relay.
+
+Validation reused the unchanged runtime's completed Docker build/test gates:
+904 Android cases, zero failures/errors, five intentional live skips; 22 release
+safety checks; Android lint; 140 server/core JVM and 139 Node tests; native/browser
+crypto interoperability; emulator import scenarios and independent source review.
+Fresh deployment checks passed TLS/readiness, ten byte-identical packaged source
+assets, no-store/security headers, both auth providers, closed anonymous account
+and household APIs, private metrics, and an empty model-origin allowlist.
+Desktop and 16 KB emulator Chrome render the deployed sign-in page. Authentik
+reaches its normal owner login form. Authenticated creation, QR and import flows
+passed against disposable local fixtures; an authenticated production pass still
+requires the owner's normal sign-in. No owner credentials or phone were used.
+The published Android APK and paused F-Droid MR are unchanged.
+
+Private evidence is in `/private/tmp/usuals-upgrade-20261020/` and
+`~/usuals/deployments/20261020-a16ca3c/` on the node. The original integrity-bound
+bundle retains its preparation-time `deploymentApproved: false`; this record
+documents the subsequent explicit approval and successful deployment.
 
 ## Observed infrastructure and configuration
 
@@ -41,7 +99,7 @@ No application source was changed for deployment.
   codes, using Traefik's [documented router annotation](https://doc.traefik.io/traefik/reference/routing-configuration/kubernetes/ingress/).
   General internet egress and public metrics remain denied.
 
-## Immutable artifacts and operator state
+## Initial deployment artifacts and operator state
 
 Relay platform manifest:
 `sha256:ae12c393fe7fe1f26017aac8c8b28d587dd17d7fd476e5345c27e73f9b9deae6`.

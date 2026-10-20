@@ -7,7 +7,7 @@ resources:
   - oidc-network-policy.yaml
 images:
   - name: usuals-relay
-    newTag: sha256-ae12c393fe7fe1f26017aac8c8b28d587dd17d7fd476e5345c27e73f9b9deae6
+    newTag: sha256-f09e84003cdaa689bea6928a090231ba6d722b8405c64284976358bf1a44748e
   - name: postgres
     newName: usuals-postgres
     newTag: sha256-1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
