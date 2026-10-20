@@ -46,7 +46,7 @@ License Agreement](CLA.md) by posting a new comment on the PR containing
 **exactly**:
 
 ```
-I have read the Usuals Contributor License Agreement and I hereby sign the CLA
+I have read version 2.0 of the Usuals Contributor License Agreement and I hereby sign the CLA
 ```
 
 The maintainer reviews PR comments before merge and will not merge until every
@@ -55,11 +55,11 @@ author copyrightable changes (`dependabot[bot]`, `github-actions[bot]`,
 `renovate[bot]`) are implicitly exempt.
 
 The CLA does **not** change the outbound license of Usuals. The app remains
-Apache-2.0 unless a specific file, subtree or future release states otherwise.
-What it does is preserve the option to license accepted contributions under
-AGPL-3.0-or-later for parts of the project that turn out to need it, notably a
-future sync relay, without re-collecting permission from every past contributor.
-See [`CLA.md`](CLA.md) section 4.
+Apache-2.0, and any future sync relay or other server component will be
+published under AGPL-3.0-only. What the CLA does is let the maintainer also
+license accepted contributions under other terms, including proprietary ones for
+a hosted Usuals service, without re-collecting permission from every past
+contributor. See [`CLA.md`](CLA.md) section 4.
 
 ## License
 
