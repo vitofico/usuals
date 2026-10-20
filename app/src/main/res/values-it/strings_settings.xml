@@ -41,7 +41,7 @@
     <string name="settings_privacy_edges_title">Cosa esce dal telefono</string>
     <string name="settings_privacy_edge_voice">La voce usa il riconoscimento sul dispositivo quando disponibile. Altrimenti il servizio vocale Android selezionato può inviare l’audio fuori dal telefono. La tastiera funziona senza connessione.</string>
     <string name="settings_privacy_edge_recipe">Leggere un link di ricetta invia l’URL al sito dal telefono. Il testo va a un modello solo quando tocchi Leggi con il mio modello.</string>
-    <string name="settings_privacy_edge_cloud">Un modello remoto riceve il testo della ricetta che invii. Controlla l’endpoint configurato.</string>
+    <string name="settings_privacy_edge_cloud">L’IA del server riceve solo testo o foto che invii esplicitamente. L’IA diretta in Avanzate usa il fornitore configurato.</string>
     <string name="settings_privacy_local_path">Per un modello nella tua rete, usa un endpoint compatibile con OpenAI del tuo ambiente di esecuzione.</string>
     <string name="settings_privacy_local_now">Questo endpoint è contrassegnato come locale. Il testo delle ricette inviato va lì; la sua privacy dipende da come viene gestito.</string>
     <string name="settings_privacy_cloud_now">Il fornitore impostato è %1$s ed è contrassegnato come remoto. Il testo delle ricette inviato va a quell’endpoint.</string>

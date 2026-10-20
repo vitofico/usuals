@@ -38,7 +38,7 @@ import java.io.ByteArrayOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier = Modifier, invitation: String? = null, onInvitationConsumed: () -> Unit = {},
-    sourceList: String? = null, onSourceConsumed: () -> Unit = {}) {
+    sourceList: String? = null, onSourceConsumed: () -> Unit = {}, connectionOnly: Boolean = false) {
     val state by vm.state.collectAsState()
     val context = LocalContext.current
     DisposableEffect(context) {
@@ -70,7 +70,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
     }
     val shareOwners = state.households.filter { it.role == "owner" && !it.removed }
     LaunchedEffect(state.sharingSource, state.busy, state.kit, shareOwners.map { it.id }) {
-        if (!state.busy && state.sharingSource != null && state.kit == null && shareOwners.size == 1) {
+        if (!connectionOnly && !state.busy && state.sharingSource != null && state.kit == null && shareOwners.size == 1) {
             sharing = shareOwners.single().id
             history = state.shareAttempts.firstOrNull { it.household == sharing && it.source == state.sharingSource }?.includeHistory ?: false
         }
@@ -82,7 +82,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
             do { delay(5000); vm.checkJoin() } while (isActive && System.currentTimeMillis() < expiresAt)
         }
     }
-    LaunchedEffect(invitation) { if (invitation != null) { vm.state.first { !it.busy }; if (vm.scanInvitation(invitation)) onInvitationConsumed() } }
+    LaunchedEffect(invitation) { if (invitation != null) { vm.state.first { !it.busy }; if (if (connectionOnly) vm.scanServer(invitation) else vm.scanInvitation(invitation)) onInvitationConsumed() } }
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.usuals.recovery+json")) { uri ->
         if (uri != null) state.kit?.let { kit -> scope.launch(Dispatchers.IO) {
             runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(kit.file) } ?: error("unavailable") }
@@ -130,7 +130,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
     val finishTransfer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::completeTransfer) }
     val recover = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { read(it, vm::recover) }
     Scaffold(modifier = modifier, containerColor = MaterialTheme.colorScheme.background, topBar = {
-        TopAppBar(title = { Text(stringResource(R.string.sharing_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
+        TopAppBar(title = { Text(stringResource(if (connectionOnly) R.string.settings_server else R.string.sharing_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.settings_back)) }
         })
     }, bottomBar = {
@@ -143,7 +143,8 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         }
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            ConnectionPanel(state, vm) { scanning = SharingScan.JOIN }
+            ConnectionPanel(state, vm, showHouseholdSetup = !connectionOnly) { scanning = SharingScan.JOIN }
+            if (!connectionOnly) {
             state.lists.firstOrNull { it.id == state.sharingSource }?.let { source ->
                 Text(stringResource(R.string.connection_share_source, source.name.ifBlank { context.getString(R.string.household_fallback_name) }))
                 TextButton(enabled = !state.busy, onClick = { vm.rememberShareSource(null) }) { Text(stringResource(R.string.sharing_cancel)) }
@@ -271,6 +272,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
                     state.backupFingerprint?.let { fingerprint -> SelectionContainer { Text(stringResource(R.string.restore_fingerprint, fingerprint), style = MaterialTheme.typography.bodySmall) } }
                 }
             }
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -352,9 +354,9 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
         text = { Text(stringResource(R.string.sharing_transfer_file_help)) },
         confirmButton = { TextButton(onClick = { saveTransfer.launch("usuals-transfer.json") }) { Text(stringResource(R.string.sharing_save_transfer)) } },
         dismissButton = { TextButton(onClick = vm::closeTransfer) { Text(stringResource(R.string.history_dismiss)) } })
-    scanning?.let { mode -> QrCameraDialog(joining = mode == SharingScan.JOIN, onDismiss = { scanning = null }, onCode = { code ->
+    scanning?.let { mode -> QrCameraDialog(joining = mode == SharingScan.JOIN, serverOnly = connectionOnly, onDismiss = { scanning = null }, onCode = { code ->
         scanning = null
-        if (mode == SharingScan.JOIN) vm.scanInvitation(code)
+        if (mode == SharingScan.JOIN) { if (connectionOnly) vm.scanServer(code) else vm.scanInvitation(code) }
         else state.requests.firstOrNull()?.let { vm.approveQr(it, code) }
     }) }
 }

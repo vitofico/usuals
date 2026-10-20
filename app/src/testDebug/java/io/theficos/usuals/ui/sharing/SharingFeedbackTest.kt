@@ -8,6 +8,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.performScrollTo
 import com.google.common.truth.Truth.assertThat
 import androidx.compose.ui.unit.dp
@@ -46,7 +49,7 @@ class SharingFeedbackTest {
     @Test fun incomingServerHandoffPrefillsConnectionAfterInitialLoad() {
         val vm = viewModel(); var consumed = false
         val link = "usuals://connect#" + Wire.encode("https://usuals.example".toByteArray())
-        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = link, onInvitationConsumed = { consumed = true }) } }
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = link, onInvitationConsumed = { consumed = true }, connectionOnly = true) } }
         compose.waitUntil(5000) { consumed && vm.state.value.origin == "https://usuals.example" }
         assertThat(vm.state.value.invitation).isEmpty()
         assertThat(vm.state.value.joining).isNull()
@@ -142,6 +145,21 @@ class SharingFeedbackTest {
         assertThat(store.read().joining!!.assertion.requestId).isNotEqualTo(pending.assertion.requestId)
         assertThat(store.read().households).isEqualTo(before.households)
         assertThat(vm.state.value.lists).isEqualTo(lists)
+    }
+    @Test fun offlineConnectionCanAlwaysRevokeAiConsent() {
+        val saved = ServerConnection("https://usuals.example", InstanceInfo(name = "Server",
+            server = ServerInfo(Wire.encode(ByteArray(32)), Wire.encode(ByteArray(32))), accounts = true, ai = true),
+            "synthetic-user", "synthetic-token", Long.MAX_VALUE, aiEnabled = true, aiRevision = "synthetic-revision")
+        val store = memoryStore(ClientState(connection = saved))
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = throw RelayProblem("unavailable", 503)
+        }
+        val vm = SharingViewModel(HouseholdClient(store, transport, CheckpointSource { _, _ -> error("unused") }), connection = ConnectionClient(store, transport))
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, connectionOnly = true) } }
+        compose.waitUntil(5000) { vm.state.value.connection != null && !vm.state.value.busy }
+        compose.onNode(isToggleable()).assertIsOn().assertIsEnabled().performClick()
+        compose.waitUntil(5000) { store.read().connection?.aiEnabled == false }
+        compose.onNodeWithText("Create a household").assertDoesNotExist()
     }
     private fun memoryStore(initial: ClientState = ClientState()): SyncStateStore = object : SyncStateStore {
             private var value = initial

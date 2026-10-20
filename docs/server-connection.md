@@ -40,3 +40,16 @@ Keystore key is automatically uploaded to the server.
 
 The legacy manual setup path remains available for older installations. A server
 must support connection protocol 1 and migration 005 for the new account flow.
+
+## Everyday settings
+
+Android **Settings** shows the server connection plus compact appearance, privacy
+and help controls. The connection page contains the server address or QR action,
+browser approval, and one AI assistance switch after connection. Household
+membership, invitations and recovery remain in **Shared lists**.
+
+Server AI supplies the provider and limits. Phone users can inspect its model,
+destination and processing location without entering endpoints or keys. AI consent
+can be turned off locally while offline. Changed server AI settings require an
+explicit confirmation before further use. On the web, optional personal provider
+and key controls live under **Account > AI assistance > Advanced**.

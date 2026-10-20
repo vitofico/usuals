@@ -6,11 +6,10 @@ import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.sync.*
 
 /** The chosen server handles provider credentials; a changed connection invalidates this client. */
-class ServerLlmClient(private val connection: ConnectionClient) : LlmClient {
-    private val saved = requireNotNull(connection.current())
+class ServerLlmClient(private val connection: ConnectionClient, private val saved: ServerConnection = requireNotNull(connection.current())) : LlmClient {
     private suspend fun call(action: String, request: AiRequest = AiRequest()): AiReply {
         require(saved.aiEnabled && connection.current() == saved)
-        val reply = try { connection.request<AiReply>("POST", "/v1/ai/$action", request.copy(revision = saved.aiRevision)) }
+        val reply = try { connection.request<AiReply>("POST", "/v1/ai/$action", request.copy(revision = saved.aiRevision), expected = saved) }
         catch (problem: RelayProblem) {
             throw ModelCallException(ModelProblem(when (problem.code) {
                 "ai_budget" -> ModelProblem.Kind.BUDGET_EXHAUSTED

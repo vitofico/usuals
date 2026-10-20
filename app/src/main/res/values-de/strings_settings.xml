@@ -41,7 +41,7 @@
     <string name="settings_privacy_edges_title">Was das Telefon verlässt</string>
     <string name="settings_privacy_edge_voice">Sprache wird nach Möglichkeit auf dem Gerät erkannt. Andernfalls kann der gewählte Android-Sprachdienst Audio vom Telefon senden. Die Tastatureingabe funktioniert offline.</string>
     <string name="settings_privacy_edge_recipe">Beim Lesen eines Rezeptlinks wird die Seiten-URL von deinem Telefon an die Website gesendet. Der Text geht erst an ein Modell, wenn du Mit meinem Modell lesen antippst.</string>
-    <string name="settings_privacy_edge_cloud">Ein gehostetes Modell erhält den von dir gesendeten Rezepttext. Prüfe den eingestellten Endpunkt.</string>
+    <string name="settings_privacy_edge_cloud">Server-KI erhält nur ausdrücklich gesendeten Text oder Fotos. Direkte KI unter Erweitert verwendet den dort eingestellten Anbieter.</string>
     <string name="settings_privacy_local_path">Für ein Modell in deinem Netzwerk verwende einen OpenAI-kompatiblen Endpunkt deiner eigenen Laufzeitumgebung.</string>
     <string name="settings_privacy_local_now">Dieser Endpunkt ist als lokal gekennzeichnet. Gesendeter Rezepttext geht dorthin. Der Datenschutz hängt davon ab, wie er betrieben wird.</string>
     <string name="settings_privacy_cloud_now">Dein Anbieter ist %1$s und als gehostet gekennzeichnet. Gesendeter Rezepttext geht an diesen Endpunkt.</string>
