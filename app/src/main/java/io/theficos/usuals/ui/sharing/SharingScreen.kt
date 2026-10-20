@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,9 +12,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -281,7 +284,9 @@ private fun ProtectStep(state: SharingState, vm: SharingViewModel, onSave: () ->
             android.content.ClipData.newPlainText(context.getString(R.string.sharing_recovery_key), kit.secret).apply {
                 description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
             }) }) { Text(stringResource(R.string.sharing_copy_key)) }
-        Row { Checkbox(stored, { stored = it }); Text(stringResource(R.string.sharing_kit_stored)) }
+        Row(Modifier.fillMaxWidth().toggleable(stored, role = Role.Checkbox, onValueChange = { stored = it }), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(stored, null); Text(stringResource(R.string.sharing_kit_stored))
+        }
         Button(enabled = !state.busy && state.verified && stored, onClick = vm::create, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(if (kit is ReplacementKit) R.string.sharing_replace_kit else R.string.sharing_create))
         }

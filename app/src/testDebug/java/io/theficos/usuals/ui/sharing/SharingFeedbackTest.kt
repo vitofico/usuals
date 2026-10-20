@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
@@ -169,6 +170,16 @@ class SharingFeedbackTest {
         assertThat(store.read().joining!!.assertion.requestId).isNotEqualTo(pending.assertion.requestId)
         assertThat(store.read().households).isEqualTo(before.households)
         assertThat(vm.state.value.lists).isEqualTo(lists)
+    }
+    @Test fun tappingTheStoredKeySentenceTicksItAndAllowsCreating() {
+        val relay = RecordingRelay { path -> if (path == "/v1/server-info") server else null }
+        val vm = SharingViewModel(HouseholdClient(memoryStore(), relay, CheckpointSource { _, _ -> error("unused") }))
+        vm.field(SharingField.ORIGIN, ORIGIN); vm.prepare()
+        vm.saveKit(requireNotNull(vm.settled().kit).file); vm.settled()
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}) } }
+        compose.onNodeWithText("Create household").assertIsNotEnabled()
+        compose.onNodeWithText("I stored the recovery key somewhere safe").performClick()
+        compose.onNodeWithText("Create household").assertIsEnabled()
     }
     @Test fun offlineConnectionCanAlwaysRevokeAiConsent() {
         val saved = ServerConnection("https://usuals.example", InstanceInfo(name = "Server",
