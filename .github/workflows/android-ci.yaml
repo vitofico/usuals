@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: android-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   secrets-scan:
     runs-on: ubuntu-24.04
@@ -33,3 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - run: server/scripts/test-local --no-daemon --no-parallel --max-workers=2
+
+  release:
+    needs: [android, server]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: write
+      actions: write
+    uses: ./.github/workflows/release-apk.yaml
+    with:
+      source: ${{ github.sha }}
+    secrets: inherit

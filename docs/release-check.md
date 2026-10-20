@@ -1244,3 +1244,15 @@ elapsed household pilot remain separate acceptance gates.
   Existing debug data was untouched. Publication identity and checksum sidecars
   bind the final APK to its immutable source tag. Private evidence is retained at
   /private/tmp/usuals-release-20261020/.
+
+## Automatic Android publication verification, 2026-10-20
+
+- Added checked-main automatic versioning, localized changelogs and signed stable
+  GitHub publication after the existing Android and server gates. Retained manual
+  tag recovery, immutable asset comparisons and the production certificate pin.
+- Local Docker `scripts/dgradle verifyReleaseTools` passed all 40 checks, including
+  temporary bare-remote tests of atomic push races, original-version retries,
+  refused replacement, false source claims and failed pushes. Official actionlint
+  1.7.12 validates all workflows. The full-history secret scan found no leaks.
+- End-to-end GitHub publication and emulator update checks are pending the first
+  run. Android and server implementation inputs are unchanged in this task.

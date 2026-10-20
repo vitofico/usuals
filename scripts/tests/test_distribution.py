@@ -50,7 +50,7 @@ class DistributionTest(unittest.TestCase):
         locales = ROOT / "fastlane/metadata/android"
         self.assertTrue({"en-US", "es-ES", "it-IT", "fr-FR", "de-DE"}.issubset({p.name for p in locales.iterdir() if p.is_dir()}))
         for locale in (p for p in locales.iterdir() if p.is_dir()):
-            for name, limit in [("title.txt", 50), ("short_description.txt", 80), ("full_description.txt", 4000), (f"changelogs/{code}.txt", 500)]:
+            for name, limit in [("title.txt", 50), ("short_description.txt", 80), ("full_description.txt", 4000), (f"changelogs/{code}.txt", 500), ("changelogs/template.txt", 500)]:
                 text = (locale / name).read_text().strip()
                 self.assertTrue(text, str(locale / name))
                 self.assertLessEqual(len(text), limit, str(locale / name))

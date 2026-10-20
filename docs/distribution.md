@@ -47,42 +47,75 @@ Store descriptions, screenshots and version-code changelogs live in
 New store locales add complete files there. Normal Android UI localization
 continues to use only complete `values-xx/` resources.
 
-## Prepare a release
+## Automatic GitHub releases
 
-1. Commit `VERSION_NAME` and a strictly increasing `VERSION_CODE` in
-   `gradle.properties` and the five changelogs. Keep the paused F-Droid recipe
-   pinned to an existing published release; refresh it after publication when
-   preparing a separately authorized future inclusion request. Use
-   `YYYY.MM.DD.N` and tag `vYYYY.MM.DD.N`. CI never rewrites the source version.
-2. Run `scripts/dgradle verifyReleaseTools :app:assembleDebug :app:assembleRelease
-   test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2` and the
-   affected server/browser gate. Verify on an emulator and scan all Git history
-   with `scripts/secret-scan` before publication.
-3. Keep the production key outside the checkout. Android assembly is unsigned.
-   After the combined debug/test gate, build the publication candidate separately
-   with `scripts/dgradle :app:clean :app:assembleRelease --no-daemon --no-build-cache`.
-   Do not sign the combined gate's APK: its cached or incremental compiler outputs
-   must not become the publication candidate.
-   On Linux, restore ownership with `sudo chown -R "$(id -u):$(id -g)" app/build`
-   after Docker builds and before signing or restoring a signed candidate.
-   `scripts/sign-release /absolute/private/signing-directory` signs in an offline
-   read-only container, with no repository or Gradle-cache mount. The signing
-   directory contains `usuals-release.keystore`, `keystore-password.txt`,
-   `key-password.txt`, `key-alias.txt` and `certificate-sha256.txt`. Its certificate
-   must equal the committed Usuals pin. Never replace a published signing key.
-4. Preserve the signed candidate outside `app/build`, then rebuild with
+Every push to `main` runs the Android build, tests, lint, native alignment,
+release-tool tests and the server/browser gate. After both gates pass,
+`android-ci` calls `release-apk` to publish a signed stable Android update.
+Documentation-only changes run CI without creating another APK. Changes to
+application, server, browser, distribution or build inputs qualify for a release.
+No manual version edit, tag creation or APK upload is needed.
+
+The release job:
+
+1. Uses the exact `main` commit that passed CI. It prepares a local bot commit
+   containing only `gradle.properties` and localized version-code changelogs.
+   The version name is UTC `YYYY.MM.DD.N`; N advances beyond all existing releases
+   that day. The Android code is the greater of every previous code plus one and
+   `yyMMdd * 100 + 1`, so updates remain monotonic even after many daily releases.
+   A backward calendar date or exhausted Android code fails closed.
+2. Builds the unsigned publication candidate separately with
    `scripts/dgradle :app:clean :app:assembleRelease --no-daemon --no-build-cache`.
-   Run `scripts/check-apk-reproducibility SIGNED_APK UNSIGNED_APK` to copy the
-   existing signature, verify it and require byte-for-byte equality. The pinned
-   verification packages run in Docker and never receive private keys.
-5. Commit the verified source, create its immutable tag, restore the signed
-   candidate to `app/build/outputs/apk/release/app-release.apk`, and run
-   `scripts/verify-release TAG`. It rejects the wrong package, debug signing,
-   a mismatched certificate/version, an uncommitted tree or a different tag.
-6. Publish the tag and three verified assets. `scripts/publish-release.py`
-   verifies existing asset bytes before repairing missing files and never
-   overwrites an existing binary. Dispatch `release-apk` with that existing tag
-   for a CI build/publish. Tags must be reachable from `main`.
+   It signs offline with the existing production identity, checks package,
+   version, certificate, licenses and 16 KB alignment, then independently builds
+   again and requires exact signature-copy reproduction. The combined CI gate's
+   incremental APK is never the publication candidate.
+3. Atomically pushes the verified bot commit and its immutable version tag.
+   It uses a normal fast-forward push. If `main` advanced, it discards the
+   candidate and dispatches fresh CI on current `main`; it never rebases an
+   untested candidate or force-pushes. A source trailer binds the version commit
+   to the checked parent.
+4. Publishes `app-release.apk`, its SHA-256 file and `release-identity.json`.
+   Obtainium discovers this stable release automatically. Retrying the original
+   run reuses its version and any existing APK bytes; existing assets must match
+   exactly before missing sidecars can be repaired. Published assets are never
+   overwritten. Main runs and release publication are serialized. Bot pushes do
+   not recursively trigger another release with GitHub's built-in token.
+
+Each store locale supplies `changelogs/template.txt` with 1 to 500 characters.
+CI copies it to the next version-code filename. Change these templates for
+localized release highlights, and keep detailed changes in `CHANGELOG.md` and
+commit descriptions. Adding a store locale means adding complete files, including
+its template. Keep the paused F-Droid recipe pinned to its existing release;
+Android publication does not submit or update an inclusion request.
+
+### Recovery and local verification
+
+Rerun a failed `android-ci` run to finish its same version. To repair a tagged
+release independently, dispatch `release-apk` from `main` with its existing
+`vYYYY.MM.DD.N` tag. The tag must be reachable from `main`. Manual recovery runs
+its own Docker tests and lint before building a missing APK; an existing signed
+APK is downloaded and verified rather than rebuilt or replaced. Dispatch
+`android-ci` on `main` to retry the current source after a stale or cancelled run.
+The workflow needs repository contents and Actions write permissions to publish
+and dispatch that fresh check. Fork pull requests receive no signing secrets or
+release permissions.
+
+For local release verification, keep the production key outside the checkout.
+`scripts/sign-release /absolute/private/signing-directory` uses an offline,
+read-only container without repository or Gradle-cache mounts. Its private
+inputs are `usuals-release.keystore`, `keystore-password.txt`, `key-password.txt`,
+`key-alias.txt` and `certificate-sha256.txt`. The certificate must match the
+committed Usuals pin. Never replace a published key.
+
+Preserve a separately clean signed candidate outside `app/build`, then repeat
+the clean release-only build with no build cache. Use
+`scripts/check-apk-reproducibility SIGNED_APK UNSIGNED_APK` to require exact bytes.
+Restore the candidate to `app/build/outputs/apk/release/app-release.apk` and run
+`scripts/verify-release TAG` against its clean, committed tag. On Linux, restore
+Docker output ownership with `sudo chown -R "$(id -u):$(id -g)" app/build` before
+signing or restoring the candidate. The verified three assets can be published
+with `scripts/publish-release.py`, which never replaces existing bytes.
 
 CI requires all four `USUALS_RELEASE_*` secrets: `KEYSTORE_B64`,
 `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`. Missing credentials fail

@@ -1,5 +1,14 @@
 # Changelog
 
+## Automatic Android releases
+
+- Publish signed stable APKs from GitHub CI after main passes Android and server
+  checks, with automatic CalVer, increasing Android codes and localized notes.
+- Require a separate clean build, pinned production certificate, 16 KB alignment
+  and byte-for-byte signature-copy reproduction before publishing source refs.
+- Handle concurrent main updates with fresh CI, and reuse immutable versions and
+  APK bytes on recovery. Obtainium follows the resulting release automatically.
+
 ## 2026.10.20.1: QR connection and written-list import
 
 - Import Markdown shopping lists and recipe ingredients locally on Android and web.

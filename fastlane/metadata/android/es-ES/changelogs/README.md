@@ -1,14 +1,13 @@
 # Registros de cambios
 
-Añade un archivo UTF-8 breve por publicación en cada idioma de la tienda. El
-nombre es el `versionCode` entero de Android, por ejemplo `26102001.txt`, no el
-nombre de versión legible.
+Cada idioma de la tienda necesita un archivo UTF-8 `template.txt` de 1 a 500
+caracteres. Cuando main supera CI, la publicación copia cada plantilla al nuevo
+nombre entero `versionCode` de Android, por ejemplo `26102002.txt`, y confirma
+estos archivos junto con las propiedades de versión. Los registros publicados
+son inmutables.
 
-Confirma `VERSION_NAME` y un `VERSION_CODE` estrictamente creciente en
-`gradle.properties` antes de crear la etiqueta. El nombre usa `AAAA.MM.DD.N`,
-donde N cuenta las publicaciones del día. El código usa `aaMMdd * 100 + N`, con
-N de 1 a 99. Usa la etiqueta inmutable correspondiente, como `v2026.10.20.1`.
-CI lee estos valores; no los genera ni los incrementa.
-
-Mantén cada entrada por debajo de 500 caracteres. `CHANGELOG.md` contiene el
-registro completo. Estos archivos preparan metadatos; no envían nada a F-Droid.
+Actualiza las plantillas con las novedades traducidas. `CHANGELOG.md` y las notas
+de GitHub contienen el registro completo. CI elige el nombre `AAAA.MM.DD.N` en
+UTC y un código Android estrictamente creciente. Consulta la
+[guía de distribución](../../../../../docs/distribution.md) para numeración,
+verificación y recuperación. Estos archivos no envían nada a F-Droid.
