@@ -112,6 +112,8 @@
     <string name="sharing_join">Rejoindre</string>
     <string name="sharing_joining_title">En attente d’approbation</string>
     <string name="sharing_joining_code">Si on vous le demande, lisez ce code :</string>
+    <string name="sharing_cancel_join">Arrêter d’attendre</string>
+    <string name="sharing_cancel_join_help">Ce téléphone cesse d’attendre l’approbation. Pour rejoindre plus tard, demandez une nouvelle invitation.</string>
     <string name="sharing_kit_stored">J’ai rangé la clé de récupération en lieu sûr</string>
     <string name="sharing_invite_waiting">En attente du scan…</string>
     <string name="sharing_request">Un téléphone veut rejoindre · code %1$s</string>

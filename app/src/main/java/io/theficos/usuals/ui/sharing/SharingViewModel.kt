@@ -191,6 +191,7 @@ class SharingViewModel(private val client: HouseholdClient,
         mutable.update { it.copy(joining = pending, invitation = "", message = SharingMessage.WAITING) }
     }
     fun checkJoin() = work { completeJoin() }
+    fun cancelJoin() = work { client.cancelJoin() }
     private suspend fun completeJoin() {
         val joined = client.completeJoin()
         mutable.update { it.copy(joining = client.joining(), households = client.households(), message = if (joined == null) SharingMessage.WAITING else SharingMessage.JOINED) }

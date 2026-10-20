@@ -152,6 +152,12 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
                     Text(stringResource(R.string.sharing_pair_waiting), style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(enabled = !state.busy, onClick = vm::retryJoin) { Text(stringResource(R.string.sharing_retry_request)) }
                     TextButton(enabled = !state.busy, onClick = vm::checkJoin) { Text(stringResource(R.string.sharing_check_approval)) }
+                    var stopping by remember { mutableStateOf(false) }
+                    TextButton(enabled = !state.busy, onClick = { stopping = true }) { Text(stringResource(R.string.sharing_cancel_join)) }
+                    if (stopping) AlertDialog(onDismissRequest = { stopping = false }, title = { Text(stringResource(R.string.sharing_cancel_join)) },
+                        text = { Text(stringResource(R.string.sharing_cancel_join_help)) },
+                        confirmButton = { TextButton(onClick = { stopping = false; vm.cancelJoin() }) { Text(stringResource(R.string.sharing_cancel_join)) } },
+                        dismissButton = { TextButton(onClick = { stopping = false }) { Text(stringResource(R.string.sharing_cancel)) } })
                 }
                 SharingStage.READY -> {
                     state.households.forEach { household -> SectionCard {

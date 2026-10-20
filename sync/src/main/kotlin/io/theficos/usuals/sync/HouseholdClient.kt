@@ -168,6 +168,8 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     }
     fun bootstrapPending(): Boolean = store.read().bootstrap != null
     fun joining(): PendingJoinState? = store.read().joining
+    /** Forgets a join that was denied or expired, so this device can use a new invite. */
+    suspend fun cancelJoin() = mutex.withLock { store.update { it.copy(joining = null) } }
     /** The six digits the owner sees beside this request; null for a legacy join that has no invite key. */
     fun joinCode(pending: PendingJoinState): String? =
         pending.invitation.key?.let { Pairing.joinCode(InviteKey(Wire.decode(it, 32)).macKey(), pending.assertion.bytes()) }

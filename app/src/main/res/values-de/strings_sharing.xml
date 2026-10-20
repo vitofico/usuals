@@ -112,6 +112,8 @@
     <string name="sharing_join">Beitreten</string>
     <string name="sharing_joining_title">Warten auf Freigabe</string>
     <string name="sharing_joining_code">Falls danach gefragt wird, nenne diesen Code:</string>
+    <string name="sharing_cancel_join">Nicht mehr warten</string>
+    <string name="sharing_cancel_join_help">Dieses Telefon wartet nicht mehr auf die Genehmigung. Um später beizutreten, bitte um eine neue Einladung.</string>
     <string name="sharing_kit_stored">Ich habe den Wiederherstellungsschlüssel sicher aufbewahrt</string>
     <string name="sharing_invite_waiting">Warten auf den Scan…</string>
     <string name="sharing_request">Ein Telefon möchte beitreten · Code %1$s</string>

@@ -344,6 +344,6 @@
   "joinLandingText": "Te han invitado a un hogar en este servidor. Abre la invitación en la app Usuals o únete con este navegador.",
   "openInUsuals": "Abrir en Usuals",
   "joinInBrowser": "Unirse en este navegador",
-  "joinUnlockFirst": "Para unirte con este navegador, inicia sesión y desbloquéalo primero.",
+  "joinUnlockFirst": "Para unirte con este navegador, inicia sesión, desbloquéalo y vuelve a abrir el enlace de invitación.",
   "upgrade": "Esta invitación viene de una versión antigua de Usuals. Pide al propietario que actualice Usuals y envíe una nueva invitación."
 }

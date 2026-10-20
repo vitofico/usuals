@@ -111,6 +111,8 @@
     <string name="sharing_join">Join</string>
     <string name="sharing_joining_title">Waiting for approval</string>
     <string name="sharing_joining_code">If they ask, read them this code:</string>
+    <string name="sharing_cancel_join">Stop waiting</string>
+    <string name="sharing_cancel_join_help">This phone stops waiting for approval. To join later, ask for a new invite.</string>
     <string name="sharing_kit_stored">I stored the recovery key somewhere safe</string>
     <string name="sharing_invite_waiting">Waiting for them to scan…</string>
     <string name="sharing_request">A phone wants to join · code %1$s</string>

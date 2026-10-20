@@ -75,4 +75,14 @@ class SharingViewModelTest {
         assertThat(sharingStage(vm.settled())).isEqualTo(SharingStage.JOINING)
         assertThat(relay.paths).contains("/v1/server-info")
     }
+
+    @Test fun stoppingAJoinThatWillNeverBeApprovedReturnsToTheStart() {
+        val store = memoryStore(ClientState(joining = pendingJoin()))
+        val relay = RecordingRelay { null }
+        val vm = vm(store, relay)
+        vm.cancelJoin()
+        assertThat(sharingStage(vm.settled())).isEqualTo(SharingStage.START)
+        assertThat(store.read().joining).isNull()
+        assertThat(relay.paths).isEmpty()
+    }
 }
