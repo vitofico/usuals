@@ -1,0 +1,1 @@
+Importiere kopierte Notizen aus Google Keep oder einer anderen App. Textlisten, Markdown, Aufzählungen und Kontrollkästchen werden lokal gelesen und vor dem Hinzufügen geprüft. Abgehakte Artikel werden übersprungen.
