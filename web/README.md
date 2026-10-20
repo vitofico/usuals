@@ -30,15 +30,25 @@ creation. This uses your admitted account, without an operator setup code.
 From Shared lists, invite a device and compare its complete fingerprint before
 approval. Keep the kit for Android recovery if this browser is lost.
 
+## Server connection and AI
+
+**Account > Connect a server** shows a public server link and QR for Android.
+Approve its full device code after signing in, without unlocking a shopping vault.
+**Account > Server AI** selects the server default or an approved personal provider
+and key. Photo import and recipe-text extraction use this same-origin gateway when
+available; ordinary users need no provider CORS or separate endpoint setup. Inputs
+are submitted only on explicit action and remain drafts until reviewed. See the
+[connection guide](../docs/server-connection.md) and [provider guide](../docs/providers.md).
+
 ## Connect a phone with QR
 
 1. Sign in, unlock the web vault and open **Shared lists > Connect a phone**.
    Create a household first if you do not have one yet.
 2. On Android, open **Settings > Shared lists > Scan invitation QR**. Scan the
    web code, check the displayed server address and tap **Connect this phone**.
-3. Back on the web, choose **Scan phone verification** and allow the computer
-   camera. Point it at the verification QR now shown on Android. The browser
-   approves that exact signed request and Android checks approval automatically.
+3. Back on the web, open **Review requests**, compare every group of the full
+   device code with Android, confirm the match and approve. Android detects approval
+   automatically. The signed verification QR remains a camera-based alternative.
 
 The private invitation expires after ten minutes and works once. An expired
 code is hidden; choose **Create a new code** to replace it. QR generation and

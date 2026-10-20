@@ -6,7 +6,8 @@ spec. ADR-0012 supersedes the former retailer invariants.
 ## Product and boundaries
 
 Usuals is an offline Android shopping list that remembers purchases on the
-phone. Capture is local. The optional model is only for unstructured recipes.
+phone. Capture is local. The optional model is only for unstructured recipes and
+written-list photos, with explicit input submission and review.
 There are no retailer integrations. Sync needs explicit approval before work
 starts because it requires a server on the maintainer's cluster.
 
@@ -50,7 +51,9 @@ JVM. `ServiceLocator` must construct every production component.
   README and store exports with `scripts/sync-brand-assets`; use `--check`
   to verify consistency rather than drawing separate logos.
 - Secrets stay in Keystore and never enter logs. Redact provider diagnostics.
-  Third-party reads originate on the device. Recipe text is untrusted data.
+  Recipe URL reads and direct model calls originate on the device. Server AI
+  uses configured provider destinations after explicit input consent. Recipe
+  text is untrusted data.
 - Use `:emoji: type: subject` commits. No attribution boilerplate in artifacts.
   No em dashes in prose, comments or documentation.
 

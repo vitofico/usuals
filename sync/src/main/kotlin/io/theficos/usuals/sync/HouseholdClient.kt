@@ -9,6 +9,24 @@ import kotlinx.serialization.json.*
 class HouseholdClient(private val store: SyncStateStore, private val transport: RelayTransport,
     private val checkpoints: CheckpointSource, private val clock: () -> Long = System::currentTimeMillis) {
     private val mutex = Mutex()
+    fun sharingSource() = store.read().sharingSource
+    fun pendingShares() = store.read().pendingShares.values.toList()
+    fun rememberSharingSource(source: String?) { store.update { it.copy(sharingSource = source) } }
+    fun reserveShare(household: String, source: String, includeHistory: Boolean): String {
+        val key = "$household:$source"
+        val state = store.update { state ->
+            val previous = state.pendingShares[key]
+            require(previous == null || previous.includeHistory == includeHistory)
+            if (previous != null) state else state.copy(pendingShares = state.pendingShares +
+                (key to PendingShare(household, source, UUID.randomUUID().toString(), includeHistory)))
+        }
+        return requireNotNull(state.pendingShares[key]).target
+    }
+    fun completeShare(household: String, target: String) { store.update { state ->
+        val completed = state.pendingShares.values.firstOrNull { it.household == household && it.target == target }
+        state.copy(pendingShares = state.pendingShares.filterValues { it != completed },
+            sharingSource = if (state.sharingSource == completed?.source) null else state.sharingSource)
+    } }
     private data class Authorization(val token: String, val normal: SavedHousehold? = null) {
         override fun toString() = "Authorization([redacted])"
     }
@@ -72,6 +90,12 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         store.update { it.copy(bootstrap = pending) }
         finishBootstrap(pending)
     }
+    suspend fun bootstrapAccount(setup: VerifiedSetup, connection: ServerConnection): String = mutex.withLock {
+        require(setup.origin == connection.origin && setup.server == connection.info.server)
+        val pending = PendingBootstrap(setup.origin, setup.server, setup.genesis, setup.device, connection.token, account = true)
+        store.update { it.copy(bootstrap = pending) }
+        finishBootstrap(pending)
+    }
     suspend fun resumeBootstrap(): String = mutex.withLock { finishBootstrap(store.read().bootstrap ?: throw RelayProblem("not_found")) }
     private suspend fun finishBootstrap(pending: PendingBootstrap): String {
         val body = pending.genesis.body(); val household = body.householdId
@@ -83,7 +107,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         if (session == null) {
             val challenge = call<Challenge>(pending.origin, "POST", "/v1/devices/challenge", ChallengeRequest(pending.device.publicKeys.id, "bootstrap", pending.device.publicKeys.signingPublicKey))
             val proof = proof(pending.origin, pending.server, pending.device, challenge, "bootstrap")
-            val response = call<Membership>(pending.origin, "POST", "/v1/households", CreateHousehold(pending.genesis, proof), Authorization(pending.token), expected = 201)
+            val response = call<Membership>(pending.origin, "POST", if (pending.account) "/v1/account/households" else "/v1/households", CreateHousehold(pending.genesis, proof), Authorization(pending.token), expected = 201)
             require(response.manifests.single().signed().hash() == pending.genesis.hash())
             session = login(pending.origin, pending.server, pending.device)
         }
@@ -321,6 +345,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     private fun saved(household: String) = store.read().households[household] ?: throw RelayProblem("not_found")
     private fun fingerprint(a: JoinAssertion) = Wire.decode(Wire.fingerprint(a.serverId, a.householdId, a.device.signingPublicKey, a.device.recipientPublicKey), 32)
         .joinToString("") { "%02x".format(it.toInt() and 255) }
+    fun applicantFingerprint(household: String, pending: PendingJoin): String = fingerprint(validateApplicant(saved(household), pending))
     private fun validateApplicant(saved: SavedHousehold, p: PendingJoin): JoinAssertion {
         val a = JoinAssertion.parse(Wire.decode(p.assertion))
         require(a.requestId == p.requestId && a.origin == saved.origin && a.serverId == saved.server.serverId && a.householdId == saved.id && a.genesisHash == saved.genesisHash)

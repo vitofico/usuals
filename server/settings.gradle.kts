@@ -13,7 +13,9 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "usuals-relay"
-include(":core:model", ":core:parse", ":sync")
+include(":core:model", ":core:parse", ":sync", ":llm")
 project(":core:model").projectDir = file("../core/model")
 project(":core:parse").projectDir = file("../core/parse")
 project(":sync").projectDir = file("../sync")
+
+project(":llm").projectDir = file("../llm")

@@ -15,7 +15,12 @@ interface SyncStateStore {
     val households: Map<String, SavedHousehold> = emptyMap(),
     val bootstrap: PendingBootstrap? = null,
     val joining: PendingJoinState? = null,
+    val connection: ServerConnection? = null,
+    val connecting: PendingConnection? = null,
+    val sharingSource: String? = null,
+    val pendingShares: Map<String, PendingShare> = emptyMap(),
 ) { override fun toString() = "ClientState([redacted])" }
+@Serializable data class PendingShare(val household: String, val source: String, val target: String, val includeHistory: Boolean)
 @Serializable data class SavedHousehold(
     val origin: String, val server: ServerInfo, val id: String, val genesis: ManifestProof, val current: ManifestProof,
     val device: DeviceSecrets, val previous: ManifestProof? = null, val keys: Map<String, String> = emptyMap(), val session: Session? = null,
@@ -26,7 +31,7 @@ interface SyncStateStore {
     val hash get() = current.signed().hash()
     override fun toString() = "SavedHousehold([redacted])"
 }
-@Serializable data class PendingBootstrap(val origin: String, val server: ServerInfo, val genesis: SignedManifest, val device: DeviceSecrets, val token: String) {
+@Serializable data class PendingBootstrap(val origin: String, val server: ServerInfo, val genesis: SignedManifest, val device: DeviceSecrets, val token: String, val account: Boolean = false) {
     override fun toString() = "PendingBootstrap([redacted])"
 }
 @Serializable data class PendingJoinState(val invitation: InvitationLink, val device: DeviceSecrets, val assertion: JoinAssertion, val signature: String) {

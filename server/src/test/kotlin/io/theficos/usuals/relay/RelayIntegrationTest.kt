@@ -54,14 +54,14 @@ class RelayIntegrationTest {
         val file = directory.resolve("fence"); val original = uuid()
         java.nio.file.Files.writeString(file, original)
         try {
-            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (5,'future')") }
+            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (6,'future')") }
             assertThat(assertThrows(IllegalStateException::class.java) { db.checkSchema() }.message).isEqualTo("migration_mismatch")
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.readString(file)).isEqualTo(original)
             java.nio.file.Files.delete(file)
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.exists(file)).isFalse()
-            db.transaction { c -> c.execute("DELETE FROM schema_migration WHERE version=5"); c.execute("UPDATE schema_migration SET checksum='changed' WHERE version=1") }
+            db.transaction { c -> c.execute("DELETE FROM schema_migration WHERE version=6"); c.execute("UPDATE schema_migration SET checksum='changed' WHERE version=1") }
             assertThrows(IllegalStateException::class.java) { db.checkSchema() }
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.exists(file)).isFalse()

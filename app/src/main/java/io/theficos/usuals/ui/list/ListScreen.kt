@@ -184,6 +184,7 @@ data class ListActions(
     val onCreateList: (String) -> Unit = {},
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
+    val onShareText: () -> Unit = {},
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
     val onFinishRows: ((List<ListRow>, Set<ItemId>?) -> Unit)? = null,
     val onUndoFinish: () -> Unit = {},
@@ -213,6 +214,7 @@ fun ListScreen(
     sharedText: String? = null,
     onSharedTextConsumed: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
+    onOpenSharing: () -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -325,7 +327,8 @@ fun ListScreen(
             onDismissConflict = vm::onDismissConflict,
             onReviewConflict = vm::onReviewConflict,
             onCreateList = vm::onCreateList,
-            onShareList = {
+            onShareList = onOpenSharing,
+            onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
                     context.getString(
                         if (row.checked) R.string.share_checked_item else R.string.share_open_item,
@@ -466,9 +469,10 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
-                IconButton(onClick = actions.onShareList, enabled = header.itemCount > 0,
+                TextButton(onClick = actions.onShareText, enabled = header.itemCount > 0) { Text(stringResource(R.string.share_list)) }
+                IconButton(onClick = actions.onShareList, enabled = true,
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.Outlined.Share, stringResource(R.string.share_list), Modifier.size(22.dp))
+                    Icon(Icons.Outlined.Share, stringResource(R.string.sharing_share_list), Modifier.size(22.dp))
                 }
             }
         }

@@ -122,3 +122,11 @@ connections, supply a JSON array of exact HTTPS origins, without paths or
 credentials. The provider must accept the app origin through CORS. This only
 changes the browser CSP and public allowed-origin list; no server model proxy
 or credential store is created. See [provider setup](../docs/providers.md).
+
+## Account connection and optional AI
+
+The [connection guide](../docs/server-connection.md), [provider configuration](../docs/providers.md)
+and [additive service API](../docs/server-services.openapi.json) cover native account
+approval and the optional model gateway. Migration 005 is required. The encrypted
+shopping protocol remains version 1. The gateway is disabled with no configured
+provider profiles, and its availability does not determine relay readiness.

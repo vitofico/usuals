@@ -37,7 +37,7 @@
     <string name="settings_privacy_title">Confidentialité</string>
     <string name="settings_privacy_kept_title">Ce qui reste ici</string>
     <string name="settings_privacy_kept_capture">Votre liste, votre historique et vos suggestions sont stockés sur ce téléphone. La saisie au clavier et la mémoire des achats fonctionnent hors connexion.</string>
-    <string name="settings_privacy_kept_secrets">Votre clé de modèle est stockée avec Android Keystore, exclue des exports et journaux, et utilisée pour l’authentification auprès du point d’accès configuré.</string>
+    <string name="settings_privacy_kept_secrets">Une clé de fournisseur direct reste dans Android Keystore. Une clé personnelle pour l’IA du serveur est envoyée au serveur choisi et conservée chiffrée. Aucune ne figure dans les exports de courses ou les journaux.</string>
     <string name="settings_privacy_edges_title">Ce qui est envoyé</string>
     <string name="settings_privacy_edge_voice">La voix utilise la reconnaissance sur l’appareil si disponible. Sinon, le service vocal Android choisi peut envoyer l’audio hors du téléphone. La saisie au clavier fonctionne hors connexion.</string>
     <string name="settings_privacy_edge_recipe">Lire un lien de recette envoie l’URL au site depuis votre téléphone. Le texte n’est envoyé à un modèle que si vous appuyez sur Lire avec mon modèle.</string>

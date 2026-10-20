@@ -2,6 +2,8 @@ package io.theficos.usuals.ui.sharing
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -22,6 +24,34 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33], qualifiers = "en")
 class SharingFeedbackTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun selectedListIsRetainedThroughConnectionSetupAndScreenRecreation() {
+        val store = memoryStore()
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = error("not connected yet")
+        }
+        fun vm() = SharingViewModel(HouseholdClient(store, transport, CheckpointSource { _, _ -> error("unused") }),
+            choices = { listOf(SharingList("chosen", "Weekend", "local", false), SharingList("other", "Work", "local", false)) })
+        val first = vm(); var consumed = false
+        var current by androidx.compose.runtime.mutableStateOf(first)
+        compose.setContent { androidx.compose.runtime.key(current) { UsualsTheme { SharingScreen(current, {}, sourceList = if (consumed) null else "chosen", onSourceConsumed = { consumed = true }) } } }
+        compose.waitUntil(5000) { !first.state.value.busy && first.state.value.sharingSource == "chosen" }
+        assertThat(store.read().sharingSource).isEqualTo("chosen")
+        val recreated = vm()
+        compose.runOnIdle { current = recreated }
+        compose.waitForIdle()
+        try { compose.waitUntil(5000) { !recreated.state.value.busy && recreated.state.value.sharingSource == "chosen" } }
+        catch (failure: Exception) { throw AssertionError("recreated busy=${recreated.state.value.busy}, source=${recreated.state.value.sharingSource}, lists=${recreated.state.value.lists.size}, stored=${store.read().sharingSource}, current=${current === recreated}", failure) }
+        compose.onNodeWithText("Ready to share “Weekend”. Connect and create a household, or choose an existing one, to continue.").performScrollTo().assertIsDisplayed()
+    }
+    @Test fun incomingServerHandoffPrefillsConnectionAfterInitialLoad() {
+        val vm = viewModel(); var consumed = false
+        val link = "usuals://connect#" + Wire.encode("https://usuals.example".toByteArray())
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, invitation = link, onInvitationConsumed = { consumed = true }) } }
+        compose.waitUntil(5000) { consumed && vm.state.value.origin == "https://usuals.example" }
+        assertThat(vm.state.value.invitation).isEmpty()
+        assertThat(vm.state.value.joining).isNull()
+        compose.onNodeWithText("Connect this server").assertIsDisplayed()
+    }
     @Test fun recoveryFailureRemainsVisibleAfterScrollingToTheFilePicker() {
         val vm = viewModel()
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
@@ -35,15 +65,15 @@ class SharingFeedbackTest {
         val vm = viewModel()
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
         compose.waitUntil(5000) { !vm.state.value.busy }
-        compose.onNodeWithText("Scan invitation QR").assertIsDisplayed()
+        compose.onNodeWithText("Scan server or invitation QR").assertIsDisplayed()
         val id = "00000000-0000-4000-8000-000000000001"
         val digest = Wire.encode(ByteArray(32))
         val uri = InvitationLink(origin = "https://usuals.example", serverId = digest, householdId = id,
             genesisHash = digest, ownerDeviceId = id, ownerFingerprint = digest, inviteId = id,
             memberId = id, role = "editor", secret = digest, expiresAt = Long.MAX_VALUE).uri()
         vm.scanInvitation(uri)
-        compose.onNodeWithText("Connect to https://usuals.example").assertIsDisplayed()
-        compose.onNodeWithText("Connect this phone").assertIsDisplayed()
+        compose.onNodeWithText("Connect to https://usuals.example").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Connect this phone").performScrollTo().assertIsDisplayed()
         assertThat(vm.state.value.joining).isNull()
         vm.scanInvitation("usuals://device#wrong-qr")
         assertThat(vm.state.value.invitation).isEmpty()
@@ -98,7 +128,7 @@ class SharingFeedbackTest {
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
         compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.joining != null }
         compose.onNodeWithText("Check approval").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Scan invitation QR").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Scan server or invitation QR").performScrollTo().assertIsDisplayed()
         vm.scanInvitation(invitation.copy(expiresAt = Long.MAX_VALUE).uri())
         compose.onNodeWithText("Connect this phone").performScrollTo().performClick()
         compose.onNodeWithText("Replace the pending request?").assertIsDisplayed()
