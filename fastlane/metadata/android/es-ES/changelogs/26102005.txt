@@ -1,0 +1,1 @@
+Importa notas copiadas de Google Keep u otra aplicación. Listas de texto, Markdown, viñetas y casillas se leen localmente y se revisan antes de añadir. Se omiten los artículos marcados.
