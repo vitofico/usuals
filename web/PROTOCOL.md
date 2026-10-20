@@ -13,23 +13,27 @@ existing signed household membership remains an independent authority.
   HKDF-SHA256 and AES-256-GCM. HPKE follows RFC 9180 base mode and the exact
   existing Tink RAW profile. Byte-level golden vectors and JVM interoperability
   are mandatory before a browser-created ciphertext is accepted as verified.
-- Enrollment accepts an existing Android or browser-owner invitation for this exact HTTPS origin.
-  The browser creates fresh independent device keys. An owner separately checks
-  the full reverse fingerprint before approving. The browser verifies genesis,
-  every membership transition, inviter fingerprint and its exact approved join
+- Enrollment accepts a pairing v2 invite link (`https://<origin>/join#2.…` or its
+  `usuals://join#` app wrapper) for this exact origin; a v1 JSON invitation reports
+  `upgrade`. The link carries a 32-byte invite key and a 16-byte anchor of the
+  owner's descriptor (household, genesis, owner fingerprint, member, role). The
+  browser derives the admission secret with HKDF, opens the invite through
+  `POST /v1/invites/{id}/open`, checks the descriptor bytes against the anchor and
+  creates fresh device keys only after that. Its join request carries
+  `HMAC(macKey, "USUALS/JOIN-MAC/2\0" ‖ assertion)`; both devices display the same
+  6-digit code from the same key. The browser still verifies genesis, every
+  membership transition, the inviter fingerprint and its exact approved join
   assertion before accepting keys. SSO never substitutes for this process.
-- A web owner can display the existing one-use invitation as a locally generated
-  QR. Scanning it on Android fills the invitation, then requires explicit server
-  confirmation before network access. Reverse QR approval decodes the exact
-  native `PendingJoin`, verifies its signed assertion and invitation ID, and uses
-  the existing membership transition and lost-acknowledgement recovery. There is
-  no new bearer token, enrollment endpoint or framing version. A QR from another
-  invitation, household, server or device cannot authorize the displayed request.
-  Browser camera access is same-origin, video-only and requested on a button
-  press. Frames are bounded to 800 pixels per side, decoded locally and cleared
-  on close, expiry, lock, page hiding, failure or successful capture. Microphone,
-  geolocation and payment permissions remain disabled. Manual full-fingerprint
-  approval remains available without camera permission.
+- A browser owner creates the invite, keeps its key in the vault and shows the link
+  as a locally generated QR. It polls join requests while the dialog is open and
+  marks a request approvable only when the MAC verifies under that key, the member,
+  expiry and admission hash match, and the signature is valid. A request whose
+  invite came from another owner device is shown but cannot be approved here. The
+  key is forgotten after approval or expiry. The relay sees the admission hash and
+  the MAC, never the key, so it cannot vouch for device keys it substituted.
+- The served `/join` page reads the fragment into memory, removes it from the
+  address bar, and offers **Open in Usuals** (the app wrapper) or **Join in this
+  browser**. No camera is used in the browser.
 - An admitted browser account can create a household through CSRF-protected
   `POST /api/households`. The relay atomically stores genesis, the creating-account
   association and the fresh owner-device binding. The account row serializes the
@@ -40,7 +44,7 @@ existing signed household membership remains an independent authority.
 - Browser creation requires a downloaded and read-back-verified native-compatible
   encrypted recovery kit, with a separate random key. Only owner keys and public
   recovery membership enter the persisted browser vault. Browser owners can
-  invite, approve full fingerprints and remove devices, rotating every list key.
+  invite, approve verified join codes and remove devices, rotating every list key.
   Exact snapshots, manifests and reservations persist before network I/O. A
   verified obsolete change can be discarded; ambiguous committed work is resolved
   first. Quota-denied creation can be cancelled only after a definitive rejection,

@@ -8,8 +8,9 @@ import { body, transition } from "../src/membership.mjs";
 import { vaultInitial } from "../src/vault.mjs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { admitKey, macKey, joinMac, joinCode, descriptorAnchor, inviteLink, parseInviteLink } from "../src/pairing.mjs";
 
-const now = 1_800_000_000_000;
+const now = 1_800_000_000_000, day = 86_400_000;
 async function fixture() {
   const identity = await newDevice(), server = { serverId: await hash(unb64(identity.publicKeys.signingPublicKey)),
     receiptPublicKey: identity.publicKeys.signingPublicKey, protocolVersions: [1] };
@@ -22,7 +23,7 @@ async function fixture() {
   const transport = async (path, options = {}) => {
     if (path === "/v1/server-info") return server;
     if (path === "/v1/devices/challenge") return { challengeId: crypto.randomUUID(), nonce: b64(random(32)),
-      serverId: server.serverId, expiresAt: now + 300000, purpose: options.body.purpose };
+      serverId: server.serverId, expiresAt: now + 10 * day, purpose: options.body.purpose };
     if (path === "/api/households") {
       if (remote.fail === "quota") { remote.fail = null; throw new Problem("quota_exceeded"); }
       assert.ok(vault.read().creating, "persist owner before network I/O");
@@ -31,7 +32,7 @@ async function fixture() {
       if (remote.fail === "creation") { remote.fail = null; throw new Problem("unavailable"); }
       return proof;
     }
-    if (path === "/v1/devices/session") return { token: "synthetic", expiresAt: now + 3600000 };
+    if (path === "/v1/devices/session") return { token: "synthetic", expiresAt: now + 10 * day };
     if (path === "/v1/join-requests") { const assertion = parseJoin(unb64(options.body.assertion));
       return { requestId: assertion.requestId, expiresAt: assertion.expiresAt }; }
     if (path.endsWith("/expired")) {
@@ -42,7 +43,13 @@ async function fixture() {
       return { requestId: a.requestId, expiresAt: a.expiresAt };
     }
     const id = body(draft.proof).householdId;
-    if (path.endsWith("/invites")) return remote.invitation = { inviteId: crypto.randomUUID(), secret: b64(random(32)), expiresAt: now + 600000 };
+    if (path.endsWith("/invites")) { remote.inviteRequest = options.body;
+      return remote.invitation = { inviteId: crypto.randomUUID(), expiresAt: now + day }; }
+    if (path.startsWith("/v1/invites/") && path.endsWith("/open")) {
+      assert.equal(path, `/v1/invites/${remote.open.inviteId}/open`);
+      assert.equal(options.body.secret, b64(await admitKey(remote.open.key)));
+      return { descriptor: b64(remote.open.descriptor), expiresAt: remote.open.expiresAt };
+    }
     if (path.endsWith("/join-requests")) return { requests: remote.requests };
     if (path.includes("/key-packages?")) {
       if (remote.fail === "packages") { remote.fail = null; throw new Problem("unavailable"); }
@@ -82,6 +89,20 @@ async function fixture() {
   const setup = () => verifySavedHousehold(draft, draft.file, draft.secret);
   return { draft, vault, remote, client, setup, server };
 }
+/** What a phone holding the link sends: the assertion it signs and the MAC only the link's key can produce. */
+async function applicant(f, household, link, device, change = {}, key = parseInviteLink(link).key) {
+  const parsed = parseInviteLink(link), descriptor = unb64(f.remote.inviteRequest.descriptor);
+  assert.deepEqual(await descriptorAnchor(descriptor), parsed.anchor);
+  const d = JSON.parse(new TextDecoder().decode(descriptor));
+  assert.equal(f.remote.inviteRequest.secretHash, await hash(await admitKey(parsed.key)));
+  const a = { origin: f.draft.origin, serverId: f.server.serverId, householdId: household,
+    genesisHash: await manifestHash(f.draft.proof), inviteId: parsed.inviteId, requestId: crypto.randomUUID(),
+    memberId: d.memberId, device: device.publicKeys, secretHash: await hash(await admitKey(parsed.key)),
+    challengeId: crypto.randomUUID(), nonce: b64(random(32)), expiresAt: f.remote.invitation.expiresAt, ...change };
+  const bytes = joinBytes(a);
+  return { assertion: a, pending: { requestId: a.requestId, assertion: b64(bytes), signature: await sign(device, bytes),
+    mac: await joinMac(await macKey(key), bytes) }, code: await joinCode(await macKey(key), bytes) };
+}
 test("web creation saves native recovery kit, validates read-back and keeps recovery secrets out of browser state", async () => {
   const f = await fixture();
   await assert.rejects(verifySavedHousehold(f.draft, f.draft.file, b64(random(32))));
@@ -105,19 +126,14 @@ for (const committed of [false, true]) test(`expired prepared approval resolves 
   const f = await fixture(); let c = f.client();
   const selected = await c.createHousehold(await f.setup(), "Our list");
   await c.synchronize(selected.household, selected.list);
-  const { parseInvitation } = await import("../src/client.mjs");
-  const link = parseInvitation(await c.invite(selected.household), f.draft.origin), device = await newDevice();
-  const a = { origin: f.draft.origin, serverId: f.server.serverId, householdId: selected.household,
-    genesisHash: await manifestHash(f.draft.proof), inviteId: link.inviteId, requestId: crypto.randomUUID(),
-    memberId: link.memberId, device: device.publicKeys, secretHash: await hash(unb64(link.secret)),
-    challengeId: crypto.randomUUID(), nonce: b64(random(32)), expiresAt: link.expiresAt };
-  const pending = { requestId: a.requestId, assertion: b64(joinBytes(a)), signature: await sign(device, joinBytes(a)) };
+  const { pending } = await applicant(f, selected.household, await c.invite(selected.household), await newDevice());
   f.remote.requests = [pending];
-  const [applicant] = await c.applicants(selected.household); f.remote.fail = "beforeCommit";
-  await assert.rejects(c.approve(selected.household, pending, applicant.fingerprint), e => e.code === "unavailable");
+  const [request] = await c.applicants(selected.household); f.remote.fail = "beforeCommit";
+  assert.equal(request.verified, true);
+  await assert.rejects(c.approve(selected.household, request.pending), e => e.code === "unavailable");
   const saved = c.read(selected.household).pendingMembership;
   await assert.rejects(c.discardInvalidMembership(selected.household), e => e.code === "membership_conflict");
-  c.stop(); c = f.client(() => now + 700000); f.remote.now += 700000; f.remote.requests = [];
+  c.stop(); c = f.client(() => now + day + 100000); f.remote.now += day + 100000; f.remote.requests = [];
   await assert.rejects(c.refresh(selected.household), e => e.code === "invalid");
   f.remote.fail = "expiry";
   await assert.rejects(c.discardInvalidMembership(selected.household), e => e.code === "unavailable");
@@ -137,51 +153,57 @@ for (const committed of [false, true]) test(`expired prepared approval resolves 
   await c.synchronize(selected.household, selected.list);
   assert.equal((await c.view(selected.household, selected.list)).name, "Our list"); c.stop();
 });
-for (const mode of ["fingerprint", "qr"]) test(`web owner verifies native join framing by ${mode}, resumes approval and rotates removed-device keys`, async () => {
+test("web owner approves only a request whose MAC proves it holds this device's invite link", async () => {
   const f = await fixture(); let c = f.client();
   const selected = await c.createHousehold(await f.setup(), "Our list");
   await c.synchronize(selected.household, selected.list);
-  const invitation = await c.invite(selected.household);
-  const { parseInvitation } = await import("../src/client.mjs");
-  const link = parseInvitation(invitation, f.draft.origin), device = await newDevice();
-  const assertion = { origin: f.draft.origin, serverId: f.server.serverId, householdId: selected.household,
-    genesisHash: await manifestHash(f.draft.proof), inviteId: link.inviteId, requestId: crypto.randomUUID(),
-    memberId: link.memberId, device: device.publicKeys, secretHash: await hash(unb64(link.secret)),
-    challengeId: crypto.randomUUID(), nonce: b64(random(32)), expiresAt: link.expiresAt };
+  const link = await c.invite(selected.household);
+  assert.equal(f.remote.inviteRequest.secret, undefined);
+  assert.equal(JSON.stringify(f.vault.read()).includes(link.slice(link.indexOf("#") + 1)), false, "the vault keeps the key, never the link text");
+  const device = await newDevice(), { assertion, pending, code } = await applicant(f, selected.household, link, device);
   assert.deepEqual(parseJoin(joinBytes(assertion)), assertion);
   const bytes = joinBytes(assertion);
   for (let n = 0; n < bytes.length; n++) assert.throws(() => parseJoin(bytes.slice(0, n)));
   assert.throws(() => parseJoin(new Uint8Array([...bytes, 0])));
-  const pending = { requestId: assertion.requestId, assertion: b64(bytes), signature: await sign(device, bytes) };
   f.remote.requests = [pending];
-  const [applicant] = await c.applicants(selected.household);
-  await assert.rejects(c.approve(selected.household, pending, "0".repeat(64)), e => e.code === "unverified");
-  const uri = "usuals://device#" + b64(jsonBytes(pending));
-  await assert.rejects(c.approveQr(selected.household, uri, { ...link, inviteId: crypto.randomUUID() }), e => e.code === "unverified");
-  await assert.rejects(c.approveQr(selected.household, "usuals://device#" + b64(jsonBytes({ ...pending, signature: b64(random(64)) })), link));
-  for (const mutation of [{ memberId: crypto.randomUUID() }, { secretHash: b64(random(32)) }, { expiresAt: assertion.expiresAt + 1 },
-    { inviteId: crypto.randomUUID() }, { householdId: crypto.randomUUID() }, { serverId: b64(random(32)) }]) {
-    const altered = joinBytes({ ...assertion, ...mutation });
-    const alteredQr = "usuals://device#" + b64(jsonBytes({ requestId: pending.requestId, assertion: b64(altered), signature: await sign(device, altered) }));
-    await assert.rejects(c.approveQr(selected.household, alteredQr, link), e => e.code === "unverified");
+  const [request] = await c.applicants(selected.household);
+  assert.deepEqual({ requestId: request.requestId, code: request.code, verified: request.verified }, { requestId: pending.requestId, code, verified: true });
+  const relay = await newDevice(), swapped = joinBytes({ ...assertion, device: relay.publicKeys });
+  const forgeries = [{ ...pending, mac: b64(random(32)) }, { ...pending, mac: undefined },
+    { ...pending, assertion: b64(swapped), signature: await sign(relay, swapped) }];
+  for (const change of [{ memberId: crypto.randomUUID() }, { secretHash: b64(random(32)) }, { expiresAt: assertion.expiresAt + 1 },
+    { inviteId: crypto.randomUUID() }, { householdId: crypto.randomUUID() }, { serverId: b64(random(32)) }])
+    forgeries.push((await applicant(f, selected.household, link, device, change)).pending);
+  forgeries.push((await applicant(f, selected.household, link, device, {}, random(32))).pending);
+  for (const forged of forgeries) {
+    f.remote.requests = [forged];
+    const [shown] = await c.applicants(selected.household);
+    assert.deepEqual({ code: shown.code, verified: shown.verified }, { code: null, verified: false });
+    await assert.rejects(c.approve(selected.household, forged), e => e.code === "unverified");
     assert.equal(c.read(selected.household).pendingMembership, null);
   }
-  const approve = () => mode === "qr" ? c.approveQr(selected.household, uri, link)
-    : c.approve(selected.household, pending, applicant.fingerprint);
+  const invites = c.read(selected.household).invites;
+  await f.vault.mutate(s => { s.households[selected.household].invites = {}; });
+  f.remote.requests = [pending];
+  assert.deepEqual((await c.applicants(selected.household)).map(r => r.verified), [false], "an owner device without the link's key cannot verify it");
+  await assert.rejects(c.approve(selected.household, pending), e => e.code === "unverified");
+  await f.vault.mutate(s => { s.households[selected.household].invites = invites; });
+  const approve = () => c.approve(selected.household, pending);
   assert.equal(f.remote.proofs.length, 2);
   f.remote.fail = "commit";
   await assert.rejects(approve(), e => e.code === "unavailable");
-  c.stop(); c = f.client(() => now + 700000);
+  c.stop(); c = f.client(() => now + day + 100000);
   await approve();
   assert.equal(f.remote.proofs.length, 3, "the committed approval resolves after reload and invitation expiry");
   assert.equal(c.read(selected.household).pendingMembership, null);
+  assert.deepEqual(c.read(selected.household).invites, {}, "an approved invite's key is forgotten");
   const recipient = await fingerprint(f.server.serverId, selected.household, device.publicKeys);
   const key = await unwrap(f.server.serverId, selected.household, f.remote.lastSigned.packages.find(p => p.recipientFingerprint === recipient),
     device, f.draft.device.publicKeys.signingPublicKey);
   assert.deepEqual(key, unb64(c.read(selected.household).keys[`${selected.list}:3`]));
   f.remote.fail = "commit";
   await assert.rejects(c.removeDevice(selected.household, device.publicKeys.id), e => e.code === "unavailable");
-  c.stop(); c = f.client(() => now + 700000);
+  c.stop(); c = f.client(() => now + day + 100000);
   await c.removeDevice(selected.household, device.publicKeys.id);
   assert.equal(f.remote.proofs.length, 4, "the committed removal is not repeated");
   assert.equal(f.remote.lastSigned.packages.some(p => p.recipientFingerprint === recipient), false);
@@ -221,12 +243,13 @@ test("only a definitive quota rejection can abandon creation and allow joining a
   assert.equal(f.vault.read().creating.rejected, true);
   await c.abandonRejectedCreation();
   assert.equal(f.vault.read().creating, null);
-  const owner = await newDevice(), invitation = { version: 1, origin: f.draft.origin, serverId: f.server.serverId,
+  const owner = await newDevice(), descriptor = jsonBytes({ version: 2, origin: f.draft.origin, serverId: f.server.serverId,
     householdId: crypto.randomUUID(), genesisHash: b64(random(32)), ownerDeviceId: owner.publicKeys.id,
-    ownerFingerprint: b64(random(32)), inviteId: crypto.randomUUID(), memberId: crypto.randomUUID(),
-    role: "editor", secret: b64(random(32)), expiresAt: now + 600000 };
-  await c.requestJoin("usuals://join#" + b64(jsonBytes(invitation)));
-  assert.equal(f.vault.read().joining.invitation.householdId, invitation.householdId);
+    ownerFingerprint: b64(random(32)), memberId: crypto.randomUUID(), role: "editor" });
+  f.remote.open = { inviteId: crypto.randomUUID(), key: random(32), descriptor, expiresAt: now + day };
+  const code = await c.requestJoin(inviteLink(f.draft.origin, f.remote.open.inviteId, f.remote.open.key, await descriptorAnchor(descriptor)));
+  assert.match(code, /^[0-9]{6}$/);
+  assert.equal(f.vault.read().joining.invitation.householdId, JSON.parse(new TextDecoder().decode(descriptor)).householdId);
   c.stop();
 });
 test("retry clears quota abandonment permission before a potentially committed request", async () => {

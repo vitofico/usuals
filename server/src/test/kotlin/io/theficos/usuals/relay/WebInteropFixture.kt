@@ -61,13 +61,19 @@ object WebInteropFixture {
             return signed to Snapshot(snapshotEnvelope, 0, Wire.zero)
         }
         val created = next(genesis, "create_list", SyncCrypto.randomKey(), genesis.body().members).first
-        val invitation = InvitationLink(origin = origin, serverId = identity.serverId, householdId = household,
+        val inviteKey = InviteKey.random()
+        val descriptor = Wire.json.encodeToString(InviteDescriptor(origin = origin, serverId = identity.serverId, householdId = household,
             genesisHash = genesis.hash(), ownerDeviceId = owner.publicKeys.id,
             ownerFingerprint = Wire.fingerprint(identity.serverId, household, owner.publicKeys.signingPublicKey, owner.publicKeys.recipientPublicKey),
-            inviteId = fresh(), memberId = fresh(), role = "editor", secret = Wire.encode(SyncCrypto.randomKey()), expiresAt = 1_900_000_000_000)
+            memberId = fresh(), role = "editor")).toByteArray()
+        val d = Wire.json.decodeFromString<InviteDescriptor>(descriptor.toString(Charsets.UTF_8))
+        val code = InviteCode(origin, fresh(), inviteKey, Pairing.descriptorAnchor(descriptor))
+        val invitation = InvitationLink(2, origin, d.serverId, household, d.genesisHash, d.ownerDeviceId, d.ownerFingerprint, code.inviteId,
+            d.memberId, d.role, Wire.encode(inviteKey.admit()), 1_900_000_000_000, inviteKey.encoded())
         val assertion = JoinAssertion(origin, identity.serverId, household, genesis.hash(), invitation.inviteId, fresh(), invitation.memberId,
-            recipient.publicKeys, Wire.hash(Wire.decode(invitation.secret, 32)), fresh(), Wire.encode(SyncCrypto.randomKey()), invitation.expiresAt)
-        val pending = PendingJoin(assertion.requestId, Wire.encode(assertion.bytes()), SyncCrypto.sign(recipient, assertion.bytes()))
+            recipient.publicKeys, Wire.hash(inviteKey.admit()), fresh(), Wire.encode(SyncCrypto.randomKey()), invitation.expiresAt)
+        val pending = PendingJoin(assertion.requestId, Wire.encode(assertion.bytes()), SyncCrypto.sign(recipient, assertion.bytes()),
+            Pairing.joinMac(inviteKey.macKey(), assertion.bytes()))
         val key = SyncCrypto.randomKey()
         val (approved, snapshot) = next(created, "approve_join", key,
             created.body().members + RosterMember(invitation.memberId, "editor", listOf(recipient.publicKeys)),
@@ -92,6 +98,7 @@ object WebInteropFixture {
             put("householdId", household); put("listId", list); put("recipient", value(recipient)); put("key", Wire.encode(key))
             put("genesis", value(proof(genesis))); put("created", value(proof(created))); put("approved", value(proof(approved)))
             put("signedManifests", value(listOf(genesis, created, approved))); put("invitation", value(invitation))
+            put("inviteLink", code.link()); put("inviteDescriptor", Wire.encode(descriptor)); put("joinCode", Pairing.joinCode(inviteKey.macKey(), assertion.bytes()))
             put("joinAssertion", value(assertion)); put("joinPending", value(pending)); put("snapshot", value(snapshot))
             put("keyPackage", value(keyPackage)); put("envelope", value(envelope)); put("plaintext", Wire.encode(plaintext)); put("receipt", value(receipt))
         }
@@ -204,5 +211,16 @@ object WebInteropFixture {
         val projection = SnapshotCodec.decode(SyncCrypto.open(snapshot.envelope, listKey, owner.signingPublicKey, 10 * 1024 * 1024))
         check(projection.name == "Our list" && projection.rows.isEmpty())
         println("PASS: browser household, recovery kit, key packages and initial snapshot verified by native codecs")
+        val joined = Wire.json.parseToJsonElement(Files.readString(directory.resolve("browser-join-output.json"))).jsonObject
+        val request = Wire.json.decodeFromJsonElement<JoinRequest>(joined.getValue("request"))
+        val inviteKey = InviteKey(Wire.decode(input.getValue("invitation").jsonObject.getValue("key").jsonPrimitive.content, 32))
+        val joinBytes = Wire.decode(request.assertion)
+        val browserJoin = JoinAssertion.parse(joinBytes)
+        check(browserJoin.bytes().contentEquals(joinBytes) && browserJoin.householdId == household && browserJoin.secretHash == Wire.hash(inviteKey.admit()))
+        check(request.secret == Wire.encode(inviteKey.admit()))
+        SyncCrypto.verify(browserJoin.device.signingPublicKey, request.signature, joinBytes)
+        check(Pairing.verifyJoinMac(inviteKey.macKey(), joinBytes, requireNotNull(request.mac)))
+        check(Pairing.joinCode(inviteKey.macKey(), joinBytes) == joined.getValue("code").jsonPrimitive.content)
+        println("PASS: browser pairing v2 join request, MAC and code verified by native codecs")
     }
 }

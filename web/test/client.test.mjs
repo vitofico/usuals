@@ -6,8 +6,9 @@ import {
   HouseholdClient,
   RunScope,
   request,
-  parseInvitation,
 } from "../src/client.mjs";
+import { inviteLink, appLink, descriptorAnchor, admitKey, verifyJoinMac, macKey, joinCode } from "../src/pairing.mjs";
+import { vaultInitial } from "../src/vault.mjs";
 import {
   manifestHash,
   unb64,
@@ -395,25 +396,27 @@ test(
   { skip: !directory },
   async () => {
     const { f, vault } = await setup(),
-      invitation = { ...f.invitation, role: "owner" },
-      uri =
-        "usuals://join#" +
-        btoa(JSON.stringify(invitation))
-          .replaceAll("+", "-")
-          .replaceAll("/", "_")
-          .replaceAll("=", "");
-    assert.throws(() => parseInvitation(uri, f.origin));
+      { b64 } = await import("../src/wire.mjs"),
+      i = f.invitation,
+      key = crypto.getRandomValues(new Uint8Array(32)),
+      descriptor = jsonBytes({ version: 2, origin: i.origin, serverId: i.serverId, householdId: i.householdId,
+        genesisHash: i.genesisHash, ownerDeviceId: i.ownerDeviceId, ownerFingerprint: i.ownerFingerprint,
+        memberId: i.memberId, role: "owner" }),
+      routes = [];
     const client = new HouseholdClient(
       vault,
       { csrfToken: "csrf" },
       {
         origin: f.origin,
-        transport: () => {
-          throw new Error("Owner invitation must stop before network");
+        transport: async (path) => {
+          routes.push(path);
+          if (path.endsWith("/open")) return { descriptor: b64(descriptor), expiresAt: i.expiresAt };
+          throw new Error("Owner invitation must stop before creating device keys");
         },
       },
     );
-    await assert.rejects(client.requestJoin(uri));
+    await assert.rejects(client.requestJoin(inviteLink(f.origin, i.inviteId, key, await descriptorAnchor(descriptor))));
+    assert.deepEqual(routes, [`/v1/invites/${i.inviteId}/open`]);
     assert.equal(vault.read().joining, null);
   },
 );
@@ -500,6 +503,8 @@ test(
         accepted = false;
       const transport = async (path, options) => {
           if (path === "/v1/server-info") return f.server;
+          if (path === `/v1/invites/${f.invitation.inviteId}/open`)
+            return { descriptor: f.inviteDescriptor, expiresAt: f.invitation.expiresAt };
           if (path === "/v1/devices/challenge")
             return {
               challengeId: crypto.randomUUID(),
@@ -530,13 +535,16 @@ test(
           { csrfToken: "csrf" },
           { origin: f.origin, transport },
         );
-      const { b64 } = await import("../src/wire.mjs"),
-        uri = "usuals://join#" + b64(jsonBytes(f.invitation));
+      const uri = appLink(f.inviteLink);
       await assert.rejects(
         client.requestJoin(uri),
         (error) => error.code === "unavailable",
       );
       const saved = vault.read().joining;
+      const sent = JSON.parse(submissions[0]), key = unb64(saved.invitation.key, 32);
+      assert.equal(sent.secret, (await import("../src/wire.mjs")).b64(await admitKey(key)));
+      assert.equal(await verifyJoinMac(await macKey(key), unb64(sent.assertion), sent.mac), true);
+      assert.equal(await client.pendingCode(), await joinCode(await macKey(key), unb64(sent.assertion)));
       assert.equal(await client.completeJoin(), null);
       assert.equal(accepted, true);
       assert.equal(submissions.length, 2);
@@ -546,3 +554,18 @@ test(
     }
   },
 );
+
+test("legacy and foreign invitations are refused before any request or key", async () => {
+  let state = vaultInitial(), calls = 0;
+  const vault = { read: () => structuredClone(state), mutate: async (action) => { const next = structuredClone(state); action(next); state = next; },
+      reserve: async () => {} },
+    client = new HouseholdClient(vault, { csrfToken: "csrf" }, { origin: "https://usuals.example", transport: async () => { calls++; throw new Error("no network"); } }),
+    { b64 } = await import("../src/wire.mjs"),
+    key = new Uint8Array(32).fill(7), anchor = new Uint8Array(16).fill(3), id = "00000000-0000-4000-8000-000000000001";
+  await assert.rejects(client.requestJoin("usuals://join#" + b64(jsonBytes({ version: 1 }))), (error) => error.code === "upgrade");
+  await assert.rejects(client.requestJoin(inviteLink("https://other.example", id, key, anchor)), (error) => error.code === "wrong_origin");
+  await assert.rejects(client.requestJoin("https://usuals.example/connect"));
+  assert.equal(calls, 0);
+  assert.equal(state.joining, null);
+  client.stop();
+});
