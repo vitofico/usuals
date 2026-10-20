@@ -1,0 +1,35 @@
+.gradle/
+build/
+.idea/
+*.iml
+local.properties
+.kotlin/
+captures/
+.cxx/
+.superpowers/
+
+# Secrets — never commit. The release keystore lives outside the repo.
+*.keystore
+*.jks
+*.p12
+*.b64
+.env
+
+# Claude Code / agent session state
+.claude/
+AGENTS.local.md
+
+# Internal design specs kept locally as reference
+internal/
+
+# Local release credentials and recovery archives
+/signing/
+*-password.txt
+*.age
+.env.*
+!.env.example
+
+# Python release-tool caches
+__pycache__/
+*.py[cod]
+.venv/

@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: usuals-postgres
+spec:
+  selector:
+    app: usuals-postgres
+  ports:
+    - name: postgres
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: usuals-postgres
+spec:
+  serviceName: usuals-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: usuals-postgres
+  template:
+    metadata:
+      labels:
+        app: usuals-postgres
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+          args:
+            - postgres
+            - -c
+            - wal_level=replica
+            - -c
+            - archive_mode=on
+            - -c
+            - archive_timeout=60s
+            - -c
+            - archive_command=timeout 30s /opt/usuals/archive-wal "%p" "%f"
+            - -c
+            - shared_buffers=128MB
+            - -c
+            - max_connections=20
+            - -c
+            - log_statement=none
+            - -c
+            - log_min_error_statement=panic
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD_FILE
+              value: /run/secrets/admin-password
+            - name: POSTGRES_INITDB_ARGS
+              value: --auth-host=scram-sha-256
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 500m, memory: 512Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          ports:
+            - {name: postgres, containerPort: 5432}
+          readinessProbe:
+            exec: {command: [pg_isready, -h, 127.0.0.1, -U, postgres, -d, postgres]}
+            periodSeconds: 5
+          livenessProbe:
+            exec: {command: [pg_isready, -h, 127.0.0.1, -U, postgres, -d, postgres]}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: backup, mountPath: /backup}
+            - {name: runtime, mountPath: /var/run/postgresql}
+            - {name: temporary, mountPath: /tmp}
+            - {name: secrets, mountPath: /run/secrets, readOnly: true}
+            - {name: tools, mountPath: /opt/usuals, readOnly: true}
+            - {name: tools, mountPath: /docker-entrypoint-initdb.d/initialize.sql, subPath: initialize.sql, readOnly: true}
+            - {name: tools, mountPath: /docker-entrypoint-initdb.d/initialize-replication.sh, subPath: initialize-replication.sh, readOnly: true}
+      volumes:
+        - {name: data, persistentVolumeClaim: {claimName: usuals-postgres}}
+        - {name: backup, persistentVolumeClaim: {claimName: usuals-backups}}
+        - {name: runtime, emptyDir: {sizeLimit: 16Mi}}
+        - {name: temporary, emptyDir: {sizeLimit: 64Mi}}
+        - name: secrets
+          secret: {secretName: usuals-postgres, defaultMode: 0440}
+        - name: tools
+          configMap: {name: usuals-postgres-tools, defaultMode: 0550}

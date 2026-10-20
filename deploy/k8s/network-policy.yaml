@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny}
+spec:
+  podSelector: {matchExpressions: [{key: app, operator: In, values: [usuals-relay, usuals-postgres, usuals-backup]}]}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: relay-ingress}
+spec:
+  podSelector: {matchLabels: {app: usuals-relay}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: traefik}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: traefik}}
+      ports: [{protocol: TCP, port: 8080}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: postgres-ingress}
+spec:
+  podSelector: {matchLabels: {app: usuals-postgres}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchExpressions: [{key: app, operator: In, values: [usuals-relay, usuals-backup]}]}
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: database-egress}
+spec:
+  podSelector: {matchExpressions: [{key: app, operator: In, values: [usuals-relay, usuals-backup]}]}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app: usuals-postgres}}}]
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: dns-egress}
+spec:
+  podSelector: {matchExpressions: [{key: app, operator: In, values: [usuals-relay, usuals-backup]}]}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+# NFS mounts are node-managed volumes. No pod has general internet egress.
+# Port 9090 has no Service/Ingress/allow rule. Scrape with authorized port-forward.

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tutorial_replay">Guided tour</string>
+    <string name="tutorial_skip">Skip tour</string>
+    <string name="tutorial_back">Back</string>
+    <string name="tutorial_next">Next</string>
+    <string name="tutorial_finish">Start my list</string>
+    <string name="tutorial_setup_sharing">Set up sharing</string>
+    <string name="tutorial_step">%1$d of %2$d</string>
+    <string name="tutorial_welcome_title">Welcome to %1$s.</string>
+    <string name="tutorial_welcome_body">Your everyday shopping list works offline, without an account or a server. Start with the things you need and make it your own.</string>
+    <string name="tutorial_welcome_hint">You can reopen this tour from Settings at any time.</string>
+    <string name="tutorial_capture_title">Catch it in the moment.</string>
+    <string name="tutorial_capture_body">Tap the keyboard to add items, or hold the microphone to speak. Tap and hold an item to edit its name, quantity, category or shop.</string>
+    <string name="tutorial_capture_hint">Microphone and camera access are requested only when you use those features.</string>
+    <string name="tutorial_scan_title">From packages and recipes.</string>
+    <string name="tutorial_scan_body">Scan a barcode to add a package, or share a recipe link to review its ingredients. You confirm any suggested product name.</string>
+    <string name="tutorial_scan_hint">Product lookup is optional in Settings. Enabling it sends the barcode to Open Food Facts.</string>
+    <string name="tutorial_shop_title">A little less to remember.</string>
+    <string name="tutorial_shop_body">Choose Start shopping and check items as you buy them. Finish shop saves checked items in History; unchecked items stay on your list.</string>
+    <string name="tutorial_shop_hint">History helps you rebuy essentials. Repeat rules add items only on the schedule you choose.</string>
+    <string name="tutorial_share_title">Your everyday, together.</string>
+    <string name="tutorial_share_body">To shop together, open Settings &gt; Shared lists. Share a list from Android using your server address and its one-time setup code, or join a household created in the web app.</string>
+    <string name="tutorial_share_hint">Save and verify the recovery kit when creating a household. To join one, open its invitation and compare the full device fingerprint with its owner.</string>
+</resources>

@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: usuals-base-backup
+spec:
+  schedule: '0 2 * * 0'
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            app: usuals-backup
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: base-backup
+              image: postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+              command: [/bin/sh, -ec]
+              args: ['cp /run/secrets/backup-pgpass /tmp/pgpass; chmod 600 /tmp/pgpass; exec /opt/usuals/base-backup']
+              env:
+                - {name: PGHOST, value: usuals-postgres}
+                - {name: PGUSER, value: usuals_backup}
+                - {name: PGPASSFILE, value: /tmp/pgpass}
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities: {drop: [ALL]}
+              resources:
+                requests: {cpu: 100m, memory: 64Mi}
+                limits: {cpu: '1', memory: 256Mi}
+              volumeMounts:
+                - {name: backup, mountPath: /backup}
+                - {name: temporary, mountPath: /tmp}
+                - {name: tools, mountPath: /opt/usuals, readOnly: true}
+                - {name: secrets, mountPath: /run/secrets, readOnly: true}
+          volumes:
+            - {name: backup, persistentVolumeClaim: {claimName: usuals-backups}}
+            - {name: temporary, emptyDir: {sizeLimit: 8Mi}}
+            - name: tools
+              configMap: {name: usuals-postgres-tools, defaultMode: 0550}
+            - name: secrets
+              secret: {secretName: usuals-postgres, defaultMode: 0440, items: [{key: backup-pgpass, path: backup-pgpass}]}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Darstellung</string>
+    <string name="appearance_hint">Wähle deine Farbpalette. Hell und Dunkel folgen deinem Gerät.</string>
+    <string name="appearance_plum">Pflaume</string>
+    <string name="appearance_plum_description">Aubergine, Champagner und warmes Papier.</string>
+    <string name="appearance_grove">Hain</string>
+    <string name="appearance_grove_description">Botanisches Grün und sanfte Hafertöne.</string>
+    <string name="appearance_tide">Gezeiten</string>
+    <string name="appearance_tide_description">Tintenblau, Meerglas und kühles Papier.</string>
+</resources>

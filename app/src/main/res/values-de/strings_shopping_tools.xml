@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shopping_tools">Einkaufshilfen</string>
+    <string name="shopping_start">Einkauf starten</string>
+    <string name="shopping_stop">Einkaufsmodus beenden</string>
+    <string name="shopping_mode">Einkaufsmodus</string>
+    <string name="shopping_keep_awake">Bildschirm beim Einkaufen eingeschaltet lassen</string>
+    <string name="shopping_haptics">Beim Abhaken vibrieren</string>
+    <string name="shopping_personal_help">Diese Einstellungen bleiben auf diesem Gerät. Favoriten und Geschäftsreihenfolgen sind in Datenexporten enthalten und werden nicht mit dem Haushalt geteilt.</string>
+    <string name="shopping_favorites">Favoriten</string>
+    <string name="shopping_pin">Zu Favoriten hinzufügen</string>
+    <string name="shopping_unpin">Favorit entfernen</string>
+    <string name="shopping_no_favorites">Halte einen Artikel gedrückt und füge ihn hier für schnellen Zugriff hinzu.</string>
+    <string name="shopping_aisle_order">Gangreihenfolge</string>
+    <string name="shopping_aisle_for">Kategoriereihenfolge für %1$s</string>
+    <string name="shopping_up">%1$s nach oben verschieben</string>
+    <string name="shopping_down">%1$s nach unten verschieben</string>
+    <string name="shopping_reset_order">Reihenfolge zurücksetzen</string>
+    <string name="shopping_next_time">Beim nächsten Mal kaufen</string>
+    <string name="shopping_next_time_help">Bleiben für alle unabgehakt. Sie kehren nach dem nächsten abgeschlossenen Einkauf zurück oder können jetzt wieder eingeblendet werden.</string>
+    <string name="shopping_restore_item">%1$s für diesen Einkauf wieder einblenden</string>
+    <string name="shopping_restore">Wieder einblenden</string>
+    <string name="shopping_close">Schließen</string>
+    <string name="history_search">Frühere Käufe durchsuchen</string>
+    <string name="history_add_selected">Auswahl hinzufügen (%1$d)</string>
+    <string name="history_rebuy_review">Wähle frühere Käufe für die aktuelle Liste aus. Bereits offene Artikel werden übersprungen und Mengen nicht verdoppelt.</string>
+    <string name="history_rebuy_done">Ausgewählte Einkäufe hinzugefügt: %1$d.</string>
+    <string name="history_no_results">Keine passenden früheren Käufe gefunden.</string>
+    <string name="history_select_trip">Diesen Einkauf auswählen</string>
+    <string name="shopping_preferences_unavailable">Persönliche Einkaufseinstellungen konnten nicht gelesen werden. Deine Listen sind sicher. Die gespeicherten Einstellungen bleiben zur Wiederherstellung erhalten.</string>
+</resources>

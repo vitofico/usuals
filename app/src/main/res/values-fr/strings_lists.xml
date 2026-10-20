@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lists_choose">Vos listes</string>
+    <string name="lists_new">Nouvelle liste</string>
+    <string name="lists_name">Nom de la liste</string>
+    <string name="lists_create">Créer</string>
+    <string name="lists_selected">Sélectionnée</string>
+    <plurals name="lists_pending">
+        <item quantity="one">%d modification à synchroniser</item>
+        <item quantity="other">%d modifications à synchroniser</item>
+        <item quantity="many">%d modifications à synchroniser</item>
+    </plurals>
+    <plurals name="lists_conflicts">
+        <item quantity="one">%d modification à vérifier</item>
+        <item quantity="other">%d modifications à vérifier</item>
+        <item quantity="many">%d modifications à vérifier</item>
+    </plurals>
+    <string name="lists_review_title">Vérifier une modification</string>
+    <string name="lists_review_body">Cette modification n’a pas pu être appliquée. L’article actuel a été conservé. Vérifiez-le pour saisir les valeurs souhaitées.</string>
+    <string name="lists_review_item">Vérifier l’article</string>
+    <string name="lists_keep_current">Garder la valeur actuelle</string>
+    <string name="lists_current_value">Actuel : %1$s</string>
+    <string name="lists_requested_value">Demandé : %1$s</string>
+    <string name="lists_value_unspecified">Non précisé</string>
+    <string name="lists_value_checked">Coché</string>
+    <string name="lists_value_unchecked">Non coché</string>
+    <string name="lists_note">Note</string>
+    <string name="lists_store">Magasin</string>
+    <string name="lists_check">État de la coche</string>
+    <string name="lists_imported_home">Maison importée</string>
+    <string name="lists_shared_label">Liste partagée</string>
+    <string name="lists_local_label">Liste locale</string>
+    <string name="lists_alias_requested">Demandé : utiliser %2$s pour %1$s</string>
+    <string name="lists_alias_current">Actuel : utiliser %2$s pour %1$s</string>
+</resources>

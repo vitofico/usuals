@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Apparence</string>
+    <string name="appearance_hint">Choisissez votre palette. Le mode clair ou sombre suit votre appareil.</string>
+    <string name="appearance_plum">Prune</string>
+    <string name="appearance_plum_description">Aubergine, champagne et papier chaleureux.</string>
+    <string name="appearance_grove">Bosquet</string>
+    <string name="appearance_grove_description">Verts botaniques et doux tons avoine.</string>
+    <string name="appearance_tide">Marée</string>
+    <string name="appearance_tide_description">Bleu encre, verre de mer et papier frais.</string>
+</resources>

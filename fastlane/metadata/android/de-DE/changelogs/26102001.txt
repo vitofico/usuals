@@ -1,0 +1,1 @@
+Verbinde dich per QR-Einladung mit einem gemeinsamen Haushalt und erhalte automatische Freigabe-Updates. Importiere Listen und Zutaten offline aus Markdown-Dateien oder eingefügtem Text. Lies geschriebene Listen auf Fotos mit einem verbundenen bildfähigen Modell und prüfe sie vor dem Hinzufügen. Fotos bleiben auf deinem Gerät, bis du das Lesen ausdrücklich anforderst.

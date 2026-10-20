@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Export Android, README and store artwork from the canonical web SVG."""
+import argparse
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--check', action='store_true', help='Report stale exports without writing')
+args = parser.parse_args()
+source = ROOT / 'web/assets/mark.svg'
+svg = ET.parse(source).getroot()
+ns = '{http://www.w3.org/2000/svg}'
+if svg.get('viewBox') != '0 0 64 64' or [e.tag for e in svg] != [ns+'rect', ns+'path', ns+'circle']:
+    sys.exit('Expected a 64-unit tile, glyph path and dot in web/assets/mark.svg')
+tile, glyph, dot = svg
+if tile.get('rx') != '20' or tile.get('width') != '64' or tile.get('height') != '64':
+    sys.exit('Update the tile export for this SVG geometry')
+def number(value):
+    return f'{float(value):g}'
+cx, cy, radius = (float(dot.get(key)) for key in ('cx', 'cy', 'r'))
+circle = f'M{number(cx+radius)},{number(cy)} a{number(radius)},{number(radius)} 0,1 0,-{number(2*radius)} 0 a{number(radius)},{number(radius)} 0,1 0,{number(2*radius)} 0 Z'
+path = glyph.get('d')
+width = glyph.get('stroke-width')
+ink, ground = glyph.get('stroke'), tile.get('fill')
+if dot.get('fill') != ink or glyph.get('fill') != 'none':
+    sys.exit('The glyph and dot must share one opaque brand colour')
+paths = f'''<path android:pathData="{path}"
+    android:fillColor="@android:color/transparent" android:strokeColor="@color/brand_champagne"
+    android:strokeWidth="{width}" android:strokeLineCap="round" android:strokeLineJoin="round" />
+<path android:pathData="{circle}" android:fillColor="@color/brand_champagne" />'''
+def vector(size, viewport, content):
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from web/assets/mark.svg by scripts/sync-brand-assets. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="{size}dp" android:height="{size}dp" android:viewportWidth="{viewport}" android:viewportHeight="{viewport}">
+{content}
+</vector>
+'''.encode()
+outputs = {}
+outputs['app/src/main/res/drawable/ic_brand_mark.xml'] = vector(32, 64, '''<path android:pathData="M20,0 H44 A20,20 0,0 1,64 20 V44 A20,20 0,0 1,44 64 H20 A20,20 0,0 1,0 44 V20 A20,20 0,0 1,20 0 Z"
+    android:fillColor="@color/ic_launcher_background" />\n''' + paths)
+outputs['app/src/main/res/drawable/ic_launcher_foreground.xml'] = vector(108, 108, '''<group android:translateX="18" android:translateY="18" android:scaleX="1.125" android:scaleY="1.125">
+''' + paths + '\n</group>')
+colours = (ROOT/'app/src/main/res/values/colors.xml').read_text()
+for name, value in [('ic_launcher_background', ground), ('brand_champagne', ink)]:
+    colours, count = re.subn(r'(<color name="'+name+r'">)[^<]+(</color>)', lambda m: m[1]+value+m[2], colours)
+    if count != 1:
+        sys.exit('Missing unique Android colour: '+name)
+outputs['app/src/main/res/values/colors.xml'] = colours.encode()
+cover = (ROOT/'docs/assets/readme-cover.svg').read_text()
+cover, count = re.subn(r'(<rect x="856" width="424" height="416" fill=")[^"]+("/>)', lambda m: m[1]+ground+m[2], cover)
+if count != 1:
+    sys.exit('Missing unique README brand background')
+cover, count = re.subn(r'<!-- brand-mark:start -->.*?<!-- brand-mark:end -->', f'''<!-- brand-mark:start -->
+    <g transform="translate(924 42) scale(4.5)" fill="none" stroke="{ink}" stroke-linecap="round" stroke-linejoin="round">
+      <path d="{path}" stroke-width="{width}"/>
+      <circle cx="{number(cx)}" cy="{number(cy)}" r="{number(radius)}" fill="{ink}" stroke="none"/>
+    </g>
+    <!-- brand-mark:end -->''', cover, flags=re.DOTALL)
+if count != 1:
+    sys.exit('Missing unique README brand-mark export markers')
+outputs['docs/assets/readme-cover.svg'] = cover.encode()
+renderer = shutil.which('rsvg-convert')
+if renderer is None:
+    sys.exit('Install librsvg (rsvg-convert) to export the store icon')
+outputs['fastlane/metadata/android/en-US/images/icon.png'] = subprocess.check_output([renderer, '--width', '512', '--height', '512', str(source)])
+stale = [name for name, data in outputs.items() if not (ROOT/name).is_file() or (ROOT/name).read_bytes() != data]
+if args.check:
+    if stale:
+        sys.exit('Stale brand exports; run scripts/sync-brand-assets:\n'+'\n'.join(stale))
+    print(f'PASS: {len(outputs)} brand exports match web/assets/mark.svg')
+else:
+    for name in stale:
+        target = ROOT/name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(outputs[name])
+    print(f'Updated {len(stale)} of {len(outputs)} brand exports')

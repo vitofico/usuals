@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="restore_open">Verschlüsseltes Server-Backup öffnen</string>
+    <string name="restore_title">Wiederhergestellte Liste prüfen</string>
+    <string name="restore_key_help">Öffne das passende Wiederherstellungskit und gib seinen separat aufbewahrten Schlüssel ein, um dieses Backup zu lesen. Ein noch verfügbares Eigentümergerät kann seine gespeicherten Schlüssel verwenden. Die Prüfung erfolgt auf diesem Gerät.</string>
+    <string name="restore_open_kit">Wiederherstellungskit für dieses Backup öffnen</string>
+    <string name="restore_copy_help">Speichere eine unabhängige lokale Kopie und vergleiche sie mit neueren Änderungen auf deinen Geräten. Bestehende Listen, ungesendete Änderungen und Freigabeschlüssel bleiben erhalten. Der wiederhergestellte Haushalt bleibt gesperrt. Teile die geprüfte Kopie über einen neuen Haushalt, wenn du bereit bist.</string>
+    <string name="restore_older">Dieses Backup ist älter als der gespeicherte Stand auf diesem Gerät. Behalte deine neueren Änderungen und gleiche sie ab.</string>
+    <string name="restore_ancestry">Einige gespeicherte Prüfpunkte lassen sich diesem Backup nicht zuordnen. Diese Kopie kann nicht nachweisen, dass sie deine neuesten Änderungen enthält. Vergleiche sie mit deinen behaltenen Listen.</string>
+    <string name="restore_save">Als lokale Kopie speichern</string>
+    <string name="restore_saved">Die wiederhergestellte Liste wurde als unabhängige lokale Kopie gespeichert. Vergleiche sie mit neueren Änderungen, bevor du sie erneut teilst.</string>
+    <plurals name="restore_items">
+        <item quantity="one">%d aktueller Artikel</item>
+        <item quantity="other">%d aktuelle Artikel</item>
+    </plurals>
+    <plurals name="restore_purchases">
+        <item quantity="one">%d früherer Kauf</item>
+        <item quantity="other">%d frühere Käufe</item>
+    </plurals>
+    <string name="restore_request">Server-Backup-Anfrage erstellen</string>
+    <string name="restore_request_help">Gib unten deinen separat aufbewahrten Wiederherstellungsschlüssel ein und öffne das passende Kit. Sende dem Betreiber nur die öffentliche Anfragedatei. Prüfe diesen vollständigen Fingerabdruck mit ihm über einen vertrauenswürdigen Kanal, bevor er eine Liste exportiert.</string>
+    <string name="restore_fingerprint">Fingerabdruck des Wiederherstellungsempfängers: %1$s</string>
+</resources>

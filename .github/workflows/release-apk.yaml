@@ -1,0 +1,175 @@
+name: release-apk
+on:
+  workflow_call:
+    inputs:
+      source:
+        description: Exact main commit that passed Android and server CI
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing verified tag to recover without creating a new version
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: usuals-android-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source || inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare an automatic version or select the recovery tag
+        id: plan
+        env:
+          SOURCE: ${{ inputs.source }}
+          RECOVERY_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          if [ -n "$SOURCE" ]; then
+            python3 scripts/auto-release.py prepare --source "$SOURCE" --date "$(date -u +%F)" --plan "$RUNNER_TEMP/release-plan.json"
+          else
+            python3 scripts/android-release.py --tag "$RECOVERY_TAG" > "$RUNNER_TEMP/release-plan.json"
+          fi
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          plan = json.loads((Path(os.environ['RUNNER_TEMP'])/'release-plan.json').read_text())
+          status = plan.get('status', 'manual')
+          ready = status in {'manual', 'prepared', 'reuse'}
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f"ready={str(ready).lower()}\nstatus={status}\n")
+          if ready:
+              with open(os.environ['GITHUB_ENV'], 'a') as output:
+                  output.write(f"TAG={plan['tag']}\n")
+          PYTHON
+      - name: Verify immutable source and public signing identity
+        if: steps.plan.outputs.ready == 'true'
+        env:
+          SOURCE: ${{ inputs.source }}
+          STATUS: ${{ steps.plan.outputs.status }}
+        run: |
+          python3 scripts/android-release.py --tag "$TAG"
+          if [ "$STATUS" = prepared ]; then
+            git merge-base --is-ancestor "$SOURCE" origin/main
+          else
+            git merge-base --is-ancestor HEAD origin/main
+          fi
+          scripts/secret-scan
+      - name: Reuse an existing immutable APK
+        if: steps.plan.outputs.ready == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/publish-release.py --repo "$GITHUB_REPOSITORY" --tag "$TAG" \
+            --fetch-existing app-release.apk --destination app/build/outputs/apk/release/app-release.apk >> "$GITHUB_OUTPUT"
+      - name: Check a manually selected source
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true' && inputs.source == ''
+        run: scripts/dgradle verifyReleaseTools test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
+      - name: Build a separate clean unsigned release without signing material
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true'
+        run: scripts/dgradle verifyReleaseTools :app:clean :app:assembleRelease --no-build-cache --no-daemon --no-watch-fs --no-parallel --max-workers=2
+      - name: Prepare tools for verification of an existing APK
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing == 'true'
+        run: scripts/dgradle help --no-daemon --no-watch-fs --no-parallel --max-workers=2
+      - name: Restore runner ownership of Docker build outputs
+        if: steps.plan.outputs.ready == 'true'
+        run: sudo chown -R "$(id -u):$(id -g)" app/build
+      - name: Prepare signing material
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.USUALS_RELEASE_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.USUALS_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.USUALS_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.USUALS_RELEASE_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, base64
+          from pathlib import Path
+          names = ['KEYSTORE_B64', 'STORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD']
+          if not all(os.environ.get(name) for name in names):
+              raise SystemExit('All four production signing secrets are required.')
+          root = Path(os.environ['RUNNER_TEMP']) / 'usuals-signing'
+          root.mkdir(mode=0o700)
+          values = {'usuals-release.keystore': base64.b64decode(os.environ['KEYSTORE_B64'], validate=True),
+                    'keystore-password.txt': (os.environ['STORE_PASSWORD']+'\n').encode(),
+                    'key-alias.txt': (os.environ['KEY_ALIAS']+'\n').encode(),
+                    'key-password.txt': (os.environ['KEY_PASSWORD']+'\n').encode(),
+                    'certificate-sha256.txt': Path('scripts/release-certificate-sha256.txt').read_bytes()}
+          for name, value in values.items():
+              path = root/name
+              path.write_bytes(value)
+              path.chmod(0o600)
+          PYTHON
+      - name: Sign offline and verify certificate, package and version
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true'
+        run: scripts/sign-release "$RUNNER_TEMP/usuals-signing"
+      - name: Remove signing material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/usuals-signing"
+      - name: Verify native alignment and clean reproduction
+        if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true'
+        run: |
+          python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/app-release.apk"
+          scripts/dgradle :app:clean :app:assembleRelease --no-daemon --no-build-cache --no-watch-fs --no-parallel --max-workers=2
+          scripts/check-apk-reproducibility "$RUNNER_TEMP/app-release.apk" app/build/outputs/apk/release/app-release-unsigned.apk
+          sudo chown -R "$(id -u):$(id -g)" app/build
+          cp "$RUNNER_TEMP/app-release.apk" app/build/outputs/apk/release/app-release.apk
+      - name: Bind artifact to the source tag
+        if: steps.plan.outputs.ready == 'true'
+        run: |
+          # The workflow driver supports older immutable tags whose wrapper
+          # predates Linux checkout ownership handling.
+          image="usuals-build:$(sha256sum Dockerfile | cut -c1-12)"
+          docker run --rm --pull never --network none --platform linux/amd64 \
+            -v "$PWD":/workspace "$image" bash -euo pipefail -c '
+              git config --global --add safe.directory /workspace
+              exec python3 scripts/android-release.py --tag "$1" \
+                --apk app/build/outputs/apk/release/app-release.apk \
+                --build-tools /opt/android-sdk/build-tools/34.0.0 \
+                --certificate-sha256 scripts/release-certificate-sha256.txt
+            ' -- "$TAG"
+      - name: Atomically publish the verified version commit and tag
+        if: steps.plan.outputs.ready == 'true' && inputs.source != ''
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/auto-release.py push --plan "$RUNNER_TEMP/release-plan.json" > "$RUNNER_TEMP/release-push.json"
+          python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          status = json.loads((Path(os.environ['RUNNER_TEMP'])/'release-push.json').read_text())['status']
+          print(f"status={status}")
+          PYTHON
+      - name: Publish immutable release assets
+        if: steps.plan.outputs.ready == 'true' && (inputs.source == '' || steps.push.outputs.status == 'published')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=false
+          if [ "$(python3 scripts/android-release.py --newest-tag)" = "$TAG" ]; then latest=true; fi
+          python3 scripts/publish-release.py --repo "$GITHUB_REPOSITORY" --tag "$TAG" --latest "$latest" \
+            --asset app/build/outputs/apk/release/app-release.apk \
+            --asset app/build/outputs/apk/release/app-release.apk.sha256 \
+            --asset app/build/outputs/apk/release/release-identity.json
+      - name: Recheck current main when it advanced during this run
+        if: always() && (steps.plan.outputs.status == 'stale' || steps.push.outputs.status == 'stale')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run android-ci.yaml --ref main

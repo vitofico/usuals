@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quality_nutri_score">Nutri-Score %1$s</string>
+    <string name="quality_nutri_score_absent">Nutri-Score: non indicato</string>
+    <string name="quality_nova_1">NOVA 1 (non trasformato)</string>
+    <string name="quality_nova_2">NOVA 2 (ingrediente culinario)</string>
+    <string name="quality_nova_3">NOVA 3 (trasformato)</string>
+    <string name="quality_nova_4">NOVA 4 (ultra-trasformato)</string>
+    <string name="quality_nova_absent">NOVA: non indicato</string>
+    <string name="quality_allergens">Allergeni: %1$s</string>
+    <string name="quality_allergens_absent">Allergeni: non indicati</string>
+    <string name="quality_allergens_none_listed">Open Food Facts non elenca allergeni. È una banca dati collaborativa, quindi non è una garanzia: controlla la confezione.</string>
+    <string name="quality_record_blank">Open Food Facts ha una scheda per questo prodotto, ma è vuota.</string>
+    <string name="quality_attribution">Dati del prodotto da Open Food Facts, con licenza ODbL.</string>
+</resources>

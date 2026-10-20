@@ -1,0 +1,1 @@
+Rejoignez un foyer partagé avec une invitation QR et le suivi automatique de l'approbation. Importez listes et ingrédients depuis des fichiers Markdown ou du texte collé, hors ligne. Lisez les listes écrites sur des photos avec un modèle connecté compatible, puis vérifiez avant d'ajouter. Les photos restent sur votre appareil jusqu'à votre demande de lecture.

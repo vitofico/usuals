@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="household_fallback_name">Zuhause</string>
+    <plurals name="list_item_count">
+        <item quantity="one">%1$d Artikel</item>
+        <item quantity="other">%1$d Artikel</item>
+    </plurals>
+    <string name="list_subtitle">%1$s · %2$s</string>
+    <string name="contributor_you">du</string>
+    <string name="contributor_separator">", "</string>
+    <string name="open_settings">Einstellungen</string>
+    <string name="list_empty_instruction">Halte die Leiste gedrückt und sage, was du brauchst.</string>
+    <plurals name="list_checked_count">
+        <item quantity="one">%1$d abgehakt</item>
+        <item quantity="other">%1$d abgehakt</item>
+    </plurals>
+    <string name="list_checked_expand">Abgehakte Artikel anzeigen</string>
+    <string name="list_checked_collapse">Abgehakte Artikel ausblenden</string>
+    <string name="item_check">%1$s abhaken</string>
+    <string name="item_uncheck">%1$s wieder auf die Liste setzen</string>
+    <string name="item_remove">Entfernen</string>
+    <string name="item_quantity_pieces">×%1$s</string>
+    <string name="capture_hint">Zum Sprechen gedrückt halten</string>
+    <string name="capture_listening">Hört zu</string>
+    <string name="capture_band">Eingabeleiste, zum Sprechen gedrückt halten</string>
+    <string name="capture_write_hint">Gib ein, was du brauchst</string>
+    <string name="capture_add">Hinzufügen</string>
+    <string name="capture_speech_unavailable">Diktieren ist auf diesem Telefon nicht verfügbar. Gib ein, was du brauchst.</string>
+    <string name="capture_scan">Barcode scannen</string>
+    <string name="capture_type">Artikel eingeben</string>
+    <string name="list_empty_title">Bereit für deinen nächsten Einkauf</string>
+    <string name="scan_title">Scannen</string>
+    <string name="scan_back">Zurück</string>
+    <string name="scan_intro">Scanne eine Verpackung</string>
+    <string name="scan_guidance">Halte den Barcode in den Rahmen. Die Kamera pausiert, sobald er gelesen wurde.</string>
+    <string name="scan_permission_rationale">Zum Lesen eines Barcodes wird die Kamera benötigt. Sie wird nur auf diesem Bildschirm verwendet und speichert keine Bilder.</string>
+    <string name="scan_permission_grant">Kamera verwenden</string>
+    <string name="scan_permission_denied">Kein Kamerazugriff. Gib stattdessen den Code ein, das funktioniert genauso.</string>
+    <string name="scan_camera_unavailable">Die Kamera ist hier nicht verfügbar. Gib stattdessen den Code ein.</string>
+    <string name="scan_manual_title">Code eingeben</string>
+    <string name="scan_manual_label">Barcode</string>
+    <string name="scan_manual_hint">EAN-13, EAN-8 oder UPC-A.</string>
+    <string name="scan_manual_add">Hinzufügen</string>
+    <string name="scan_manual_invalid">Dieser Code scheint ungültig zu sein.</string>
+    <string name="quantity_gram">%1$s g</string>
+    <string name="quantity_kilogram">%1$s kg</string>
+    <string name="quantity_millilitre">%1$s ml</string>
+    <string name="quantity_litre">%1$s l</string>
+    <string name="quantity_pack">%1$s Pck.</string>
+</resources>

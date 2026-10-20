@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="product_details">Product details</string>
+    <string name="product_brand">Brand: %1$s</string>
+    <string name="product_pack">Pack size: %1$s</string>
+    <string name="product_ingredients">Ingredients</string>
+    <string name="product_ingredients_unknown">Ingredients are not stated.</string>
+    <string name="product_traces">May contain traces of: %1$s</string>
+    <string name="product_traces_unknown">Traces are not stated.</string>
+    <string name="product_traces_empty">Open Food Facts lists no traces.</string>
+    <string name="product_check_package">Community-contributed data may be incomplete or outdated. Always check the packaging for ingredients and allergens.</string>
+    <string name="product_saved">Saved on this device: %1$s</string>
+    <string name="product_saved_stale">Older saved data: %1$s</string>
+    <string name="product_refresh">Refresh</string>
+    <string name="product_close">Close</string>
+    <string name="product_source">View or contribute on Open Food Facts</string>
+    <string name="product_disabled">Online barcode lookup is off. Saved details remain available offline.</string>
+    <string name="product_settings">Lookup settings</string>
+    <string name="product_rate_limited">Open Food Facts is busy. Wait a minute before trying again. Saved details are still available.</string>
+    <string name="product_unavailable">Could not refresh product details. Any saved data is shown below.</string>
+    <string name="product_source_updated">Source updated: %1$s</string>
+    <string name="product_not_found">No product record was found for this barcode. You can contribute missing details on Open Food Facts.</string>
+</resources>

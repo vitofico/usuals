@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Apariencia</string>
+    <string name="appearance_hint">Elige tu paleta. Los modos claro y oscuro siguen al dispositivo.</string>
+    <string name="appearance_plum">Ciruela</string>
+    <string name="appearance_plum_description">Berenjena, champán y papel cálido.</string>
+    <string name="appearance_grove">Bosque</string>
+    <string name="appearance_grove_description">Verdes botánicos y suaves tonos avena.</string>
+    <string name="appearance_tide">Marea</string>
+    <string name="appearance_tide_description">Azul tinta, vidrio marino y papel fresco.</string>
+</resources>

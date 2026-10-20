@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_intro">Jeder abgeschlossene Einkauf bleibt erhalten.</string>
+    <string name="history_transfer_title">Behalte deinen Verlauf</string>
+    <string name="history_title">Verlauf</string>
+    <string name="history_back">Zurück</string>
+    <string name="history_export">Daten exportieren</string>
+    <string name="history_import">Daten importieren</string>
+    <string name="history_transfer_hint">Exporte enthalten deine benannten Listen, Einkäufe, gekauften Artikel und Artikelvorlieben. Schlüssel, Gruppenmitgliedschaften und zwischengespeicherte Produktdaten bleiben auf dem Telefon.</string>
+    <string name="history_imported">Einkaufsdaten importiert.</string>
+    <string name="history_exported">Einkaufsdaten exportiert.</string>
+    <string name="history_invalid_file">Dies ist kein kompatibler %1$s-Export. Wähle eine JSON-Datei von %1$s.</string>
+    <string name="history_invalid_date">Gib ein gültiges Datum im Format JJJJ-MM-TT ein, heute oder früher.</string>
+    <string name="history_empty_import">Keine Artikel gefunden. Füge eine Einkaufsliste ein und versuche es erneut.</string>
+    <string name="history_failed">Die Daten konnten nicht gespeichert oder gelesen werden. Deine Liste bleibt erhalten. Versuche es erneut.</string>
+    <string name="history_dismiss">Schließen</string>
+    <string name="history_past_title">Früheren Einkauf hinzufügen</string>
+    <string name="history_date_label">Einkaufsdatum (JJJJ-MM-TT)</string>
+    <string name="history_paste_label">Gekaufte Artikel einfügen</string>
+    <string name="history_import_past">Früheren Einkauf speichern</string>
+    <string name="history_empty">Schließe einen Einkauf ab, um deinen Kaufverlauf zu beginnen.</string>
+    <plurals name="history_item_count">
+        <item quantity="one">%1$d Artikel</item>
+        <item quantity="other">%1$d Artikel</item>
+    </plurals>
+    <string name="history_purchase">%1$s %2$s</string>
+    <string name="finish_shop">Einkauf abschließen</string>
+    <string name="finish_shop_question">Diesen Einkauf abschließen?</string>
+    <string name="finish_shop_all_checked">Alles ist abgehakt. Diese Artikel als Einkauf speichern?</string>
+    <string name="finish_shop_keep_open">Liste offen lassen</string>
+    <plurals name="finish_shop_saved">
+        <item quantity="one">%1$d Artikel als Einkauf gespeichert.</item>
+        <item quantity="other">%1$d Artikel als Einkauf gespeichert.</item>
+    </plurals>
+    <string name="finish_shop_undo">Rückgängig</string>
+    <plurals name="history_stale_question">
+        <item quantity="one">%1$d früher abgehakten Artikel als Einkauf speichern?</item>
+        <item quantity="other">Diese %1$d früher abgehakten Artikel als Einkauf speichern?</item>
+    </plurals>
+    <string name="history_not_now">Jetzt nicht</string>
+    <string name="history_still_needed">Noch benötigt?</string>
+    <string name="history_carry_over">Diese Artikel sind seit mehreren Einkäufen offen: %1$s</string>
+    <string name="history_keep">Behalten</string>
+    <string name="history_remove">Entfernen</string>
+    <string name="share_list">Liste teilen</string>
+    <string name="share_open_item">☐ %1$s %2$s</string>
+    <string name="share_checked_item">☑ %1$s %2$s</string>
+</resources>

@@ -1,0 +1,11 @@
+[Unit]
+Description=Usuals encrypted off-cluster backup
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+UMask=0077
+# Separate scoped configuration, credentials and hook are provisioned privately.
+ExecStart=/usr/bin/timeout 240 /usr/local/bin/borgmatic --config /etc/borgmatic.d/usuals.yaml create
+# Written only after a successful encrypted archive. Alert if this is >10 minutes old.
+ExecStartPost=/usr/bin/touch /var/lib/usuals-backup/offsite-completed-at

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_hint">Choose your palette. Light and dark follow your device.</string>
+    <string name="appearance_plum">Plum</string>
+    <string name="appearance_plum_description">Aubergine, champagne and warm paper.</string>
+    <string name="appearance_grove">Grove</string>
+    <string name="appearance_grove_description">Botanical greens and soft oat tones.</string>
+    <string name="appearance_tide">Tide</string>
+    <string name="appearance_tide_description">Ink blue, sea glass and cool paper.</string>
+</resources>
