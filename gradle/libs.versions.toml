@@ -30,7 +30,7 @@ androidx-test-runner = "1.6.2"
 androidx-test-rules = "1.6.1"
 androidx-test-junit = "1.2.1"
 truth = "1.4.4"
-espresso = "3.6.1"
+espresso = "3.7.0"
 zxing-core = "3.5.3"
 camerax = "1.4.2"
 # Shared RAW wire profile. Android uses tink-android; the isolated relay uses tink.

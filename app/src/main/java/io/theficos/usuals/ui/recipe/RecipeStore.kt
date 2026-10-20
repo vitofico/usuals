@@ -7,7 +7,7 @@ import io.theficos.usuals.llm.ModelImage
 
 enum class RecipeModelProblem { NOT_CONFIGURED, BUDGET, EMPTY, NOT_CONNECTED, NO_IMAGES }
 enum class ImportProblem { READ, TOO_LARGE, INVALID_IMAGE, INVALID_MARKDOWN }
-enum class RecipeSource { URL, MARKDOWN, PHOTO }
+enum class RecipeSource { MARKDOWN, URL, PHOTO }
 sealed interface RecipeLoad {
     data class Review(val url: String, val title: String?, val servings: String?, val rows: List<IngredientReview>, val viaModel: Boolean = false) : RecipeLoad
     data class Unstructured(val url: String, val text: String) : RecipeLoad
@@ -16,12 +16,13 @@ sealed interface RecipeLoad {
         val importProblem: ImportProblem? = null) : RecipeLoad
 }
 data class RecipeUiState(val url: String = "", val busy: Boolean = false, val result: RecipeLoad? = null, val selected: Set<Int> = emptySet(),
-    val source: RecipeSource = RecipeSource.URL, val markdown: String = "")
+    val source: RecipeSource = if (url.isBlank()) RecipeSource.MARKDOWN else RecipeSource.URL, val markdown: String = "", val fromShare: Boolean = false)
 
 interface RecipeStore {
     suspend fun read(url: String): RecipeLoad
     suspend fun model(url: String, text: String): RecipeLoad
     suspend fun markdown(text: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
+    suspend fun review(parsed: List<ParsedItem>): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun markdownFile(uri: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun photoPreview(uri: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun photo(image: ModelImage): RecipeLoad = RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)

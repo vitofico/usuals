@@ -37,6 +37,18 @@ class ShareIngestionTest {
         assertThat(pendingShare(share("2 litros de leche y 3 tomates"), null))
             .isEqualTo("2 litros de leche y 3 tomates")
     }
+    @Test
+    fun copied_styled_notes_and_markdown_are_read_as_plain_text() {
+        val note = "Shopping\n☐ milk\n☑ bought bread"
+        for (mime in listOf("text/plain", "text/markdown", "text/x-markdown")) {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_TEXT, android.text.SpannableString(note))
+            }
+            assertThat(pendingShare(intent, null)).isEqualTo(note)
+            assertThat(pendingShare(intent, recreation(consumed = true))).isNull()
+        }
+    }
 
     @Test
     fun a_rotation_after_the_list_swallowed_it_ingests_nothing() {

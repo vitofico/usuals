@@ -30,7 +30,7 @@ class RecipeImportSheetTest {
             }
         }
         compose.onNodeWithText("Close").assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
-        compose.onNodeWithText("Import recipe").assertDoesNotExist()
+        compose.onNodeWithText("Import list or recipe").assertDoesNotExist()
     }
     @Test fun `Markdown and photo both require an explicit review action`() {
         var state by mutableStateOf(RecipeUiState(source = RecipeSource.MARKDOWN, markdown = "- milk"))
@@ -39,7 +39,7 @@ class RecipeImportSheetTest {
             RecipeImportSheet(state, onUrl = {}, onRead = {}, onModel = { reads++ }, onToggle = {}, onAdd = {}, onDismiss = {},
                 onSource = { state = state.copy(source = it) }, onReadMarkdown = { reads++ })
         } }
-        compose.onNodeWithText("Review Markdown").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Review items").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.runOnIdle { assert(reads == 1); state = state.copy(source = RecipeSource.PHOTO,
             result = RecipeLoad.Photo(io.theficos.usuals.llm.VisionChallenge.create().image)) }
         compose.onNodeWithText("Read photo with my model").performScrollTo().assertIsEnabled()

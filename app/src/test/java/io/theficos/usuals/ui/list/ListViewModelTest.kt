@@ -260,14 +260,15 @@ class ListViewModelTest {
     }
 
     @Test
-    fun text_shared_into_the_app_becomes_items() = runTest(main.dispatcher) {
+    fun text_shared_into_the_app_opens_an_import_without_changing_the_list() = runTest(main.dispatcher) {
         val store = FakeItemStore()
         val vm = viewModel(store)
 
         vm.onSharedText("leche, huevos y pan")
 
-        assertThat(store.current.map { it.name })
-            .containsExactly("leche", "huevos", "pan").inOrder()
+        assertThat(store.current).isEmpty()
+        assertThat(vm.state.value.recipe!!.markdown).isEqualTo("leche, huevos y pan")
+        assertThat(vm.state.value.recipe!!.source).isEqualTo(io.theficos.usuals.ui.recipe.RecipeSource.MARKDOWN)
     }
 
     @Test

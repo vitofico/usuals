@@ -5,6 +5,30 @@ import org.junit.Test
 
 class MarkdownIngredientsTest {
     private val reader = MarkdownIngredients()
+    @Test fun plainNotesKeepOneItemPerLineWithoutRequiringAModel() {
+        assertThat(reader.read("# Shopping\n\n2 l milk\n6 eggs\n\n2 kg apples").ingredients)
+            .containsExactly("2 l milk", "6 eggs", "2 kg apples").inOrder()
+        assertThat(reader.read("milk\r\neggs\rbread\u2028apples\u2029pears").ingredients)
+            .containsExactly("milk", "eggs", "bread", "apples", "pears").inOrder()
+    }
+    @Test fun copiedNoteBulletsAndStandaloneCheckboxesSkipTitlesAndCompletedItems() {
+        assertThat(reader.read("Shopping list\n\n• 2 l milk\n◦ eggs\n☐ apples\n☑ bought bread\n☒ bought salt\n[ ] pears\n[x] bought rice").ingredients)
+            .containsExactly("2 l milk", "eggs", "apples", "pears").inOrder()
+        assertThat(reader.read("Shopping list\n☑ milk\n[x] bread").ingredients).isEmpty()
+        assertThat(reader.read("milk\n[x] bought bread\neggs\n• apples\n☐ pears").ingredients)
+            .containsExactly("milk", "eggs", "apples", "pears").inOrder()
+    }
+    @Test fun plainRecipeIngredientsDoNotIncludeMethodOrFencedNotes() {
+        assertThat(reader.read("# Soup\n## Ingredients\n2 onions\n1 l water\n## Method\nBoil\n- stir").ingredients)
+            .containsExactly("2 onions", "1 l water").inOrder()
+        for ((ingredients, method) in listOf("Ingredients" to "Method", "Ingredientes" to "Preparación",
+            "Ingredienti" to "Procedimento", "Ingrédients" to "Préparation", "Zutaten" to "Zubereitung")) {
+            assertThat(reader.read("$ingredients:\n2 onions\n1 l water\n$method:\nBoil for ten minutes").ingredients)
+                .containsExactly("2 onions", "1 l water").inOrder()
+        }
+        assertThat(reader.read("# Shopping\n2 l milk\n```\nprivate notes\n```\n> quoted text\neggs\nhttps://example.invalid").ingredients)
+            .containsExactly("2 l milk", "eggs").inOrder()
+    }
     @Test fun ingredientsExcludeCheckedRowsInstructionsFencesAndRemoteImages() {
         val document = reader.read("""
             # Tomato soup

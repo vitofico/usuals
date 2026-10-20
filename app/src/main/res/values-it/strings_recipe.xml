@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="recipe_title">Importa ricetta</string>
+    <string name="recipe_title">Importa lista o ricetta</string>
+    <string name="recipe_import">Importa</string>
     <string name="recipe_close">Chiudi</string>
     <string name="recipe_url">URL della ricetta</string>
     <string name="recipe_read">Leggi ricetta</string>
@@ -14,11 +15,11 @@
     <string name="recipe_on_list">Già nella tua lista</string>
     <string name="recipe_pantry">Alimento di base</string>
     <string name="recipe_recent">Acquistato negli ultimi 7 giorni</string>
-    <string name="recipe_empty">Nessun ingrediente utilizzabile trovato. Prova un’altra fonte o aggiungi gli articoli a mano.</string>
+    <string name="recipe_empty">Nessun articolo utilizzabile trovato. Prova un’altra fonte o aggiungi gli articoli a mano.</string>
     <plurals name="recipe_add">
-        <item quantity="one">Aggiungi %1$d ingrediente</item>
-        <item quantity="other">Aggiungi %1$d ingredienti</item>
-        <item quantity="many">Aggiungi %1$d ingredienti</item>
+        <item quantity="one">Aggiungi %1$d articolo</item>
+        <item quantity="other">Aggiungi %1$d articoli</item>
+        <item quantity="many">Aggiungi %1$d articoli</item>
     </plurals>
     <string name="recipe_model_missing">Collega un server nelle Impostazioni e attiva l’assistenza IA. Nessun dato è stato inviato a un modello.</string>
     <string name="recipe_model_empty">Il modello non ha restituito ingredienti utilizzabili. Controlla la connessione nelle Impostazioni o aggiungili a mano.</string>
@@ -31,12 +32,12 @@
     <string name="recipe_not_html">Questo link non è una pagina web di una ricetta. Incolla il link di una pagina HTTP o HTTPS.</string>
     <string name="recipe_failed">Impossibile importare la ricetta. La tua lista è ancora qui.</string>
     <string name="recipe_source_url">Link</string>
-    <string name="recipe_source_markdown">Markdown</string>
+    <string name="recipe_source_markdown">Testo o Markdown</string>
     <string name="recipe_source_photo">Foto</string>
-    <string name="recipe_markdown_help">Incolla Markdown o apri un file UTF-8. Voci e ingredienti vengono letti localmente. Le voci spuntate, i blocchi di codice e le istruzioni vengono ignorati.</string>
-    <string name="recipe_markdown_text">Testo Markdown</string>
-    <string name="recipe_markdown_file">Apri file Markdown</string>
-    <string name="recipe_read_markdown">Rivedi Markdown</string>
+    <string name="recipe_markdown_help">Incolla una nota da Google Keep o un’altra app, oppure apri un file di testo o Markdown UTF-8. Usa un articolo per riga, punti elenco o caselle. L’importazione avviene su questo dispositivo; gli articoli già spuntati vengono esclusi.</string>
+    <string name="recipe_markdown_text">Incolla la tua lista</string>
+    <string name="recipe_markdown_file">Apri file di testo o Markdown</string>
+    <string name="recipe_read_markdown">Rivedi articoli</string>
     <string name="recipe_photo_help">Scegli o scatta una foto nitida di una lista scritta o degli ingredienti. Prima viene verificato il modello con un’immagine di prova. La lettura invia la foto preparata direttamente al fornitore e usa fino a due chiamate al modello.</string>
     <string name="recipe_choose_photo">Scegli foto</string>
     <string name="recipe_take_photo">Scatta foto</string>

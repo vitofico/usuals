@@ -1,1 +1,1 @@
-Aggiornamenti e miglioramenti. Consulta la pubblicazione su GitHub per tutti i cambiamenti.
+Importa note copiate da Google Keep o un’altra app. Liste di testo, Markdown, punti elenco e caselle vengono letti localmente e verificati prima di aggiungerli. Gli articoli già spuntati sono esclusi.
