@@ -40,6 +40,7 @@ data class SettingsUiState(
     val callsToday: Int = 0,
     val modelProbe: ProbeState<ModelCapabilities> = ProbeState.Idle,
     val loaded: Boolean = false,
+    val serverOrigin: String? = null,
 )
 
 /**
@@ -63,6 +64,7 @@ class SettingsViewModel(
     private val info: AppInfo = AppInfo(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val worker: CoroutineDispatcher = Dispatchers.Default,
+    private val currentServerOrigin: () -> String? = { null },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -75,6 +77,10 @@ class SettingsViewModel(
     private var settingsRevision = 0L
 
     fun loadIfNeeded() {
+        scope.launch {
+            val origin = withContext(worker) { runCatching { currentServerOrigin() }.getOrNull() }
+            _state.update { it.copy(serverOrigin = origin) }
+        }
         if (_state.value.loaded) return
         scope.launch {
             val loaded = withContext(worker) { store.load() }

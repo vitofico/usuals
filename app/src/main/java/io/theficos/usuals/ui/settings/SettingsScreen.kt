@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -68,8 +69,11 @@ fun SettingsScreen(
     palette: AppPalette = AppPalette.PLUM,
     onPaletteChange: (AppPalette) -> Unit = {},
     onOpenTutorial: () -> Unit = {},
+    onOpenAdvanced: () -> Unit = {},
+    advanced: Boolean = false,
 ) {
     val state by vm.state.collectAsState()
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(vm) { vm.loadIfNeeded() }
 
@@ -78,7 +82,7 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall) },
+                title = { Text(stringResource(if (advanced) R.string.settings_advanced else R.string.settings_title), style = MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -99,19 +103,40 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Spacer(Modifier.height(4.dp))
-            OutlinedButton(onClick = onOpenTutorial) { Text(stringResource(R.string.tutorial_replay)) }
-            AppearanceSection(palette, onPaletteChange)
-            SectionCard {
-                Text(stringResource(R.string.sharing_title), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.sharing_intro), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onOpenSharing) { Text(stringResource(R.string.sharing_title)) }
+            if (advanced) {
+                Text(stringResource(R.string.settings_direct_help), style = MaterialTheme.typography.bodyMedium)
+                ModelSection(state, vm)
+                BudgetSection(state, vm)
+            } else {
+                SectionCard {
+                    Text(stringResource(R.string.settings_server), style = MaterialTheme.typography.titleLarge)
+                    Text(state.serverOrigin ?: stringResource(R.string.settings_server_help), style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = onOpenSharing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (state.serverOrigin == null) R.string.connection_title else R.string.settings_manage_server)) }
+                }
+                SectionCard {
+                    TextButton(onClick = { panel = "appearance" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.appearance_title)) }
+                    TextButton(onClick = { panel = "privacy" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_privacy_title)) }
+                    TextButton(onClick = { panel = "help" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_help)) }
+                }
             }
-            PrivacySection(state, vm::setScanLookup)
-            ModelSection(state, vm)
-            BudgetSection(state, vm)
-            AboutSection(state)
             Spacer(Modifier.height(32.dp))
         }
+    }
+    panel?.let { selected ->
+        AlertDialog(onDismissRequest = { panel = null },
+            title = { Text(stringResource(when (selected) { "appearance" -> R.string.appearance_title; "privacy" -> R.string.settings_privacy_title; else -> R.string.settings_help })) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (selected) {
+                    "appearance" -> AppearanceSection(palette, onPaletteChange)
+                    "privacy" -> PrivacySection(state, vm::setScanLookup)
+                    else -> {
+                        TextButton(onClick = { panel = null; onOpenTutorial() }) { Text(stringResource(R.string.tutorial_replay)) }
+                        AboutSection(state)
+                        TextButton(onClick = { panel = null; onOpenAdvanced() }) { Text(stringResource(R.string.settings_advanced)) }
+                    }
+                }
+            } },
+            confirmButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.recipe_close)) } })
     }
 }
 
@@ -128,7 +153,7 @@ private fun ModelSection(state: SettingsUiState, vm: SettingsViewModel) {
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.secondary,
         )
-        ProviderKind.entries.forEach { kind ->
+        ProviderKind.entries.filter { it != ProviderKind.ANTHROPIC }.forEach { kind ->
             ChoiceRow(
                 label = stringResource(
                     when (kind) {
@@ -317,17 +342,7 @@ private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Un
             Bullet(stringResource(R.string.settings_privacy_edge_recipe))
             Bullet(stringResource(R.string.settings_privacy_edge_cloud))
 
-            if (state.settings.provider.isLocal) {
-                Quiet(stringResource(R.string.settings_privacy_local_now))
-            } else {
-                val providerName = stringResource(when (state.settings.provider.kind) {
-                    ProviderKind.ANTHROPIC -> R.string.settings_provider_anthropic
-                    ProviderKind.OPENAI_COMPATIBLE -> R.string.settings_provider_openai
-                    ProviderKind.OLLAMA -> R.string.settings_provider_ollama
-                })
-                Bad(stringResource(R.string.settings_privacy_cloud_now, providerName))
-                Quiet(stringResource(R.string.settings_privacy_local_path))
-            }
+            Bullet(stringResource(R.string.connection_privacy))
         }
     }
 }

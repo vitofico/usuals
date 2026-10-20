@@ -39,7 +39,7 @@ class ConnectionDeviceScenarioTest {
         val publicTicket = File(context.filesDir, "connection-qa.json")
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
-            scenario.onActivity { activity -> activity.setContent { UsualsTheme { SharingScreen(vm, {}) } } }
+            scenario.onActivity { activity -> activity.setContent { UsualsTheme { SharingScreen(vm, {}, connectionOnly = true) } } }
             withContext(Dispatchers.Main) { vm.field(SharingField.ORIGIN, origin) }
             withTimeout(10000) { while (vm.state.value.busy) delay(100) }
             withContext(Dispatchers.Main) { vm.connectServer() }
@@ -54,6 +54,8 @@ class ConnectionDeviceScenarioTest {
             assertTrue(model.parseUtterance("synthetic shopping recipe").isNotEmpty())
             assertTrue(model.probeImages().supportsImages)
             assertTrue(model.parseImage(VisionChallenge.create().image).isNotEmpty())
+            withContext(Dispatchers.Main) { vm.enableServerAi(false) }
+            assertFalse(requireNotNull(connection.current()).aiEnabled)
             val draft = household.prepare(origin)
             val id = household.bootstrapAccount(draft.verifySaved(draft.file, draft.secret), requireNotNull(connection.current()))
             assertEquals("owner", household.households().single { it.id == id }.role)

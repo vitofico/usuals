@@ -4,9 +4,11 @@
 
 Android and web can use the chosen Usuals server's model gateway. Follow the
 [connection guide](server-connection.md). The default needs no model endpoint,
-provider key or browser CORS configuration on each device. Under the connection
-or account settings, choose the server default or an approved provider profile
-with your personal key. Saving a personal key sends it to the chosen server,
+provider key or browser CORS configuration on each device. In Android, open
+**Settings > Server connection**, connect once and enable **AI assistance**.
+The server supplies the selected model. Its details are read-only on the phone.
+Under the web account’s **AI assistance > Advanced**, you can optionally choose
+an approved provider profile with your personal key. Saving a personal key sends it to the chosen server,
 which stores it encrypted. The server handles that credential during inference.
 
 The selected provider, model and operator-declared processing location are shown
@@ -79,7 +81,10 @@ network-local flag and model key, and test the connection. Prose recipes and pho
 a configured model. Markdown and structured recipe pages work locally.
 
 The client supports OpenAI-compatible chat completions, including Ollama.
-The Anthropic option reports that this build does not support its protocol.
+Direct configuration lives under **Settings > Help and about > Advanced: direct AI**.
+It applies while no server is connected. A connected server with AI switched off
+never falls back to a saved direct provider. Server AI uses server limits; the
+legacy on-device request ceiling applies only to direct AI.
 Keys live in Keystore, separate from provider settings. Probes validate a real
 structured reply rather than trusting provider declarations. Errors are redacted
 and bounded before reaching the app.

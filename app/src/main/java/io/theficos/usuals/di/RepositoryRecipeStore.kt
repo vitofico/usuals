@@ -10,7 +10,7 @@ import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.recipe.*
 import io.theficos.usuals.ui.recipe.*
 
-class RepositoryRecipeStore(
+internal class RepositoryRecipeStore(
     private val fetcher: RecipeFetcher,
     private val planner: IngredientReviewPlanner,
     private val items: ItemRepository,
@@ -20,6 +20,7 @@ class RepositoryRecipeStore(
     private val clock: () -> Long = System::currentTimeMillis,
     private val markdown: MarkdownIngredients = MarkdownIngredients(),
     private val files: RecipeImportFiles = NoRecipeImportFiles,
+    private val access: () -> RecipeModelAccess? = { client()?.let { RecipeModelAccess(it) } },
 ) : RecipeStore {
     override suspend fun read(url: String): RecipeLoad = when (val result = fetcher.fetch(url)) {
         is RecipeFetch.Failed -> RecipeLoad.Failed(result.problem, httpCode = result.httpCode)
@@ -30,8 +31,10 @@ class RepositoryRecipeStore(
     }
 
     override suspend fun model(url: String, text: String): RecipeLoad {
-        val model = client() ?: return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
-        if (!budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
+        val selected = access() ?: return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
+        if (!selected.isCurrent()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED)
+        val model = selected.client
+        if (!selected.serverManaged && !budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
         val parsed = model.parseUtterance(text.take(30_000))
         if (parsed.isEmpty()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.EMPTY)
         return RecipeLoad.Review(url, null, null,
@@ -51,12 +54,15 @@ class RepositoryRecipeStore(
     override fun cameraUri(): String = files.cameraUri()
     override fun releaseCamera(uri: String) = files.releaseCamera(uri)
     override suspend fun photo(image: io.theficos.usuals.llm.ModelImage): RecipeLoad {
-        val model = client() ?: return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
-        if (!budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
+        val selected = access() ?: return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
+        if (!selected.isCurrent()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED)
+        val model = selected.client
+        if (!selected.serverManaged && !budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
         val capability = model.probeImages()
         if (!capability.reachable) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED)
         if (!capability.supportsImages || !capability.supportsStructuredOutput) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NO_IMAGES)
-        if (!budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
+        if (!selected.isCurrent()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED)
+        if (!selected.serverManaged && !budget.tryConsume()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.BUDGET)
         val parsed = model.parseImage(image)
         if (parsed.isEmpty()) return RecipeLoad.Failed(modelProblem = RecipeModelProblem.EMPTY)
         return RecipeLoad.Review("", null, null,

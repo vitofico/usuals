@@ -51,14 +51,15 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     sourceButtons.forEach((node, i) => { node.className = sources[i] === mode ? "primary" : "secondary"; node.setAttribute("aria-pressed", String(sources[i] === mode)); });
     root.querySelectorAll("input, textarea, button").forEach(node => { node.disabled = busy; });
     cancel.disabled = committing;
-    photoFile.disabled = busy || !model.status.verified;
-    startCamera.disabled = busy || !model.status.verified || !!camera;
+    photoFile.disabled = busy || (!server && !model.status.verified);
+    startCamera.disabled = busy || (!server && !model.status.verified) || !!camera;
     capture.disabled = busy || !cameraReady;
-    readPhoto.disabled = busy || !image || !model.status.verified;
+    readPhoto.disabled = busy || !image || (server ? !model.status.configured : !model.status.verified);
+    if (readText) readText.disabled = busy || !model.status.configured || !recipeText.value.trim();
     add.disabled = busy || !selected.size;
     add.textContent = t("importAdd", { count: selected.size });
     reviewList.querySelectorAll("input[data-existing]").forEach(node => { node.disabled = true; });
-    if (!model.status.configured) status.textContent = "";
+    if (server || !model.status.configured) status.textContent = "";
     else status.textContent = t(model.status.verified ? "importModelReady" : "importModelNotReady", { used: model.status.used, limit: model.status.limit });
   }
   async function showReview(proposals) {
@@ -108,15 +109,16 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   el("label", { class: "label", for: limit.id }, t("importModelLimit")), limit,
   el("p", { class: "helper" }, t("importModelMemory")), el("button", { type: "submit", class: "secondary" }, t("importConnectModel")));
   for (const field of [endpoint, modelName, key, limit]) field.addEventListener("input", () => { model.disconnect(); stopCamera(); update(); });
+  const serverDetails = el("p", { class: "helper" }), textServerDetails = el("p", { class: "helper" });
   const textServerDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));
   const serverDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));
   if (server) model.settings().then(settings => {
     if (!current()) return;
     const selected = settings.profiles.find(p => p.id === settings.selected);
-    serverDescription.textContent = t("serverAiPrivacy") + (selected ? " " + selected.label + " · " + selected.model + " · " + selected.imageModel + " · " + selected.baseUrl + ". " + t(selected.isLocal ? "serverAiLocal" : "serverAiExternal") : ""); textServerDescription.textContent = serverDescription.textContent; update();
+    serverDescription.textContent = t("serverAiPrivacy") + (selected ? " " + selected.label + ". " + t(selected.isLocal ? "serverAiLocal" : "serverAiExternal") : ""); textServerDescription.textContent = serverDescription.textContent;
+    serverDetails.textContent = textServerDetails.textContent = selected ? selected.model + " · " + selected.imageModel + " · " + selected.baseUrl : ""; update();
   }).catch(fail);
-  const modelSection = server ? el("section", {}, serverDescription,
-    button(t("importConnectModel"), () => run(() => model.check()))) : origins.length ? el("details", { open: true }, el("summary", {}, t("importModelConnectionTitle")),
+  const modelSection = server ? el("section", {}, serverDescription, el("details", {}, el("summary", {}, t("serverAiDetails")), serverDetails)) : origins.length ? el("details", { open: true }, el("summary", {}, t("importModelConnectionTitle")),
     el("p", { class: "helper" }, t("importAllowedOrigins", { origins: origins.join(", ") })), connection) : el("p", { class: "helper" }, t("importNoModelOrigins"));
   const startCamera = button(t("importTakePhoto"), () => run(async () => {
     camera = new PhotoCamera(); video.hidden = false; capture.hidden = false;
@@ -124,7 +126,7 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     catch { stopCamera(); throw new Problem("importCameraFailed"); }
   }));
   const capture = button(t("importCapturePhoto"), () => run(() => { try { showPhoto(camera.capture()); } finally { stopCamera(); } })); capture.hidden = true;
-  const readPhoto = button(t("importReadPhoto"), () => run(async () => { const proposed = await model.read(image); if (current()) await showReview(proposed); }), "primary");
+  const readPhoto = button(t("importReadPhoto"), () => run(async () => { if (server && !model.status.verified) await model.check(); const proposed = await model.read(image); if (current()) await showReview(proposed); }), "primary");
   markdownPane.append(el("p", {}, t("importMarkdownHelp")), el("label", { class: "label", for: markdown.id }, t("importMarkdownText")), markdown,
     el("label", { class: "label", for: markdownFile.id }, t("importMarkdownFile")), markdownFile, button(t("importReview"), () => run(readMarkdown), "primary"));
   photoPane.append(el("p", {}, t("importPhotoHelp")), modelSection, status,
@@ -147,8 +149,10 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     } finally { committing = false; }
   }), "primary");
   review.append(reviewHeading, el("p", { class: "helper" }, t("importReviewHelp")), reviewList, empty, el("div", { class: "button-row" }, back, add));
-  if (server) textPane.append(el("p", {}, t("importRecipeTextHelp")), textServerDescription, recipeText,
-    button(t("importRecipeText"), () => run(async () => { await showReview(await model.text(recipeText.value)); }), "primary"));
+  const readText = server ? button(t("importRecipeText"), () => run(async () => { await showReview(await model.text(recipeText.value)); }), "primary") : null;
+  recipeText.addEventListener("input", update);
+  if (server) textPane.append(el("p", {}, t("importRecipeTextHelp")), textServerDescription,
+    el("details", {}, el("summary", {}, t("serverAiDetails")), textServerDetails), recipeText, readText);
   root.append(el("h2", {}, t("importTitle")), controls, markdownPane, photoPane, textPane, review, error, el("div", { class: "button-row" }, cancel));
   const guard = event => { if (committing) { event.preventDefault(); event.stopImmediatePropagation(); } };
   dialog.addEventListener("cancel", guard, true);

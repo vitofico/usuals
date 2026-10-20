@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_server">Servidor</string>
+    <string name="settings_server_help">Conecta una vez para compartir listas y usar IA. El servidor configura el modelo.</string>
+    <string name="settings_help">Ayuda y acerca de</string>
+    <string name="settings_advanced">Avanzado: IA directa</string>
+    <string name="settings_direct_help">La IA directa envía recetas y fotos a este proveedor. Desconecta el servidor para usar estos ajustes.</string>
+    <string name="settings_offline">Tus listas locales funcionan sin servidor ni cuenta.</string>
+    <string name="settings_connected">Conectado</string>
+    <string name="settings_ai">Asistencia de IA</string>
+    <string name="settings_ai_help">Usa la IA configurada por tu servidor. Solo se envían datos cuando eliges una acción de IA.</string>
+    <string name="settings_server_account">Gestionar cuenta en el servidor</string>
+    <string name="settings_manage_server">Gestionar conexión</string>
+    <string name="settings_ai_changed">La configuración de IA ha cambiado. Revisa el proveedor antes de volver a usar la IA.</string>
+    <string name="settings_ai_details">Detalles del modelo y del procesamiento</string>
+    <string name="settings_scan_server">Escanear QR del servidor</string>
+    <string name="settings_ai_update">Usar la IA actualizada</string>
+    <string name="settings_scan_server_help">Escanea el QR del servidor que aparece en tu cuenta. También puedes pegar el enlace del servidor.</string>
+</resources>

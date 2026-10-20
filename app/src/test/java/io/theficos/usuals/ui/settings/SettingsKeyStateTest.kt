@@ -139,4 +139,18 @@ class SettingsKeyStateTest {
         assertThat(subject.state.value.apiKey).isEqualTo(KeyState.PRESENT)
         assertThat(subject.state.value.apiKeyDraft).isEmpty()
     }
+    @Test fun `returning to settings refreshes the server summary without discarding preferences`() = runTest(dispatcher) {
+        var origin: String? = null
+        val subject = SettingsViewModel(scope = this, worker = dispatcher, currentServerOrigin = { origin })
+        subject.loadIfNeeded(); advanceUntilIdle()
+        subject.setScanLookup(true); advanceUntilIdle()
+        origin = "https://server.example"
+        subject.loadIfNeeded(); advanceUntilIdle()
+        assertThat(subject.state.value.serverOrigin).isEqualTo(origin)
+        assertThat(subject.state.value.settings.scanLookupEnabled).isTrue()
+        origin = null
+        subject.loadIfNeeded(); advanceUntilIdle()
+        assertThat(subject.state.value.serverOrigin).isNull()
+    }
+
 }

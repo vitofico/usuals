@@ -19,7 +19,7 @@
         <item quantity="one">Add %1$d ingredient</item>
         <item quantity="other">Add %1$d ingredients</item>
     </plurals>
-    <string name="recipe_model_missing">Configure an optional model in Settings first, then try again. No source text or photo has been sent to a model.</string>
+    <string name="recipe_model_missing">Connect a server in Settings and turn on AI assistance, then try again. Nothing has been sent to a model.</string>
     <string name="recipe_model_empty">The model returned no usable ingredients. Check the connection in Settings or add them by hand.</string>
     <string name="recipe_invalid_url">Enter a valid HTTP or HTTPS recipe link without a username or password.</string>
     <string name="recipe_blocked">This site blocks automatic page reads. Open it in your browser and add the ingredients by hand, or try another site.</string>

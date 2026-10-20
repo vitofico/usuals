@@ -12,8 +12,6 @@ import kotlinx.coroutines.launch
 
 class SharingViewModel(private val client: HouseholdClient,
     private val connection: ConnectionClient? = null,
-    private val directProvider: () -> String? = { null },
-    private val directProviderKey: () -> String? = { null },
     private val choices: suspend () -> List<SharingList> = { emptyList() },
     private val shareList: suspend (String, String, Boolean) -> Unit = { _, _, _ -> },
     private val retryList: suspend (String, String) -> Unit = { _, _ -> },
@@ -111,28 +109,11 @@ class SharingViewModel(private val client: HouseholdClient,
     fun cancelConnection() { connection?.cancel(); reloadConnection() }
     fun disconnectServer() = work { requireNotNull(connection).disconnect(); reloadConnection() }
     fun enableServerAi(enabled: Boolean) { connection?.enableAi(enabled, state.value.ai?.revision); reloadConnection() }
-    fun migrateDirectKey(profile: AiProfileView) = work {
-        require(profile.baseUrl.trimEnd('/') == directProvider()?.trimEnd('/'))
-        val key = requireNotNull(directProviderKey())
-        val settings = requireNotNull(connection).request<AiSettings>("POST", "/v1/ai/settings", AiSelection(profile.id, key = key))
-        connection.enableAi(false); reloadConnection()
-        mutable.update { it.copy(ai = settings) }
-    }
-    fun chooseAi(profile: String?, key: String?) = work {
-        val settings = requireNotNull(connection).request<AiSettings>("POST", "/v1/ai/settings", AiSelection(profile, key = key?.ifBlank { null }))
-        requireNotNull(connection).enableAi(false)
-        reloadConnection()
-        mutable.update { it.copy(ai = settings) }
-    }
     private fun reloadConnection() {
         val saved = connection?.current()
         mutable.update { it.copy(connection = saved, connecting = connection?.pending(), origin = saved?.origin ?: it.origin) }
     }
-    fun testAi() = work(refresh = false) {
-        val result = requireNotNull(connection).request<AiReply>("POST", "/v1/ai/probe", AiRequest(revision = state.value.ai?.revision))
-        mutable.update { it.copy(aiReady = result.reachable && result.structured && result.problem == null, ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings"), directProviderUrl = directProvider()) }
-    }
-    fun loadAi() = work(refresh = false) { mutable.update { it.copy(ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings"), directProviderUrl = directProvider()) } }
+    fun loadAi() = work(refresh = false) { mutable.update { it.copy(ai = requireNotNull(connection).request<AiSettings>("GET", "/v1/ai/settings")) } }
     fun reverseQr(pending: PendingJoinState) = client.reverseQr(pending)
     fun fingerprint(pending: PendingJoinState) = client.applicantFingerprint(pending)
     fun load() = work { reload(); mutable.update { it.copy(lists = choices(), sharingSource = client.sharingSource()) } }
@@ -143,6 +124,16 @@ class SharingViewModel(private val client: HouseholdClient,
     }
     fun resumeBootstrap() = work { client.resumeBootstrap(); reload(); mutable.update { it.copy(message = SharingMessage.CREATED) } }
     fun retryJoin() = work { client.resumeJoin(); reload() }
+    fun scanServer(value: String): Boolean {
+        if (state.value.busy) return false
+        try {
+            val origin = serverOrigin(value)
+            // Previewing a public link must not open the private vault. Connect validates it again.
+            require(state.value.connection?.origin.let { it == null || it == origin })
+            mutable.update { it.copy(origin = origin, problem = null) }
+        } catch (_: Exception) { mutable.update { it.copy(problem = SharingProblem.VERIFICATION) } }
+        return true
+    }
     fun scanInvitation(value: String): Boolean {
         if (state.value.busy) return false
         try {
@@ -267,7 +258,7 @@ class SharingViewModel(private val client: HouseholdClient,
 data class SharingState(val origin: String = "", val setupCode: String = "", val invitation: String = "", val recoveryKey: String = "",
     val sharingSource: String? = null,
     val shareAttempts: List<PendingShare> = emptyList(),
-    val connection: ServerConnection? = null, val connecting: PendingConnection? = null, val ai: AiSettings? = null, val directProviderUrl: String? = null, val aiReady: Boolean? = null,
+    val connection: ServerConnection? = null, val connecting: PendingConnection? = null, val ai: AiSettings? = null,
     val fingerprint: String = "", val bootstrapPending: Boolean = false, val busy: Boolean = false, val problem: SharingProblem? = null, val message: SharingMessage? = null,
     val households: List<HouseholdSummary> = emptyList(), val kit: RecoveryDraft? = null, val saved: Boolean = false, val verified: Boolean = false,
     val backupRequest: ByteArray? = null, val backupFingerprint: String? = null, val pendingExport: ByteArray? = null, val frozenUri: String? = null, val frozenCopy: FrozenCopy? = null,
