@@ -49,7 +49,11 @@ To persist personal credentials, mount a private regular file containing exactly
 32 random bytes and set `USUALS_AI_KEY_FILE` to its path. Only the server user may
 read it. A private file such as `/identity/ai-wrap.key`, created by an explicit
 operator job under the relay UID and mounted read-only at runtime, fits the
-existing deployment. Standard projected Secret symlinks are not accepted directly. Do not put it in the image, source repository or PostgreSQL backup.
+existing deployment. Set the PVC source and container mount read-only at runtime
+and in migration jobs, so local-volume `fsGroup` handling cannot widen the
+private file permissions. Create the file in a separate operator pod without
+`fsGroup` and verify its permissions through the final runtime mount before use.
+Standard projected Secret symlinks are not accepted directly. Do not put it in the image, source repository or PostgreSQL backup.
 Back it up separately using the operator's encrypted secret escrow. Loss of the
 wrapping key requires re-entering provider keys; shopping encryption is unrelated.
 Changing a preference to **Use server default** deletes its personal credential.
