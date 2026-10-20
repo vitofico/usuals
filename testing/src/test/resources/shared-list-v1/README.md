@@ -23,3 +23,8 @@ Do not report those future gates as passed because these files parse.
 
 The S1 repeat-cycle amendment adds nine scenarios, for 38 reducer scenarios.
 It preserves next-shop deferral without resurrecting accepted old occurrences.
+
+`../pairing-v2/vectors.json` is a Python-authored pairing v2 golden: HKDF
+admission and MAC keys from a fixed invite key, the join MAC and 6-digit code
+over synthetic assertion bytes, the descriptor anchor and both link forms.
+Kotlin (`PairingTest`) and the browser (`pairing.test.mjs`) check every field.
