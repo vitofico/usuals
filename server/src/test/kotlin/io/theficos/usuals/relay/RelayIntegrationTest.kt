@@ -414,6 +414,45 @@ class RelayIntegrationTest {
         assertThat(applicantState.read().joining).isNull()
         assertThat(owner.client.pending(owner.household)).isEmpty()
     }
+    @Test fun anApprovalWhoseResponseIsLostStillUsesUpTheInvite() = testApplication {
+        application { relayModule(f.relay) }
+        val sent = mutableListOf<String>(); var lose = false
+        val transport = pairingTransport(sent) { path, bytes -> if (lose && path.endsWith("/membership")) throw java.io.IOException("lost") else bytes }
+        val owner = pairingOwner(transport)
+        val link = owner.client.invitation(owner.household).link()
+        repeat(2) { HouseholdClient(MemorySyncStore(), transport, pairingSource) { now }.requestJoin(link) }
+        val (first, second) = owner.client.pending(owner.household)
+        lose = true
+        try { owner.client.approve(owner.household, requireNotNull(first.verified)); error("the response was lost") } catch (_: java.io.IOException) { }
+        lose = false
+        assertThat(owner.client.pending(owner.household).none { it.verified != null }).isTrue()
+        sent.clear()
+        try { owner.client.approve(owner.household, requireNotNull(second.verified)); error("a used invite must not approve again") } catch (_: IllegalArgumentException) { }
+        assertThat(sent.filter { it.endsWith("/membership") && it.startsWith("POST") }).isEmpty()
+    }
+    @Test fun aRelayCannotStretchAnInvitePastItsLifetime() = testApplication {
+        application { relayModule(f.relay) }
+        var stretch = false
+        val later = { at: Long -> at + 30L * 86_400_000 }
+        val transport = pairingTransport { path, bytes ->
+            if (!stretch) bytes
+            else if (path.endsWith("/invites")) Wire.json.decodeFromString(Invite.serializer(), bytes.toString(Charsets.UTF_8))
+                .let { Wire.json.encodeToString(Invite.serializer(), it.copy(expiresAt = later(it.expiresAt))).toByteArray() }
+            else if (path.endsWith("/open")) Wire.json.decodeFromString(OpenedInvite.serializer(), bytes.toString(Charsets.UTF_8))
+                .let { Wire.json.encodeToString(OpenedInvite.serializer(), it.copy(expiresAt = later(it.expiresAt))).toByteArray() }
+            else bytes
+        }
+        val owner = pairingOwner(transport)
+        stretch = true
+        try { owner.client.invitation(owner.household); error("an inflated expiry must be refused") } catch (_: IllegalArgumentException) { }
+        assertThat(owner.state.read().invites).isEmpty()
+        stretch = false
+        val link = owner.client.invitation(owner.household).link()
+        stretch = true
+        val applicant = MemorySyncStore()
+        try { HouseholdClient(applicant, transport, pairingSource) { now }.requestJoin(link); error("an inflated expiry must be refused") } catch (_: IllegalArgumentException) { }
+        assertThat(applicant.read().joining).isNull()
+    }
     @Test fun expiredOutgoingInvitesArePruned() = testApplication {
         application { relayModule(f.relay) }
         val owner = pairingOwner(pairingTransport())

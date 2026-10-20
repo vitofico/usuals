@@ -129,7 +129,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
                 saved.server.serverId, household, saved.device.publicKeys.signingPublicKey, saved.device.publicKeys.recipientPublicKey),
             memberId = member, role = role)).toByteArray()
         val invite = call<Invite>(saved.origin, "POST", "/v1/households/$household/invites", InviteRequest(member, role, Wire.hash(key.admit()), Wire.encode(descriptor)), token)
-        require(invite.secret == null)
+        require(invite.secret == null && invite.expiresAt > clock() && invite.expiresAt <= clock() + Pairing.MAX_INVITE_LIFETIME)
         store.update { state -> state.copy(invites = state.invites.filterValues { it.expiresAt > clock() } +
             (invite.inviteId to OutgoingInvite(household, key.encoded(), member, role, invite.expiresAt))) }
         InviteCode(saved.origin, invite.inviteId, key, Pairing.descriptorAnchor(descriptor))
@@ -145,7 +145,7 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         val d = Wire.json.decodeFromJsonElement(InviteDescriptor.serializer(), Wire.strictJson(bytes, 2048)).validate(code.origin)
         if (store.read().households.containsKey(d.householdId)) throw RelayProblem("already_joined")
         val server = info(code.origin)
-        require(server.serverId == d.serverId && opened.expiresAt > clock())
+        require(server.serverId == d.serverId && opened.expiresAt > clock() && opened.expiresAt <= clock() + Pairing.MAX_INVITE_LIFETIME)
         val invitation = InvitationLink(2, code.origin, d.serverId, d.householdId, d.genesisHash, d.ownerDeviceId, d.ownerFingerprint, code.inviteId,
             d.memberId, d.role, admit, opened.expiresAt, code.key.encoded())
         val device = SyncCrypto.device()
@@ -199,13 +199,13 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     }
     /** Every waiting request; only those whose MAC proves they hold this device's invite key come back verified. */
     suspend fun pending(household: String): List<JoinCandidate> = mutex.withLock {
-        val saved = refresh(household); val invites = store.read().invites
+        val saved = refresh(household); val invites = store.read().invites; val members = saved.current.signed().body().members
         call<PendingRequests>(saved.origin, "GET", "/v1/households/$household/join-requests", token = session(saved)).requests.map { request ->
             val verified = runCatching {
                 val assertion = validateApplicant(saved, request)
                 val invite = requireNotNull(invites[assertion.inviteId])
                 val key = InviteKey(Wire.decode(invite.key, 32))
-                require(invite.household == household && invite.memberId == assertion.memberId && invite.expiresAt == assertion.expiresAt &&
+                require(invite.household == household && invite.memberId == assertion.memberId && invite.expiresAt == assertion.expiresAt && members.none { it.id == invite.memberId } &&
                     assertion.secretHash == Wire.hash(key.admit()) && Pairing.verifyJoinMac(key.macKey(), assertion.bytes(), requireNotNull(request.mac)))
                 VerifiedApplicant(request, assertion, invite.role, Pairing.joinCode(key.macKey(), assertion.bytes()))
             }.getOrNull()
@@ -214,12 +214,11 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
     }
     suspend fun approve(household: String, verified: VerifiedApplicant, role: String = verified.role) = mutex.withLock {
         val saved = refresh(household); val assertion = validateApplicant(saved, verified.pending)
-        val before = saved.current.signed().body()
-        val exists = before.members.firstOrNull { it.id == assertion.memberId }
-        require(exists == null || exists.role == role)
-        val members = if (exists == null) before.members + RosterMember(assertion.memberId, role, listOf(assertion.device)) else
-            before.members.map { if (it.id == exists.id) it.copy(devices = it.devices + assertion.device) else it }
-        change(saved, "approve_join", members, joins = mapOf(assertion.requestId to Wire.hash(assertion.bytes())))
+        val before = saved.current.signed().body(); val invite = store.read().invites[assertion.inviteId]
+        // Every invite names a fresh member, so it is spent once that member is in the roster, even when the approval's response was lost.
+        require(invite != null && invite.household == household && invite.memberId == assertion.memberId && invite.expiresAt > clock() &&
+            before.members.none { it.id == assertion.memberId })
+        change(saved, "approve_join", before.members + RosterMember(assertion.memberId, role, listOf(assertion.device)), joins = mapOf(assertion.requestId to Wire.hash(assertion.bytes())))
         store.update { it.copy(invites = it.invites - assertion.inviteId) }
     }
     suspend fun deny(household: String, request: String) = mutex.withLock {

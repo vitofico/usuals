@@ -35,6 +35,8 @@ class InviteKey(bytes: ByteArray) {
 }
 
 object Pairing {
+    /** The relay's 24-hour invite lifetime plus five minutes of clock skew; a later expiry is the relay overreaching. */
+    const val MAX_INVITE_LIFETIME = 86_700_000L
     fun descriptorAnchor(descriptor: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-256").digest("USUALS/INVITE/2\u0000".toByteArray() + descriptor).copyOf(16)
     fun joinMac(macKey: ByteArray, assertion: ByteArray): String = Wire.encode(hmac(macKey, "USUALS/JOIN-MAC/2\u0000", assertion))

@@ -7,6 +7,8 @@ async function derive(key, info) {
 }
 export const admitKey = (key) => derive(key, "USUALS/INVITE/2/admit");
 export const macKey = (key) => derive(key, "USUALS/INVITE/2/mac");
+/** The relay's 24-hour invite lifetime plus five minutes of clock skew; a later expiry is the relay overreaching. */
+export const MAX_INVITE_LIFETIME = 86_700_000;
 
 async function hmac(key, label, message) {
   const k = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

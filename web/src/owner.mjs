@@ -4,7 +4,7 @@ import { random, sign, verify, seal, hpkeSeal } from "./crypto.mjs";
 import { body, owners, devices, genesis, transition, verifyChain } from "./membership.mjs";
 import { emptyProjection, snapshotDecode } from "./reducer.mjs";
 import { packageContext, packageBytes } from "./wire.mjs";
-import { admitKey, macKey, verifyJoinMac, joinCode, descriptorAnchor, inviteLink } from "./pairing.mjs";
+import { admitKey, macKey, verifyJoinMac, joinCode, descriptorAnchor, inviteLink, MAX_INVITE_LIFETIME } from "./pairing.mjs";
 
 function owner(h) {
   const m = body(h.proofs.at(-1));
@@ -171,7 +171,7 @@ export async function invite(c, id) {
   const value = await c.authorized(id, `/v1/households/${id}/invites`, { method: "POST",
     body: { memberId, role: "editor", secretHash: await hash(await admitKey(key)), descriptor: b64(descriptor) } });
   uuid(value.inviteId);
-  requireThat(value.secret == null && Number.isSafeInteger(value.expiresAt) && value.expiresAt > c.clock());
+  requireThat(value.secret == null && Number.isSafeInteger(value.expiresAt) && value.expiresAt > c.clock() && value.expiresAt <= c.clock() + MAX_INVITE_LIFETIME);
   await c.save(id, s => {
     s.invites = Object.fromEntries(Object.entries(s.invites ?? {}).filter(([, i]) => i.expiresAt > c.clock()));
     s.invites[value.inviteId] = { key: b64(key), memberId, expiresAt: value.expiresAt };
@@ -244,10 +244,14 @@ export async function validateApplicant(c, id, pending, checkExpiry = true) {
   await c.scope.wait(verify(a.device.signingPublicKey, pending.signature, joinBytes(a)));
   return { assertion: a, pending };
 }
-/** The relay cannot forge this: the MAC needs the key that only this device's link carried. */
+/**
+ * The relay cannot forge this: the MAC needs the key that only this device's link carried. Every invite names a fresh
+ * member, so it is spent once that member is in the roster, even when the approval's response was lost.
+ */
 async function verifiedJoin(c, id, pending) {
-  const { assertion: a } = await validateApplicant(c, id, pending, false), invite = c.read(id).invites?.[a.inviteId];
-  requireThat(invite && a.memberId === invite.memberId && a.expiresAt === invite.expiresAt, "unverified");
+  const { assertion: a } = await validateApplicant(c, id, pending, false), h = c.read(id), invite = h.invites?.[a.inviteId];
+  requireThat(invite && a.memberId === invite.memberId && a.expiresAt === invite.expiresAt &&
+    !owner(h).members.some(member => member.id === a.memberId), "unverified");
   const key = unb64(invite.key, 32), mac = await macKey(key);
   requireThat(a.secretHash === await hash(await admitKey(key)) && await verifyJoinMac(mac, joinBytes(a), pending.mac), "unverified");
   return { assertion: a, code: await joinCode(mac, joinBytes(a)) };
@@ -273,11 +277,7 @@ export async function approve(c, id, pending) {
   requireThat(!approved && a.expiresAt > c.clock(), "invite_expired");
   await verifiedJoin(c, id, pending);
   requireThat(!devices(m).some(d => d.id === a.device.id), "conflict");
-  const existing = m.members.find(x => x.id === a.memberId);
-  requireThat(!existing || existing.role === "editor", "forbidden");
-  const members = existing ? m.members.map(x => x.id === existing.id ? { ...x, devices: [...x.devices, a.device] } : x)
-    : [...m.members, { id: a.memberId, role: "editor", devices: [a.device] }];
-  await change(c, id, "approve_join", members, { [a.requestId]: assertionHash }, null, pending);
+  await change(c, id, "approve_join", [...m.members, { id: a.memberId, role: "editor", devices: [a.device] }], { [a.requestId]: assertionHash }, null, pending);
   return forget();
 }
 export async function remove(c, id, device) {

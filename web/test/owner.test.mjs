@@ -44,7 +44,7 @@ async function fixture() {
     }
     const id = body(draft.proof).householdId;
     if (path.endsWith("/invites")) { remote.inviteRequest = options.body;
-      return remote.invitation = { inviteId: crypto.randomUUID(), expiresAt: now + day }; }
+      return remote.invitation = { inviteId: crypto.randomUUID(), expiresAt: now + (remote.inviteLifetime ?? day) }; }
     if (path.startsWith("/v1/invites/") && path.endsWith("/open")) {
       assert.equal(path, `/v1/invites/${remote.open.inviteId}/open`);
       assert.equal(options.body.secret, b64(await admitKey(remote.open.key)));
@@ -211,6 +211,34 @@ test("web owner approves only a request whose MAC proves it holds this device's 
   assert.equal(body(f.remote.proofs.at(-1)).action, "remove");
   await assert.rejects(approve(), e => e.code === "invite_expired");
   assert.equal(c.read(selected.household).pendingMembership, null);
+  c.stop();
+});
+test("an invite whose approval response was lost cannot approve a second request", async () => {
+  const f = await fixture(), c = f.client();
+  const selected = await c.createHousehold(await f.setup(), "Our list");
+  await c.synchronize(selected.household, selected.list);
+  const link = await c.invite(selected.household);
+  const first = await applicant(f, selected.household, link, await newDevice()), second = await applicant(f, selected.household, link, await newDevice());
+  f.remote.requests = [first.pending, second.pending];
+  f.remote.fail = "commit";
+  await assert.rejects(c.approve(selected.household, first.pending), e => e.code === "unavailable");
+  assert.deepEqual((await c.applicants(selected.household)).map(r => r.verified), [false, false]);
+  await assert.rejects(c.approve(selected.household, second.pending), e => e.code === "unverified");
+  assert.equal(f.remote.proofs.length, 3, "only the first approval reached the roster");
+  c.stop();
+});
+test("a relay cannot stretch an invite past its lifetime", async () => {
+  const f = await fixture(), c = f.client();
+  const selected = await c.createHousehold(await f.setup(), "Our list");
+  f.remote.inviteLifetime = 30 * day;
+  await assert.rejects(c.invite(selected.household));
+  assert.deepEqual(c.read(selected.household).invites ?? {}, {});
+  const owner = await newDevice(), descriptor = jsonBytes({ version: 2, origin: f.draft.origin, serverId: f.server.serverId,
+    householdId: crypto.randomUUID(), genesisHash: b64(random(32)), ownerDeviceId: owner.publicKeys.id,
+    ownerFingerprint: b64(random(32)), memberId: crypto.randomUUID(), role: "editor" });
+  f.remote.open = { inviteId: crypto.randomUUID(), key: random(32), descriptor, expiresAt: now + 30 * day };
+  await assert.rejects(c.requestJoin(inviteLink(f.draft.origin, f.remote.open.inviteId, f.remote.open.key, await descriptorAnchor(descriptor))));
+  assert.equal(f.vault.read().joining, null);
   c.stop();
 });
 for (const phase of ["creation", "stage", "commit"]) test(`web owner resumes ${phase} interruption with the same identity, keys and ciphertext`, async () => {

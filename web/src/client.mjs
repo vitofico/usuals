@@ -27,7 +27,7 @@ import {
   seal,
   verifyReceipt,
 } from "./crypto.mjs";
-import { parseInviteLink, admitKey, macKey, joinMac, joinCode, descriptorAnchor } from "./pairing.mjs";
+import { parseInviteLink, admitKey, macKey, joinMac, joinCode, descriptorAnchor, MAX_INVITE_LIFETIME } from "./pairing.mjs";
 import {
   body,
   devices,
@@ -351,7 +351,7 @@ export class HouseholdClient {
       );
       for (const k of ["householdId", "ownerDeviceId", "memberId"]) uuid(d[k]);
       for (const k of ["serverId", "genesisHash", "ownerFingerprint"]) unb64(d[k], 32);
-      requireThat(Number.isSafeInteger(opened.expiresAt) && opened.expiresAt > this.clock(), "invite_expired");
+      requireThat(Number.isSafeInteger(opened.expiresAt) && opened.expiresAt > this.clock() && opened.expiresAt <= this.clock() + MAX_INVITE_LIFETIME, "invite_expired");
       requireThat(!this.vault.read().households[d.householdId], "already_joined");
       const invitation = {
         version: 2,

@@ -136,7 +136,7 @@ class SharingFeedbackTest {
             override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
                 val response = when (path) {
                     "/v1/server-info" -> Wire.json.encodeToString(server)
-                    "/v1/invites/$replacement/open" -> Wire.json.encodeToString(OpenedInvite(Wire.encode(descriptor), Long.MAX_VALUE))
+                    "/v1/invites/$replacement/open" -> Wire.json.encodeToString(OpenedInvite(Wire.encode(descriptor), 3_600_000))
                     "/v1/devices/challenge" -> {
                         val request = Wire.json.decodeFromString<ChallengeRequest>(requireNotNull(body).toString(Charsets.UTF_8))
                         Wire.json.encodeToString(Challenge(id, digest, server.serverId, Long.MAX_VALUE, request.purpose))
