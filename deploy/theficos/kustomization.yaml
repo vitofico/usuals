@@ -8,7 +8,7 @@ resources:
   - ai-egress.yaml
 images:
   - name: usuals-relay
-    newTag: sha256-20b790f8bfc1102bfb5070c24c3b3ac6464451435e688594c39595b040b304e7
+    newTag: sha256-15c9b2dcabe3df32da4ff98c4a9679efb6d6dadd6515c70c8643d95d93327277
   - name: postgres
     newName: usuals-postgres
     newTag: sha256-1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
