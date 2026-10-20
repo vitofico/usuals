@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shopping_tools">Strumenti per la spesa</string>
+    <string name="shopping_start">Inizia la spesa</string>
+    <string name="shopping_stop">Esci dalla modalità spesa</string>
+    <string name="shopping_mode">Modalità spesa</string>
+    <string name="shopping_keep_awake">Tieni acceso lo schermo durante la spesa</string>
+    <string name="shopping_haptics">Vibra quando spunti un articolo</string>
+    <string name="shopping_personal_help">Queste scelte restano sul dispositivo. Preferiti e ordine dei negozi sono inclusi nelle esportazioni dei dati, ma non sono condivisi con il gruppo.</string>
+    <string name="shopping_favorites">Preferiti</string>
+    <string name="shopping_pin">Aggiungi ai preferiti</string>
+    <string name="shopping_unpin">Rimuovi preferito</string>
+    <string name="shopping_no_favorites">Tieni premuto un articolo e aggiungilo qui per ritrovarlo subito.</string>
+    <string name="shopping_aisle_order">Ordine dei reparti</string>
+    <string name="shopping_aisle_for">Ordine delle categorie per %1$s</string>
+    <string name="shopping_up">Sposta %1$s in alto</string>
+    <string name="shopping_down">Sposta %1$s in basso</string>
+    <string name="shopping_reset_order">Ripristina ordine</string>
+    <string name="shopping_next_time">Compra la prossima volta</string>
+    <string name="shopping_next_time_help">Restano non spuntati per tutti. Tornano dopo la prossima spesa conclusa, oppure puoi ripristinarli ora.</string>
+    <string name="shopping_restore_item">Ripristina %1$s per questa spesa</string>
+    <string name="shopping_restore">Ripristina</string>
+    <string name="shopping_close">Chiudi</string>
+    <string name="history_search">Cerca acquisti passati</string>
+    <string name="history_add_selected">Aggiungi selezionati (%1$d)</string>
+    <string name="history_rebuy_review">Seleziona gli acquisti passati da aggiungere alla lista attuale. Gli articoli già aperti vengono saltati e le quantità non sono raddoppiate.</string>
+    <string name="history_rebuy_done">Acquisti selezionati aggiunti: %1$d.</string>
+    <string name="history_no_results">Nessun acquisto passato corrisponde alla ricerca.</string>
+    <string name="history_select_trip">Seleziona questa spesa</string>
+    <string name="shopping_preferences_unavailable">Impossibile leggere le preferenze personali. Le liste sono al sicuro. Le preferenze salvate sono conservate per il recupero.</string>
+</resources>

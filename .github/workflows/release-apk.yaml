@@ -1,0 +1,96 @@
+name: release-apk
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing verified release tag, such as v2026.10.19.1
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-apk-${{ inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable source and public signing identity
+        run: |
+          python3 scripts/android-release.py --tag "$TAG"
+          git merge-base --is-ancestor HEAD origin/main
+          scripts/secret-scan
+      - name: Build unsigned APK without signing material
+        run: scripts/dgradle verifyReleaseTools :app:clean :app:assembleRelease test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
+      - name: Restore runner ownership of Docker build outputs
+        run: sudo chown -R "$(id -u):$(id -g)" app/build
+      - name: Prepare signing material
+        env:
+          KEYSTORE_B64: ${{ secrets.USUALS_RELEASE_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.USUALS_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.USUALS_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.USUALS_RELEASE_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, base64
+          from pathlib import Path
+          names = ['KEYSTORE_B64', 'STORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD']
+          if not all(os.environ.get(name) for name in names):
+              raise SystemExit('All four production signing secrets are required.')
+          root = Path(os.environ['RUNNER_TEMP']) / 'usuals-signing'
+          root.mkdir(mode=0o700)
+          values = {'usuals-release.keystore': base64.b64decode(os.environ['KEYSTORE_B64'], validate=True),
+                    'keystore-password.txt': (os.environ['STORE_PASSWORD']+'\n').encode(),
+                    'key-alias.txt': (os.environ['KEY_ALIAS']+'\n').encode(),
+                    'key-password.txt': (os.environ['KEY_PASSWORD']+'\n').encode(),
+                    'certificate-sha256.txt': Path('scripts/release-certificate-sha256.txt').read_bytes()}
+          for name, value in values.items():
+              path = root/name
+              path.write_bytes(value)
+              path.chmod(0o600)
+          PYTHON
+      - name: Sign offline and verify certificate, package and version
+        run: scripts/sign-release "$RUNNER_TEMP/usuals-signing"
+      - name: Remove signing material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/usuals-signing"
+      - name: Verify native alignment and clean reproduction
+        run: |
+          python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/app-release.apk"
+          scripts/dgradle :app:clean :app:assembleRelease --no-daemon --no-build-cache --no-watch-fs --no-parallel --max-workers=2
+          scripts/check-apk-reproducibility "$RUNNER_TEMP/app-release.apk" app/build/outputs/apk/release/app-release-unsigned.apk
+          sudo chown -R "$(id -u):$(id -g)" app/build
+          cp "$RUNNER_TEMP/app-release.apk" app/build/outputs/apk/release/app-release.apk
+      - name: Bind artifact to the source tag
+        run: |
+          # The workflow driver supports older immutable tags whose wrapper
+          # predates Linux checkout ownership handling.
+          image="usuals-build:$(sha256sum Dockerfile | cut -c1-12)"
+          docker run --rm --pull never --network none --platform linux/amd64 \
+            -v "$PWD":/workspace "$image" bash -euo pipefail -c '
+              git config --global --add safe.directory /workspace
+              exec python3 scripts/android-release.py --tag "$1" \
+                --apk app/build/outputs/apk/release/app-release.apk \
+                --build-tools /opt/android-sdk/build-tools/34.0.0 \
+                --certificate-sha256 scripts/release-certificate-sha256.txt
+            ' -- "$TAG"
+      - name: Publish immutable release assets
+        run: |
+          latest=false
+          if [ "$(python3 scripts/android-release.py --newest-tag)" = "$TAG" ]; then latest=true; fi
+          python3 scripts/publish-release.py --repo "$GITHUB_REPOSITORY" --tag "$TAG" --latest "$latest" \
+            --asset app/build/outputs/apk/release/app-release.apk \
+            --asset app/build/outputs/apk/release/app-release.apk.sha256 \
+            --asset app/build/outputs/apk/release/release-identity.json

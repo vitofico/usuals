@@ -1,0 +1,1816 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Usuals relay contract",
+    "version": "1.0.0-s0",
+    "description": "Local contract only. No relay is implemented or deployed. Security and membership rules in security-v1.md are normative."
+  },
+  "paths": {
+    "/v1/server-info": {
+      "get": {
+        "operationId": "serverInfo",
+        "description": "serverInfo",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/challenge": {
+      "post": {
+        "operationId": "challenge",
+        "description": "challenge",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/session": {
+      "post": {
+        "operationId": "session",
+        "description": "session",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Proof"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/households": {
+      "post": {
+        "operationId": "createHousehold",
+        "description": "Bootstrap only; signed empty genesis roster; lists, packages and snapshotRefs must all be empty. Owner proof key must match genesis signer.",
+        "security": [
+          {
+            "bootstrapToken": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHousehold"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/households/{h}/invites": {
+      "post": {
+        "operationId": "invite",
+        "description": "Owner only; role grants nothing until signed membership approval.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invite"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRequest"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/join-requests": {
+      "post": {
+        "operationId": "requestJoin",
+        "description": "Secret matches hash in full signed join assertion; challenge nonce consumed once. Pending assertion and signature are returned unchanged to owner; approval is separate.",
+        "security": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinPending"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/households/{h}/membership": {
+      "get": {
+        "operationId": "membership",
+        "description": "Signed proof chain only, one manifest per page; no package ciphertext bodies. Caller fetches only its recipient packages separately. Recovery scoped to own household.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "afterEpoch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "changeMembership",
+        "description": "Owner or active recovery principal only; exact predecessor and list-head CAS; ownership transfer includes recipient acceptance. Recovery access is restricted to own household/current-epoch recovery and the transition shape in security-v1.md.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedManifest"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/households/{h}/lists": {
+      "get": {
+        "operationId": "lists",
+        "description": "lists Recovery access is restricted to own household/current-epoch recovery and the transition shape in security-v1.md.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lists"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createList",
+        "description": "Owner-only action=create_list membership CAS; epoch advances, rotates all existing lists plus one new previously unused list. Full signed hashes bind every package and candidate.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Membership"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedManifest"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/lists/{l}/operations": {
+      "get": {
+        "operationId": "operations",
+        "description": "operations Recovery access is restricted to own household/current-epoch recovery and the transition shape in security-v1.md.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operations"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9223372036854775807
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "append",
+        "description": "Atomic new writes, per-input success results. Any invalid/conflicting input rolls back every new insert; exact retries return prior receipts. Never advance applied cursor from this response.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppendResults"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Append"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/lists/{l}/intents/{i}": {
+      "get": {
+        "operationId": "intent",
+        "description": "Current member author resolves ambiguous acceptance; do not reveal another author intent.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredOperation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "i",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/lists/{l}/snapshot": {
+      "get": {
+        "operationId": "snapshot",
+        "description": "snapshot Recovery access is restricted to own household/current-epoch recovery and the transition shape in security-v1.md.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "putSnapshot",
+        "description": "Owner signature, exact committed head and current epoch; never truncates the log.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Snapshot"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "l",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/changes": {
+      "get": {
+        "operationId": "changes",
+        "description": "Upgrade to authenticated WebSocket; subscribe list ids in frames; hints only, frame max 16 KiB. Never put bearer token in query.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "101": {
+            "description": "WebSocket upgrade"
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz",
+        "description": "healthz",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz",
+        "description": "readyz",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/households/{h}/join-requests": {
+      "get": {
+        "operationId": "pendingJoins",
+        "description": "Owner only, at most 10 pending joins; response omits invitation secrets.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequests"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/households/{h}/join-requests/{r}/deny": {
+      "post": {
+        "operationId": "denyJoin",
+        "description": "Owner only; deny pending request and invalidate invitation.",
+        "security": [
+          {
+            "deviceSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "r",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/households/{h}/snapshot-candidates/{c}": {
+      "put": {
+        "operationId": "stageSnapshot",
+        "description": "Current owner or restricted recovery principal; household authorizes target list UUID decoded from header, including uncreated owner list. Candidate upload grants no membership. Recovery access is restricted to own household/current-epoch recovery and the transition shape in security-v1.md.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotRef"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Snapshot"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "c",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/households/{h}/key-packages": {
+      "get": {
+        "operationId": "keyPackages",
+        "description": "Own recipient fingerprint only, selected list/epoch. Recovery principal receives only its recovery packages.",
+        "security": [
+          {
+            "deviceSession": []
+          },
+          {
+            "recoverySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyPackages"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured protocol error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "h",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "listId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "epoch",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "deviceSession": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "bootstrapToken": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "recoverySession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Five-minute restricted recovery principal, never normal membership. Restored-household fence denies issuance."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "inputIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "existingEnvelopeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "existingReceipt": {
+            "$ref": "#/components/schemas/Receipt"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "Envelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "header": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 262,
+            "maxLength": 262
+          },
+          "ciphertext": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 38,
+            "maxLength": 87035
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "header",
+          "ciphertext",
+          "signature"
+        ]
+      },
+      "Receipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "previousHead": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "head": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "seq",
+          "previousHead",
+          "head",
+          "signature"
+        ]
+      },
+      "StoredOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "envelope": {
+            "$ref": "#/components/schemas/Envelope"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/Receipt"
+          }
+        },
+        "required": [
+          "envelope",
+          "receipt"
+        ]
+      },
+      "Append": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "envelopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Envelope"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "envelopes"
+        ]
+      },
+      "Operations": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredOperation"
+            },
+            "maxItems": 100
+          },
+          "nextCursor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entries",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "ChallengeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "bootstrap",
+              "session",
+              "join",
+              "recovery"
+            ]
+          },
+          "signingPublicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          }
+        },
+        "required": [
+          "deviceId",
+          "purpose"
+        ]
+      },
+      "Challenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "serverId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "purpose": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "nonce",
+          "serverId",
+          "expiresAt",
+          "purpose"
+        ]
+      },
+      "Proof": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "challengeId",
+          "deviceId",
+          "signature"
+        ]
+      },
+      "Session": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ]
+      },
+      "SignedManifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "manifestBytes": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyPackage"
+            },
+            "maxItems": 3400
+          },
+          "snapshotRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotRef"
+            },
+            "maxItems": 20
+          },
+          "transferAcceptance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "signature": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{86}$"
+              }
+            },
+            "required": [
+              "signature"
+            ]
+          }
+        },
+        "required": [
+          "manifestBytes",
+          "signature",
+          "packages",
+          "snapshotRefs"
+        ]
+      },
+      "KeyPackage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipientFingerprint": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "epoch": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "predecessorHash": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "ciphertext": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "listId",
+          "recipientFingerprint",
+          "epoch",
+          "predecessorHash",
+          "ciphertext",
+          "signature"
+        ]
+      },
+      "Snapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "envelope": {
+            "$ref": "#/components/schemas/SnapshotEnvelope"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "head": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          }
+        },
+        "required": [
+          "envelope",
+          "seq",
+          "head"
+        ]
+      },
+      "CreateHousehold": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/SignedManifest"
+          },
+          "bootstrapProof": {
+            "$ref": "#/components/schemas/Proof"
+          }
+        },
+        "required": [
+          "manifest",
+          "bootstrapProof"
+        ]
+      },
+      "Membership": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "manifests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManifestProof"
+            },
+            "maxItems": 1
+          },
+          "nextEpoch": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "manifests",
+          "nextEpoch"
+        ]
+      },
+      "Invite": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inviteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "inviteId",
+          "secret",
+          "expiresAt"
+        ]
+      },
+      "InviteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "editor",
+              "owner"
+            ]
+          }
+        },
+        "required": [
+          "memberId",
+          "role"
+        ]
+      },
+      "JoinRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "secret": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "assertion": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "maxLength": 2048
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "secret",
+          "assertion",
+          "signature"
+        ]
+      },
+      "JoinPending": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "requestId",
+          "expiresAt"
+        ]
+      },
+      "Lists": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "listIds"
+        ]
+      },
+      "ServerInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "serverId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "receiptPublicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "protocolVersions": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "const": 1
+            }
+          }
+        },
+        "required": [
+          "serverId",
+          "receiptPublicKey",
+          "protocolVersions"
+        ]
+      },
+      "SnapshotEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "header": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 262,
+            "maxLength": 262
+          },
+          "ciphertext": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 38,
+            "maxLength": 10485760
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "header",
+          "ciphertext",
+          "signature"
+        ]
+      },
+      "SnapshotRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "listId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "head": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "candidateId",
+          "listId",
+          "sha256",
+          "seq",
+          "head"
+        ]
+      },
+      "PendingRequests": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingJoin"
+            },
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "requests"
+        ]
+      },
+      "PendingJoin": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assertion": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "maxLength": 2048
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          }
+        },
+        "required": [
+          "requestId",
+          "assertion",
+          "signature"
+        ]
+      },
+      "AppendResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "intentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "envelopeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "duplicate"
+            ]
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/Receipt"
+          }
+        },
+        "required": [
+          "inputIndex",
+          "intentId",
+          "envelopeId",
+          "outcome",
+          "receipt"
+        ]
+      },
+      "AppendResults": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppendResult"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "head": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "lastSeq": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "results",
+          "head",
+          "lastSeq"
+        ]
+      },
+      "KeyPackages": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "packages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyPackage"
+            },
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "packages"
+        ]
+      },
+      "ManifestProof": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "manifestBytes": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 86,
+            "maxLength": 86
+          },
+          "transferAcceptance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "signature": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{86}$"
+              }
+            },
+            "required": [
+              "signature"
+            ]
+          }
+        },
+        "required": [
+          "manifestBytes",
+          "signature"
+        ]
+      }
+    }
+  }
+}

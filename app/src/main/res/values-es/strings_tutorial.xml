@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tutorial_replay">Visita guiada</string>
+    <string name="tutorial_skip">Omitir visita</string>
+    <string name="tutorial_back">Atrás</string>
+    <string name="tutorial_next">Siguiente</string>
+    <string name="tutorial_finish">Empezar mi lista</string>
+    <string name="tutorial_setup_sharing">Configurar listas compartidas</string>
+    <string name="tutorial_step">%1$d de %2$d</string>
+    <string name="tutorial_welcome_title">Te damos la bienvenida a %1$s.</string>
+    <string name="tutorial_welcome_body">Tu lista de la compra funciona sin conexión, sin cuenta ni servidor. Empieza con lo que necesitas y adáptala a tu gusto.</string>
+    <string name="tutorial_welcome_hint">Puedes volver a abrir esta visita desde Ajustes en cualquier momento.</string>
+    <string name="tutorial_capture_title">Apúntalo al momento.</string>
+    <string name="tutorial_capture_body">Toca el teclado para añadir productos o mantén pulsado el micrófono para hablar. Mantén pulsado un producto para editar su nombre, cantidad, categoría o tienda.</string>
+    <string name="tutorial_capture_hint">El acceso al micrófono y a la cámara se solicita solo al usar esas funciones.</string>
+    <string name="tutorial_scan_title">De envases y recetas.</string>
+    <string name="tutorial_scan_body">Escanea un código de barras para añadir un envase o comparte un enlace de receta para revisar sus ingredientes. Tú confirmas cualquier nombre de producto sugerido.</string>
+    <string name="tutorial_scan_hint">La consulta de productos es opcional en Ajustes. Al activarla, el código se envía a Open Food Facts.</string>
+    <string name="tutorial_shop_title">Un poco menos que recordar.</string>
+    <string name="tutorial_shop_body">Elige Empezar compra y marca los productos que vayas comprando. Terminar compra guarda los marcados en el historial; los demás siguen en la lista.</string>
+    <string name="tutorial_shop_hint">El historial te ayuda a volver a comprar lo esencial. Las repeticiones añaden productos solo con la frecuencia que tú eliges.</string>
+    <string name="tutorial_share_title">El día a día, en compañía.</string>
+    <string name="tutorial_share_body">Para comprar en compañía, abre Ajustes &gt; Listas compartidas. Comparte una lista desde Android con la dirección del servidor y su código de un solo uso, o únete a un hogar creado en la web.</string>
+    <string name="tutorial_share_hint">Al crear un hogar, guarda y verifica el kit de recuperación. Para unirte a uno, abre su invitación y compara la huella completa del dispositivo con su propietario.</string>
+</resources>

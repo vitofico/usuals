@@ -1,0 +1,15 @@
+Usuals merkt sich deine Einkäufe. Die Liste funktioniert offline, ohne Konto, Server oder Modell.
+
+Füge Produkte per Tastatur, Sprache, geteiltem Text oder Barcode hinzu. Bearbeite Namen, Mengen, Kategorien und Geschäfte. Schließe den Einkauf ab, um abgehakte Produkte im Verlauf zu speichern, mit Rückgängig. Nur ausdrücklich geplante Wiederholungen fügen Produkte automatisch hinzu.
+
+Teile einen Rezeptlink, prüfe die Zutaten und wähle aus, was auf die Liste kommt. Strukturierte Rezeptdaten benötigen kein Modell. Die optionale Hilfe kann ein lokales Modell oder einen Cloud-Dienst verwenden.
+
+Die optionale Open-Food-Facts-Abfrage erkennt Verpackungen und zeigt Marke, Packungsgröße, Zutaten, Nährwertbewertungen sowie deklarierte Allergene und Spuren. Du bestätigst den Namen. Die Daten können unvollständig sein: Prüfe die Verpackung. Ohne Abfrage benennst du das Produkt selbst.
+
+Teile verschlüsselte Listen über deinen eigenen Usuals-Server und die Web-App. Erstelle den Haushalt unter Android oder im Web, sichere das Wiederherstellungspaket und bestätige Geräte nach Vergleich ihres vollständigen Fingerabdrucks. Die Web-App unterstützt lokale Konten oder eingerichtetes SSO. Lokale Android-Listen benötigen keine Anmeldung.
+
+Drei Designs mit Dunkelmodus, Einführung, Widget sowie Export und Import des Verlaufs. Oberfläche auf Deutsch, Englisch, Spanisch, Italienisch und Französisch.
+
+Keine Werbung, Nutzungsanalyse, automatischen Fehlerberichte oder Google Play Services. Produktsuche und Modelle sind zunächst deaktiviert. Sprache nutzt den gewählten Android-Dienst, der Audio online verarbeiten kann; die Tastatur funktioniert offline. Anfragen gehen direkt vom Gerät aus. Cloud-Backups sind ausgeschlossen; Zugangsdaten sind nicht Teil der Exporte.
+
+Apache-2.0. Optionale Cloud-Modelle können proprietäre Dienste verwenden.

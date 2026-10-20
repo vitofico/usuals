@@ -1,0 +1,1 @@
+An offline shopping list with a memory and optional shared lists

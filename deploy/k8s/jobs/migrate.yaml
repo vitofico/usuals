@@ -1,0 +1,138 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "usuals-migrate",
+    "namespace": "usuals"
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 120,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "usuals-relay"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "securityContext": {
+          "runAsNonRoot": true,
+          "runAsUser": 10001,
+          "runAsGroup": 10001,
+          "fsGroup": 10001,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "containers": [
+          {
+            "name": "relay",
+            "image": "usuals-relay:deployment-not-approved",
+            "imagePullPolicy": "Never",
+            "env": [
+              {
+                "name": "USUALS_IDENTITY_FILE",
+                "value": "/identity/identity"
+              },
+              {
+                "name": "USUALS_FENCE_FILE",
+                "value": "/identity/fence"
+              },
+              {
+                "name": "USUALS_JDBC_URL",
+                "value": "jdbc:postgresql://usuals-postgres:5432/usuals"
+              },
+              {
+                "name": "USUALS_DB_USER",
+                "value": "usuals"
+              },
+              {
+                "name": "USUALS_DB_PASSWORD_FILE",
+                "value": "/run/secrets/app-password"
+              },
+              {
+                "name": "USUALS_ORIGIN",
+                "value": "https://usuals.example.org"
+              },
+              {
+                "name": "USUALS_OPS_BIND",
+                "value": "0.0.0.0"
+              },
+              {
+                "name": "USUALS_TRUSTED_PROXY_CIDRS",
+                "value": "REPLACE_WITH_VERIFIED_INGRESS_PEER_CIDR"
+              }
+            ],
+            "securityContext": {
+              "readOnlyRootFilesystem": true,
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            },
+            "resources": {
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "identity",
+                "mountPath": "/identity",
+                "readOnly": true
+              },
+              {
+                "name": "secrets",
+                "mountPath": "/run/secrets",
+                "readOnly": true
+              },
+              {
+                "name": "temporary",
+                "mountPath": "/tmp"
+              }
+            ],
+            "args": [
+              "migrate"
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "name": "identity",
+            "persistentVolumeClaim": {
+              "claimName": "usuals-identity"
+            }
+          },
+          {
+            "name": "secrets",
+            "secret": {
+              "secretName": "usuals-postgres",
+              "defaultMode": 288,
+              "items": [
+                {
+                  "key": "app-password",
+                  "path": "app-password"
+                }
+              ]
+            }
+          },
+          {
+            "name": "temporary",
+            "emptyDir": {
+              "sizeLimit": "32Mi"
+            }
+          }
+        ],
+        "restartPolicy": "Never"
+      }
+    }
+  }
+}

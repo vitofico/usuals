@@ -1,0 +1,15 @@
+Usuals se souvient de vos achats. Votre liste fonctionne hors ligne, sans compte, serveur ni modèle.
+
+Ajoutez des produits au clavier, à la voix, par texte partagé ou code-barres. Modifiez noms, quantités, catégories et magasins. Terminez les courses pour enregistrer les articles cochés dans l'historique, avec Annuler. Seules les répétitions que vous programmez ajoutent des produits automatiquement.
+
+Partagez une recette, vérifiez ses ingrédients et choisissez quoi ajouter. Les données structurées ne nécessitent aucun modèle. L'aide facultative peut utiliser un modèle local ou un service cloud.
+
+La recherche facultative Open Food Facts identifie les emballages et affiche marque, format, ingrédients, évaluations nutritionnelles, allergènes et traces déclarés. Vous confirmez les noms. Les données peuvent être incomplètes : vérifiez l'emballage. Sans recherche, nommez le produit vous-même.
+
+Partagez des listes chiffrées via votre serveur Usuals et son application web. Créez le foyer sur Android ou sur le web, conservez le kit de récupération et approuvez les appareils après comparaison de leur empreinte complète. Le web accepte des comptes locaux ou un SSO configuré. Les listes locales Android ne demandent aucune connexion.
+
+Trois thèmes avec mode sombre, visite guidée, widget, export et import de l'historique. Interface en français, anglais, espagnol, italien et allemand.
+
+Sans publicité, analyse d'utilisation, rapports automatiques d'erreurs ni Google Play Services. Recherche produit et modèles sont désactivés par défaut. La voix utilise le service Android choisi, qui peut traiter l'audio en ligne ; le clavier reste utilisable hors ligne. Les requêtes partent directement de l'appareil. La sauvegarde cloud est exclue et les identifiants sont absents des exports.
+
+Apache-2.0. Les modèles cloud facultatifs peuvent utiliser des services propriétaires.

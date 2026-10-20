@@ -1,0 +1,1 @@
+Erste öffentliche Version: Offline-Listen, Einkaufsverlauf, Wiederholungen, Rezepte, optionale Produktsuche, verschlüsselte geteilte Listen, fünf Sprachen und drei Designs. Einführung und Haushaltserstellung im Web.

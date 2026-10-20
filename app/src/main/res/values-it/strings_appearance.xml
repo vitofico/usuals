@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Aspetto</string>
+    <string name="appearance_hint">Scegli la tua palette. Il tema chiaro o scuro segue il dispositivo.</string>
+    <string name="appearance_plum">Prugna</string>
+    <string name="appearance_plum_description">Melanzana, champagne e carta calda.</string>
+    <string name="appearance_grove">Bosco</string>
+    <string name="appearance_grove_description">Verdi botanici e morbidi toni avena.</string>
+    <string name="appearance_tide">Marea</string>
+    <string name="appearance_tide_description">Blu inchiostro, vetro marino e carta fresca.</string>
+</resources>

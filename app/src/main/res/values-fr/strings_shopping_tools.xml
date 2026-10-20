@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shopping_tools">Outils de courses</string>
+    <string name="shopping_start">Commencer les courses</string>
+    <string name="shopping_stop">Quitter le mode courses</string>
+    <string name="shopping_mode">Mode courses</string>
+    <string name="shopping_keep_awake">Garder l’écran allumé pendant les courses</string>
+    <string name="shopping_haptics">Vibrer en cochant un article</string>
+    <string name="shopping_personal_help">Ces choix restent sur cet appareil. Les favoris et l’ordre des magasins sont inclus dans vos exports, sans être partagés avec le foyer.</string>
+    <string name="shopping_favorites">Favoris</string>
+    <string name="shopping_pin">Ajouter aux favoris</string>
+    <string name="shopping_unpin">Retirer le favori</string>
+    <string name="shopping_no_favorites">Maintenez un article et ajoutez-le ici pour un accès rapide.</string>
+    <string name="shopping_aisle_order">Ordre des rayons</string>
+    <string name="shopping_aisle_for">Ordre des catégories pour %1$s</string>
+    <string name="shopping_up">Monter %1$s</string>
+    <string name="shopping_down">Descendre %1$s</string>
+    <string name="shopping_reset_order">Réinitialiser l’ordre</string>
+    <string name="shopping_next_time">Acheter la prochaine fois</string>
+    <string name="shopping_next_time_help">Ils restent non cochés pour tous. Ils reviennent après les prochaines courses terminées, ou vous pouvez les rétablir maintenant.</string>
+    <string name="shopping_restore_item">Rétablir %1$s pour ces courses</string>
+    <string name="shopping_restore">Rétablir</string>
+    <string name="shopping_close">Fermer</string>
+    <string name="history_search">Rechercher des achats passés</string>
+    <string name="history_add_selected">Ajouter la sélection (%1$d)</string>
+    <string name="history_rebuy_review">Sélectionnez des achats passés à ajouter à la liste actuelle. Les articles déjà ouverts sont ignorés et les quantités ne sont pas doublées.</string>
+    <string name="history_rebuy_done">Achats sélectionnés ajoutés : %1$d.</string>
+    <string name="history_no_results">Aucun achat passé ne correspond.</string>
+    <string name="history_select_trip">Sélectionner ces courses</string>
+    <string name="shopping_preferences_unavailable">Impossible de lire les préférences personnelles. Vos listes sont conservées. Les préférences enregistrées restent disponibles pour récupération.</string>
+</resources>

@@ -1,0 +1,1 @@
+Connect to shared households with QR invitations and automatic approval updates. Import shopping lists and ingredients from Markdown files or pasted text, offline. Read written lists from photos with a connected image-capable model, then review before adding. Photos stay on your device until you explicitly request reading.

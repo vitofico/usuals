@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#583D53" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Usuals</title>
+    <link rel="icon" href="/assets/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script type="module" src="/src/app.mjs"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+    <div class="app-shell">
+      <aside class="rail">
+        <a href="/" class="wordmark" aria-label="Usuals"
+          ><img src="/assets/mark.svg" alt="" width="34" height="34" /><span
+            >Usuals<span class="brand-dot">.</span></span
+          ></a
+        >
+        <p class="eyebrow" data-i18n="tagline">A little more considered.</p>
+        <nav
+          id="navigation"
+          aria-label="Navigation"
+          data-i18n-label="navigation"
+        >
+          <button type="button" class="nav-button active" data-view="list">
+            <span class="nav-icon">✓</span
+            ><span data-i18n="shoppingList">Shopping list</span>
+          </button>
+          <button type="button" class="nav-button" data-view="sharing">
+            <span class="nav-icon">↗</span
+            ><span data-i18n="sharing">Your household</span>
+          </button>
+          <button type="button" class="nav-button" data-view="account">
+            <span class="nav-icon">○</span
+            ><span data-i18n="account">Account</span>
+          </button>
+          <button type="button" class="nav-button" id="tutorial">
+            <span class="nav-icon" aria-hidden="true">?</span><span data-i18n="tutorialReplay">Guided tour</span>
+          </button>
+        </nav>
+        <div class="rail-bottom">
+          <span class="status-dot"></span
+          ><span data-i18n="privateByDesign">Private by design</span
+          ><button id="appearance" class="text-button" type="button"
+            aria-label="Appearance" data-i18n-label="appearance">◐</button><button
+            id="language"
+            class="text-button"
+            type="button"
+            aria-label="Language"
+            data-i18n-label="language"
+          >
+            EN
+          </button>
+        </div>
+      </aside>
+      <main id="main" tabindex="-1">
+        <header class="topbar">
+          <span id="section-label" class="eyebrow"></span>
+          <div class="top-actions">
+            <span id="sync-status" class="sync-status" role="status"></span
+            ><button
+              id="refresh"
+              class="round-button"
+              type="button"
+              data-i18n-label="refresh"
+            >
+              ↻</button
+            ><button
+              id="lock"
+              class="text-button"
+              type="button"
+              data-i18n="lock"
+            >
+              Lock
+            </button>
+          </div>
+        </header>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <div id="content"></div>
+        <footer class="page-footer">
+          <span>Usuals</span
+          ><span data-i18n="footer">Good things, remembered.</span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="dialog"><div id="dialog-content"></div></dialog>
+  </body>
+</html>

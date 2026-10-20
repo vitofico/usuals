@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="restore_open">Abrir copia cifrada del servidor</string>
+    <string name="restore_title">Revisar una lista recuperada</string>
+    <string name="restore_key_help">Abre el kit de recuperación correspondiente e introduce su clave independiente para leer esta copia. Un dispositivo del propietario que siga disponible puede usar sus claves guardadas. La verificación se realiza en este dispositivo.</string>
+    <string name="restore_open_kit">Abrir kit de recuperación de esta copia</string>
+    <string name="restore_copy_help">Guarda una copia local independiente y compárala con el trabajo más reciente de tus dispositivos. Tus listas, cambios sin enviar y claves de uso compartido se conservan. El hogar restaurado permanece bloqueado. Comparte la copia revisada mediante un nuevo hogar cuando estés listo.</string>
+    <string name="restore_older">Esta copia es anterior al estado guardado en este dispositivo. Conserva y reconcilia tu trabajo más reciente.</string>
+    <string name="restore_ancestry">Algunos puntos de control guardados no se pueden vincular a esta copia. No se puede demostrar que contenga tu trabajo más reciente. Compárala con tus listas conservadas.</string>
+    <string name="restore_save">Guardar como copia local</string>
+    <string name="restore_saved">Lista recuperada guardada como copia local independiente. Compárala con tu trabajo más reciente antes de volver a compartirla.</string>
+    <plurals name="restore_items">
+        <item quantity="one">%d artículo actual</item>
+        <item quantity="other">%d artículos actuales</item>
+        <item quantity="many">%d artículos actuales</item>
+    </plurals>
+    <plurals name="restore_purchases">
+        <item quantity="one">%d compra anterior</item>
+        <item quantity="other">%d compras anteriores</item>
+        <item quantity="many">%d compras anteriores</item>
+    </plurals>
+    <string name="restore_request">Crear solicitud de copia del servidor</string>
+    <string name="restore_request_help">Introduce abajo tu clave de recuperación independiente y abre el kit correspondiente. Envía al administrador solo el archivo de solicitud pública. Verifica con él esta huella completa por un canal de confianza antes de que exporte una lista.</string>
+    <string name="restore_fingerprint">Huella del destinatario de recuperación: %1$s</string>
+</resources>

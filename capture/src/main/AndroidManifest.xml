@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Both capture paths need a sensor, and neither is allowed to be the
+        reason someone cannot install the app. Design section 12 gives both
+        failures a defined state: a denied camera permission falls back to
+        typed entry and does not re-prompt, and an unavailable recogniser falls
+        back to the keyboard in the same row, with no modal. required="false"
+        is what makes those states reachable rather than theoretical, and it
+        keeps the app installable on a device with no camera at all.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
+    <!--
+        Package visibility, from Android 11 on. Without this the platform hides
+        the speech recognition service from us, isRecognitionAvailable() answers
+        false on a phone that can plainly recognise speech, and capture silently
+        degrades to the keyboard for no reason the user can see.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
+</manifest>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_intro">Every finished shop, remembered.</string>
+    <string name="history_transfer_title">Keep your history</string>
+    <string name="history_title">History</string>
+    <string name="history_back">Back</string>
+    <string name="history_export">Export data</string>
+    <string name="history_import">Import data</string>
+    <string name="history_transfer_hint">Exports include your named lists, shops, purchases and item preferences. Keys, membership and cached product data stay on the phone.</string>
+    <string name="history_imported">Shopping data imported.</string>
+    <string name="history_exported">Shopping data exported.</string>
+    <string name="history_invalid_file">This is not a compatible %1$s export. Choose a %1$s JSON file.</string>
+    <string name="history_invalid_date">Enter a valid date in YYYY-MM-DD format, today or earlier.</string>
+    <string name="history_empty_import">No items were found. Paste a shopping list and try again.</string>
+    <string name="history_failed">Could not save or read the data. Your list is still here. Try again.</string>
+    <string name="history_dismiss">Dismiss</string>
+    <string name="history_past_title">Add a past shop</string>
+    <string name="history_date_label">Shop date (YYYY-MM-DD)</string>
+    <string name="history_paste_label">Paste the items you bought</string>
+    <string name="history_import_past">Save past shop</string>
+    <string name="history_empty">Finish a shop to start your purchase history.</string>
+    <plurals name="history_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="history_purchase">%1$s %2$s</string>
+    <string name="finish_shop">Finish shop</string>
+    <string name="finish_shop_question">Finish this shop?</string>
+    <string name="finish_shop_all_checked">Everything is checked off. File these items as a shop?</string>
+    <string name="finish_shop_keep_open">Keep list open</string>
+    <plurals name="finish_shop_saved">
+        <item quantity="one">Saved %1$d item as a shop.</item>
+        <item quantity="other">Saved %1$d items as a shop.</item>
+    </plurals>
+    <string name="finish_shop_undo">Undo</string>
+    <plurals name="history_stale_question">
+        <item quantity="one">File %1$d older checked item as a shop?</item>
+        <item quantity="other">File these %1$d older checked items as a shop?</item>
+    </plurals>
+    <string name="history_not_now">Not now</string>
+    <string name="history_still_needed">Still needed?</string>
+    <string name="history_carry_over">These items have stayed open across several shops: %1$s</string>
+    <string name="history_keep">Keep</string>
+    <string name="history_remove">Remove</string>
+    <string name="share_list">Share list</string>
+    <string name="share_open_item">☐ %1$s %2$s</string>
+    <string name="share_checked_item">☑ %1$s %2$s</string>
+</resources>

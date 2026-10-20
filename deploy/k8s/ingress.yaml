@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: usuals
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # OAuth callback codes must never enter ingress access logs.
+    traefik.ingress.kubernetes.io/router.observability.accesslogs: 'false'
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [usuals.example.org]
+      secretName: usuals-tls
+  rules:
+    - host: usuals.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: usuals-relay
+                port: {name: http}

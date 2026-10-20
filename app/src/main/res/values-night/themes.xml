@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window shell matches the dark Compose palette. -->
+<resources>
+    <style name="Theme.Usuals" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/usuals_ground_dark</item>
+        <item name="android:statusBarColor">@color/usuals_ground_dark</item>
+        <item name="android:navigationBarColor">@color/usuals_ground_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorAccent">@color/usuals_accent</item>
+    </style>
+</resources>

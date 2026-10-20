@@ -1,0 +1,1 @@
+Conecta con tu hogar compartido mediante invitaciones QR y actualizaciones automáticas de aprobación. Importa listas e ingredientes desde archivos Markdown o texto pegado, sin conexión. Lee listas escritas en fotos con un modelo conectado compatible con imágenes y revisa antes de añadir. Las fotos permanecen en tu dispositivo hasta que solicitas su lectura.

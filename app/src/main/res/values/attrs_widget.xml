@@ -1,0 +1,5 @@
+<resources>
+    <attr name="widgetAccentColor" format="color" />
+    <attr name="widgetSubtext" format="color" />
+    <attr name="widgetText" format="color" />
+</resources>

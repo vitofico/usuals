@@ -1,0 +1,35 @@
+name: android-ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - run: scripts/secret-scan
+  android:
+    needs: secrets-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: scripts/dgradle verifyReleaseTools :app:assembleDebug :app:assembleRelease test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
+      - run: python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release-unsigned.apk
+  server:
+    needs: secrets-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: server/scripts/test-local --no-daemon --no-parallel --max-workers=2

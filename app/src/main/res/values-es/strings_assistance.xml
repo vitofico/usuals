@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quantity_hint_use">Usar %1$s para %2$s</string>
+    <string name="merge_title">¿Tu artículo habitual?</string>
+    <string name="merge_question">¿“%1$s” es tu “%2$s” habitual? Si los combinas, %3$s recordará este nombre.</string>
+    <string name="merge_yes">Usar artículo habitual</string>
+    <string name="merge_no">Mantener separados</string>
+    <string name="repeat_offer_title">¿Añadir una repetición?</string>
+    <plurals name="repeat_offer_question">
+        <item quantity="one">Has aceptado tres veces sugerencias de %1$s. ¿Añadirlo automáticamente cada %2$d día?</item>
+        <item quantity="other">Has aceptado tres veces sugerencias de %1$s. ¿Añadirlo automáticamente cada %2$d días?</item>
+        <item quantity="many">Has aceptado tres veces sugerencias de %1$s. ¿Añadirlo automáticamente cada %2$d días?</item>
+    </plurals>
+    <string name="repeat_offer_yes">Crear regla de repetición</string>
+    <string name="repeat_offer_no">Seguir sugiriendo</string>
+</resources>

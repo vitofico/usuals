@@ -1,0 +1,49 @@
+# Dependabot and Renovate split the repository between them rather than both
+# opening a PR for the same manifest. The split is: Dependabot takes the two
+# ecosystems that decide what CI runs on (the pinned action SHAs and the build
+# image), Renovate takes the Gradle version catalog, where its grouping and its
+# dependency dashboard are worth the GitHub App install. renovate.json disables
+# the github-actions and dockerfile managers to hold up its half of the deal.
+#
+# The reason Dependabot owns the CI half rather than Renovate is availability:
+# Dependabot needs no app installed, so a clone of this repository keeps getting
+# security updates for its actions even if nobody ever wires Renovate up.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Madrid
+    labels:
+      - dependencies
+      - ci
+    # Every action in these workflows is pinned to a commit SHA with the version
+    # in a trailing comment. Dependabot moves the SHA and rewrites the comment,
+    # which is the only maintainable way to keep a pinned action current.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ":arrow_up: chore"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Madrid
+    labels:
+      - dependencies
+      - build-image
+    # The Dockerfile's base image is one half of build reproducibility, the
+    # Android SDK pins inside it are the other. Dependabot can only see the base
+    # image, so an SDK bump stays a deliberate edit.
+    commit-message:
+      prefix: ":arrow_up: chore"
+    open-pull-requests-limit: 3
