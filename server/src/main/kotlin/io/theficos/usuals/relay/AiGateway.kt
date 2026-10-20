@@ -14,7 +14,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable data class AiProvider(val id: String, val label: String, val baseUrl: String, val model: String,
-    val imageModel: String = model, val isLocal: Boolean = false, val kind: String = "OPENAI_COMPATIBLE", val keyEnv: String? = null) {
+    val imageModel: String = model, val isLocal: Boolean = false, val kind: String = "OPENAI_COMPATIBLE", val keyEnv: String? = null,
+    val allowHttp: Boolean = false) {
     override fun toString() = "AiProvider([redacted])"
     fun view() = AiProfileView(id, label, model, imageModel, isLocal, baseUrl)
 }
@@ -29,7 +30,7 @@ class AiConfiguration(val profiles: List<AiProvider> = emptyList(), val default:
             require(p.kind in setOf("OLLAMA", "OPENAI_COMPATIBLE"))
             val uri = URI(p.baseUrl)
             require(uri.host != null && uri.userInfo == null && uri.rawQuery == null && uri.rawFragment == null &&
-                (uri.scheme == "https" || uri.scheme == "http" && p.isLocal) && p.baseUrl.length <= 1024)
+                (uri.scheme == "https" || uri.scheme == "http" && (p.isLocal || p.allowHttp)) && p.baseUrl.length <= 1024)
             p.keyEnv?.let { require(it.matches(Regex("[A-Z][A-Z0-9_]{0,100}"))); validateKey(environment[it]) }
         }
     }

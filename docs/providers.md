@@ -24,6 +24,11 @@ Operators configure `USUALS_AI_PROFILES` as a JSON array, for example:
 
 Use actual installed, tested model IDs. An internal Ollama URL does not establish
 that inference is local; cloud-backed models can forward content externally.
+For an internal HTTP proxy that forwards to a cloud model, use `isLocal: false`
+and explicitly set `allowHttp: true`. This operator-only transport exception
+preserves the external-processing disclosure. Restrict it to a trusted internal
+network; personal provider keys also traverse that HTTP hop. It does not permit
+users to choose destinations or bypass the operator's network policy.
 `USUALS_AI_DEFAULT` selects a profile ID, otherwise the first profile is used.
 An empty array disables the gateway. External profiles use HTTPS, with optional
 `keyEnv` naming a protected environment variable containing the operator key.
