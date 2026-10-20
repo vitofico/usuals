@@ -102,10 +102,10 @@ devices share lists with explicit roles, membership changes and conflict review.
 The relay stores encrypted shopping contents; membership and routing metadata
 remain visible to the server.
 
-Connect a phone from the web with **Shared lists > Connect a phone**. Scan the
-invitation in Android, confirm the server, then compare every group of the full
-device code in Review requests and approve. No return camera or fingerprint typing
-is needed. See the
+In Android, **Settings > Server and sharing** walks through one step at a time:
+sign in to the server, save the recovery file, then **Invite someone**. The other
+phone scans the invite QR and taps **Join**; the owner approves with one tap. See
+the [server connection guide](docs/server-connection.md) and the
 [QR connection guide](web/README.md#connect-a-phone-with-qr) for camera-free options.
 
 <p align="center">
