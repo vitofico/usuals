@@ -18,6 +18,10 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -198,6 +202,25 @@ class AppWiringTest {
     @Test fun shared_https_invite_links_open_sharing_instead_of_becoming_items() {
         launchApp("https://usuals.example/join#2.synthetic")
         compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.SHARING }
+    }
+
+    /** The browser's Return to Usuals link arrives through onNewIntent, which also bumps the list request. */
+    @Test fun returning_from_browser_sign_in_keeps_the_open_sharing_screen() {
+        var shared by mutableStateOf<String?>(null)
+        var openList by mutableIntStateOf(0)
+        compose.setContent {
+            nav = rememberNavController()
+            UsualsTheme {
+                UsualsApp(navController = nav, sharedText = shared, openListRequest = openList, onSharedTextConsumed = { shared = null },
+                    listViewModel = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(available = false)))
+            }
+        }
+        goTo(Routes.SHARING)
+        val screen = requireNotNull(nav.currentBackStackEntry).id
+        compose.runOnIdle { shared = "usuals://connected"; openList++ }
+        compose.waitForIdle()
+        assertThat(currentRoute()).isEqualTo(Routes.SHARING)
+        assertThat(requireNotNull(nav.currentBackStackEntry).id).isEqualTo(screen)
     }
 
     @Test fun server_links_open_the_sharing_route() {

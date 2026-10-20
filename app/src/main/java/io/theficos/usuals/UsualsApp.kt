@@ -102,15 +102,15 @@ fun UsualsApp(
     // which is the same span the microphone refusal already gets.
     var cameraRefused by rememberSaveable { mutableStateOf(false) }
 
+    // Server, invite and sign-in-return links all open the one sharing screen; any other shared text is for the list.
+    val invitation = sharedText?.takeIf { it.startsWith("usuals:") || runCatching { io.theficos.usuals.sync.PairingLink.parse(it.trim()) is io.theficos.usuals.sync.PairingLink.Invite }.getOrDefault(false) }
+    // A sharing link must not pop back to the list: that would drop an open sharing screen and the household it is drafting.
     LaunchedEffect(openListRequest) {
-        if (openListRequest > 0) navController.navigate(Routes.LIST) {
+        if (openListRequest > 0 && invitation == null) navController.navigate(Routes.LIST) {
             popUpTo(Routes.LIST) { inclusive = false }
             launchSingleTop = true
         }
     }
-
-    // Server, invite and sign-in-return links all open the one sharing screen; any other shared text is for the list.
-    val invitation = sharedText?.takeIf { it.startsWith("usuals:") || runCatching { io.theficos.usuals.sync.PairingLink.parse(it.trim()) is io.theficos.usuals.sync.PairingLink.Invite }.getOrDefault(false) }
     LaunchedEffect(invitation) {
         if (invitation != null) navController.navigate(Routes.SHARING) { launchSingleTop = true }
     }
