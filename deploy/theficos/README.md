@@ -3,9 +3,39 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `4b81b67`, merged in PR #8 and deployed
+current server/web image is built from `0fd2cac`, merged in PR #11 and deployed
 with Vito's explicit approval on 2026-10-20. The initial deployment used source `9c3bd57`.
-The current upgrade streamlines settings and checks photo support automatically.
+The current upgrade adds local import of copied notes and Markdown lists.
+
+## 2026-10-20 copied notes and Markdown import
+
+[PR #11](https://github.com/vitofico/usuals/pull/11) merged as `a22837b` after all
+CI checks passed. Preserved source `0fd2cac4604b724f12748c8b3f8746d03057c6c2` has the
+same complete Git tree as that merge. The source-bound image and platform
+manifest are `usuals-relay:sha256-928fdbff2c76c760e4a63efa706c13548df7fbe1bb96e743c7e4e4b4531698e9`.
+The verified bundle is `/private/tmp/usuals-notes-bundle-0fd2cac`.
+
+Only the relay image and source annotation changed. All other reviewed runtime
+settings, AI profiles, network policy, identity and PVC mounts are unchanged.
+Generic candidate manifests were not applied. The imported manifest and config
+content matched, and the ready pod reports the expected config digest with zero
+restarts. Schema 005 and identity, fence and AI-key hashes are unchanged. The
+wrapping key remains mode0600 owned by UID/GID10001. No migration was required;
+the previous `15c9b2dc...27277` image remains a schema-compatible rollback target.
+
+Before rollout, `usuals-prenotes-20261020` produced an online PostgreSQL base
+backup with WAL. The job and independent manifest verification passed. Fresh
+encrypted database and existing verified key escrow copies in
+`/Users/vito/personal-repos/usuals-operator-backups/20261020-notes/` match the
+node checksums. No plaintext credentials were transferred.
+
+Live TLS/readiness, 19 exact packaged browser assets, all five locales, security
+headers, both authentication modes, protected anonymous APIs and stable server
+identity passed. Text import is local and does not request a model. Functional
+Android and browser checks are in the [verification record](../../docs/verification/2026-10-20-notes-import.md).
+Node evidence is `~/usuals/deployments/20261020-notes/`; local evidence is
+`/private/tmp/usuals-notes-deploy/`. Android uses the automatic signed release
+workflow from main.
 
 ## 2026-10-20 streamlined settings
 
