@@ -119,6 +119,8 @@ class SharedReplicaTest {
         val replica = LocalReplica(db)
         val lists = ListRepository(db) { "shared-copy" }
         lists.prepareShare("household", LOCAL_LIST_ID, false, replica)
+        items.add(ParsedItem("Added after first attempt"))
+        assertThat(lists.prepareShare("household", LOCAL_LIST_ID, false, replica, "shared-copy")).isEqualTo("shared-copy")
         val copy = replica.projection("shared-copy")
         assertThat(copy.rows.values.single().facts["name"]!!.jsonPrimitive.content).isEqualTo("Milk")
         assertThat(copy.purchases).isEmpty(); assertThat(copy.seen).isEmpty()

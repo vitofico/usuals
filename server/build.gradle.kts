@@ -9,6 +9,8 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 application { mainClass = "io.theficos.usuals.relay.MainKt" }
 dependencies {
     implementation(project(":sync"))
+    implementation(project(":llm"))
+    implementation(project(":core:parse"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.tink)
     implementation(libs.relay.ktor.core)

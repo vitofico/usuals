@@ -63,8 +63,8 @@
     <string name="sharing_retry_request">Reintentar solicitud de unión</string>
     <string name="sharing_history_unverifiable">El servidor no pudo demostrar que amplía el historial guardado de este dispositivo. Tu lista local se conserva. Pide al administrador una copia de recuperación verificada.</string>
     <string name="sharing_already_joined">Este dispositivo ya pertenece a este hogar. Actualízalo. Tus claves y trabajo pendiente se conservan.</string>
-    <string name="sharing_scan_invitation">Escanear QR de invitación</string>
-    <string name="sharing_invitation_camera_help">Permite la cámara para escanear una invitación privada o pega su enlace.</string>
+    <string name="sharing_scan_invitation">Escanear QR de servidor o invitación</string>
+    <string name="sharing_invitation_camera_help">Permite usar la cámara para escanear un servidor o una invitación privada, o pega el enlace.</string>
     <string name="sharing_privacy">Al activar las listas compartidas, los datos cifrados se envían al servidor de tu hogar. Puede ver miembros, claves públicas de dispositivos, identificadores de listas, horarios de solicitudes y direcciones de red. El contenido de la compra y las claves privadas permanecen cifrados. Las recetas y búsquedas de productos siguen saliendo directamente de tu teléfono.</string>
     <string name="sharing_hide_key">Ocultar clave de recuperación</string>
     <string name="sharing_members">Miembros y dispositivos</string>

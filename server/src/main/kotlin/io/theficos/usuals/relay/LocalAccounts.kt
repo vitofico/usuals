@@ -67,6 +67,8 @@ internal class LocalAccounts(private val config: WebIdentityConfig, private val 
             val salt = LocalPasswords.salt(); val hash = LocalPasswords.hash(request.password, salt)
             c.execute("UPDATE local_credential SET password_hash=?,salt=?,setup_hash=NULL,setup_expires=NULL WHERE user_id=?", hash, salt, id(account.first))
             c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(account.first))
+            c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(account.first))
+            c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(account.first))
             c.execute("UPDATE web_user SET last_login_at=? WHERE id=?", clock(), id(account.first))
             session(c, account.first)
         }
@@ -82,6 +84,8 @@ internal class LocalAccounts(private val config: WebIdentityConfig, private val 
             val salt = LocalPasswords.salt(); val hash = LocalPasswords.hash(request.newPassword, salt)
             c.execute("UPDATE local_credential SET password_hash=?,salt=?,setup_hash=NULL,setup_expires=NULL WHERE user_id=?", hash, salt, id(caller.user.id))
             c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(caller.user.id))
+            c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(caller.user.id))
+            c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(caller.user.id))
         }
     }
     fun create(c: Connection, request: LocalCreateRequest, administrator: Boolean): LocalSetupValue {
@@ -101,6 +105,8 @@ internal class LocalAccounts(private val config: WebIdentityConfig, private val 
         val token = randomToken(); val expires = clock() + 86400000
         c.execute("UPDATE local_credential SET password_hash=NULL,salt=NULL,setup_hash=?,setup_expires=? WHERE user_id=?", digest(token), expires, id(target))
         c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(target))
+        c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(target))
+        c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(target))
         return LocalSetupValue(target, token, expires)
     }
     fun operator(rawUsername: String, path: Path, reset: Boolean) {

@@ -6,7 +6,7 @@
     <string name="recipe_read">Lire la recette</string>
     <string name="recipe_intro">Collez ou partagez un lien de recette. %1$s lit la page sur votre téléphone et vous permet de vérifier les ingrédients avant de les ajouter.</string>
     <string name="recipe_no_structured">Cette page ne contient pas d’ingrédients structurés. Essayez votre modèle facultatif ou fermez cet écran et saisissez les ingrédients.</string>
-    <string name="recipe_model_privacy">Utiliser le modèle envoie le texte de la page au fournisseur configuré et consomme un des appels du jour.</string>
+    <string name="recipe_model_privacy">La lecture envoie ce texte au fournisseur direct choisi ou, avec l’IA du serveur, via votre serveur connecté au fournisseur affiché. Elle utilise une tentative.</string>
     <string name="recipe_use_model">Lire avec mon modèle</string>
     <string name="recipe_servings">Quantité obtenue : %1$s</string>
     <string name="recipe_review_hint">Vérifiez les ingrédients. Les produits de base et les achats des 7 derniers jours ne sont pas cochés au départ. Les articles déjà sur votre liste sont exclus. Les mesures d’origine sont conservées pour vérification.</string>

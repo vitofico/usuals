@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_title">Server connection</string>
+    <string name="connection_intro">Connect once to share lists and use this server’s optional AI. Paste a server link or scan its QR code below.</string>
+    <string name="connection_link">Server link</string>
+    <string name="connection_connect">Connect this server</string>
+    <string name="connection_compare">Compare every group of this code with the browser before approving.</string>
+    <string name="connection_signin">Sign in in your browser</string>
+    <string name="connection_waiting">Waiting for browser approval…</string>
+    <string name="connection_cancel">Cancel connection</string>
+    <string name="connection_disconnect">Disconnect account services</string>
+    <string name="connection_ai">Use server AI</string>
+    <string name="connection_privacy">Only text or photos you explicitly submit reach this server and its selected provider. Shopping lists remain encrypted.</string>
+    <string name="connection_local">Operator declares processing on its own infrastructure.</string>
+    <string name="connection_external">Processing uses an external provider.</string>
+    <string name="connection_usage">%1$d of %2$d daily attempts used</string>
+    <string name="connection_default">Use server default</string>
+    <string name="connection_personal">Use my provider</string>
+    <string name="connection_key">Personal provider key</string>
+    <string name="connection_key_help">Saving sends this key to the chosen server, which stores it encrypted. A blank key uses the provider’s operator configuration.</string>
+    <string name="connection_choose">Use %1$s</string>
+    <string name="connection_migrate">Send my saved direct-provider key to this server for %1$s</string>
+    <string name="connection_share_source">Ready to share “%1$s”. Connect and create a household, or choose an existing one, to continue.</string>
+    <string name="connection_retry_copy">Retry sends the copy already prepared, with the same history choice. Later edits remain in your local list.</string>
+</resources>

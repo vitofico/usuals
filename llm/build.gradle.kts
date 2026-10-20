@@ -10,6 +10,7 @@ java {
 
 dependencies {
     api(project(":core:model"))
+    implementation(project(":sync"))
     implementation(project(":core:parse"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.okhttp)

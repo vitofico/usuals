@@ -63,8 +63,8 @@
     <string name="sharing_retry_request">Beitrittsanfrage erneut versuchen</string>
     <string name="sharing_history_unverifiable">Der Server konnte nicht nachweisen, dass er den gespeicherten Verlauf dieses Geräts fortsetzt. Deine lokale Liste bleibt erhalten. Bitte den Administrator um eine geprüfte Wiederherstellungskopie.</string>
     <string name="sharing_already_joined">Dieses Gerät gehört bereits zu diesem Haushalt. Aktualisiere ihn. Deine Schlüssel und ausstehenden Änderungen bleiben erhalten.</string>
-    <string name="sharing_scan_invitation">Einladungs-QR-Code scannen</string>
-    <string name="sharing_invitation_camera_help">Erlaube die Kamera, um eine private Einladung zu scannen, oder füge ihren Link ein.</string>
+    <string name="sharing_scan_invitation">Server- oder Einladungs-QR scannen</string>
+    <string name="sharing_invitation_camera_help">Erlaube die Kamera, um einen Server oder eine private Einladung zu scannen, oder füge den Link ein.</string>
     <string name="sharing_privacy">Wenn du das Teilen aktivierst, gehen verschlüsselte Listendaten an den Haushaltsserver. Er sieht Mitgliedschaften, öffentliche Geräteschlüssel, Listenkennungen, Anfragezeiten und Netzwerkadressen. Einkaufsinhalte und private Schlüssel bleiben verschlüsselt. Rezept- und Produktsuchen erfolgen weiterhin direkt von deinem Telefon.</string>
     <string name="sharing_hide_key">Wiederherstellungsschlüssel ausblenden</string>
     <string name="sharing_members">Mitglieder und Geräte</string>

@@ -73,6 +73,11 @@ const allowedCodes = new Set([
   "invalid",
   "unavailable",
   "conflict",
+  "ai_unavailable",
+  "ai_budget",
+  "ai_images_unverified",
+  "ai_credentials_unavailable",
+  "ai_configuration_changed",
 ]);
 export async function request(
   path,
@@ -96,7 +101,7 @@ export async function request(
       !/[\u0000-\u0020\\]/.test(path),
   );
   requireThat(
-    Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 30000,
+    Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= (path.startsWith("/v1/ai/") ? 45000 : 30000),
   );
   const headers = { Accept: "application/json" };
   if (payload !== undefined) headers["Content-Type"] = "application/json";

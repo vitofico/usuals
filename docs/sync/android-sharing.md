@@ -22,6 +22,13 @@ receipt witness. Same-id, different-source collisions remain visible and cannot
 block unrelated uploads. Known membership epoch/hash and list heads survive
 restart and never reset to make a bad response acceptable.
 
+## Simpler server connection
+
+Use the [connection guide](../server-connection.md) for link/QR setup and browser
+account approval. Connected admitted accounts create households without an
+operator setup code. Recovery verification and signed device membership are
+unchanged. The manual workflow below remains available for older installations.
+
 ## Choices and concurrent work
 
 For a first household, open **Settings > Shared lists > Create a household**.

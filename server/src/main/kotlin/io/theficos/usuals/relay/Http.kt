@@ -18,10 +18,30 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 
+private data class AccountAccess(val user: String, val verify: (java.sql.Connection) -> Unit)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetrics(relay.db), ingress: TrustedIngress = TrustedIngress(), webIdentity: WebIdentity? = null,
-    browserModels: BrowserModels = BrowserModels()) {
+    browserModels: BrowserModels = BrowserModels(), ai: AiGateway = AiGateway(relay.db, AiConfiguration())) {
     val service = MembershipService(relay)
+    val connections = webIdentity?.let { Connections(relay.db, relay, it) }
+    val aiSlots = Semaphore(2)
+    val aiIo = Dispatchers.IO.limitedParallelism(2)
+    fun ApplicationCall.accountAccess(mutation: Boolean = true): AccountAccess {
+        val native = request.headers[HttpHeaders.Authorization]
+        return if (native != null) {
+            val token = bearer(); val binding = requireNotNull(connections)
+            val user = relay.db.transaction { binding.caller(it, token) }
+            AccountAccess(user) { c -> expect(binding.caller(c, token) == user, "unauthenticated", 401) }
+        }
+        else {
+            val web = webIdentity ?: reject("unauthenticated", 401)
+            if (mutation) {
+                val caller = webCaller(web)
+                AccountAccess(caller.user.id) { c -> web.current(c, caller); Unit }
+            } else AccountAccess(web.me(webToken(web)).user.id) { }
+        }
+    }
     val io = Dispatchers.IO.limitedParallelism(4)
     val identityIo = Dispatchers.IO.limitedParallelism(1)
     val requests = Semaphore(8)
@@ -90,6 +110,39 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         get("/healthz") { call.respondText("ok") }
         get("/readyz") { run { val ready = relay.db.ready(); call.respondText(if (ready) "ok" else "unavailable", status = if (ready) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable) } }
         get("/v1/server-info") { call.json(relay.identity.info()) }
+
+        get("/v1/instance") { call.privateResponse(); call.json(InstanceInfo(name = "Usuals", server = relay.identity.info(), accounts = webIdentity != null, ai = webIdentity != null && ai.configuration.profiles.isNotEmpty())) }
+        if (webIdentity != null && connections != null) {
+            post("/v1/connect") { run { call.privateResponse(); call.json(connections.start(call.body(4096), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
+            get("/api/connect/{id}") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.view(WebCaller("", me.user, "", me.expiresAt), call.routeId("id"))) } }
+            post("/api/connect/{id}/approve") { run { call.privateResponse(); connections.approve(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(true)) } }
+            get("/api/connections") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.sessions(WebCaller("", me.user, "", me.expiresAt))) } }
+            post("/api/connections/{id}/revoke") { run { call.privateResponse(); connections.revoke(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(false)) } }
+            post("/v1/connect/{id}/complete") { run { call.privateResponse(); call.json(connections.complete(call.routeId("id"), call.body(2048), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
+            post("/v1/connection/logout") { run { call.privateResponse(); call.json(connections.logout(call.bearer())) } }
+            post("/v1/account/households") { run {
+                call.privateResponse(); val token = call.bearer()
+                val user = relay.db.transaction { connections.caller(it, token) }
+                val proof = webIdentity.createHouseholdFor(user, call.body(65536), relay, false) { c -> expect(connections.caller(c, token) == user, "unauthenticated", 401) }
+                call.json(Membership(listOf(proof), 2), HttpStatusCode.Created)
+            } }
+            get("/v1/ai/settings") { run { call.privateResponse(); call.json(ai.settings(call.accountAccess(mutation = false).user)) } }
+            post("/v1/ai/settings") { run { call.privateResponse(); val access = call.accountAccess(); call.json(ai.select(access.user, call.body(8192), access.verify)) } }
+            for (action in listOf("probe", "probe-image", "text", "image")) post("/v1/ai/$action") {
+                call.privateResponse()
+                expect(aiSlots.tryAcquire(), "unavailable", 503)
+                try {
+                    withTimeout(40000) { withContext(aiIo) {
+                        val access = call.accountAccess()
+                        val request = withTimeout(5000) { call.body<AiRequest>(if (action == "image") 2900000 else 130000) }
+                        val reply = try { ai.execute(access.user, action, request, access.verify) }
+                        catch (failure: io.theficos.usuals.llm.ModelCallException) { AiReply(reachable = false, structured = false, problem = failure.problem.kind.name) }
+                        call.json(reply)
+                    } }
+                } finally { aiSlots.release() }
+            }
+        }
+
         post("/v1/devices/challenge") { run { call.json(relay.auth.challenge(call.body(), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
         post("/v1/devices/session") { run {
             val webSession = if (webIdentity != null && call.request.cookies[webIdentity.sessionCookieName()] != null)

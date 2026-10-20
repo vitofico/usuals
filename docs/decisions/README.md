@@ -1,5 +1,8 @@
 # Architecture decisions
 
+[ADR-0014](ADR-0014-server-connection-and-ai.md) describes simpler server account
+connection, full device-code comparison and the optional server AI gateway.
+
 [ADR-0012](ADR-0012-smart-shopping-list.md) records the implemented smart-list pivot.
 [ADR-0013](ADR-0013-shared-list-protocol.md) accepts the reviewed S0 contract for
 local shared-list implementation; the current app remains single-phone.

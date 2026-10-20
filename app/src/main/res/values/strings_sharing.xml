@@ -62,8 +62,8 @@
     <string name="sharing_retry_request">Retry join request</string>
     <string name="sharing_history_unverifiable">The server could not prove it extends this device’s saved history. Your local list is kept. Ask the administrator for a verified recovery copy.</string>
     <string name="sharing_already_joined">This device already has this household. Refresh it instead. Your existing keys and pending work are kept.</string>
-    <string name="sharing_scan_invitation">Scan invitation QR</string>
-    <string name="sharing_invitation_camera_help">Allow the camera to scan a private invitation, or paste its link instead.</string>
+    <string name="sharing_scan_invitation">Scan server or invitation QR</string>
+    <string name="sharing_invitation_camera_help">Allow the camera to scan a server or private invitation, or paste the link instead.</string>
     <string name="sharing_privacy">When you enable sharing, encrypted list data goes to your household server. It can see membership, device public keys, list identifiers, request timing and network addresses. Shopping contents and private keys stay encrypted. Recipes and product lookups still come directly from your phone.</string>
     <string name="sharing_hide_key">Hide recovery key</string>
     <string name="sharing_members">Members and devices</string>

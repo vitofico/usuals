@@ -63,8 +63,8 @@
     <string name="sharing_retry_request">Riprova la richiesta di adesione</string>
     <string name="sharing_history_unverifiable">Il server non ha potuto dimostrare di estendere la cronologia salvata su questo dispositivo. La lista locale è conservata. Chiedi all’amministratore una copia di recupero verificata.</string>
     <string name="sharing_already_joined">Questo dispositivo appartiene già a questo gruppo. Aggiornalo. Le chiavi e il lavoro in sospeso sono conservati.</string>
-    <string name="sharing_scan_invitation">Scansiona il QR di invito</string>
-    <string name="sharing_invitation_camera_help">Consenti la fotocamera per scansionare un invito privato, oppure incolla il link.</string>
+    <string name="sharing_scan_invitation">Scansiona QR del server o invito</string>
+    <string name="sharing_invitation_camera_help">Consenti la fotocamera per scansionare un server o un invito privato, oppure incolla il link.</string>
     <string name="sharing_privacy">Quando attivi la condivisione, i dati cifrati delle liste vanno al server del gruppo. Può vedere membri, chiavi pubbliche dei dispositivi, identificativi delle liste, orari delle richieste e indirizzi di rete. Contenuti della spesa e chiavi private restano cifrati. Ricette e ricerche di prodotti partono ancora direttamente dal telefono.</string>
     <string name="sharing_hide_key">Nascondi la chiave di recupero</string>
     <string name="sharing_members">Membri e dispositivi</string>

@@ -2,12 +2,13 @@ import { Problem, requireThat } from "./wire.mjs";
 import { canonical, decimal } from "./reducer.mjs";
 import { normalize } from "./identity.mjs";
 import { markdownDocument, ingredient } from "./import.mjs";
+import { ServerModel } from "./server-model.mjs";
 import { ImageModel } from "./image-model.mjs";
 import { preparePhoto, photoBlob, visionChallenge, PhotoCamera } from "./photo.mjs";
 
-export function importDialog({ el, button, t, openDialog, closeDialog, dialog, packs, origins, client, destination, valid, finished }) {
+export function importDialog({ el, button, t, openDialog, closeDialog, dialog, packs, origins, server = null, client, destination, valid, finished }) {
   let closed = false, busy = false, committing = false, mode = "markdown", rows = [], selected = new Set(), image = null, blobUrl = null, camera = null, cameraReady = false;
-  const model = new ImageModel({ origins, challenge: visionChallenge });
+  const model = server ? new ServerModel({ csrf: server.csrf, valid }) : new ImageModel({ origins, challenge: visionChallenge });
   const error = el("p", { class: "dialog-error", role: "alert" }), status = el("p", { class: "helper", role: "status" });
   const root = el("div", { class: "import-dialog" });
   const markdown = el("textarea", { id: "import-markdown", class: "field", rows: 7, maxlength: 30001, spellcheck: false });
@@ -22,14 +23,16 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const cancel = button(t("cancel"), closeDialog);
   const review = el("section", { hidden: true }), reviewList = el("ul", { class: "import-review" });
   const reviewHeading = el("h3", { tabindex: -1 }, t("importReviewTitle"));
+  const textPane = el("section", { hidden: true }), recipeText = el("textarea", { class: "field", rows: 8, maxlength: 30000, "aria-label": t("importRecipeText") });
   const markdownPane = el("section"), photoPane = el("section", { hidden: true });
   const controls = el("div", { class: "button-row", role: "group", "aria-label": t("importSource") });
-  const sourceButtons = ["markdown", "photo"].map(source => button(t(source === "markdown" ? "importMarkdown" : "importPhoto"), () => {
+  const sources = server ? ["markdown", "photo", "text"] : ["markdown", "photo"];
+  const sourceButtons = sources.map(source => button(t(source === "markdown" ? "importMarkdown" : source === "photo" ? "importPhoto" : "importRecipeText"), () => {
     stopCamera(); mode = source; update();
   }));
   controls.append(...sourceButtons);
   const current = () => !closed && valid();
-  function fail(problem) { error.textContent = t(problem?.code?.startsWith("import") ? problem.code : "importFailed"); }
+  function fail(problem) { error.textContent = t(problem?.code?.startsWith("import") || problem?.code?.startsWith("ai_") ? problem.code : "importFailed"); }
   function stopCamera() { camera?.stop(); camera = null; cameraReady = false; video.hidden = true; capture.hidden = true; }
   function showPhoto(value) {
     if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -44,7 +47,8 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   function update() {
     const reviewing = rows.length > 0 || !review.hidden;
     controls.hidden = reviewing; markdownPane.hidden = reviewing || mode !== "markdown"; photoPane.hidden = reviewing || mode !== "photo";
-    sourceButtons.forEach((node, i) => { node.className = ["markdown", "photo"][i] === mode ? "primary" : "secondary"; node.setAttribute("aria-pressed", String(["markdown", "photo"][i] === mode)); });
+    textPane.hidden = reviewing || mode !== "text";
+    sourceButtons.forEach((node, i) => { node.className = sources[i] === mode ? "primary" : "secondary"; node.setAttribute("aria-pressed", String(sources[i] === mode)); });
     root.querySelectorAll("input, textarea, button").forEach(node => { node.disabled = busy; });
     cancel.disabled = committing;
     photoFile.disabled = busy || !model.status.verified;
@@ -104,7 +108,15 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   el("label", { class: "label", for: limit.id }, t("importModelLimit")), limit,
   el("p", { class: "helper" }, t("importModelMemory")), el("button", { type: "submit", class: "secondary" }, t("importConnectModel")));
   for (const field of [endpoint, modelName, key, limit]) field.addEventListener("input", () => { model.disconnect(); stopCamera(); update(); });
-  const modelSection = origins.length ? el("details", { open: true }, el("summary", {}, t("importModelConnectionTitle")),
+  const textServerDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));
+  const serverDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));
+  if (server) model.settings().then(settings => {
+    if (!current()) return;
+    const selected = settings.profiles.find(p => p.id === settings.selected);
+    serverDescription.textContent = t("serverAiPrivacy") + (selected ? " " + selected.label + " · " + selected.model + " · " + selected.imageModel + " · " + selected.baseUrl + ". " + t(selected.isLocal ? "serverAiLocal" : "serverAiExternal") : ""); textServerDescription.textContent = serverDescription.textContent; update();
+  }).catch(fail);
+  const modelSection = server ? el("section", {}, serverDescription,
+    button(t("importConnectModel"), () => run(() => model.check()))) : origins.length ? el("details", { open: true }, el("summary", {}, t("importModelConnectionTitle")),
     el("p", { class: "helper" }, t("importAllowedOrigins", { origins: origins.join(", ") })), connection) : el("p", { class: "helper" }, t("importNoModelOrigins"));
   const startCamera = button(t("importTakePhoto"), () => run(async () => {
     camera = new PhotoCamera(); video.hidden = false; capture.hidden = false;
@@ -135,13 +147,15 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     } finally { committing = false; }
   }), "primary");
   review.append(reviewHeading, el("p", { class: "helper" }, t("importReviewHelp")), reviewList, empty, el("div", { class: "button-row" }, back, add));
-  root.append(el("h2", {}, t("importTitle")), controls, markdownPane, photoPane, review, error, el("div", { class: "button-row" }, cancel));
+  if (server) textPane.append(el("p", {}, t("importRecipeTextHelp")), textServerDescription, recipeText,
+    button(t("importRecipeText"), () => run(async () => { await showReview(await model.text(recipeText.value)); }), "primary"));
+  root.append(el("h2", {}, t("importTitle")), controls, markdownPane, photoPane, textPane, review, error, el("div", { class: "button-row" }, cancel));
   const guard = event => { if (committing) { event.preventDefault(); event.stopImmediatePropagation(); } };
   dialog.addEventListener("cancel", guard, true);
   openDialog(root, () => {
     closed = true; model.disconnect(); stopCamera(); image = null;
     if (blobUrl) URL.revokeObjectURL(blobUrl); blobUrl = null;
-    preview.removeAttribute("src"); key.value = ""; markdown.value = ""; photoFile.value = ""; markdownFile.value = "";
+    preview.removeAttribute("src"); recipeText.value = ""; key.value = ""; markdown.value = ""; photoFile.value = ""; markdownFile.value = "";
     dialog.removeEventListener("cancel", guard, true);
   });
   update(); markdown.focus();

@@ -91,6 +91,7 @@ fun UsualsApp(
     onTutorialFinished: () -> Unit = {},
 ) {
     var tutorialRequested by rememberSaveable { mutableStateOf(false) }
+    var sharingSource by rememberSaveable { mutableStateOf<String?>(null) }
     // A camera refusal, remembered above the scan destination. Design section
     // 12 says to fall back to typed entry and not to re-prompt, and the scan
     // screen cannot keep that promise on its own: pressing back pops its entry
@@ -119,6 +120,7 @@ fun UsualsApp(
                 onOpenScan = { navController.navigate(Routes.SCAN) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                onOpenSharing = { sharingSource = listViewModel.state.value.directory.selected; navController.navigate(Routes.SHARING) },
                 sharedText = sharedText?.takeIf { invitation == null },
                 onSharedTextConsumed = onSharedTextConsumed,
             )
@@ -136,7 +138,8 @@ fun UsualsApp(
         composable(Routes.SHARING) {
             val factory = remember(sharingViewModelFactory) { sharingViewModelFactory() }
             val vm: io.theficos.usuals.ui.sharing.SharingViewModel = viewModel(factory = factory)
-            io.theficos.usuals.ui.sharing.SharingScreen(vm, { navController.popBackStack() }, invitation = invitation, onInvitationConsumed = onSharedTextConsumed)
+            io.theficos.usuals.ui.sharing.SharingScreen(vm, { navController.popBackStack() }, invitation = invitation, onInvitationConsumed = onSharedTextConsumed,
+                sourceList = sharingSource, onSourceConsumed = { sharingSource = null })
         }
         composable(Routes.HISTORY) {
             val factory = remember(historyViewModelFactory) { historyViewModelFactory() }

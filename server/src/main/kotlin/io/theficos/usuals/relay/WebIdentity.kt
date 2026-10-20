@@ -137,13 +137,19 @@ class WebIdentity internal constructor(
     internal fun update(caller: WebCaller, target: String, update: WebUserUpdate): WebUser = db.transaction { c ->
         expect(current(c, caller).user.admin, "forbidden", 403)
         expect(c.execute("UPDATE web_user SET disabled=? WHERE id=? AND (issuer=? OR issuer=?)", update.disabled, id(target), config.oidc?.issuer ?: "", if (config.localEnabled) WebIdentityConfig.LOCAL_ISSUER else "") == 1, "not_found", 404)
-        if (update.disabled) c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(target))
+        if (update.disabled) {
+            c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(target))
+            c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(target))
+        c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(target))
+        }
         c.query("SELECT ${userColumns()} FROM web_user WHERE id=?", id(target), read = ::user).single()
     }
     internal fun revokeUser(caller: WebCaller, target: String) = db.transaction { c ->
         expect(current(c, caller).user.admin, "forbidden", 403)
-        expect(c.query("SELECT issuer FROM web_user WHERE id=?", id(target)) { config.accepts(it.getString(1)) }.singleOrNull() == true, "not_found", 404)
+        expect(c.query("SELECT issuer FROM web_user WHERE id=? FOR UPDATE", id(target)) { config.accepts(it.getString(1)) }.singleOrNull() == true, "not_found", 404)
         c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(target))
+        c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(target))
+        c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(target))
     }
     internal fun link(caller: WebCaller, proof: Proof) = db.transaction { c ->
         current(c, caller)
@@ -155,33 +161,35 @@ class WebIdentity internal constructor(
         c.execute("INSERT INTO web_device VALUES (?,?)", id(proof.deviceId), id(caller.user.id))
         c.execute("UPDATE auth_session SET revoked=true WHERE device=?", id(proof.deviceId))
     }
-    internal fun createHousehold(caller: WebCaller, request: CreateHousehold, relay: Relay): ManifestProof {
-        auth.limit("web-household:${caller.user.id}", 5)
+    internal fun createHousehold(caller: WebCaller, request: CreateHousehold, relay: Relay): ManifestProof =
+        createHouseholdFor(caller.user.id, request, relay, true) { current(it, caller); Unit }
+    internal fun createHouseholdFor(userId: String, request: CreateHousehold, relay: Relay, browser: Boolean, authorize: (Connection) -> Unit): ManifestProof {
+        auth.limit("web-household:${userId}", 5)
         return db.transaction { c ->
             // Serialize quota checks with account disabling and bind before any device session can exist.
-            c.query("SELECT id FROM web_user WHERE id=? FOR UPDATE", id(caller.user.id)) { Unit }
-            current(c, caller)
+            c.query("SELECT id FROM web_user WHERE id=? FOR UPDATE", id(userId)) { Unit }
+            authorize(c)
             val manifest = ManifestRules.genesis(request.manifest, relay.identity.serverId)
             val existing = c.query("SELECT w.user_id,h.genesis FROM web_created_household w JOIN household h ON h.id=w.household WHERE w.household=?", id(manifest.householdId)) {
                 it.getObject(1).toString() to io.theficos.usuals.sync.Wire.encode(it.getBytes(2))
             }.singleOrNull()
             if (existing != null) {
-                expect(existing.first == caller.user.id && existing.second == request.manifest.hash(), "conflict", 409)
+                expect(existing.first == userId && existing.second == request.manifest.hash(), "conflict", 409)
                 val signing = auth.consume(c, request.bootstrapProof, setOf("bootstrap")).second
                 expect(request.bootstrapProof.deviceId == manifest.signer && manifest.members.single().devices.single().signingPublicKey == signing)
                 request.manifest.proof()
             } else {
-                expect(c.query("SELECT count(*) FROM web_created_household WHERE user_id=?", id(caller.user.id)) { it.getLong(1) }.single() < 10, "quota_exceeded", 429)
+                expect(c.query("SELECT count(*) FROM web_created_household WHERE user_id=?", id(userId)) { it.getLong(1) }.single() < 10, "quota_exceeded", 429)
                 val keys = listOf(manifest.members.single().devices.single(), manifest.recovery)
                 expect(keys.all { key -> c.query("SELECT 1 FROM principal WHERE id=? OR signing=? OR recipient=?", id(key.id), raw(key.signingPublicKey), raw(key.recipientPublicKey)) { true }.isEmpty() }, "conflict", 409)
                 val proof = relay.create(c, request)
-                c.execute("INSERT INTO web_device VALUES (?,?)", id(manifest.signer), id(caller.user.id))
-                c.execute("INSERT INTO web_created_household VALUES (?,?)", id(manifest.householdId), id(caller.user.id))
+                if (browser) c.execute("INSERT INTO web_device VALUES (?,?)", id(manifest.signer), id(userId))
+                c.execute("INSERT INTO web_created_household VALUES (?,?)", id(manifest.householdId), id(userId))
                 proof
             }
         }
     }
-    private fun current(c: Connection, caller: WebCaller): WebCaller {
+    internal fun current(c: Connection, caller: WebCaller): WebCaller {
         val active = c.query("SELECT s.revoked,s.expires,u.disabled,u.issuer FROM web_session s JOIN web_user u ON u.id=s.user_id WHERE s.id=? AND s.user_id=?", id(caller.session), id(caller.user.id)) { !it.getBoolean(1) && it.getLong(2) > clock() && !it.getBoolean(3) && config.accepts(it.getString(4)) }.singleOrNull()
         expect(active == true, "unauthenticated", 401)
         return caller

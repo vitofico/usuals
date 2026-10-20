@@ -14,8 +14,9 @@ for enrollment, session, password and restore details.
 
 The web **Connect a phone** action renders a private one-use invitation QR
 locally. Android asks for confirmation of the server before contacting it.
-The owner scans the phone’s signed verification QR back in the browser; approval
-checks the complete original invitation and existing signed membership protocol.
+The owner compares every group of the full device code shown on both devices
+and explicitly approves. The signed verification QR remains an alternative; its
+approval checks the complete original invitation and signed membership protocol.
 Browser camera permission is requested only for that action. Frames stay on the
 device and the camera stops with the dialog, invitation or unlocked session.
 Manual full-fingerprint verification remains available.
@@ -30,8 +31,14 @@ full third-party bodies. A hosted model receives explicitly submitted recipe tex
 Selecting a local endpoint is a statement about the user's network, not proof
 that a server stores nothing.
 
-All third-party reads originate on the device. No application server fetches a
-recipe, a barcode record or a provider response on behalf of a phone.
+Recipe and barcode reads originate on the client. In direct native model mode,
+provider requests also originate there. With server AI, the authenticated gateway
+receives explicitly submitted recipe text or prepared photos and forwards them
+to a configured provider. Account-bound credentials use AES-256-GCM with a wrapping
+key outside PostgreSQL. Provider revisions bind consent to the selected destination
+and models; stale requests fail before upload. Image checks, durable quotas and
+separate concurrency protect the gateway. See [ADR-0014](decisions/ADR-0014-server-connection-and-ai.md)
+and the [provider operations guide](providers.md).
 Recipe pages are fetched only from explicit HTTP or HTTPS links. No scripts or
 linked contexts execute. Reads have size and time limits, and blocked pages
 produce a clear failure instead of an access workaround. Untrusted prose is
@@ -87,8 +94,9 @@ a readable file at the location the person chose.
 The isolated Ktor/PostgreSQL relay, Android Keystore keys, verified joining and
 shopping transport are implemented locally. The relay stores ciphertext plus
 public membership/routing metadata. It cannot read shopping names, quantities
-or history. Recipe, catalog and model reads still originate on the device or browser.
-No application server enters any third-party read path.
+or history. Recipe and catalog reads still originate on the device or browser. Explicit
+server-AI submissions are readable by the gateway and selected model provider.
+Encrypted shopping transport does not automatically disclose list contents to AI.
 
 The [v1 contract](sync/security-v1.md) covers signed membership, per-list keys,
 receipts, pins, removal, recovery and its freshness limits. Restored household
@@ -126,8 +134,9 @@ source metadata before an explicit model action. Synthetic image probes never
 include the selected photo; rejected probes cannot enable a photo upload. All
 output remains untrusted and requires the existing review/add confirmation.
 
-Browser model connections are exact operator-approved CSP origins, empty by
-default. Their keys live only in the import dialog memory, with no relay proxy,
+Legacy direct browser model connections use exact operator-approved CSP origins,
+empty by default. Those direct keys live only in the import dialog memory, without
+the gateway,
 ambient account credentials, redirect following or vault persistence. A failed
 replacement disconnects the old provider. Native requests and browser requests
 are cancellable and response-bounded. Camera streams stop on dismissal, lock,

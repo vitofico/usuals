@@ -125,16 +125,22 @@ class SharingCoordinator(private val context: Context, private val client: House
         retry
     }
     suspend fun share(household: String, source: String, history: Boolean): String {
-        val id = lists.prepareShare(household, source, history, replica)
+        val target = client.reserveShare(household, source, history)
+        val id = lists.prepareShare(household, source, history, replica, target)
         // Original local scope is retained even if creation or its acknowledgement fails.
-        client.createList(household, id)
-        lists.select(id); request()
+        client.resume(household)
+        if (id !in client.households().first { it.id == household }.lists) client.createList(household, id)
+        lists.select(id)
+        client.completeShare(household, id)
+        request()
         return id
     }
     suspend fun retryShare(household: String, id: String) {
         require(lists.all().any { it.id == id && it.shared && it.householdId == household })
         client.resume(household)
         if (id !in client.households().first { it.id == household }.lists) client.createList(household, id)
+        lists.select(id)
+        client.completeShare(household, id)
         request()
     }
     override fun close() { scope.cancel() }
