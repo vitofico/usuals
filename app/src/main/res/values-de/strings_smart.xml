@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_produce">Obst und Gemüse</string>
+    <string name="category_dairy">Milchprodukte und Eier</string>
+    <string name="category_bakery">Backwaren</string>
+    <string name="category_meat">Fleisch</string>
+    <string name="category_fish">Fisch und Meeresfrüchte</string>
+    <string name="category_frozen">Tiefkühlkost</string>
+    <string name="category_pantry">Vorräte</string>
+    <string name="category_drinks">Getränke</string>
+    <string name="category_snacks">Snacks</string>
+    <string name="category_household">Haushalt</string>
+    <string name="category_personal_care">Körperpflege</string>
+    <string name="category_other">Sonstiges</string>
+    <string name="item_edit">Artikel bearbeiten</string>
+    <string name="item_edit_action">%1$s bearbeiten</string>
+    <string name="edit_name">Name</string>
+    <string name="edit_quantity">Menge</string>
+    <string name="edit_category">Verschieben nach…</string>
+    <string name="edit_category_auto">Automatisch</string>
+    <string name="edit_repeat_days">Wiederholen alle (Tage)</string>
+    <string name="edit_repeat_hint">Fügt diesen Artikel automatisch hinzu, wenn er fällig ist. Leer lassen, um die Wiederholung zu beenden.</string>
+    <string name="edit_save">Speichern</string>
+    <string name="edit_cancel">Abbrechen</string>
+    <string name="unit_pieces">Stück</string>
+    <string name="unit_gram">g</string>
+    <string name="unit_kilogram">kg</string>
+    <string name="unit_millilitre">ml</string>
+    <string name="unit_litre">l</string>
+    <string name="unit_pack">Packungen</string>
+    <string name="repeat_added">Durch eine Wiederholungsregel hinzugefügt</string>
+    <string name="autocomplete_add">%1$s hinzufügen</string>
+    <string name="edit_name_invalid">Gib einen Artikelnamen ein.</string>
+    <string name="edit_quantity_invalid">Verwende eine Zahl ab 0 oder lasse das Feld leer.</string>
+    <string name="edit_repeat_invalid">Verwende eine ganze Anzahl Tage größer als 0 oder lasse das Feld leer.</string>
+</resources>

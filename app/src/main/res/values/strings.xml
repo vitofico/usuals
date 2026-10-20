@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English is the default language: a phone in any language without its own
+  `values-xx/` folder reads these. To add a language, copy the files in this
+  folder to `values-xx/` and translate them. `StringParityTest` fails until every
+  key has a translation, and the build declares the new locale by itself.
+
+  Copy rules for every language: sentence case, plain verbs, no exclamation
+  marks, and the app never claims to know something it inferred.
+-->
+<resources>
+    <string name="app_name" translatable="false">Usuals</string>
+
+    <!-- List header -->
+    <string name="household_fallback_name">Home</string>
+    <plurals name="list_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="list_subtitle">%1$s · %2$s</string>
+    <string name="contributor_you">you</string>
+    <!-- Quoted so the trailing space survives: Android trims unquoted string resources. -->
+    <string name="contributor_separator">", "</string>
+    <string name="open_settings">Settings</string>
+
+    <!-- The list itself -->
+    <string name="list_empty_instruction">Hold the bar and say what you need.</string>
+    <plurals name="list_checked_count">
+        <item quantity="one">%1$d checked off</item>
+        <item quantity="other">%1$d checked off</item>
+    </plurals>
+    <string name="list_checked_expand">Show checked items</string>
+    <string name="list_checked_collapse">Hide checked items</string>
+    <string name="item_check">Check off %1$s</string>
+    <string name="item_uncheck">Put %1$s back on the list</string>
+    <string name="item_remove">Remove</string>
+    <string name="item_quantity_pieces">×%1$s</string>
+
+    <!-- Capture band -->
+    <string name="capture_hint">Hold to speak</string>
+    <string name="capture_listening">Listening</string>
+    <string name="capture_band">Capture bar, hold to speak</string>
+    <string name="capture_write_hint">Type what you need</string>
+    <string name="capture_add">Add</string>
+    <string name="capture_speech_unavailable">Dictation is not available on this phone, type what you need.</string>
+    <string name="capture_scan">Scan a barcode</string>
+
+    <string name="capture_type">Type items</string>
+    <string name="list_empty_title">Ready for your next shop</string>
+
+    <!-- Scan screen -->
+    <string name="scan_title">Scan</string>
+    <string name="scan_back">Back</string>
+    <string name="scan_intro">Scan a package</string>
+    <string name="scan_guidance">Hold the barcode inside the frame. The camera pauses when it is read.</string>
+    <string name="scan_permission_rationale">Reading a barcode needs the camera. It is used on this screen only, and no image is stored.</string>
+    <string name="scan_permission_grant">Use the camera</string>
+    <string name="scan_permission_denied">No camera. Type the code instead, it works just as well.</string>
+    <string name="scan_camera_unavailable">The camera is not available here. Type the code instead.</string>
+    <string name="scan_manual_title">Type the code</string>
+    <string name="scan_manual_label">Barcode</string>
+    <string name="scan_manual_hint">EAN-13, EAN-8 or UPC-A.</string>
+    <string name="scan_manual_add">Add</string>
+    <string name="scan_manual_invalid">That code does not look valid.</string>
+    <string name="quantity_gram">%1$s g</string>
+    <string name="quantity_kilogram">%1$s kg</string>
+    <string name="quantity_millilitre">%1$s ml</string>
+    <string name="quantity_litre">%1$s l</string>
+    <string name="quantity_pack">%1$s pk</string>
+</resources>

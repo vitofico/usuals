@@ -1,0 +1,15 @@
+Usuals recuerda lo que compras. Usa tu lista sin conexión, sin cuenta, servidor ni modelo.
+
+Añade productos por teclado, voz, texto compartido o código de barras. Edita nombres, cantidades, categorías y tiendas. Finaliza una compra para guardar los productos marcados en el historial, con Deshacer. Las repeticiones solo añaden lo que tú programas. Las sugerencias te ayudan a recordar tus productos habituales.
+
+Comparte una receta, revisa sus ingredientes y elige qué añadir. Las recetas con datos estructurados no necesitan modelo. La ayuda opcional puede usar un modelo local o un proveedor en la nube.
+
+La consulta opcional de Open Food Facts identifica envases y muestra marca, tamaño, ingredientes, valores nutricionales, alérgenos y trazas declarados. Tú confirmas el nombre. Los datos pueden estar incompletos: comprueba el envase. Sin consulta puedes nombrar el producto manualmente.
+
+Comparte listas cifradas mediante tu propio servidor Usuals y su aplicación web. Crea el hogar en Android o en la web, guarda el paquete de recuperación y aprueba cada dispositivo comprobando su huella completa. La web admite contraseñas locales o SSO configurado. Las listas locales de Android no requieren iniciar sesión.
+
+Tres temas con modo oscuro, tutorial inicial, widget, exportación e importación del historial e interfaz en español, inglés, italiano, francés y alemán.
+
+Sin anuncios, analítica, informes de errores ni Google Play Services. La consulta de productos y los modelos están desactivados inicialmente. La voz usa el servicio de reconocimiento de Android elegido, que puede procesar audio fuera del teléfono. El teclado funciona sin conexión. Las consultas de recetas y productos salen directamente del dispositivo. La copia de seguridad en la nube está excluida; las credenciales no forman parte de las exportaciones.
+
+Apache-2.0. Los modelos opcionales en la nube pueden utilizar servicios propietarios.

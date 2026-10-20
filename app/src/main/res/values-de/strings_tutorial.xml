@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tutorial_replay">Geführte Einführung</string>
+    <string name="tutorial_skip">Einführung überspringen</string>
+    <string name="tutorial_back">Zurück</string>
+    <string name="tutorial_next">Weiter</string>
+    <string name="tutorial_finish">Meine Liste starten</string>
+    <string name="tutorial_setup_sharing">Teilen einrichten</string>
+    <string name="tutorial_step">%1$d von %2$d</string>
+    <string name="tutorial_welcome_title">Willkommen bei %1$s.</string>
+    <string name="tutorial_welcome_body">Deine Einkaufsliste funktioniert offline, ohne Konto oder Server. Beginne mit den Dingen, die du brauchst, und gestalte sie nach deinen Wünschen.</string>
+    <string name="tutorial_welcome_hint">Du kannst diese Einführung jederzeit in den Einstellungen erneut öffnen.</string>
+    <string name="tutorial_capture_title">Halte es gleich fest.</string>
+    <string name="tutorial_capture_body">Tippe auf die Tastatur, um Artikel hinzuzufügen, oder halte das Mikrofon zum Sprechen gedrückt. Halte einen Artikel gedrückt, um Name, Menge, Kategorie oder Geschäft zu ändern.</string>
+    <string name="tutorial_capture_hint">Der Zugriff auf Mikrofon und Kamera wird erst bei der Nutzung dieser Funktionen angefragt.</string>
+    <string name="tutorial_scan_title">Von Packungen und Rezepten.</string>
+    <string name="tutorial_scan_body">Scanne einen Barcode, um eine Packung hinzuzufügen, oder teile einen Rezeptlink, um die Zutaten zu prüfen. Jeden vorgeschlagenen Produktnamen bestätigst du selbst.</string>
+    <string name="tutorial_scan_hint">Die Produktsuche ist in den Einstellungen optional. Wenn du sie aktivierst, wird der Barcode an Open Food Facts gesendet.</string>
+    <string name="tutorial_shop_title">Etwas weniger zu merken.</string>
+    <string name="tutorial_shop_body">Wähle Einkauf starten und hake Artikel beim Einkaufen ab. Einkauf abschließen speichert abgehakte Artikel im Verlauf; die anderen bleiben auf der Liste.</string>
+    <string name="tutorial_shop_hint">Der Verlauf hilft dir, Wichtiges erneut zu kaufen. Wiederholungsregeln fügen Artikel nur nach deinem Zeitplan hinzu.</string>
+    <string name="tutorial_share_title">Dein Alltag, gemeinsam.</string>
+    <string name="tutorial_share_body">Öffne Einstellungen &gt; Geteilte Listen, um gemeinsam einzukaufen. Teile eine Android-Liste mit Serveradresse und einmaligem Einrichtungscode oder tritt einem im Web erstellten Haushalt bei.</string>
+    <string name="tutorial_share_hint">Speichere und überprüfe beim Erstellen eines Haushalts das Wiederherstellungspaket. Öffne zum Beitreten eine Einladung und vergleiche den vollständigen Gerätefingerabdruck mit der besitzenden Person.</string>
+</resources>

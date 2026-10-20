@@ -1,0 +1,1 @@
+Primera versión pública: listas sin conexión, historial, repeticiones, recetas, consulta opcional de productos, listas compartidas cifradas, cinco idiomas y tres temas. Incluye tutoriales y creación de hogares desde la web.

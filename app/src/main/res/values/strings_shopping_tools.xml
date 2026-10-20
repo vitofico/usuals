@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shopping_tools">Shopping tools</string>
+    <string name="shopping_start">Start shopping</string>
+    <string name="shopping_stop">Leave shopping mode</string>
+    <string name="shopping_mode">Shopping mode</string>
+    <string name="shopping_keep_awake">Keep screen awake while shopping</string>
+    <string name="shopping_haptics">Vibrate when checking an item</string>
+    <string name="shopping_personal_help">These choices stay on this device. Favourites and store layouts are included in your data exports; they are not shared with your household.</string>
+    <string name="shopping_favorites">Pinned essentials</string>
+    <string name="shopping_pin">Pin as an essential</string>
+    <string name="shopping_unpin">Unpin</string>
+    <string name="shopping_no_favorites">Long-press an item and pin it here for quick access.</string>
+    <string name="shopping_aisle_order">Aisle order</string>
+    <string name="shopping_aisle_for">Category order for %1$s</string>
+    <string name="shopping_up">Move %1$s up</string>
+    <string name="shopping_down">Move %1$s down</string>
+    <string name="shopping_reset_order">Reset category order</string>
+    <string name="shopping_next_time">Buy next time</string>
+    <string name="shopping_next_time_help">Kept unchecked for everyone. These items return after the next finished shop, or you can restore them now.</string>
+    <string name="shopping_restore_item">Restore %1$s to this shop</string>
+    <string name="shopping_restore">Restore</string>
+    <string name="shopping_close">Close</string>
+    <string name="history_search">Search past purchases</string>
+    <string name="history_add_selected">Add selected (%1$d)</string>
+    <string name="history_rebuy_review">Select past purchases to add to the current list. Items already open are skipped; quantities are not doubled.</string>
+    <string name="history_rebuy_done">Selected purchases added: %1$d.</string>
+    <string name="history_no_results">No past purchases match this search.</string>
+    <string name="history_select_trip">Select this shop</string>
+    <string name="shopping_preferences_unavailable">Personal shopping preferences could not be read. Your lists are safe. The saved preferences have been kept for recovery.</string>
+</resources>

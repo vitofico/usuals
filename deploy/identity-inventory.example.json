@@ -1,0 +1,7 @@
+{
+  "issuer": "https://auth.example.org/application/o/usuals/",
+  "clientId": "usuals-web",
+  "adminSubjects": ["REPLACE_WITH_VERIFIED_SUBJECT"],
+  "allowedGroups": ["usuals-users"],
+  "egressCidrs": ["REPLACE_WITH_VERIFIED_INGRESS_ADDRESS/32"]
+}

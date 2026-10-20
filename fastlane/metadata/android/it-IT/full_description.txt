@@ -1,0 +1,15 @@
+Usuals ricorda ciò che compri. La lista funziona offline, senza account, server o modelli.
+
+Aggiungi prodotti con tastiera, voce, testo condiviso o codice a barre. Modifica nomi, quantità, categorie e negozi. Termina la spesa per salvare gli articoli spuntati nella cronologia, con Annulla. Le ripetizioni aggiungono soltanto ciò che programmi. I suggerimenti ricordano i tuoi prodotti abituali.
+
+Condividi una ricetta, controlla gli ingredienti e scegli cosa aggiungere. I dati strutturati non richiedono un modello; l'assistenza facoltativa può usare un modello locale o un servizio cloud.
+
+La ricerca facoltativa su Open Food Facts identifica le confezioni e mostra marca, formato, ingredienti, valutazioni nutrizionali, allergeni e tracce dichiarati. Confermi tu il nome. I dati possono essere incompleti: controlla la confezione. Senza ricerca puoi assegnare il nome manualmente.
+
+Condividi liste cifrate tramite il tuo server Usuals e la sua app web. Crea un gruppo domestico su Android o sul web, conserva il kit di recupero e approva i dispositivi confrontandone l'intera impronta. Il web supporta account locali o SSO configurato. Le liste locali Android non richiedono accesso.
+
+Tre temi con modalità scura, guida iniziale, widget, esportazione e importazione della cronologia. Interfaccia in italiano, inglese, spagnolo, francese e tedesco.
+
+Niente pubblicità, analisi, segnalazioni automatiche di errori o Google Play Services. Ricerca prodotti e modelli sono disattivati inizialmente. La voce usa il servizio Android scelto, che può elaborare l'audio online; la tastiera funziona offline. Le richieste di ricette e prodotti partono direttamente dal dispositivo. Il backup cloud è escluso e le credenziali non sono incluse nelle esportazioni.
+
+Apache-2.0. I modelli cloud facoltativi possono utilizzare servizi proprietari.

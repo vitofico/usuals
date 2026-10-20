@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The window shell, not the design system. Everything a person looks at is
+  drawn by Compose and coloured by ui/theme/Theme.kt; this theme exists only to
+  paint the window and the system bars before the first frame, so launching the
+  app does not flash white paper-then-Material-grey.
+
+  Parent is the framework Material theme rather than Theme.Material3.DayNight
+  because the app has no com.google.android.material dependency, and adding one
+  to inherit a style it never uses would be a dependency for nothing. Material 3
+  lives in the Compose layer.
+-->
+<resources>
+    <style name="Theme.Usuals" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/usuals_ground</item>
+        <item name="android:statusBarColor">@color/usuals_ground</item>
+        <item name="android:navigationBarColor">@color/usuals_ground</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">@color/usuals_accent</item>
+    </style>
+</resources>

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: usuals-postgres
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: microk8s-hostpath
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: usuals-identity
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: microk8s-hostpath
+  resources:
+    requests:
+      storage: 100Mi
+---
+# Only backup artifacts use NFS. Provision this private UID 70 path after approval.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: usuals-backups
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: usuals
+    name: usuals-backups
+  nfs:
+    server: 192.0.2.10
+    path: /srv/cluster-data/usuals/backups
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: usuals-backups
+spec:
+  accessModes: [ReadWriteMany]
+  volumeName: usuals-backups
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 20Gi

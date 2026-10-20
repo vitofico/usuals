@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_produce">Frutas y verduras</string>
+    <string name="category_dairy">Lácteos y huevos</string>
+    <string name="category_bakery">Panadería</string>
+    <string name="category_meat">Carne</string>
+    <string name="category_fish">Pescado y marisco</string>
+    <string name="category_frozen">Congelados</string>
+    <string name="category_pantry">Despensa</string>
+    <string name="category_drinks">Bebidas</string>
+    <string name="category_snacks">Aperitivos</string>
+    <string name="category_household">Hogar</string>
+    <string name="category_personal_care">Cuidado personal</string>
+    <string name="category_other">Otros</string>
+    <string name="item_edit">Editar artículo</string>
+    <string name="item_edit_action">Editar %1$s</string>
+    <string name="edit_name">Nombre</string>
+    <string name="edit_quantity">Cantidad</string>
+    <string name="edit_category">Mover a…</string>
+    <string name="edit_category_auto">Automática</string>
+    <string name="edit_repeat_days">Repetir cada (días)</string>
+    <string name="edit_repeat_hint">Añade este artículo automáticamente cuando toque. Déjalo vacío para dejar de repetir.</string>
+    <string name="edit_save">Guardar</string>
+    <string name="edit_cancel">Cancelar</string>
+    <string name="unit_pieces">Unidades</string>
+    <string name="unit_gram">g</string>
+    <string name="unit_kilogram">kg</string>
+    <string name="unit_millilitre">ml</string>
+    <string name="unit_litre">l</string>
+    <string name="unit_pack">Paquetes</string>
+    <string name="repeat_added">Añadido por una regla de repetición</string>
+    <string name="autocomplete_add">Añadir %1$s</string>
+    <string name="edit_name_invalid">Introduce un nombre de artículo.</string>
+    <string name="edit_quantity_invalid">Usa un número de al menos 0 o déjalo vacío.</string>
+    <string name="edit_repeat_invalid">Usa un número entero de días mayor que 0 o déjalo vacío.</string>
+</resources>

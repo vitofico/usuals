@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="product_details">Détails du produit</string>
+    <string name="product_brand">Marque : %1$s</string>
+    <string name="product_pack">Conditionnement : %1$s</string>
+    <string name="product_ingredients">Ingrédients</string>
+    <string name="product_ingredients_unknown">Ingrédients non renseignés.</string>
+    <string name="product_traces">Peut contenir des traces de : %1$s</string>
+    <string name="product_traces_unknown">Traces non renseignées.</string>
+    <string name="product_traces_empty">Open Food Facts ne mentionne aucune trace.</string>
+    <string name="product_check_package">Les données de la communauté peuvent être incomplètes ou anciennes. Vérifiez toujours les ingrédients et allergènes sur l’emballage.</string>
+    <string name="product_saved">Enregistré sur cet appareil : %1$s</string>
+    <string name="product_saved_stale">Données enregistrées anciennes : %1$s</string>
+    <string name="product_refresh">Actualiser</string>
+    <string name="product_close">Fermer</string>
+    <string name="product_source">Consulter ou contribuer sur Open Food Facts</string>
+    <string name="product_disabled">La recherche par code est désactivée. Les détails enregistrés restent disponibles hors connexion.</string>
+    <string name="product_settings">Paramètres de recherche</string>
+    <string name="product_rate_limited">Open Food Facts est occupé. Attendez une minute avant de réessayer. Les détails enregistrés restent disponibles.</string>
+    <string name="product_unavailable">Impossible d’actualiser les détails. Les données enregistrées figurent ci-dessous.</string>
+    <string name="product_source_updated">Source mise à jour : %1$s</string>
+    <string name="product_not_found">Aucun produit trouvé pour ce code. Vous pouvez ajouter les informations manquantes sur Open Food Facts.</string>
+</resources>

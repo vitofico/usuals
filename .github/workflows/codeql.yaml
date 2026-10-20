@@ -1,0 +1,67 @@
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Weekly, so a query-pack update finds the code even in a quiet week. Monday
+  # 06:00 UTC, deliberately not on the hour boundary everyone else picks.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  analyze:
+    # Uploading results needs Code Scanning, which is free on a public repository
+    # and gated behind GitHub Advanced Security on a private one. While the repo
+    # is private the whole workflow is skipped rather than failing on every push.
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@311b4ee155dcdab395044f00946f664bd51ff173 # v4
+        with:
+          languages: ${{ matrix.language }}
+
+      # This is the one workflow that does not build through scripts/dgradle.
+      # CodeQL extracts a compiled language by wrapping the compiler processes it
+      # launches on the runner, and it cannot see inside a container the build
+      # started for itself. So the analysis build runs on the host with a host JDK
+      # and SDK, which is a different environment from the one that ships. That is
+      # acceptable here because nothing this job produces is published: it reads
+      # the code, it does not release it.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # -x test because the tests are android-ci's job. CodeQL needs the classes,
+      # not a green suite, and running the suite twice would double the weekly
+      # cost for no extra coverage.
+      - name: Build for analysis
+        run: ./gradlew assembleDebug -x test --stacktrace
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@311b4ee155dcdab395044f00946f664bd51ff173 # v4

@@ -1,0 +1,52 @@
+# Credential detection, for a repository that is about to have a remote.
+#
+# The threat is not sophisticated and does not need to be: somebody pastes a
+# provider key into a test to see whether rung 4 works, the test passes, the
+# commit lands, and the key is in the history of a public repository for ever.
+# CodeQL does not catch that. It is static analysis for code defects, it builds
+# with tests excluded, and it skips itself entirely while a repository is
+# private, which is exactly the window in which the paste happens.
+#
+# The scan runs over the whole git history rather than the working tree, because
+# a key that was committed and then deleted is still a key that was published.
+#
+# ## The one rule about this file
+#
+# **Nothing here is allowlisted by file path.** Allowlisting a path is how a
+# real secret committed into a test file passes a scan that looks like it is
+# working, and test files are precisely where a key gets pasted. Every entry
+# below matches an exact value, so it can hide that value and nothing else. A
+# second secret in the same file is still a finding.
+#
+# `paths`, `commits` and `stopwords` are deliberately absent for the same
+# reason. If a finding here is genuinely a false positive, add its exact value,
+# with a line saying what it is.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-benign values, each pinned by its exact text"
+
+# Robolectric's staged `android-all` jars. These are the build identifiers of
+# Google's own Android system images as Robolectric republishes them, and the
+# `generic-api-key` rule reads a long opaque string next to a `=` as a
+# credential, which is what it is there to do.
+#
+# These are pinned one by one rather than matched by shape, so a Robolectric
+# upgrade makes this scan fail with a new "secret" on a line of
+# `gradle/libs.versions.toml`. That is not an accident and it is not much work:
+# look at the line, confirm it is another version string, add it here. A regex
+# over the shape would pass silently for ever, including on the day the shape
+# stops meaning what it means today.
+regexes = [
+    '''^8\.0\.0_r4-robolectric-r1-i6$''',
+    '''^13-robolectric-9030017-i6$''',
+    '''^14-robolectric-10818077-i6$''',
+    # Public SHA-256 of Usuals' Android release certificate, not a private key.
+    '''^2b146331dad6daacb6c547677b72d7e2f87e649b84b5f88c04f438ba3c2df990$''',
+]
+# Matched against the secret the rule extracted, not against the whole line, so
+# the anchors mean what they look like they mean: this exact string and no
+# other. Against the line, a `^...$` pair would silently match nothing.
+regexTarget = "secret"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="suggestions_title">Ti servono questi?</string>
+    <string name="suggestion_repeat">È il momento della tua ripetizione</string>
+    <string name="suggestion_interval">Di solito serve in questo periodo</string>
+    <string name="suggestion_staple">Acquistato in almeno metà delle ultime spese</string>
+    <string name="suggestion_add">Aggiungi</string>
+    <string name="suggestion_not_now">Non ora</string>
+    <string name="suggestion_never">Mai</string>
+    <string name="suggestion_action">%1$s %2$s</string>
+</resources>

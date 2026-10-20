@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_lookup_toggle">Look up scanned product names</string>
+    <string name="scan_lookup_hint">Off by default. Send barcodes to Open Food Facts to offer names and categories. You confirm each name. Scanning always works without a connection.</string>
+    <string name="scan_lookup_privacy">If you enable barcode lookup, Usuals sends scanned barcodes directly to Open Food Facts for product names, categories and product details. Your lists and purchase history are never sent. Lookup is off by default.</string>
+    <string name="scan_name_manual">Name this scan</string>
+    <string name="scan_name_offer">Use this product name?</string>
+    <string name="scan_name_barcode">Barcode: %1$s</string>
+    <string name="scan_name_category">Category: %1$s</string>
+    <string name="scan_name_confirm">Use name</string>
+    <string name="scan_name_skip">Not now</string>
+    <string name="scan_name_skip_all">Skip remaining names</string>
+    <string name="scan_name_disabled">Product name lookup is off. Enable it to send barcodes to Open Food Facts for names and categories. Your list and history stay on this phone.</string>
+    <string name="scan_name_enable">Enable product names</string>
+    <string name="scan_name_not_found">Open Food Facts has no name for this barcode. You can name it once and %1$s will remember it.</string>
+    <string name="scan_name_unavailable">Product name lookup could not finish. Check your connection and retry, or name the item yourself.</string>
+    <string name="scan_name_restricted">This is a store-specific barcode. Its product name cannot be looked up in Open Food Facts.</string>
+    <string name="scan_name_retry">Retry name lookup</string>
+    <string name="scan_saved">Added barcode %1$s. The camera is paused.</string>
+    <string name="scan_saved_name">Added %1$s. The camera is paused.</string>
+    <string name="scan_duplicate">Barcode %1$s is already scanned in this session. No extra item was added.</string>
+    <string name="scan_next">Scan next item</string>
+    <string name="scan_done">Done scanning</string>
+    <plurals name="scan_count">
+        <item quantity="one">Scanned %1$d unique barcode.</item>
+        <item quantity="other">Scanned %1$d unique barcodes.</item>
+    </plurals>
+    <string name="edit_store">Store tag (optional)</string>
+    <string name="store_all">All stores</string>
+    <string name="store_empty">No items for this store. Choose All stores to see the rest.</string>
+</resources>

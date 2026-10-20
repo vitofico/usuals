@@ -1,0 +1,1 @@
+Collegati al gruppo con inviti QR e aggiornamenti automatici dell'approvazione. Importa liste e ingredienti da file Markdown o testo incollato, anche offline. Leggi liste scritte nelle foto con un modello connesso che supporta immagini, poi controlla prima di aggiungere. Le foto restano sul dispositivo finché non ne richiedi la lettura.

@@ -1,0 +1,17 @@
+<resources>
+    <style name="ShoppingWidgetPlum">
+        <item name="widgetAccentColor">@color/widget_accent</item>
+        <item name="widgetSubtext">@color/widget_secondary</item>
+        <item name="widgetText">@color/widget_ink</item>
+    </style>
+    <style name="ShoppingWidgetGrove">
+        <item name="widgetAccentColor">@color/widget_grove_accent</item>
+        <item name="widgetSubtext">@color/widget_grove_secondary</item>
+        <item name="widgetText">@color/widget_grove_ink</item>
+    </style>
+    <style name="ShoppingWidgetTide">
+        <item name="widgetAccentColor">@color/widget_tide_accent</item>
+        <item name="widgetSubtext">@color/widget_tide_secondary</item>
+        <item name="widgetText">@color/widget_tide_ink</item>
+    </style>
+</resources>
