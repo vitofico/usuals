@@ -4,14 +4,14 @@ import io.theficos.usuals.parse.InputLanguages
 import java.text.Normalizer
 import java.util.Locale
 
-/** Extracts explicit list entries. Markdown is source text, never rendered or fetched. */
+/** Reads note lines and ingredient sections. Markdown is never rendered or fetched. */
 class MarkdownIngredients {
     private val ingredients = InputLanguages.available.flatMap { it.ingredientHeadings }.map(::headingKey).toSet()
     private val ignored = InputLanguages.available.flatMap { it.ignoredRecipeHeadings }.map(::headingKey).toSet()
 
     fun read(text: String): RecipeDocument {
         require(text.length <= MAX_TEXT)
-        val source = visibleLines(text.removePrefix("\uFEFF"))
+        val source = visibleLines(text.removePrefix("\uFEFF").replace('\u2028', '\n').replace('\u2029', '\n'))
         val recipe = source.any { heading(it)?.second?.let(::headingKey) in ingredients }
         var title: String? = null
         var ingredientDepth: Int? = null
@@ -34,8 +34,8 @@ class MarkdownIngredients {
                 }
                 return@forEach
             }
-            if (!accept || line.isBlank() || line.startsWith('>') || line == "---") return@forEach
-            val entry = BULLET.matchEntire(line)?.groupValues?.get(1) ?: if (ingredientDepth != null) line else return@forEach
+            if (!accept || line.isBlank() || line.startsWith('>') || RULE.matches(line)) return@forEach
+            val entry = entry(line) ?: line
             if (CHECKED.containsMatchIn(entry)) return@forEach
             val content = clean(UNCHECKED.replaceFirst(entry, ""))
             if (content.isNotBlank() && !URL.matches(content)) lines += content
@@ -60,7 +60,7 @@ class MarkdownIngredients {
                 return@forEachIndexed
             }
             if (marker != null) { fence = marker; return@forEachIndexed }
-            if (Regex("^(?:={3,}|-{3,})$").matches(line) && result.lastOrNull()?.let { it.isNotBlank() && BULLET.matchEntire(it.trim()) == null && heading(it) == null } == true) {
+            if (Regex("^(?:={3,}|-{3,})$").matches(line) && result.lastOrNull()?.let { it.isNotBlank() && entry(it.trim()) == null && HEADING.matchEntire(it.trim()) == null } == true) {
                 result[result.lastIndex] = (if (line.startsWith('=')) "# " else "## ") + result.last().trim()
             } else result += raw
         }
@@ -69,7 +69,9 @@ class MarkdownIngredients {
 
     private fun heading(raw: String): Pair<Int, String>? = HEADING.matchEntire(raw.trim())?.let {
         it.groupValues[1].length to clean(it.groupValues[2].trimEnd('#', ' '))
-    }
+    } ?: clean(raw).takeIf { headingKey(it) in ingredients || headingKey(it) in ignored }?.let { 2 to it }
+    private fun entry(line: String): String? = BULLET.matchEntire(line)?.groupValues?.get(1)
+        ?: line.takeIf { CHECKBOX.containsMatchIn(it) }
     private fun clean(raw: String): String = HtmlText.clean(LINK.replace(IMAGE.replace(raw, ""), "$1")
         .replace("**", "").replace("__", "").replace("`", "").replace("*", "").replace("_", ""))
     private fun headingKey(raw: String): String = Normalizer.normalize(raw.lowercase(Locale.ROOT), Normalizer.Form.NFD)
@@ -80,9 +82,11 @@ class MarkdownIngredients {
         const val MAX_ITEMS = 150
         private val HEADING = Regex("^(#{1,6})\\s+(.+)$")
         private val FENCE = Regex("^(?:`{3,}|~{3,})")
-        private val BULLET = Regex("^(?:[-+*]|[0-9]+[.)])\\s+(.+)$")
-        private val CHECKED = Regex("^\\[[xX]]\\s*")
-        private val UNCHECKED = Regex("^\\[ ]\\s*")
+        private val RULE = Regex("^(?:-{3,}|\\*{3,}|_{3,})$")
+        private val BULLET = Regex("^(?:[-+*•◦]|[0-9]+[.)])\\s+(.+)$")
+        private val CHECKBOX = Regex("^(?:\\[[ xX]]|[☐☑☒])\\s*")
+        private val CHECKED = Regex("^(?:\\[[xX]]|[☑☒])\\s*")
+        private val UNCHECKED = Regex("^(?:\\[ ]|☐)\\s*")
         private val IMAGE = Regex("!\\[[^]]*]\\([^)]*\\)")
         private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
         private val URL = Regex("https?://\\S+", RegexOption.IGNORE_CASE)

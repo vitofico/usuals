@@ -6,10 +6,13 @@ const pairs = (packs, key) => new Map(words(packs, key).map(x => { const at = x.
 const clean = value => value.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
   .replace(/<[^>]+>/g, " ").replace(/\*\*|__|`|\*|_/g, "").replace(/\s+/g, " ").trim();
 const heading = value => { const m = /^(#{1,6})\s+(.+)$/.exec(value.trim()); return m && [m[1].length, clean(m[2].replace(/[# ]+$/, ""))]; };
-const bullet = /^(?:[-+*]|\d+[.)])\s+(.+)$/;
+const bullet = /^(?:[-+*•◦]|\d+[.)])\s+(.+)$/;
+const entry = line => bullet.exec(line)?.[1] ?? (/^(?:\[[ xX]\]|[☐☑☒])\s*/.test(line) ? line : null);
 export function markdownDocument(text, packs) {
   requireThat(typeof text === "string" && text.length <= 30000, "importTooLarge");
-  const visible = [], lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+  const ingredients = new Set(words(packs, "ingredient-headings").map(headingKey)), ignored = new Set(words(packs, "ignored-recipe-headings").map(headingKey));
+  const section = raw => { const name = clean(raw); return heading(raw) ?? (ingredients.has(headingKey(name)) || ignored.has(headingKey(name)) ? [2, name] : null); };
+  const visible = [], lines = text.replace(/^\uFEFF/, "").split(/\r\n?|\n|\u2028|\u2029/);
   let fence = null, front = lines[0]?.trim() === "---";
   for (let index = 0; index < lines.length; index++) {
     const raw = lines[index], line = raw.trim();
@@ -18,16 +21,15 @@ export function markdownDocument(text, packs) {
     if (fence) { if (marker && marker[0] === fence[0] && marker.length >= fence.length && !line.slice(marker.length).trim()) fence = null; continue; }
     if (marker) { fence = marker; continue; }
     const previous = visible.at(-1);
-    if (/^(?:={3,}|-{3,})$/.test(line) && previous?.trim() && !bullet.test(previous.trim()) && !heading(previous))
+    if (/^(?:={3,}|-{3,})$/.test(line) && previous?.trim() && entry(previous.trim()) === null && !heading(previous))
       visible[visible.length - 1] = (line[0] === "=" ? "# " : "## ") + previous.trim();
     else visible.push(raw);
   }
-  const ingredients = new Set(words(packs, "ingredient-headings").map(headingKey)), ignored = new Set(words(packs, "ignored-recipe-headings").map(headingKey));
-  const recipe = visible.some(x => { const h = heading(x); return h && ingredients.has(headingKey(h[1])); });
+  const recipe = visible.some(x => { const h = section(x); return h && ingredients.has(headingKey(h[1])); });
   let title = null, ingredientDepth = null, ignoredDepth = null, accept = !recipe;
   const entries = [];
   for (const raw of visible) {
-    const line = raw.trim(), h = heading(line);
+    const line = raw.trim(), h = section(line);
     if (h) {
       const [depth, name] = h, key = headingKey(name);
       if (!title && depth === 1 && !ingredients.has(key) && !ignored.has(key)) title = name;
@@ -38,10 +40,10 @@ export function markdownDocument(text, packs) {
       else { ingredientDepth = null; ignoredDepth = null; accept = !recipe; }
       continue;
     }
-    if (!accept || !line || line.startsWith(">") || line === "---") continue;
-    const entry = bullet.exec(line)?.[1] ?? (ingredientDepth !== null ? line : null);
-    if (!entry || /^\[[xX]\]\s*/.test(entry)) continue;
-    const value = clean(entry.replace(/^\[ \]\s*/, ""));
+    if (!accept || !line || line.startsWith(">") || /^(?:-{3,}|\*{3,}|_{3,})$/.test(line)) continue;
+    const item = entry(line) ?? line;
+    if (!item || /^(?:\[[xX]\]|[☑☒])\s*/.test(item)) continue;
+    const value = clean(item.replace(/^(?:\[ \]|☐)\s*/, ""));
     if (value && !/^https?:\/\/\S+$/i.test(value)) entries.push(value);
     requireThat(entries.length <= 150, "importTooLarge");
   }

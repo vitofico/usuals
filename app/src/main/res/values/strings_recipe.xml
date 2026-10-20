@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="recipe_title">Import recipe</string>
+    <string name="recipe_title">Import list or recipe</string>
+    <string name="recipe_import">Import</string>
     <string name="recipe_close">Close</string>
     <string name="recipe_url">Recipe URL</string>
     <string name="recipe_read">Read recipe</string>
@@ -14,10 +15,10 @@
     <string name="recipe_on_list">Already on your list</string>
     <string name="recipe_pantry">Pantry staple</string>
     <string name="recipe_recent">Bought in the last 7 days</string>
-    <string name="recipe_empty">No usable ingredients were found. Try another source or add the items by hand.</string>
+    <string name="recipe_empty">No usable items were found. Try another source or add the items by hand.</string>
     <plurals name="recipe_add">
-        <item quantity="one">Add %1$d ingredient</item>
-        <item quantity="other">Add %1$d ingredients</item>
+        <item quantity="one">Add %1$d item</item>
+        <item quantity="other">Add %1$d items</item>
     </plurals>
     <string name="recipe_model_missing">Connect a server in Settings and turn on AI assistance, then try again. Nothing has been sent to a model.</string>
     <string name="recipe_model_empty">The model returned no usable ingredients. Check the connection in Settings or add them by hand.</string>
@@ -30,12 +31,12 @@
     <string name="recipe_not_html">This link is not a recipe web page. Paste an HTTP or HTTPS page link.</string>
     <string name="recipe_failed">Could not import the recipe. Your list is still here.</string>
     <string name="recipe_source_url">Link</string>
-    <string name="recipe_source_markdown">Markdown</string>
+    <string name="recipe_source_markdown">Text or Markdown</string>
     <string name="recipe_source_photo">Photo</string>
-    <string name="recipe_markdown_help">Paste Markdown or open a UTF-8 file. List entries and recipe ingredients are read locally. Checked entries, code blocks and instructions are skipped.</string>
-    <string name="recipe_markdown_text">Markdown text</string>
-    <string name="recipe_markdown_file">Open Markdown file</string>
-    <string name="recipe_read_markdown">Review Markdown</string>
+    <string name="recipe_markdown_help">Paste a note from Google Keep or another app, or open a UTF-8 text or Markdown file. Use one item per line, bullets or checkboxes. Import stays on this device; checked items are skipped.</string>
+    <string name="recipe_markdown_text">Paste your list</string>
+    <string name="recipe_markdown_file">Open text or Markdown file</string>
+    <string name="recipe_read_markdown">Review items</string>
     <string name="recipe_photo_help">Choose or take a clear photo of a written list or recipe ingredients. Your configured model is checked with a test image first. Reading sends the prepared photo directly to that provider and uses up to two model calls.</string>
     <string name="recipe_choose_photo">Choose photo</string>
     <string name="recipe_take_photo">Take photo</string>

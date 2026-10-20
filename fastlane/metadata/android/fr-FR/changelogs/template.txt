@@ -1,1 +1,1 @@
-Mises à jour et améliorations. Consultez la publication GitHub pour tous les changements.
+Importez des notes copiées de Google Keep ou d’une autre application. Listes texte, Markdown, puces et cases sont lus localement et vérifiés avant ajout. Les articles cochés sont ignorés.
