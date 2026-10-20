@@ -32,10 +32,10 @@ approval. Keep the kit for Android recovery if this browser is lost.
 
 ## Server connection and AI
 
-**Account > Connect a server** shows a public server link and QR for Android.
+**Account > Connect a phone** shows a public server link and QR for Android.
 Approve its full device code after signing in, without unlocking a shopping vault.
-**Account > Server AI** selects the server default or an approved personal provider
-and key. Photo import and recipe-text extraction use this same-origin gateway when
+**Account > AI assistance** shows the server-selected provider. Its optional
+**Advanced** section contains model details and personal provider/key controls. Photo import and recipe-text extraction use this same-origin gateway when
 available; ordinary users need no provider CORS or separate endpoint setup. Inputs
 are submitted only on explicit action and remain drafts until reviewed. See the
 [connection guide](../docs/server-connection.md) and [provider guide](../docs/providers.md).
@@ -138,9 +138,11 @@ completed checkboxes and recipe instructions, and reviews the selected rows.
 Confirmation queues all new rows in one atomic vault save. Existing identities
 and aliases are excluded rather than increasing their quantities.
 
-Photos require an explicit memory-only model connection and a successful image
-compatibility check. The operator must allow exact provider origins and the
-provider must support browser CORS. No photo is sent by selection, preview or
+With server AI, **Read photo** performs the synthetic compatibility check and
+then submits the prepared photo, without a separate model connection step.
+Legacy direct browser models still require an explicit memory-only connection;
+the operator must allow exact provider origins and the provider must support
+browser CORS. No photo is sent by selection, preview or
 capture alone. See [provider setup](../docs/providers.md). Camera permission is
 requested only on **Take photo**; cancellation and failures stop the stream.
 

@@ -20,7 +20,7 @@
         <item quantity="other">Aggiungi %1$d ingredienti</item>
         <item quantity="many">Aggiungi %1$d ingredienti</item>
     </plurals>
-    <string name="recipe_model_missing">Configura prima un modello facoltativo nelle Impostazioni e riprova. Nessun testo o foto è stato inviato a un modello.</string>
+    <string name="recipe_model_missing">Collega un server nelle Impostazioni e attiva l’assistenza IA. Nessun dato è stato inviato a un modello.</string>
     <string name="recipe_model_empty">Il modello non ha restituito ingredienti utilizzabili. Controlla la connessione nelle Impostazioni o aggiungili a mano.</string>
     <string name="recipe_invalid_url">Inserisci un link HTTP o HTTPS valido di una ricetta, senza nome utente o password.</string>
     <string name="recipe_blocked">Questo sito blocca la lettura automatica. Aprilo nel browser e aggiungi gli ingredienti a mano, oppure prova un altro sito.</string>

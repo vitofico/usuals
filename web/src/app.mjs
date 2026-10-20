@@ -1389,19 +1389,23 @@ async function serverSettingsDialog() {
   if (own !== generation) return;
   const key = el("input", { type: "password", class: "field", autocomplete: "off", maxlength: 4096, "aria-label": t("importModelKey") });
   const selected = settings.profiles.find(p => p.id === settings.selected);
-  openDialog(el("div", {}, el("h2", {}, t("serverAiTitle")), paragraph("serverAiPrivacy"),
-    selected ? el("p", {}, selected.label + " · " + selected.model + " · " + selected.imageModel + " · " + selected.baseUrl,
-      el("span", { class: "helper" }, t(selected.isLocal ? "serverAiLocal" : "serverAiExternal"))) : paragraph("ai_unavailable"),
+  const advanced = el("details", {}, el("summary", {}, t("settingsAdvanced")),
+    selected ? el("p", { class: "helper" }, selected.model + " · " + selected.imageModel + " · " + selected.baseUrl) : null,
     el("p", { class: "helper" }, t("serverAiUsage", { used: settings.used, limit: settings.dailyLimit })),
     button(t("serverAiDefault"), () => act(async () => { await api("/v1/ai/settings", { method: "POST", csrf: account.csrfToken, body: {} }); closeDialog(); })),
     el("label", { class: "label" }, t("serverAiPersonal"), key), paragraph("serverAiKeyHelp", "helper"),
     ...settings.profiles.map(p => button(p.label + " · " + p.model, () => act(async () => {
       const draft = key.value; key.value = "";
       await api("/v1/ai/settings", { method: "POST", csrf: account.csrfToken, body: { profile: p.id, ...(draft ? { key: draft } : {}) } }); closeDialog();
-    }))), el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { key.value = ""; });
+    }))));
+  openDialog(el("div", {}, el("h2", {}, t("serverAiTitle")),
+    selected ? el("section", {}, paragraph("serverAiConfigured"), el("p", {}, selected.label),
+      el("p", { class: "helper" }, t(selected.isLocal ? "serverAiLocal" : "serverAiExternal"))) : paragraph("ai_unavailable"),
+    paragraph("serverAiPrivacy"), advanced,
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { key.value = ""; });
 }
 function serverConnectionDialog() {
-  openDialog(el("div", { class: "pair-device" }, el("h2", {}, t("connectionTitle")), paragraph("connectionLinkHelp"),
+  openDialog(el("div", { class: "pair-device" }, el("h2", {}, t("connectionAddPhone")), paragraph("connectionLinkHelp"),
     el("p", { class: "server-address" }, location.origin + "/connect"), invitationQr(location.origin + "/connect"),
     el("a", { class: "primary", href: "usuals://connect#" + b64(new TextEncoder().encode(location.origin)) }, t("connectionTitle")),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
@@ -1448,7 +1452,7 @@ async function renderAccount(own) {
           ...(user.issuer === "urn:usuals:local"
             ? [button(t("changePassword"), passwordDialog)]
             : []),
-          button(t("connectionTitle"), serverConnectionDialog),
+          button(t("connectionAddPhone"), serverConnectionDialog),
           button(t("connectionSessions"), () => act(connectedPhonesDialog, { rerender: false })),
           button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
           button(t("signOut"), () =>

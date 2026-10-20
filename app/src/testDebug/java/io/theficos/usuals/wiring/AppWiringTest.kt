@@ -174,15 +174,31 @@ class AppWiringTest {
     }
 
     @Test
-    fun settings_sections_expand_and_privacy_details_stay_available() {
+    fun settings_keep_connection_simple_and_privacy_and_direct_ai_accessible() {
         launchApp()
         goTo(Routes.SETTINGS)
-        compose.onNodeWithText("What stays here").assertDoesNotExist()
-        compose.onNodeWithText("Privacy details").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Test connection").assertDoesNotExist()
+        compose.onNodeWithText("Server connection").performClick()
+        assertThat(currentRoute()).isEqualTo(Routes.CONNECTION)
+        compose.onNodeWithText("Create a household").assertDoesNotExist()
+        compose.onNodeWithText("Scan server QR").assertExists()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Privacy").performClick()
+        compose.onNodeWithText("Privacy details").performClick()
         compose.onNodeWithText("What stays here").assertExists()
-        compose.onNodeWithText("Hide privacy details").performSemanticsAction(SemanticsActions.OnClick) { it() }
-        compose.onNodeWithText("Model").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Help and about").performClick()
+        compose.onNodeWithText("Advanced: direct AI").performScrollTo().performClick()
+        assertThat(currentRoute()).isEqualTo(Routes.ADVANCED)
+        compose.onNodeWithText("Model").performClick()
         compose.onNodeWithText("Test connection").assertExists()
+    }
+
+    @Test fun server_links_open_the_focused_connection_route() {
+        launchApp("usuals://connect#" + io.theficos.usuals.sync.Wire.encode("https://usuals.example".toByteArray()))
+        compose.waitUntil(5000) { currentRoute() == Routes.CONNECTION }
+        compose.onNodeWithText("Create a household").assertDoesNotExist()
+        compose.waitUntil(5000) { compose.onAllNodesWithText("https://usuals.example").fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test

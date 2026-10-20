@@ -176,3 +176,17 @@ internal fun unusableProblem(settings: ProviderSettings): ModelProblem = ModelPr
 
     else -> ModelProblem.Kind.INCOMPLETE_CONFIGURATION
 })
+
+/** Binds the selected route and its budget for the entire import, including a vision probe. */
+internal class RecipeModelAccess(val client: LlmClient, val serverManaged: Boolean = false, val isCurrent: () -> Boolean = { true }) {
+    override fun toString() = "RecipeModelAccess([redacted])"
+}
+
+/** A connected server owns AI routing, including the user's choice to keep AI off. */
+internal fun connectedModelAccess(current: () -> io.theficos.usuals.sync.ServerConnection?, legacy: () -> LlmClient?,
+    gateway: (io.theficos.usuals.sync.ServerConnection) -> LlmClient): RecipeModelAccess? {
+    val saved = current()
+    if (saved == null) return legacy()?.let { RecipeModelAccess(it, isCurrent = { current() == null }) }
+    if (!saved.aiEnabled) return null
+    return RecipeModelAccess(gateway(saved), serverManaged = true, isCurrent = { current() == saved })
+}
