@@ -108,7 +108,8 @@
           {
             "name": "identity",
             "persistentVolumeClaim": {
-              "claimName": "usuals-identity"
+              "claimName": "usuals-identity",
+              "readOnly": true
             }
           },
           {
