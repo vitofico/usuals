@@ -69,7 +69,7 @@ object WebInteropFixture {
         val d = Wire.json.decodeFromString<InviteDescriptor>(descriptor.toString(Charsets.UTF_8))
         val code = InviteCode(origin, fresh(), inviteKey, Pairing.descriptorAnchor(descriptor))
         val invitation = InvitationLink(2, origin, d.serverId, household, d.genesisHash, d.ownerDeviceId, d.ownerFingerprint, code.inviteId,
-            d.memberId, d.role, Wire.encode(inviteKey.admit()), 1_900_000_000_000, inviteKey.encoded())
+            d.memberId, d.role, Wire.encode(inviteKey.admit()), System.currentTimeMillis() + 3_600_000, inviteKey.encoded())
         val assertion = JoinAssertion(origin, identity.serverId, household, genesis.hash(), invitation.inviteId, fresh(), invitation.memberId,
             recipient.publicKeys, Wire.hash(inviteKey.admit()), fresh(), Wire.encode(SyncCrypto.randomKey()), invitation.expiresAt)
         val pending = PendingJoin(assertion.requestId, Wire.encode(assertion.bytes()), SyncCrypto.sign(recipient, assertion.bytes()),
