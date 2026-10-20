@@ -3,9 +3,41 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `72719fb`, merged in PR #6 and deployed
+current server/web image is built from `4b81b67`, merged in PR #8 and deployed
 with Vito's explicit approval on 2026-10-20. The initial deployment used source `9c3bd57`.
-The current upgrade includes the simpler server connection and server AI gateway.
+The current upgrade streamlines settings and checks photo support automatically.
+
+## 2026-10-20 streamlined settings
+
+[PR #8](https://github.com/vitofico/usuals/pull/8) merged as `3ac479b` after all CI
+checks passed. Preserved source `4b81b6724c65fc085af408c4a63f64d6d365ea3c` has the
+same complete Git tree as the merge. The source-bound image and platform manifest
+are `usuals-relay:sha256-15c9b2dcabe3df32da4ff98c4a9679efb6d6dadd6515c70c8643d95d93327277`.
+The verified local bundle is `/private/tmp/usuals-settings-bundle-4b81b67`.
+
+Only the relay image and source annotation changed. The existing AI profiles,
+identity, network policy, PVC mounts and all other runtime configuration stayed
+identical to the reviewed baseline. Generic candidate-bundle manifests were not
+applied. The imported manifest and its config content were verified; the ready
+Deployment pod reports that config digest and has zero restarts. Schema 005 and
+identity, fence and AI-key hashes are unchanged; the wrapping key remains a
+mode0600 regular file owned by UID/GID10001. No migration was needed. The prior
+005-capable image `20b790f8...304e7` remains an image-only rollback target.
+
+Before rollout, `usuals-presettings-20261020` created an online PostgreSQL base
+backup at `20261020T200957Z`, with streamed WAL and two successful manifest checks.
+The live AI key still matches the previously verified escrow, and the encrypted
+escrow bytes match their prior checksum. Fresh encrypted database and key copies
+in `/Users/vito/personal-repos/usuals-operator-backups/20261020-settings/` match the
+node checksums. No plaintext credentials were transferred.
+
+Live HTTPS, readiness, 19 packaged browser assets including all five locales,
+security headers, both authentication modes and closed anonymous APIs passed.
+The server identity is unchanged. Native and browser functional checks and their
+manual visual/camera limits are in the [verification record](../../docs/verification/2026-10-20-streamlined-settings.md).
+Private node evidence is `~/usuals/deployments/20261020-settings/`; local evidence
+is `/private/tmp/usuals-settings-deploy/`. Android uses the automatic signed
+release workflow from main.
 
 ## 2026-10-20 server connection and AI gateway
 
