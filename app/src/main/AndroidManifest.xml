@@ -84,13 +84,14 @@
                 <data android:scheme="usuals" android:host="connect" />
             </intent-filter>
             <!--
-              Share a recipe or a message into the app and it becomes items.
-              Text/plain accepts a list or a recipe URL for ingredient review.
+              Share a plain-text note, Markdown list or recipe link for review.
             -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
             </intent-filter>
         </activity>
     </application>

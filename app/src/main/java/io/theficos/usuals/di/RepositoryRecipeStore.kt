@@ -48,6 +48,11 @@ internal class RepositoryRecipeStore(
     } catch (_: IllegalArgumentException) { RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE) }
 
     override suspend fun markdownFile(uri: String): RecipeLoad = importing { markdown(files.markdown(uri)) }
+    override suspend fun review(parsed: List<ParsedItem>): RecipeLoad {
+        if (parsed.size > MarkdownIngredients.MAX_ITEMS) return RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE)
+        return RecipeLoad.Review("", null, null,
+            planner.planParsed(parsed.map { it.name to it }, history.snapshot(), items.items(), clock()))
+    }
     override suspend fun photoPreview(uri: String): RecipeLoad = importing {
         try { RecipeLoad.Photo(files.photo(uri)) } finally { files.releaseCamera(uri) }
     }

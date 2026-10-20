@@ -1,5 +1,15 @@
 # Changelog
 
+## Copied notes and Markdown lists
+
+- Put text and Markdown first under a visible Import action on Android.
+- Read plain lines, copied bullets and standalone checkboxes locally on Android
+  and web. Skip completed entries and recognize localized recipe sections.
+- Review shared Android notes before adding. Only a standalone shared recipe URL
+  fetches a page; links embedded in notes stay local.
+- Keep quantities, duplicate exclusion and explicit confirmation, with complete
+  interface copy in all five languages.
+
 ## Automatic Android releases
 
 - Publish signed stable APKs from GitHub CI after main passes Android and server

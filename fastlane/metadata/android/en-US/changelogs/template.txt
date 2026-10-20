@@ -1,1 +1,1 @@
-Updates and improvements. See the GitHub release for the full list of changes.
+Import copied notes from Google Keep or another app. Plain lists, Markdown, bullets and checkboxes work locally, with review before adding. Checked items are skipped.

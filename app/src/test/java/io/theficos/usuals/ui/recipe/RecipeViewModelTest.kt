@@ -14,6 +14,64 @@ import org.junit.Test
 
 class RecipeViewModelTest {
     @get:Rule val main = MainDispatcherRule()
+    @Test fun `single-line quick shares retain every locally parsed item and require review`() = runTest(main.dispatcher) {
+        var proposals = emptyList<ParsedItem>()
+        var added = emptyList<ParsedItem>()
+        var reviews = 0
+        val recipe = object : RecipeStore by NoRecipeStore {
+            override suspend fun markdown(text: String): RecipeLoad = error("Quick shares use the capture parser")
+            override suspend fun review(parsed: List<ParsedItem>): RecipeLoad {
+                proposals = parsed
+                reviews++
+                return RecipeLoad.Review("", null, null, parsed.map { IngredientReview(it.name, it.name, it, IngredientReason.NONE) })
+            }
+            override suspend fun add(items: List<ParsedItem>) { added = items }
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        vm.onSharedText("leche, huevos y pan")
+        assertThat(proposals.map { it.name }).containsExactly("leche", "huevos", "pan").inOrder()
+        vm.onReadRecipeMarkdown()
+        assertThat(reviews).isEqualTo(2)
+        assertThat((vm.state.value.recipe!!.result as RecipeLoad.Review).rows.map { it.item.name })
+            .containsExactly("leche", "huevos", "pan").inOrder()
+        assertThat(added).isEmpty()
+        vm.onDismissRecipe()
+        assertThat(added).isEmpty()
+        vm.onSharedText("leche, huevos y pan")
+        vm.onAddRecipe()
+        assertThat(added.map { it.name }).containsExactly("leche", "huevos", "pan").inOrder()
+    }
+    @Test fun `notes and Markdown links stay local and need confirmation`() = runTest(main.dispatcher) {
+        var received: String? = null
+        var added = emptyList<ParsedItem>()
+        val recipe = object : RecipeStore by NoRecipeStore {
+            override suspend fun read(url: String): RecipeLoad = error("A note must not fetch embedded links")
+            override suspend fun markdown(text: String): RecipeLoad {
+                received = text
+                return RecipeLoad.Review("", null, null, listOf(IngredientReview("milk", "2 l milk", ParsedItem("milk"), IngredientReason.NONE)))
+            }
+            override suspend fun add(items: List<ParsedItem>) { added = items }
+        }
+        val store = FakeItemStore()
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        vm.onOpenRecipe()
+        assertThat(vm.state.value.recipe!!.source).isEqualTo(RecipeSource.MARKDOWN)
+        for (note in listOf("milk\neggs", "# Shopping\n- [milk](https://example.invalid)",
+            "- [milk](https://example.invalid)", "- https://example.invalid", "Shopping\nhttps://example.invalid",
+            "Buy milk https://example.invalid/tracker", "milk\u2028https://example.invalid", "> milk, eggs", "<b>milk</b>, eggs")) {
+            vm.onSharedText(note)
+            assertThat(received).isEqualTo(note)
+            assertThat(vm.state.value.recipe!!.source).isEqualTo(RecipeSource.MARKDOWN)
+            assertThat(vm.state.value.recipe!!.selected).containsExactly(0)
+            vm.onDismissRecipe()
+            assertThat(added).isEmpty()
+            assertThat(store.current).isEmpty()
+        }
+        vm.onSharedText("2 l milk")
+        assertThat(added).isEmpty()
+        vm.onAddRecipe()
+        assertThat(added).containsExactly(ParsedItem("milk"))
+    }
     @Test fun `sharing a URL reviews ingredients without adding and defaults pantry off`() = runTest(main.dispatcher) {
         var added = emptyList<ParsedItem>()
         val rows = listOf(IngredientReview("onion", "1 onion", ParsedItem("onion"), IngredientReason.NONE),
@@ -25,7 +83,7 @@ class RecipeViewModelTest {
         }
         val store = FakeItemStore()
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
-        vm.onSharedText("Soup https://example.org/recipe")
+        vm.onSharedText("https://example.org/recipe")
         assertThat(store.current).isEmpty()
         assertThat(vm.state.value.recipe!!.selected).containsExactly(0)
         vm.onRecipeToggle(2)

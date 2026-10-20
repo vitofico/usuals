@@ -302,7 +302,18 @@ class ListViewModel(
         screen.update { it.copy(recipe = it.recipe?.copy(source = source, result = null, selected = emptySet())) }
     }
     fun onRecipeMarkdown(text: String) { screen.update { it.copy(recipe = it.recipe?.copy(markdown = text.take(30_001), result = null, selected = emptySet())) } }
-    fun onReadRecipeMarkdown() { val text = screen.value.recipe?.markdown ?: return; runRecipe { recipeStore.markdown(text) } }
+    fun onReadRecipeMarkdown() {
+        val draft = screen.value.recipe ?: return
+        val text = draft.markdown
+        runRecipe {
+            val plain = !text.any { it in "\r\n\u2028\u2029" } &&
+                !Regex("[#\\[\\]`*_<>]|^(?:[-+•◦]\\s|[0-9]+[.)]\\s|[☐☑☒])").containsMatchIn(text.trim())
+            if (draft.fromShare && plain && text.length <= io.theficos.usuals.recipe.MarkdownIngredients.MAX_TEXT) {
+                val parsed = parser.parse(text)
+                if (parsed.size > 1) recipeStore.review(parsed) else recipeStore.markdown(text)
+            } else recipeStore.markdown(text)
+        }
+    }
     fun onRecipeMarkdownFile(uri: String) { if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.MARKDOWN) runRecipe { recipeStore.markdownFile(uri) } }
     fun onRecipePhoto(uri: String) {
         if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.PHOTO) runRecipe { recipeStore.photoPreview(uri) }
@@ -578,16 +589,16 @@ class ListViewModel(
         screen.update { it.copy(capture = CaptureState.Idle) }
     }
 
-    /**
-     * Text shared into the app from somewhere else.
-     *
-     * The local parser handles a short list well enough today. A pasted recipe
-     * is the LLM parser's job, and until that exists this quietly gets whatever
-     * the rules can pull out of it rather than nothing at all.
-     */
+    /** Shared notes are local drafts. Only a standalone recipe link may fetch a page. */
     fun onSharedText(text: String) {
-        val url = Regex("https?://[^\\s<>]+", RegexOption.IGNORE_CASE).find(text)?.value
-        if (url != null) onOpenRecipe(url) else viewModelScope.launch { commit(text, CaptureState.Idle) }
+        val trimmed = text.trim().replace('\u2028', '\n').replace('\u2029', '\n')
+        val url = trimmed.takeIf { it.none(Char::isWhitespace) && Regex("https?://[^<>]+", RegexOption.IGNORE_CASE).matches(it) }
+        if (url != null) onOpenRecipe(url) else {
+            onOpenRecipe()
+            screen.update { it.copy(recipe = it.recipe?.copy(fromShare = true)) }
+            onRecipeMarkdown(text)
+            onReadRecipeMarkdown()
+        }
     }
 
     private fun startListening() {

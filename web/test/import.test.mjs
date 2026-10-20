@@ -15,6 +15,18 @@ function fixture(limit = 3) {
   model.connect({endpoint:'https://model.invalid/v1',model:'synthetic',apiKey:'synthetic-key',limit});
   return {model,sent};
 }
+test('pasted notes support plain lines, copied bullets and standalone checkboxes locally', () => {
+  assert.deepEqual(markdownDocument('# Shopping\n\n2 l milk\n6 eggs\n\n2 kg apples', packs).entries, ['2 l milk','6 eggs','2 kg apples']);
+  assert.deepEqual(markdownDocument('milk\r\neggs\rbread\u2028apples\u2029pears', packs).entries, ['milk','eggs','bread','apples','pears']);
+  assert.deepEqual(markdownDocument('Shopping list\n\n• 2 l milk\n◦ eggs\n☐ apples\n☑ bought bread\n☒ bought salt\n[ ] pears\n[x] bought rice', packs).entries, ['2 l milk','eggs','apples','pears']);
+  assert.deepEqual(markdownDocument('Shopping list\n☑ milk\n[x] bread', packs).entries, []);
+  assert.deepEqual(markdownDocument('milk\n[x] bought bread\neggs\n• apples\n☐ pears', packs).entries, ['milk','eggs','apples','pears']);
+  assert.deepEqual(markdownDocument('# Soup\n## Ingredients\n2 onions\n1 l water\n## Method\nBoil\n- stir', packs).entries, ['2 onions','1 l water']);
+  for (const [ingredients, method] of [['Ingredients','Method'], ['Ingredientes','Preparación'], ['Ingredienti','Procedimento'], ['Ingrédients','Préparation'], ['Zutaten','Zubereitung']])
+    assert.deepEqual(markdownDocument(`${ingredients}:\n2 onions\n1 l water\n${method}:\nBoil for ten minutes`, packs).entries, ['2 onions','1 l water']);
+  assert.deepEqual(markdownDocument('# Shopping\n2 l milk\n```\nprivate notes\n```\n> quoted text\neggs\nhttps://example.invalid', packs).entries, ['2 l milk','eggs']);
+  assert.throws(() => markdownDocument('milk\n'.repeat(151), packs));
+});
 test('Markdown reads explicit unchecked entries, sections and language packs without rendering', () => {
   const doc = markdownDocument('---\ntitle: private\n---\n# Soup\n## Ingredients\n- [ ] **2 kg tomatoes**\n- [x] oil\n### Dressing\n- [salt](https://invalid)\n## Method\n1. Cook it\n```\n- not food\n```', packs);
   assert.deepEqual(doc, {title:'Soup',entries:['2 kg tomatoes','salt']});
