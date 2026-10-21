@@ -116,8 +116,27 @@ class ListSyncTest {
         assertThat(sync.push()).isEqualTo(SyncStatus.SYNCED)
         assertThat(pending(home)).isEqualTo(0)
         assertThat(server.names(home)).containsExactly("Bread", "Milk")
-        assertThat(db.syncDao().projection(home)!!.let { it.confirmed == it.optimistic }).isTrue()
+        assertThat(db.syncDao().projection(home, optimistic = true)).isEqualTo(db.syncDao().projection(home, optimistic = false))
         assertThat(db.listDao().find(home)!!.seq).isEqualTo(server.lists.getValue(home).seq)
+    }
+
+    @Test fun aListPastThePhonesTwoMegabyteRowLimitSyncsBothWays() = runTest {
+        val home = server.seed("Home")
+        server.lists.getValue(home).projection = Projection(name = "Home",
+            trips = (0 until 300).associate { "trip-$it" to buildJsonObject { put("closedAt", it * 1_000L) } },
+            purchases = (0 until 19_000).associate { i -> "purchase-$i" to buildJsonObject {
+                put("id", "purchase-$i"); put("tripId", "trip-${i % 300}"); put("key", "café-$i"); put("name", "Café crème 🥐 $i")
+                put("boughtAt", i.toLong()); put("fromSuggestion", false); put("normalizerVersion", NORMALIZER_VERSION)
+            } })
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        server.capture(home, "Bread")
+        add(home, "Milk")
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.names(home)).containsExactly("Bread", "Milk")
+        assertThat(names(home)).containsExactly("Bread", "Milk")
+        assertThat(replica.projection(home)).isEqualTo(server.lists.getValue(home).projection)
+        assertThat(db.historyDao().purchases(home)).hasSize(19_000)
     }
 
     @Test fun resendingAfterALostAnswerChangesNothingTwice() = runTest {

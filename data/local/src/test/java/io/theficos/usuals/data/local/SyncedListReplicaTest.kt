@@ -3,6 +3,7 @@ package io.theficos.usuals.data.local
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.ParsedItem
@@ -10,6 +11,7 @@ import io.theficos.usuals.sync.*
 import kotlinx.coroutines.flow.first
 import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -215,7 +217,7 @@ class SyncedListReplicaTest {
         assertThat(items.items().single().name).isEqualTo("Bread")
         assertThat(db.listDao().find(LOCAL_LIST_ID)).isNull()
         assertThat(db.syncDao().pending(LOCAL_LIST_ID)).isEmpty()
-        assertThat(db.syncDao().projection(LOCAL_LIST_ID)).isNull()
+        assertThat(db.syncDao().projection(LOCAL_LIST_ID, optimistic = false) + db.syncDao().projection(LOCAL_LIST_ID, optimistic = true)).isEmpty()
         assertThat(db.historyDao().allItems(LOCAL_LIST_ID)).isEmpty()
         replica.drop(other)
         assertThat(db.listDao().all().map { it.id }).containsExactly("fresh")
@@ -361,4 +363,53 @@ class SyncedListReplicaTest {
         assertThat(items.items()).isEmpty()
         db.close()
     }
+    @Test fun aListLargerThanTheCursorWindowIsStoredRebasedAndReadBackAfterARestart() = runTest {
+        val name = "synced-replica-large"; context.deleteDatabase(name)
+        fun open() = Room.databaseBuilder(context, UsualsDatabase::class.java, name).allowMainThreadQueries().build()
+        // Android reads a row through a 2 MB cursor window; the server accepts a list of up to 7 MB.
+        val large = largeProjection(30_000)
+        assertThat(Json { encodeDefaults = true }.encodeToString(large).encodeToByteArray().size).isIn(Range.closed(6_000_000, 7_000_000))
+        var db = open(); synced(db)
+        var replica = LocalReplica(db)
+        replica.accept(server(large, 1))
+        assertThat(replica.projection(LOCAL_LIST_ID)).isEqualTo(large)
+
+        ItemRepository(db, replica = replica).add(ParsedItem("Milk"))
+        val milk = replica.pendingIntents(LOCAL_LIST_ID, 100).single()
+        val renamed = large.copy(name = "Kitchen", nameRevision = "elsewhere")
+        replica.accept(server(renamed, 2))
+        assertThat(replica.projection(LOCAL_LIST_ID)).isEqualTo(Reducer(NORMALIZER_VERSION).apply(renamed, milk).projection)
+        assertThat(replica.creation(LOCAL_LIST_ID)).isEqualTo(renamed)
+        assertThat(replica.pendingIntents(LOCAL_LIST_ID, 100)).containsExactly(milk)
+        assertThat(replica.observeStatus(LOCAL_LIST_ID).first().pending).isEqualTo(1)
+
+        val confirmed = Reducer(NORMALIZER_VERSION).apply(renamed, milk).projection
+        replica.accept(server(confirmed, 3), listOf(milk.id))
+        db.close(); db = open(); replica = LocalReplica(db)
+        assertThat(replica.projection(LOCAL_LIST_ID)).isEqualTo(confirmed)
+        assertThat(replica.creation(LOCAL_LIST_ID)).isEqualTo(confirmed)
+        assertThat(replica.pendingIntents(LOCAL_LIST_ID, 100)).isEmpty()
+        assertThat(db.historyDao().purchases(LOCAL_LIST_ID)).hasSize(30_000)
+        assertThat(ItemRepository(db).items().single().name).isEqualTo("Milk")
+        db.close(); context.deleteDatabase(name)
+    }
+    @Test fun aPartNeverEndsInsideACharacter() = runTest {
+        val db = memory()
+        // Every surrogate pair starts at an odd index, so the first cut lands inside one unless it moves.
+        val text = "{" + "🥐".repeat(PROJECTION_PART)
+        val parts = text.projectionParts()
+        assertThat(parts.size).isGreaterThan(1)
+        assertThat(parts.map { it.last().isHighSurrogate() }).doesNotContain(true)
+        assertThat(parts.maxOf { it.encodeToByteArray().size }).isLessThan(1_000_000)
+        db.syncDao().insertProjection(parts.mapIndexed { part, value -> ProjectionPartEntity("list", true, part, value) })
+        assertThat(db.syncDao().projection("list", optimistic = true).joinToString("")).isEqualTo(text)
+        db.close()
+    }
 }
+
+/** A list with [purchases] past purchases. Multi-byte names put character boundaries where parts are cut. */
+internal fun largeProjection(purchases: Int, name: String = "Home") = Projection(name = name,
+    trips = (0 until 300).associate { "trip-$it" to buildJsonObject { put("closedAt", it * 1_000L) } },
+    purchases = (0 until purchases).associate { i ->
+        "purchase-$i" to PurchaseEntity("purchase-$i", "trip-${i % 300}", "café-$i", "Café crème 🥐 $i", null, null, null, i.toLong(), false, NORMALIZER_VERSION, LOCAL_LIST_ID).facts()
+    })

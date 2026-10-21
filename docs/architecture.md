@@ -30,9 +30,10 @@ locale folders. AGP generates the system locale list from the resource files.
 
 ## Storage
 
-Room schema 7 keeps named lists, their scoped shopping facts and, for lists that
+Room schema 8 keeps named lists, their scoped shopping facts and, for lists that
 belong to the signed-in account, the server's last projection and an outbox of
-pending intents. Each schema since the finalized schema 4 has a versioned
+pending intents. A projection is stored in parts that each fit Android's 2 MB
+cursor window. Each schema since the finalized schema 4 has a versioned
 migration that preserves shopping facts. Destructive fallback remains limited to
 unreleased schemas 1, 2 and 3. Every later schema change needs its own migration,
 exported schema and migration tests.

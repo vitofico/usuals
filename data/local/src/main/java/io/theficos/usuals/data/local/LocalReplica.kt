@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.*
  */
 class LocalReplica(private val database: UsualsDatabase, private val reducer: Reducer = Reducer(NORMALIZER_VERSION), private val newId: () -> String = { UUID.randomUUID().toString() }) {
     private val json = Json { encodeDefaults = true }
-    fun observeStatus(scope: String): Flow<ReplicaStatus> = combine(database.syncDao().observePending(scope), database.syncDao().observeProjection(scope), database.syncDao().observeDismissals(scope)) { pending, saved, dismissed ->
-        val state = saved?.optimistic?.let { json.decodeFromString<Projection>(it) }
+    fun observeStatus(scope: String): Flow<ReplicaStatus> = combine(database.syncDao().observePending(scope), database.syncDao().observeOptimistic(scope), database.syncDao().observeDismissals(scope)) { pending, saved, dismissed ->
+        val state = decode(saved)
         val owned = pending.map { it.intentId }.toSet()
         val rejected = state?.rejected.orEmpty().mapValues { (id, code) ->
             Conflict(pending.firstOrNull { it.intentId == id }?.let { json.decodeFromString<Intent>(it.command).payload } ?: JsonObject(emptyMap()), JsonObject(emptyMap()), code)
@@ -36,30 +36,30 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val scope = database.listDao().selected()
         val dao = database.syncDao()
         dao.dismiss(ConflictDismissalEntity(scope, id))
-        val saved = dao.projection(scope) ?: return@withTransaction
-        val before = json.decodeFromString<Projection>(saved.optimistic)
-        val after = rebase(scope, json.decodeFromString(saved.confirmed))
+        val before = stored(scope, optimistic = true) ?: return@withTransaction
+        val after = rebase(scope, requireNotNull(stored(scope, optimistic = false)))
         materialize(scope, before, after)
-        dao.saveProjection(saved.copy(optimistic = json.encodeToString(after)))
+        save(scope, optimistic = true, json.encodeToString(after))
     }
     suspend fun projection(): Projection = projection(database.listDao().selected())
-    suspend fun projection(scope: String): Projection =
-        database.syncDao().projection(scope)?.optimistic?.let { json.decodeFromString<Projection>(it) } ?: seed(scope)
+    suspend fun projection(scope: String): Projection = stored(scope, optimistic = true) ?: seed(scope)
 
     suspend fun submit(kind: String, makePayload: suspend (Projection, String) -> JsonObject): Reduction = database.withTransaction {
         val scope = database.listDao().selected()
         submitTo(scope, kind, makePayload(projection(scope), scope))
     }
     suspend fun submitTo(scope: String, kind: String, payload: JsonObject): Reduction = database.withTransaction {
-        val before = projection(scope)
+        val saved = stored(scope, optimistic = true)
+        val before = saved ?: seed(scope)
         val intent = Intent(newId(), scope, kind, payload, normalizer = NORMALIZER_VERSION)
         val result = reducer.apply(before, intent)
         check(result.outcome != Outcome.UPGRADE_REQUIRED)
         materialize(scope, before, result.projection)
         val synced = database.listDao().find(scope)?.synced == true
         val encoded = json.encodeToString(result.projection)
-        val confirmed = if (synced) database.syncDao().projection(scope)?.confirmed ?: json.encodeToString(before) else encoded
-        database.syncDao().saveProjection(ProjectionEntity(scope, confirmed, encoded))
+        save(scope, optimistic = true, encoded)
+        // A synced list's confirmed copy changes only with a server answer, and both copies are stored together.
+        if (!synced) save(scope, optimistic = false, encoded) else if (saved == null) save(scope, optimistic = false, json.encodeToString(before))
         database.syncDao().enqueue(OutboxEntity(scope, intent.id, database.syncDao().nextOrdinal(scope), json.encodeToString(intent), acknowledged = !synced))
         result
     }
@@ -76,8 +76,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
      */
     suspend fun adoptLocalLists() = database.withTransaction {
         for (list in database.listDao().all().filter { !it.synced && !unused(it) }) {
-            val encoded = json.encodeToString(projection(list.id))
-            database.syncDao().saveProjection(ProjectionEntity(list.id, encoded, encoded))
+            saveBoth(list.id, json.encodeToString(projection(list.id)))
             database.listDao().update(list.copy(synced = true))
         }
     }
@@ -100,13 +99,13 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     suspend fun unsent(): Int = database.withTransaction { outgoing().sumOf { list -> pendingIntents(list.id, Int.MAX_VALUE).size + if (list.created) 0 else 1 } }
     /** What creating [list] on the server sends: the state it was last confirmed with. */
     suspend fun creation(list: String): Projection = database.withTransaction {
-        database.syncDao().projection(list)?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: seed(list)
+        stored(list, optimistic = false) ?: seed(list)
     }
     /** Pending intents in submission order. One whose id was accepted with other contents waits for review instead. */
     suspend fun pendingIntents(list: String, limit: Int): List<Intent> = database.withTransaction {
         val dao = database.syncDao()
         val dismissed = dao.dismissals(list).toSet()
-        val accepted = dao.projection(list)?.confirmed?.let { json.decodeFromString<Projection>(it).seen }.orEmpty()
+        val accepted = stored(list, optimistic = false)?.seen.orEmpty()
         dao.pending(list).asSequence().filter { !it.acknowledged && it.intentId !in dismissed }
             .map { json.decodeFromString<Intent>(it.command) }
             .filter { accepted[it.id] == null || accepted[it.id] == it }.take(limit).toList()
@@ -120,12 +119,10 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     /** Drops pending intents the server can never take, so later ones can still be sent. */
     suspend fun discard(list: String, intents: Collection<String>) = database.withTransaction {
         database.syncDao().acknowledge(list, intents)
-        val saved = database.syncDao().projection(list) ?: return@withTransaction
-        val before = json.decodeFromString<Projection>(saved.optimistic)
-        val confirmed = json.decodeFromString<Projection>(saved.confirmed)
-        val after = rebase(list, confirmed)
+        val before = stored(list, optimistic = true) ?: return@withTransaction
+        val after = rebase(list, requireNotNull(stored(list, optimistic = false)))
         materialize(list, before, after)
-        database.syncDao().saveProjection(saved.copy(optimistic = json.encodeToString(after)))
+        save(list, optimistic = true, json.encodeToString(after))
     }
     /** One feed page and its cursor commit together; the last page of a reset drops the lists it did not return. */
     suspend fun applyPage(page: ListChanges) = database.withTransaction {
@@ -185,26 +182,26 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
             lists.select(ListSelectionEntity(listId = shown.firstOrNull()?.id ?: newId().also { lists.insert(ListEntity(it, "")) }))
     }
     private suspend fun store(server: SharedList, force: Boolean) {
-        val lists = database.listDao(); val dao = database.syncDao()
+        val lists = database.listDao()
         val owner = json.encodeToString(server.owner); val members = json.encodeToString(server.members)
         val existing = lists.find(server.id)
         if (existing == null) {
             lists.insert(ListEntity(server.id, server.projection.name, synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members,
                 archived = server.archived, archivedByOwner = server.archivedByOwner))
             materialize(server.id, Projection(name = server.projection.name), server.projection)
-            val encoded = json.encodeToString(server.projection)
-            dao.saveProjection(ProjectionEntity(server.id, encoded, encoded))
+            saveBoth(server.id, json.encodeToString(server.projection))
             return
         }
-        val saved = dao.projection(server.id)
-        val before = saved?.optimistic?.let { json.decodeFromString<Projection>(it) } ?: seed(server.id)
+        val saved = stored(server.id, optimistic = true)
+        val before = saved ?: seed(server.id)
         val newer = force || !existing.created || server.seq >= existing.seq
-        val confirmed = if (newer) server.projection else saved?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: before
+        val confirmed = if (newer) server.projection else stored(server.id, optimistic = false) ?: before
         if (newer) lists.update(existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false,
             archived = server.archived, archivedByOwner = server.archivedByOwner))
         val optimistic = rebase(server.id, confirmed)
         materialize(server.id, before, optimistic)
-        dao.saveProjection(ProjectionEntity(server.id, json.encodeToString(confirmed), json.encodeToString(optimistic)))
+        if (newer || saved == null) save(server.id, optimistic = false, json.encodeToString(confirmed))
+        save(server.id, optimistic = true, json.encodeToString(optimistic))
     }
     private suspend fun rebase(scope: String, confirmed: Projection): Projection {
         val dao = database.syncDao()
@@ -234,20 +231,28 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val seeded = seed(source)
         val initial = seeded.copy(tombstones = seeded.tombstones.filterKeys { it in seeded.rows }, name = requireNotNull(database.listDao().find(destination)).name)
         materialize(destination, Projection(), initial)
-        val encoded = json.encodeToString(initial)
-        database.syncDao().saveProjection(ProjectionEntity(destination, encoded, encoded))
+        saveBoth(destination, json.encodeToString(initial))
     }
     suspend fun reap(cutoff: Long): Int = database.withTransaction {
         val scope = database.listDao().selected()
         if (database.listDao().find(scope)?.synced == true) return@withTransaction 0
         val gone = database.historyDao().allItems(scope).filter { it.deletedAt?.let { at -> at < cutoff } == true }.map { it.id }.toSet()
         val count = database.itemDao().reapTombstones(cutoff, scope)
-        database.syncDao().projection(scope)?.let {
-            val state = json.decodeFromString<Projection>(it.optimistic)
-            val cleaned = json.encodeToString(state.copy(rows = state.rows - (gone - state.occurrences.values.toSet())))
-            database.syncDao().saveProjection(it.copy(confirmed = cleaned, optimistic = cleaned))
+        stored(scope, optimistic = true)?.let { state ->
+            saveBoth(scope, json.encodeToString(state.copy(rows = state.rows - (gone - state.occurrences.values.toSet()))))
         }
         count
+    }
+    private suspend fun stored(scope: String, optimistic: Boolean): Projection? = decode(database.syncDao().projection(scope, optimistic))
+    private fun decode(parts: List<String>): Projection? =
+        if (parts.isEmpty()) null else json.decodeFromString(buildString(parts.sumOf { it.length }) { parts.forEach(::append) })
+    /** Replaces one stored copy; the caller holds the transaction. */
+    private suspend fun save(scope: String, optimistic: Boolean, encoded: String) {
+        database.syncDao().clearProjection(scope, optimistic)
+        database.syncDao().insertProjection(encoded.projectionParts().mapIndexed { part, text -> ProjectionPartEntity(scope, optimistic, part, text) })
+    }
+    private suspend fun saveBoth(scope: String, encoded: String) {
+        save(scope, optimistic = false, encoded); save(scope, optimistic = true, encoded)
     }
     /** A blank local list nothing was ever added to, like the one a fresh install or signing out starts with. */
     suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && projection(list.id) == Projection()
