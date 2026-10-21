@@ -208,6 +208,16 @@ class ListsTest {
         }
     }
 
+    @Test fun aPhoneRequestInFlightDoesNotHoldUpAddingItsAccountToAList() = http {
+        val list = client.create(alice).id
+        database.pool.connection.use { phone ->
+            // Bob's phone mid-request: the sign-in check keeps his account row locked until the request commits.
+            withContext(Dispatchers.IO) { Connections(db, f.relay, f.web).allowed(phone, bob.id) }
+            assertThat(client.share(alice, list, bob).status).isEqualTo(HttpStatusCode.OK)
+            phone.commit()
+        }
+    }
+
     @Test fun aChangeByOneAccountWakesAnotherAccountsWaitingRequestWithoutHoldingASlot() {
         val operations = RelayMetrics(db)
         http(operations = operations) {
