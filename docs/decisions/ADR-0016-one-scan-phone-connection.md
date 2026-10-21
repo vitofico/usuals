@@ -1,6 +1,9 @@
 # ADR 0016 One-scan phone connection from a signed-in browser
 
-Status: accepted, 2026-10-21. Extends [ADR 0015](ADR-0015-pairing-v2.md).
+Status: superseded by [ADR 0017](ADR-0017-server-held-lists.md), 2026-10-21. It keeps
+the connection offer QR, but the phone now connects as soon as it is scanned,
+with no code to compare and no household invite. Accepted earlier on 2026-10-21;
+it extended [ADR 0015](ADR-0015-pairing-v2.md).
 
 ## Context
 
