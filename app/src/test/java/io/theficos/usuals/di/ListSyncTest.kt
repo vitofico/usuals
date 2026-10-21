@@ -71,6 +71,16 @@ class ListSyncTest {
         assertThat(db.listDao().find("first")?.name).isEqualTo("Home")
     }
 
+    @Test fun aListTheServerCannotTakeDoesNotHoldBackTheListsAfterIt() = runTest {
+        val broken = lists.create("Broken"); add(broken, "Milk")
+        val home = lists.create("Home"); add(home, "Bread")
+        server.invalid = broken
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.CAPACITY)
+        assertThat(server.names(home)).containsExactly("Bread")
+        assertThat(server.lists).doesNotContainKey(broken)
+    }
+
     @Test fun pendingChangesStayOnTopOfTheConfirmedListUntilTheServerTakesThem() = runTest {
         val home = lists.create("Home")
         signIn(); sync.sync()
@@ -263,6 +273,7 @@ private class FakeServer : ListsService {
     var offline = false
     var unauthenticated = false
     var refuse: String? = null
+    var invalid: String? = null
 
     fun seed(name: String, owner: String = me, members: List<String> = emptyList()): String {
         val id = "server-${lists.size}"
@@ -303,6 +314,7 @@ private class FakeServer : ListsService {
     }
     override suspend fun create(list: String, projection: Projection): SharedList {
         calls += "PUT $list"; check()
+        if (list == invalid) throw RelayProblem("invalid_request", 400)
         lists[list]?.let { if (me in it.members) return shared(list) }
         if (list in taken || list in lists) throw RelayProblem("list_exists", 409)
         lists[list] = Stored(++seq, projection, me, mutableMapOf(me to "owner"))

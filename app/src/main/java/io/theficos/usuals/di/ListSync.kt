@@ -148,7 +148,8 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
             } catch (problem: RelayProblem) {
                 when {
                     problem.status == 404 -> commit(token) { replica.drop(id) }
-                    problem.code in FULL -> full = true
+                    // A list the server can never take (full, or a creation it refuses) waits without holding back the lists after it.
+                    problem.code in FULL || problem.status == 400 -> full = true
                     else -> throw problem
                 }
             }
