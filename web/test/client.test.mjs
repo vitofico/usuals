@@ -37,10 +37,10 @@ test("a route may answer with any of its expected statuses, and 204 has no body"
     assert.equal(await request("/api/lists/x", { method: "DELETE", status: 204 }), null));
 });
 
-test("server error codes the interface explains survive, anything else reads as invalid", async () => {
+test("server error codes the interface explains survive, any 401 means signed out, anything else reads as invalid", async () => {
   for (const [status, body, code] of [[409, '{"code":"list_exists"}', "list_exists"], [409, '{"code":"limit_reached"}', "limit_reached"],
     [401, '{"code":"unauthenticated"}', "unauthenticated"], [404, '{"code":"not_found"}', "not_found"], [413, '{"code":"too_large"}', "too_large"],
-    [500, '{"code":"database_exploded"}', "invalid"], [502, "<html>Bad gateway</html>", "invalid"]])
+    [401, "", "unauthenticated"], [500, '{"code":"database_exploded"}', "invalid"], [502, "<html>Bad gateway</html>", "invalid"]])
     await withFetch(async () => new Response(body, { status }), () =>
       assert.rejects(request("/api/lists/x/intents", { method: "POST", body: {} }), (error) => error.code === code));
   await withFetch(async () => new Response("not json", { status: 200 }), () =>

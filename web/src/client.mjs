@@ -99,7 +99,8 @@ export async function request(
       offset += chunk.length;
     }
     if (![status].flat().includes(response.status)) {
-      let code = "invalid";
+      // A 401 always means signed out, even when a proxy in front of the server answers it without a code.
+      let code = response.status === 401 ? "unauthenticated" : "invalid";
       try {
         const value = JSON.parse(text.decode(bytes.subarray(0, 65536)));
         if (allowedCodes.has(value.code)) code = value.code;
