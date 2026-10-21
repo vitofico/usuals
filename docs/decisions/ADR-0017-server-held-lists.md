@@ -97,6 +97,6 @@ frozen copies, the browser vault and the WebSocket change stream are removed.
   reached the cap in about four years. Now an item's row leaves with the intent
   that took it off the list, a purchase keeps only the facts phones store, and a
   list keeps its latest 5,000 purchases. The same shop levels off at about
-  2.6 MB. In exchange, a finish can be undone only within the resend horizon,
+  2.8 MB. In exchange, a finish can be undone only within the resend horizon,
   and history and suggestions on every device reach back about four years for
   that shop, less for a busier one.

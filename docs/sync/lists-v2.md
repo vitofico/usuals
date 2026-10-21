@@ -141,7 +141,7 @@ well under the 7 MB cap:
 
 Phones mirror the list, so their history and suggestions cover the same
 purchases. A 25-item weekly shop with two deleted items a week levels off at
-about 2.6 MB: 0.8 MB of `seen`, 0.4 MB of rows and 1.3 MB of purchases.
+about 2.8 MB: 0.8 MB of `seen`, 0.4 MB of rows and 1.4 MB of purchases.
 
 The shape of the projection does not change, so the bound ships without a
 version step. Phones on the previous release do not read lists v2: the household
