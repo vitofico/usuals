@@ -188,8 +188,8 @@ data class ListActions(
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
-    val onRenameList: (String) -> Unit = {},
-    val onRemoveList: () -> Unit = {},
+    val onRenameList: (String, String) -> Unit = { _, _ -> },
+    val onRemoveList: (String) -> Unit = {},
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
     val onFinishRows: ((List<ListRow>, Set<ItemId>?) -> Unit)? = null,
     val onUndoFinish: () -> Unit = {},
@@ -490,11 +490,11 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
 @Composable
 private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
     var open by remember { mutableStateOf(false) }
+    // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
-    var removing by rememberSaveable { mutableStateOf(false) }
+    var draft by rememberSaveable { mutableStateOf("") }
+    var removing by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
-    val name = selected?.name?.ifBlank { null } ?: header.name ?: stringResource(R.string.household_fallback_name)
-    val leaves = selected?.editor == true
     Box {
         IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
             Icon(Icons.Outlined.MoreVert, stringResource(R.string.list_more), Modifier.size(22.dp))
@@ -502,21 +502,24 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.name.orEmpty() })
-            DropdownMenuItem(text = { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = true })
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
+            DropdownMenuItem(text = { Text(stringResource(if (selected?.editor == true) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = selected?.id })
         }
     }
-    renaming?.let { draft ->
+    directory.lists.firstOrNull { it.id == renaming }?.let { list ->
         AlertDialog(onDismissRequest = { renaming = null }, title = { Text(stringResource(R.string.list_rename)) },
-            text = { OutlinedTextField(draft, { if (it.length <= 100) renaming = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true) },
-            confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { renaming = null; actions.onRenameList(draft.trim()) }) { Text(stringResource(R.string.list_rename)) } },
+            text = { OutlinedTextField(draft, { if (it.length <= 100) draft = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true) },
+            confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { renaming = null; actions.onRenameList(list.id, draft.trim()) }) { Text(stringResource(R.string.list_rename)) } },
             dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
-    if (removing) AlertDialog(onDismissRequest = { removing = false },
-        title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, name)) },
-        text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
-        confirmButton = { TextButton(onClick = { removing = false; actions.onRemoveList() }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
-        dismissButton = { TextButton(onClick = { removing = false }) { Text(stringResource(R.string.edit_cancel)) } })
+    directory.lists.firstOrNull { it.id == removing }?.let { list ->
+        val leaves = list.editor
+        AlertDialog(onDismissRequest = { removing = null },
+            title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
+            text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
+            confirmButton = { TextButton(onClick = { removing = null; actions.onRemoveList(list.id) }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
 }
 
 @Composable

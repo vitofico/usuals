@@ -144,9 +144,9 @@ class ListViewModel(
     }
     fun onSelectList(id: String) = changeList { directoryStore.select(id) }
     fun onCreateList(name: String) = changeList { directoryStore.create(name) }
-    fun onRenameList(name: String) = changeList { directoryStore.rename(directory.value.selected, name) }
-    /** Deletes the selected list, or leaves it when someone else owns it. */
-    fun onRemoveList() = changeList { directoryStore.remove(directory.value.selected) }
+    fun onRenameList(id: String, name: String) = changeList { directoryStore.rename(id, name) }
+    /** Deletes a list, or leaves it when someone else owns it. */
+    fun onRemoveList(id: String) = changeList { directoryStore.remove(id) }
     private fun changeList(change: suspend () -> Unit) {
         if (screen.value.busy || screen.value.capture != CaptureState.Idle) return
         viewModelScope.launch {

@@ -6,6 +6,7 @@ import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.MeasureUnit
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.parse.LocalUtteranceParser
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -52,6 +53,25 @@ class ListViewModelTest {
     }
 
     // The list -----------------------------------------------------------
+
+    @Test
+    fun the_list_menu_acts_on_the_list_it_was_opened_for_even_after_the_selection_moved() = runTest(main.dispatcher) {
+        val renamed = mutableListOf<Pair<String, String>>()
+        val removed = mutableListOf<String>()
+        val directory = object : ListDirectoryStore {
+            override fun observe() = flowOf(ListDirectory(selected = "other", lists = listOf(NamedList("mine", "Mine", shared = true), NamedList("other", "Other", shared = false))))
+            override suspend fun select(id: String) = Unit
+            override suspend fun create(name: String) = Unit
+            override suspend fun rename(id: String, name: String) { renamed += id to name }
+            override suspend fun remove(id: String) { removed += id }
+        }
+        val vm = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(),
+            newItemId = { ItemId("item-${++minted}") }, clock = { FIXED_CLOCK }, directoryStore = directory)
+        vm.onRenameList("mine", "Groceries")
+        vm.onRemoveList("mine")
+        assertThat(renamed).containsExactly("mine" to "Groceries")
+        assertThat(removed).containsExactly("mine")
+    }
 
     @Test
     fun pending_and_checked_are_split_and_ordered_by_position() = runTest(main.dispatcher) {
