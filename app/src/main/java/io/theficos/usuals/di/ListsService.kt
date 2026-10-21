@@ -13,6 +13,7 @@ interface ListsService {
     suspend fun people(query: String): List<Person>
     suspend fun addMember(list: String, user: String): SharedList
     suspend fun removeMember(list: String, user: String)
+    suspend fun archive(list: String, archived: Boolean): SharedList
 }
 
 /** Sends each request with the phone's credential; a missing one reads as a 401, like an expired one. */
@@ -28,6 +29,8 @@ class HttpListsService(private val transport: RelayTransport, private val connec
     override suspend fun addMember(list: String, user: String): SharedList =
         call("POST", "/api/lists/${escape(list)}/members", Wire.json.encodeToString(AddMember.serializer(), AddMember(user)))
     override suspend fun removeMember(list: String, user: String) { send("DELETE", "/api/lists/${escape(list)}/members/${escape(user)}") }
+    override suspend fun archive(list: String, archived: Boolean): SharedList =
+        call("PUT", "/api/lists/${escape(list)}/archived", Wire.json.encodeToString(ArchiveList.serializer(), ArchiveList(archived)))
 
     private suspend inline fun <reified T> call(method: String, path: String, body: String? = null): T =
         Wire.json.decodeFromJsonElement(Wire.strictJson(send(method, path, body), MAX_RESPONSE, payload = true))

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "84e6e833c3c5fde5a8abfe1a3826c305",
+    "identityHash": "c7a4c1d5926c9e747ad2a54801a53871",
     "entities": [
       {
         "tableName": "items",
@@ -535,7 +535,7 @@
       },
       {
         "tableName": "list_scope",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `archiveSource` TEXT, `synced` INTEGER NOT NULL, `created` INTEGER NOT NULL, `seq` INTEGER NOT NULL, `role` TEXT, `owner` TEXT, `members` TEXT, `stale` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `archiveSource` TEXT, `synced` INTEGER NOT NULL, `created` INTEGER NOT NULL, `seq` INTEGER NOT NULL, `role` TEXT, `owner` TEXT, `members` TEXT, `stale` INTEGER NOT NULL, `archived` INTEGER NOT NULL DEFAULT 0, `archivedByOwner` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -596,6 +596,20 @@
             "columnName": "stale",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "archived",
+            "columnName": "archived",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "archivedByOwner",
+            "columnName": "archivedByOwner",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           }
         ],
         "primaryKey": {
@@ -784,7 +798,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '84e6e833c3c5fde5a8abfe1a3826c305')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c7a4c1d5926c9e747ad2a54801a53871')"
     ]
   }
 }

@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 val MIGRATION_6_7: Migration = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("CREATE TABLE `list_scope_v7` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `archiveSource` TEXT, `synced` INTEGER NOT NULL, `created` INTEGER NOT NULL, `seq` INTEGER NOT NULL, `role` TEXT, `owner` TEXT, `members` TEXT, `stale` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+        db.execSQL("CREATE TABLE `list_scope_v7` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `archiveSource` TEXT, `synced` INTEGER NOT NULL, `created` INTEGER NOT NULL, `seq` INTEGER NOT NULL, `role` TEXT, `owner` TEXT, `members` TEXT, `stale` INTEGER NOT NULL, `archived` INTEGER NOT NULL DEFAULT 0, `archivedByOwner` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
         db.execSQL("INSERT INTO `list_scope_v7` (`id`, `name`, `archiveSource`, `synced`, `created`, `seq`, `stale`) SELECT `id`, `name`, `archiveSource`, 0, 0, 0, 0 FROM `list_scope` ORDER BY rowid")
         db.execSQL("DROP TABLE `list_scope`")
         db.execSQL("ALTER TABLE `list_scope_v7` RENAME TO `list_scope`")

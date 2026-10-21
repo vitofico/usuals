@@ -18,7 +18,7 @@ class ListRepository(private val database: UsualsDatabase, private val newId: ()
     suspend fun find(id: String) = database.listDao().find(id)
     suspend fun all() = database.listDao().all()
     suspend fun select(id: String) = database.withTransaction {
-        requireNotNull(database.listDao().find(id))
+        require(database.listDao().find(id)?.archived == false)
         database.listDao().select(ListSelectionEntity(listId = id))
     }
 }
