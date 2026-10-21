@@ -163,8 +163,8 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 } }
                 delete("{id}") { run { call.privateResponse(); lists.delete(call.accountAccess(), call.routeId("id")); call.respond(HttpStatusCode.NoContent) } }
                 post("{id}/members") { run {
-                    call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id")
-                    call.listed(ListView.serializer()) { lists.add(access, list, call.body(1024)) }
+                    call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id"); val request = call.body<AddMember>(1024)
+                    call.listed(ListView.serializer()) { lists.add(access, list, request) }
                 } }
                 put("{id}/archived") { run {
                     call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id"); val request = call.body<ArchiveList>(1024)
