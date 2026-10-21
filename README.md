@@ -116,7 +116,7 @@ are no invitations or codes to send. See the
 [server connection guide](docs/server-connection.md) for the details.
 
 <p align="center">
-  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web editor in dark mode: a shopping list with quantities, checked items and account navigation" width="100%"></a>
+  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web app in dark mode: a list shared with another account, with quantities and a picked-up item" width="100%"></a>
 </p>
 
 <p align="center"><em>Android in your pocket. A larger workspace in your browser.</em></p>
