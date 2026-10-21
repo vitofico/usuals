@@ -1,6 +1,7 @@
 package io.theficos.usuals.di
 
 import android.content.Context
+import io.theficos.usuals.R
 import io.theficos.usuals.auth.KeystoreSecretStore
 import io.theficos.usuals.auth.ProviderSettingsStore
 import io.theficos.usuals.data.local.UsualsDatabase
@@ -123,7 +124,7 @@ object ServiceLocator {
     val connectionClient by resettable { io.theficos.usuals.sync.ConnectionClient(syncState, relayTransport) }
 
     /** The account's lists on the server; see [ListSync]. */
-    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState) }
+    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name)) }
     private val listSyncSchedulerField = resettable { ListSyncScheduler(context, listSync, database.syncDao().observeOutgoing()) }
     val listSyncScheduler by listSyncSchedulerField
     val shareStore by resettable { AccountShareStore(listRepository, listSync) }

@@ -37,7 +37,7 @@ class ListSyncTest {
         override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse =
             throw RelayProblem("offline")
     })
-    private val sync = ListSync(lists, replica, server, connections, state)
+    private val sync = ListSync(lists, replica, server, connections, state, unnamed = "Home")
 
     @After fun close() = db.close()
 
@@ -61,6 +61,14 @@ class ListSyncTest {
         assertThat(server.lists.getValue(home).projection).isEqualTo(replica.projection(home))
         assertThat(db.listDao().all().map { it.synced to it.created }.distinct()).containsExactly(true to true)
         assertThat(replica.unsent()).isEqualTo(0)
+    }
+
+    @Test fun aListWithoutANameIsUploadedUnderTheNameThePhoneShows() = runTest {
+        db.listDao().insert(ListEntity("first", "")); add("first", "Eggs")
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.lists.getValue("first").projection.name).isEqualTo("Home")
+        assertThat(db.listDao().find("first")?.name).isEqualTo("Home")
     }
 
     @Test fun pendingChangesStayOnTopOfTheConfirmedListUntilTheServerTakesThem() = runTest {

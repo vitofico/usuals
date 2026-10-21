@@ -20,7 +20,7 @@ import kotlinx.coroutines.sync.withLock
  * bring back lists that signing out removed.
  */
 class ListSync(private val lists: ListRepository, private val replica: LocalReplica, private val service: ListsService,
-    private val connections: ConnectionClient, private val store: SyncStateStore) : AccountSession {
+    private val connections: ConnectionClient, private val store: SyncStateStore, private val unnamed: String) : AccountSession {
     private val pushing = Mutex()
     private val pulling = Mutex()
     private val writes = Mutex()
@@ -160,7 +160,7 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
         var id = list
         while (true) {
             try {
-                val created = service.create(id, replica.creation(id))
+                val created = service.create(id, replica.creation(id).let { if (it.name.isBlank()) it.copy(name = unnamed) else it })
                 commit(token) { replica.accept(created) }
                 return id
             } catch (problem: RelayProblem) {
