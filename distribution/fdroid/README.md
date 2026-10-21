@@ -18,7 +18,7 @@ those review findings.
 ## Metadata correction
 
 [io.theficos.usuals.yml](metadata/io.theficos.usuals.yml) now pins the full
-`2968d12f300ecf6c075c789e51b7984ae9d900a6` source hash of `v2026.10.19.1`,
+`e2d097b71f14f4cc34d08ea08070d608225427ef` source hash of `v2026.10.19.1`,
 instead of using a tag in `commit`. Its version code, binary URL, public signing
 certificate, NonFreeNet declaration and unsigned-build settings are retained.
 Maintainer notes explain that this is a reference for the existing release.

@@ -27,12 +27,15 @@ JVM. `ServiceLocator` must construct every production component.
 - Publish only with the maintainer's authorization. On 2026-10-18 the maintainer
   authorized private GitHub publication and, after verifying Grove/Tide themes,
   a squash and force-push. Use an explicit lease to protect concurrent updates.
-  Vito subsequently authorized the initial theficos cluster deployment in this
-  chat. Keep its operational follow-up local unless publication is requested.
+  This repository is public: never commit the maintainer's own deployment
+  details (hostnames, IPs, node names, deployment records, backup or operator
+  paths, production anecdotes). They belong in the maintainer's private
+  infrastructure repository; examples here use placeholders such as
+  `usuals.example.org`.
   On 2026-10-19 Vito authorized public repository publication, production Android
   releases, Obtainium distribution and an F-Droid inclusion submission. He also
   explicitly approved a new Usuals signing identity, its encrypted recovery backup
-  and GitHub signing secrets. This does not authorize another cluster deployment.
+  and GitHub signing secrets. Each deployment needs its own authorization.
 - Versions live in `gradle/libs.versions.toml`. Prefer existing dependencies.
   No Play Services, Firebase, ML Kit, analytics or crash reporting.
 - English UI resources live in `:app` `values/`. A new UI language adds only

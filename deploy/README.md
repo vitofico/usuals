@@ -1,8 +1,6 @@
 # Deployment packages
 
 The generic templates remain review material and require deployment approval.
-Vito authorized the initial theficos deployment on 2026-10-18. Its observed
-configuration and verification are in [theficos/README.md](theficos/README.md).
 No cluster credentials are required for the local checks below.
 
 ```sh
@@ -57,9 +55,10 @@ selected platform manifest digest. Both archives must be imported and their actu
 and migration are separate explicit jobs, never part of automatic reconciliation.
 Follow the runbook order; never initialize an existing identity again.
 
-The package targets the locally observed single-node amd64 MicroK8s cluster,
-Traefik `websecure`, cert-manager `letsencrypt-prod`, `microk8s-hostpath` and
-`usuals.example.org`. Those names/capabilities require live confirmation.
+The package targets a single-node amd64 MicroK8s cluster with Traefik
+`websecure`, cert-manager `letsencrypt-prod` and `microk8s-hostpath`. Replace
+`usuals.example.org`, the issuer and the NFS server in the templates and
+inventory examples with your own values, and confirm them against the cluster.
 The relay is a one-replica Recreate deployment, UID10001, read-only rootfs,
 dropped capabilities, no service account token, bounded JVM and private metrics.
 PostgreSQL16 is dedicated, non-root UID70, with separate app and replication

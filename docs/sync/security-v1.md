@@ -55,8 +55,8 @@ The household UUID is random routing, distinct from its genesis fingerprint.
 Genesis body fields `genesisHash` and `previousHash` are both 32 zero bytes,
 with epoch 1; hash the signed genesis once and use that resulting genesisHash
 in subsequent manifests/invitations. Household identity is that genesis hash. TLS/origin trust at bootstrap is explicit;
-a server claiming another origin is rejected. Do not reuse Quire credentials,
-Spunto bearer tokens, Authentik forward-auth or provider keys.
+a server claiming another origin is rejected. Do not reuse credentials, bearer
+tokens, forward-auth or provider keys from other services on the same host.
 
 An owner invitation is a pairing v2 link (below). QR reading does not use the
 app's grocery GTIN scanner. Applicant generates both keys locally and signs
