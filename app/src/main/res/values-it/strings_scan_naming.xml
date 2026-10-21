@@ -27,6 +27,7 @@
         <item quantity="many">%1$d codici distinti scansionati.</item>
     </plurals>
     <string name="edit_store">Etichetta negozio (facoltativa)</string>
+    <string name="edit_note">Nota (facoltativa)</string>
     <string name="store_all">Tutti i negozi</string>
     <string name="store_empty">Nessun articolo per questo negozio. Scegli Tutti i negozi per vedere gli altri.</string>
     <string name="scan_merge_question">Unire la confezione scansionata (%1$s) con %2$s? La quantità attuale (%3$s) verrà mantenuta. La quantità scansionata non verrà aggiunta. Le prossime scansioni useranno questo nome.</string>

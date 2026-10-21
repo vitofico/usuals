@@ -123,7 +123,7 @@ class ItemRepository(
         }
         return result.outcome == Outcome.APPLIED
     }
-    suspend fun edit(id: ItemId, name: String, quantity: Quantity?, preferences: List<ItemPreference>, store: String? = null, version: ItemVersion? = null): Boolean = database.withTransaction {
+    suspend fun edit(id: ItemId, name: String, quantity: Quantity?, preferences: List<ItemPreference>, store: String? = null, version: ItemVersion? = null, note: String? = null): Boolean = database.withTransaction {
         val existing = dao.find(id.value, listId()) ?: return@withTransaction false
         if (existing.deletedAt != null) return@withTransaction false
         val aliases = version?.aliases ?: database.historyDao().aliases(listId()).associate { it.fromKey to it.toKey }
@@ -133,6 +133,7 @@ class ItemRepository(
             put("name", name.trim()); put("key", key)
             put("quantity", quantity?.amount?.toString()?.let(::JsonPrimitive) ?: JsonNull)
             put("unit", quantity?.unit?.name?.let(::JsonPrimitive) ?: JsonNull); put("store", store?.trim()?.ifBlank { null }?.let(::JsonPrimitive) ?: JsonNull)
+            put("note", note?.trim()?.ifBlank { null }?.let(::JsonPrimitive) ?: JsonNull)
         }, if (existing.gtin != null && name != existing.gtin) mapOf("gtin:${existing.gtin}" to key) else emptyMap(), version)
         if (saved) {
             for (preference in preferences) savePreference(preference.entity().copy(listId = listId()), version)

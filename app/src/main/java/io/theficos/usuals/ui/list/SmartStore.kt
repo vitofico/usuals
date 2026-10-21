@@ -8,7 +8,9 @@ import io.theficos.usuals.smart.SuggestionChoice
 import io.theficos.usuals.smart.RepeatOffer
 
 data class ItemPresentation(val category: Category, val override: Category?, val repeatEveryDays: Int?, val quantityHint: Quantity? = null)
-data class ItemEdit(val id: ItemId, val name: String, val quantity: Quantity?, val category: Category?, val repeatEveryDays: Int?, val store: String? = null, val version: ItemVersion? = null, val changeCategory: Boolean = true, val changeRepeat: Boolean = true)
+data class ItemEdit(val id: ItemId, val name: String, val quantity: Quantity?, val category: Category?, val repeatEveryDays: Int?, val store: String? = null, val version: ItemVersion? = null, val changeCategory: Boolean = true, val changeRepeat: Boolean = true, val note: String? = null) {
+    companion object { const val MAX_NOTE = 500 }
+}
 
 interface SmartStore {
     suspend fun addAgain(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = 0

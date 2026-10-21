@@ -1,1 +1,1 @@
-Al importar una nota de Google Keep ahora entran todos los artículos, marcados o no. Los emoji repetidos tras un artículo indican su cantidad, así que Cerveza 🍺🍺🍺 añade 3 cervezas; la pantalla de importación ahora lo explica.
+Edita la nota de un artículo: mantén pulsado el artículo y cambia o vacía el campo Nota. Las notas también se siguen escribiendo directamente, como Leche (sin lactosa) o Leche para el café.

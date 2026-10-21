@@ -40,6 +40,7 @@ internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Un
     var unit by rememberSaveable(row.id.value) { mutableStateOf(row.quantity?.unit ?: MeasureUnit.PIECE) }
     var category by rememberSaveable(row.id.value) { mutableStateOf(row.categoryOverride) }
     var store by rememberSaveable(row.id.value) { mutableStateOf(row.store.orEmpty()) }
+    var note by rememberSaveable(row.id.value) { mutableStateOf(row.note.orEmpty()) }
     var repeat by rememberSaveable(row.id.value) { mutableStateOf(row.repeatEveryDays?.toString().orEmpty()) }
     var unitsOpen by remember { mutableStateOf(false) }
     var categoriesOpen by remember { mutableStateOf(false) }
@@ -61,6 +62,8 @@ internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Un
                 label = { Text(stringResource(R.string.edit_name)) }, isError = !validName,
                 supportingText = { if (!validName) Text(stringResource(R.string.edit_name_invalid)) },
                 modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = note, onValueChange = { note = it.take(ItemEdit.MAX_NOTE) },
+                label = { Text(stringResource(R.string.edit_note)) }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = amount, onValueChange = { amount = it }, singleLine = true,
                     label = { Text(stringResource(R.string.edit_quantity)) }, isError = !validAmount,
@@ -94,7 +97,7 @@ internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Un
             OutlinedTextField(value = store, onValueChange = { store = it.take(80) }, singleLine = true,
                 label = { Text(stringResource(R.string.edit_store)) }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { onSave(ItemEdit(row.id, name.trim(), number?.let { Quantity(it, unit) }, category, days, store.trim().ifBlank { null }, row.version, category != row.categoryOverride, days != row.repeatEveryDays)) },
+                Button(onClick = { onSave(ItemEdit(row.id, name.trim(), number?.let { Quantity(it, unit) }, category, days, store.trim().ifBlank { null }, row.version, category != row.categoryOverride, days != row.repeatEveryDays, note.trim().ifBlank { null })) },
                     enabled = validName && validAmount && validRepeat && !busy) { Text(stringResource(R.string.edit_save)) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.edit_cancel)) }
                 TextButton(onClick = { onRemove(row.id) }, enabled = !busy) {
