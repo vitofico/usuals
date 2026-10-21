@@ -1,0 +1,1 @@
+La condivisione ora è un unico percorso guidato: collega il server, salva il file di recupero e invita con un codice QR. L’altro telefono si unisce con una scansione, entrambi mostrano le stesse sei cifre e un tocco approva. Gli inviti durano 24 ore e valgono una volta sola.
