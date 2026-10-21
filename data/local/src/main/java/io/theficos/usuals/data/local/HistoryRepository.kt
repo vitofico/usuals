@@ -144,7 +144,9 @@ class HistoryRepository(
                 }
                 if (emptyDestination) {
                     val source = decoded.selectedListId ?: decoded.lists.first().id
-                    database.listDao().select(ListSelectionEntity(listId = copies[decoded.lists.indexOfFirst { it.id == source }].first.id))
+                    // A local list of the same id that is archived takes the import but is never selected.
+                    copies[decoded.lists.indexOfFirst { it.id == source }].first.takeIf { !it.archived }
+                        ?.let { database.listDao().select(ListSelectionEntity(listId = it.id)) }
                 }
             }
         }
