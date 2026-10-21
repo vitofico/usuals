@@ -1,5 +1,13 @@
 # Changelog
 
+## Keep notes import whole
+
+- Importing a note brings in every item, ticked or not. A Keep list with some
+  rows ticked used to import only the unticked ones. Untick what you do not need
+  in the review.
+- The import screen now explains that repeated emoji after an item set its
+  quantity.
+
 ## Quicker typing, empty a list, Keep imports
 
 - While typing an item, a tap anywhere outside the field closes it and the

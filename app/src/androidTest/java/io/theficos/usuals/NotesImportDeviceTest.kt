@@ -54,7 +54,7 @@ class NotesImportDeviceTest {
             val store = RepositoryRecipeStore(RecipeFetcher(RecipeJsonLd()), IngredientReviewPlanner(IngredientLineParser(), emptyList()),
                 items, history, { error("Notes cannot request a model") }, budget)
             lateinit var vm: ListViewModel
-            val note = "# Shopping\n☐ 2 l milk\n- [x] bought bread\n• 6 eggs"
+            val note = "# Shopping\n☐ 2 l milk\n- [x] bread\n• 6 eggs"
             compose.runOnUiThread {
                 vm = ListViewModel(RepositoryItemStore(items), LocalUtteranceParser(), NoSpeechSource, recipeStore = store)
                 viewModels.put("notes-qa", vm)
@@ -68,7 +68,7 @@ class NotesImportDeviceTest {
             }
             suspend fun reviewed() {
                 compose.waitUntil(15_000) { vm.state.value.recipe?.result is RecipeLoad.Review }
-                assertEquals(listOf("milk", "eggs"), (vm.state.value.recipe!!.result as RecipeLoad.Review).rows.map { it.item.name })
+                assertEquals(listOf("milk", "bread", "eggs"), (vm.state.value.recipe!!.result as RecipeLoad.Review).rows.map { it.item.name })
                 assertTrue(items.items().isEmpty())
                 assertEquals(0, budget.usedToday())
             }
@@ -82,9 +82,9 @@ class NotesImportDeviceTest {
                 File(context.cacheDir, "notes-import-review.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 bitmap.recycle()
             }
-            compose.onNodeWithText(context.resources.getQuantityString(R.plurals.recipe_add, 2, 2)).performClick()
+            compose.onNodeWithText(context.resources.getQuantityString(R.plurals.recipe_add, 3, 3)).performClick()
             compose.waitUntil(10_000) { vm.state.value.recipe == null }
-            assertEquals(setOf("milk", "eggs"), items.items().map { it.name }.toSet())
+            assertEquals(setOf("milk", "bread", "eggs"), items.items().map { it.name }.toSet())
             assertEquals(Quantity(2.0, MeasureUnit.LITRE), items.items().single { it.name == "milk" }.quantity)
             assertEquals(Quantity.pieces(6), items.items().single { it.name == "eggs" }.quantity)
             assertEquals(0, budget.usedToday())

@@ -1,1 +1,1 @@
-Mientras escribes un artículo, toca en cualquier lugar fuera del campo para cerrarlo junto con el teclado. Vacía una lista de una vez con Quitar todos los artículos en su menú. Una nota de Google Keep ahora se importa aunque todos los artículos estén marcados, y los emoji repetidos como 🍺🍺🍺 pasan a ser la cantidad.
+Al importar una nota de Google Keep ahora entran todos los artículos, marcados o no. Los emoji repetidos tras un artículo indican su cantidad, así que Cerveza 🍺🍺🍺 añade 3 cervezas; la pantalla de importación ahora lo explica.
