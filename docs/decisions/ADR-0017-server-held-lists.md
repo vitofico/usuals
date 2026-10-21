@@ -46,6 +46,10 @@ authority for it.
   lasts 10 minutes, and the web app shows the connected phone with a
   **Disconnect** action. The browser sign-in flow stays for a phone with no
   signed-in computer nearby.
+- **Encryption at rest.** Every stored projection is encrypted with AES-256-GCM
+  under a required 32-byte server key file, bound to its list id. A copy of the
+  database or of a backup without that key reveals no list contents. The key can
+  be rotated with `list-rewrap`.
 - **Sessions.** A web session slides to 30 days of inactivity. A phone
   credential slides to 180 days and can be revoked from the web app.
 
@@ -54,8 +58,16 @@ frozen copies, the browser vault and the WebSocket change stream are removed.
 
 ## Consequences
 
-- The privacy promise changes: the operator of a server can read the lists of
-  its accounts. Lists that never leave the phone (signed out) stay local.
+- The privacy promise changes: the running server, and so its operator, can
+  read the lists of its accounts. Encryption at rest protects a stolen database
+  or backup, not a compromised running server. Lists that never leave the phone
+  (signed out) stay local. Encryption with a key only the user holds was
+  considered and rejected for now: the server could no longer merge changes, so
+  every client would reconcile them again, every device and browser would need
+  the key, and sharing would need a key exchange. A later per-list private mode
+  remains possible.
+- The server key is a new required secret: it must be provisioned and escrowed
+  before deploying, and losing it loses every stored list.
 - Migration 008 drops the household tables. Their contents were end-to-end
   encrypted, so the server cannot convert them. Phones upload their plaintext
   copies after upgrading. When two phones held the same household list, the

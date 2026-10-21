@@ -84,6 +84,11 @@ is never reused.
 A caller who is not a member gets 404 `not_found` from every list route, whether
 or not the list exists.
 
+Stored projections are encrypted at rest with AES-256-GCM under a required
+32-byte server key file, with additional data `USUALS/LIST/1`, a zero byte and
+the list id, so a ciphertext cannot be moved to another list. Clients never see
+this layer.
+
 ## Sharing
 
 `GET /api/people?q=<text>` returns `People`: up to 20 other enabled accounts on
