@@ -1,153 +1,124 @@
-# Browser client protocol and security boundary
+# Browser client boundary
 
-This client is served by the relay at its own origin. The relay never receives shopping
-plaintext or private household keys. SSO controls account/session access only;
-existing signed household membership remains an independent authority.
+The browser is a thin window onto the signed-in account. The server holds every
+list in plaintext and is the authority for its contents, its members and the order
+of changes ([ADR 0017](../docs/decisions/ADR-0017-server-held-lists.md)). The wire
+contract, including every route, type and error code below, is
+[lists v2](../docs/sync/lists-v2.md). This page records what the browser relies on
+and what it deliberately does not do.
 
-## Implementation boundary
+## What the browser keeps
 
-- Buildless native modules and WebCrypto, no remote scripts, fonts, analytics or
-  service worker. All UI copy is in complete locale JSON files, English default.
-- The browser trusts code delivered by its serving origin. An active operator who replaces JavaScript can read an unlocked browser, so Android retains a stronger boundary against the relay operator. Strict CSP and local assets reduce third-party exposure, without claiming protection from that origin.
-- Secure context required. Signing uses Ed25519, recipient agreement X25519,
-  HKDF-SHA256 and AES-256-GCM. HPKE follows RFC 9180 base mode and the exact
-  existing Tink RAW profile. Byte-level golden vectors and JVM interoperability
-  are mandatory before a browser-created ciphertext is accepted as verified.
-- Enrollment accepts a pairing v2 invite link (`https://<origin>/join#2.…` or its
-  `usuals://join#` app wrapper) for this exact origin; a v1 JSON invitation reports
-  `upgrade`. The link carries a 32-byte invite key and a 16-byte anchor of the
-  owner's descriptor (household, genesis, owner fingerprint, member, role). The
-  browser derives the admission secret with HKDF, opens the invite through
-  `POST /v1/invites/{id}/open`, checks the descriptor bytes against the anchor and
-  creates fresh device keys only after that. Its join request carries
-  `HMAC(macKey, "USUALS/JOIN-MAC/2\0" ‖ assertion)`; both devices display the same
-  6-digit code from the same key. The browser still verifies genesis, every
-  membership transition, the inviter fingerprint and its exact approved join
-  assertion before accepting keys. SSO never substitutes for this process.
-- A browser owner creates the invite, keeps its key in the vault and shows the link
-  as a locally generated QR. It polls join requests while the dialog is open and
-  marks a request approvable only when the MAC verifies under that key, the member,
-  expiry and admission hash match, and the signature is valid. A request whose
-  invite came from another owner device is shown but cannot be approved here. The
-  key is forgotten after approval or expiry. The relay sees the admission hash and
-  the MAC, never the key, so it cannot vouch for device keys it substituted.
-- The served `/join` page reads the fragment into memory, removes it from the
-  address bar, and offers **Open in Usuals** (the app wrapper) or **Join in this
-  browser**. No camera is used in the browser.
-- An admitted browser account can create a household through CSRF-protected
-  `POST /api/households`. The relay atomically stores genesis, the creating-account
-  association and the fresh owner-device binding. The account row serializes the
-  permanent ten-household quota and disabling; durable attempts are limited to
-  five per minute. Exact genesis retries are idempotent for the same account.
-  Android operator-token creation remains unchanged. No operator token enters
-  the browser.
-- Browser creation requires a downloaded and read-back-verified native-compatible
-  encrypted recovery kit, with a separate random key. Only owner keys and public
-  recovery membership enter the persisted browser vault. Browser owners can
-  invite, approve verified join codes and remove devices, rotating every list key.
-  Exact snapshots, manifests and reservations persist before network I/O. A
-  verified obsolete change can be discarded; ambiguous committed work is resolved
-  first. Quota-denied creation can be cancelled only after a definitive rejection,
-  and retry revokes that permission before I/O.
-- A pending approval retains the applicant's signed assertion as an expiry witness.
-  Owner-authenticated `POST /v1/households/{h}/join-requests/{r}/expired` verifies
-  its signature, routing, genesis and request ID under the household lock and
-  returns its `requestId`/`expiresAt` only once the server clock reaches expiry.
-  It works after TTL cleanup without changing membership. The browser binds the
-  witness hash to its staged approval and checks for an exact committed manifest
-  both before and after this check before discarding uncommitted keys. Uncertain
-  responses preserve all pending state.
-- Recovery, recovery replacement and ownership transfer remain native actions.
-  Device identities cannot be exported or restored from files, preventing cloned
-  keys and stale reservation counters.
-- A strong user passphrase encrypts the complete local vault, bound to its immutable issuer, subject, account id and exact origin in the encrypted record and associated data, using PBKDF2-SHA256
-  (600,000 iterations), fresh 16-byte salt and AES-256-GCM with a 12-byte nonce.
-  Only encrypted vault records enter IndexedDB. The passphrase and wrapping key
-  remain in memory; locking, logout, page hide and idle timeout discard them.
-  Lost passphrase means joining as a fresh device, or recovering a browser-owned
-  household in Android with its saved kit. No server reset can decrypt the vault.
-- Web Locks serializes all vault/network mutations across tabs. A tab without
-  Web Locks cannot unlock. IndexedDB atomically stores each complete encrypted
-  revision. Save a durable per-device/list/epoch/key reservation before every
-  encryption attempt; retain the existing 4,096-use ceiling. Persist source
-  intents and exact encrypted envelopes before network access. Retry exact bytes.
-- Keep confirmed projection/cursor, pending intent/envelope, current/previous
-  membership proofs, list keys, highest verified membership and head pins plus
-  authenticated append receipts together in the encrypted vault. Unknown versions,
-  unsafe integer ranges, malformed JSON, duplicate keys, rollback/fork, revoked
-  membership and restore fences stop synchronization without dropping work.
-- Catch up through every authenticated envelope using the full deterministic
-  reducer. UI writes only capture, check, edit and delete. Other supported
-  Android commands still reduce so Finish, repeats, aliases and imports remain
-  compatible. Revisions govern conflicts; time never chooses a winner.
-- Verify signature, header routing, contiguous receipt/head and current author
-  membership before decrypting an operation. Snapshots require exact current or
-  preceding authorized signer and committed cutoff hash, plus a receipt bridge
-  from every retained known head. Persist append receipt witnesses before reads.
-- Same-origin fetch only, redirect errors, bounded streaming responses, no raw
-  diagnostics, no credentials in URLs or console. Fragment invitation secrets
-  are consumed and removed before rendering. JSON shapes reject duplicate keys,
-  oversized input, excessive depth/nodes and the reserved internal numeric marker. Prototype-like user keys use safe own-property dictionaries.
+Nothing about lists survives the page. Lists, cursors and member names live in
+memory and are read again from the feed on every load. There is no vault,
+passphrase, device key, outbox or IndexedDB database. Local storage holds only
+preferences: language, palette and whether the guided tour was completed.
+
+Earlier versions kept an encrypted vault in IndexedDB (`usuals-private-vault`) and
+two storage keys (`usuals-join-invite` in session storage, `usuals-tutorial-v1` in
+local storage). Every load deletes them, best effort; blocked or missing storage
+never stops the app from starting.
+
+## Transport
+
+- Same-origin `fetch` only, with the session cookie, `redirect: "error"` and
+  `cache: "no-store"`. No credential, secret or token is placed in a URL, log or
+  browser storage.
+- Mutations send `Content-Type: application/json` and `X-CSRF-Token` from
+  `GET /api/me`; the browser adds `Origin` itself.
+- Responses are read as a bounded stream: 1 MiB by default, 8 MiB for a single
+  list and 160 MiB for a feed page of 20 lists. A larger body stops with `too_large`.
+- Errors are `{"code": …}`. The browser recognises `unauthenticated`, `forbidden`,
+  `not_found`, `list_exists`, `limit_reached`, `rate_limited`, `too_large`,
+  `invalid`, `unavailable`, `upgrade_required` and the `ai_*` codes; any other code
+  reads as `invalid`, and a timeout as `unavailable`. Any 401 returns to the
+  sign-in screen.
+
+## Lists
+
+- **Feed.** `GET /api/lists/changes?limit=20&wait=0` without a cursor on load (a
+  reset), following `hasMore` pages, then `wait=25` with the returned cursor while
+  the tab is visible. Entries of a page are applied in `seq` order and an entry
+  never replaces a newer one. After the last page of a reset, lists the reset did
+  not return are dropped. A hidden tab aborts its waiting request and asks again
+  when it becomes visible. Failures back off from 1 s to 60 s; `online` and
+  visibility changes retry at once.
+- **Edits.** `POST /api/lists/{id}/intents` with `{"intents": [Intent]}`, at most
+  100 per request, each with a fresh UUID `id`, `listId` equal to `{id}`,
+  `schema: 1` and `normalizer: 1`. The browser writes `capture`, `check`, `edit`,
+  `delete`, `list_name`, `finish` and `undo`. Each payload carries the revisions
+  the browser last saw, so a stale change becomes a conflict instead of
+  overwriting someone else's. The reply's `list` replaces the shown list when its
+  `seq` is newer. A `conflict` outcome shows the code recorded in
+  `projection.conflicts[intentId]`; `rejected` and `upgrade_required` show their
+  own notices. A 404 removes the list from the screen.
+- **Finish.** Only picked-up rows whose `key`, `name`, `quantity`, `unit` and
+  integer `checkedAt` are present are sent, with facts limited to strings,
+  booleans, null and that timestamp. The reducer compares facts exactly, and
+  JavaScript cannot keep the spelling of other JSON numbers.
+- **Lists.** `PUT /api/lists/{uuid}` with `{"projection": {"name": …}}` creates
+  one (200 or 201); a 409 `list_exists` retries once with a new id.
+  `DELETE /api/lists/{id}` deletes an owned list (204).
+
+## Sharing
+
+- `GET /api/people?q=` lists other accounts (the first 20 for an empty query).
+- `POST /api/lists/{id}/members` with `{"userId": …}` adds one as an editor.
+- `DELETE /api/lists/{id}/members/{userId}` removes an editor (owner) or leaves
+  (the signed-in account's own id from `GET /api/me`), 204.
+
+The share dialog offers Remove only to the owner and only on editors, and Leave
+only on the signed-in person's row when they are not the owner. The server
+enforces the same rules; the browser merely hides what would be refused.
+
+## Connecting a phone
+
+**Connect a phone** draws 32 random bytes in the browser and sends only their
+SHA-256 (`POST /api/connect/offers` with `{"secretHash": b64url}`). The QR encodes
+`https://<origin>/connect#1.<b64url(offerId16 || secret32)>`, exactly 48 bytes
+after the version; the secret is zeroed after drawing. The dialog polls
+`GET /api/connect/offers/{id}` every 2 s and shows the phone as connected once a
+`ticket` appears; 404 or the offer's `expiresAt` ends it. The QR is generated
+locally, without uploads or an external service.
+
+The served `/connect` page reads the fragment into memory, removes it from the
+address bar and offers **Open in Usuals** (`usuals://connect#<b64url(link)>`).
+
+A phone with no signed-in computer still uses the browser sign-in flow: it opens
+`/?connect=<ticket>`, the browser reads `GET /api/connect/{ticket}` and approves
+with `POST /api/connect/{ticket}/approve` after the person compares the 6-digit
+code derived from the ticket's `fingerprint`.
+
+`GET /api/connections` lists connected phones and
+`POST /api/connections/{id}/revoke` disconnects one.
 
 ## Account API boundary
 
-`GET /auth/config` reports enabled local/OIDC methods. Navigation to
+`GET /auth/config` reports enabled local and OIDC methods. Navigation to
 `/auth/login` starts OIDC. Local sign-in and one-use activation use a new
-short-lived cookie-bound CSRF challenge per attempt. Local account passwords
-never derive browser-vault keys. Administrator-created local accounts have no
-public signup; their one-use setup secrets are shown once and never enter URLs. `GET /api/me` supplies the current account and CSRF token;
-`POST /auth/logout`, session revocation and admin mutations send exact Origin and
-`X-CSRF-Token`. An opaque session reference uses a secure HttpOnly cookie; OIDC tokens never enter browser storage or cookies. Administrators
-may disable accounts or revoke account sessions; they cannot grant household
-membership or decrypt contents. Administrative screens make that scope explicit.
+short-lived cookie-bound CSRF challenge per attempt. Administrator-created local
+accounts have no public signup; their one-use setup secrets are shown once and
+never enter URLs. `GET /api/me` supplies the current account and CSRF token;
+`POST /auth/logout`, session revocation and admin mutations send the exact Origin
+and `X-CSRF-Token`. An opaque session reference uses a secure HttpOnly cookie;
+OIDC tokens never enter browser storage or cookies. Administrators may disable
+accounts or revoke sessions; those screens do not show or change anyone's lists.
 
-## Verification gates
+## Trust
 
-Wire/header/hash and Ed25519 vectors, HPKE browser/JVM round trips, all shared
-reducer scenarios, malformed input/adversarial membership and snapshot/receipt
-regressions, durable outbox interruption/reload, browser vault wrong-passphrase
-and lock tests, local real-relay interoperability and responsive browser QA.
-No cluster deployment or production-browser compatibility claim follows from
-local checks. Chromium and Firefox/modern Safari need native Ed25519/X25519 and
-Web Locks support; unsupported browsers fail closed with translated feedback.
-
-## Browser numeric capability
-
-The browser retains the original spelling of numeric JSON tokens, including
-`0`, `0.0` and exponents, through reducer copies and encrypted vault reloads.
-This preserves JVM `JsonPrimitive` identity for revisions, facts and source
-intent acknowledgements. Its reserved internal marker cannot be supplied by an
-incoming JSON object; serialization emits the original numeric token instead.
-
-Quantities are bounded to zero or the inclusive range 0.000001 to
-1,000,000,000,000. Extreme or unsupported Java decimal representations stop
-catch-up with upgrade-required before consuming the operation or changing its
-projection. Pending work, cursors and pins remain intact. All locales explain
-that the quantity must be reviewed in Android. Positions and timestamps do not
-use this quantity bound. This is a browser capability limit, not a changed
-household protocol or Android model.
-
-The browser also stops before consuming snapshots or operations that introduce
-JavaScript array-index keys in ordered row, close or intent-ledger maps. These
-legacy identifiers could change insertion order and therefore change merge or
-repeat semantics. Normal Android UUID identifiers are unaffected. Numeric item
-names in preferences and rules remain supported. All locales direct the person
-to review or copy a legacy list through Android; pending browser work remains.
-
-Quoted hexadecimal floating-point position values, accepted by Java’s number
-parser, also stop before consumption with a localized number-format capability
-message. Canonical quantity validation still rejects hexadecimal quantity text.
-This avoids a second numeric parser with different rounding behavior.
+The served origin supplies the code and holds the lists, so whoever operates the
+server can read them; the browser adds no protection against its own origin. A
+strict content security policy and local assets keep third parties out: no remote
+scripts, fonts, analytics or service worker.
 
 ## Optional photo model boundary
 
 Photo import is an explicit direct request to an operator-allowlisted provider,
-separate from household transport. Selecting or capturing an image makes no
-request. A synthetic image capability check must succeed first; prepared photos
-are sent only on the Read action. Keys and images stay in dialog memory and are
-cleared on dismissal or vault lock. No account cookies or redirect forwarding
-are used. Changing provider fields invalidates the prior connection.
+separate from list traffic. Selecting or capturing an image makes no request. A
+synthetic image capability check must succeed first; prepared photos are sent
+only on the Read action. Keys and images stay in dialog memory and are cleared
+when the dialog closes. No account cookies or redirect forwarding are used.
+Changing provider fields invalidates the prior connection.
 
-Markdown requires no model. Review confirmation commits selected new capture
-intents atomically, with existing canonical identities excluded. This introduces
-no wire operation, schema, normalizer, framing or encryption change.
+Markdown requires no model. Review confirmation sends `capture` intents for the
+selected new rows; rows whose canonical key is already on the list are skipped.

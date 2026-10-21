@@ -1,48 +1,36 @@
-import {
-  Problem,
-  requireThat,
-  fingerprint,
-  hex,
-  unb64,
-  primitive,
-  number,
-  isLiteralNumber,
-  hash,
-} from "./wire.mjs";
-import { Vault, openStorage } from "./vault.mjs";
-import { HouseholdClient, RunScope, request } from "./client.mjs";
-import { body } from "./membership.mjs";
-import { canonical, decimal } from "./reducer.mjs";
+import { requireThat, hash } from "./wire.mjs";
+import { RunScope, request } from "./client.mjs";
+import { ListStore, ListFeed, ListsApi, access, problem } from "./lists.mjs";
+import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
-import { RefreshLoop } from "./refresh.mjs";
-import { UnlockAttempt } from "./unlock.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
-import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 import { qrMatrix } from "./qr.mjs";
-import { appLink, connectionCode, parseInviteLink, resumableInvite, forgetInvite, connectLink, connectAppLink, parseConnectLink, joinsConnection } from "./pairing.mjs";
+import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "./connect.mjs";
 import { importDialog } from "./import-dialog.mjs";
+import { forgetLegacyVault } from "./legacy.mjs";
+
+forgetLegacyVault();
+const ticketPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// A phone without a signed-in computer nearby opens /?connect=<ticket>; the ticket waits in this tab through sign-in.
 let pendingConnectionId = null, connectionDone = false;
-// The /join fragment carries the invite key: it leaves the address bar at startup and waits in this tab through sign-in.
-const inviteTab = (() => { try { return sessionStorage; } catch { return null; } })();
-let pendingInvite = resumableInvite(inviteTab, location.pathname === "/join" && location.hash.startsWith("#2.") ? location.href : null, Date.now());
+try {
+  const candidate = new URL(location.href).searchParams.get("connect");
+  if (candidate && ticketPattern.test(candidate)) sessionStorage.setItem("usuals-connect-request", candidate);
+  pendingConnectionId = sessionStorage.getItem("usuals-connect-request");
+} catch { pendingConnectionId = new URL(location.href).searchParams.get("connect"); }
 // A computer's connect QR opened by a phone camera: it only hands the code to the app, so it needs no sign-in here.
 let pendingConnect = (() => {
   try { return location.pathname === "/connect" && location.hash.startsWith("#1.") ? (parseConnectLink(location.href), location.href) : null; }
   catch { return null; }
 })();
 const spaced = (code) => code.slice(0, 3) + " " + code.slice(3);
-try {
-  const candidate = new URL(location.href).searchParams.get("connect");
-  if (candidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(candidate)) sessionStorage.setItem("usuals-connect-request", candidate);
-  pendingConnectionId = sessionStorage.getItem("usuals-connect-request");
-} catch { pendingConnectionId = new URL(location.href).searchParams.get("connect"); }
 const $ = (id) => document.getElementById(id);
-function appearanceStorage() {
+function localStore() {
   try { return localStorage; } catch { return null; }
 }
-let palette = readPalette(appearanceStorage());
-let tutorialSeen = tutorialCompleted(appearanceStorage()), tutorialActive = false;
+let palette = readPalette(localStore());
+let tutorialSeen = tutorialCompleted(localStore()), tutorialActive = false;
 function applyAppearance() {
   document.documentElement.dataset.palette = palette;
   document.querySelector('meta[name="theme-color"]').content =
@@ -51,8 +39,7 @@ function applyAppearance() {
 applyAppearance();
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyAppearance);
 let uiScope = new RunScope();
-const api = (path, options = {}) =>
-  request(path, { ...options, scope: uiScope });
+const api = (path, options = {}) => request(path, { ...options, scope: uiScope });
 let importResources = null;
 function loadImportResources() {
   if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
@@ -64,17 +51,17 @@ let availableLocales = ["en"],
   locale = "en",
   account = null,
   config = null,
-  vault = null,
-  client = null,
-  scope = null,
   view = "list",
+  screen = null,
   selected = null,
   generation = 0,
   busy = false,
-  idleTimer = null,
-  expiryTimer = null,
-  stayUnlocked = false,
-  dialogCleanup = null;
+  dialogCleanup = null,
+  dialogRefresh = null,
+  store = null,
+  lists = null,
+  feed = null,
+  syncState = "";
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
   for (const [name, replacement] of Object.entries(values))
@@ -86,35 +73,22 @@ function el(tag, attributes = {}, ...children) {
   for (const [key, value] of Object.entries(attributes)) {
     if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
     else if (key === "class") node.className = value;
-    else if (value !== undefined && value !== null) {
-      if (key === "value")
-        node.value = isLiteralNumber(value) ? primitive(value) : value;
-      else if (key === "checked") node.checked = value;
-      else node.setAttribute(key, String(value));
-    }
+    else if (key === "value") node.value = value;
+    else if (key === "checked") node.checked = value;
+    else if (value !== undefined && value !== null) node.setAttribute(key, String(value));
   }
   for (const child of children.flat())
     if (child !== null && child !== undefined)
-      node.append(
-        child instanceof Node
-          ? child
-          : document.createTextNode(
-              isLiteralNumber(child) ? primitive(child) : String(child),
-            ),
-      );
+      node.append(child instanceof Node ? child : document.createTextNode(String(child)));
   return node;
 }
 const button = (label, action, kind = "secondary", attributes = {}) =>
-  el(
-    "button",
-    { type: "button", class: kind, onclick: action, ...attributes },
-    label,
-  );
-const paragraph = (key, kind = "lede", values = {}) =>
-  el("p", { class: kind }, t(key, values));
-function notice(key, error = false) {
+  el("button", { type: "button", class: kind, onclick: action, ...attributes }, label);
+const paragraph = (key, kind = "lede", values = {}) => el("p", { class: kind }, t(key, values));
+/** `action` is an optional [label, handler] pair, such as Undo. */
+function notice(key, error = false, values = {}, action = null) {
   const node = $("notice");
-  node.textContent = t(key);
+  node.replaceChildren(t(key, values), ...(action ? [" ", button(action[0], action[1], "text-button")] : []));
   node.classList.toggle("error", error);
   node.hidden = false;
 }
@@ -123,9 +97,9 @@ function clearNotice() {
 }
 function failure(error) {
   if (error?.name === "AbortError" || error?.code === "locked") return;
-  if (["unauthenticated", "forbidden"].includes(error?.code) && !client) {
-    lock();
-    loadAccount().catch(() => {});
+  if (error?.code === "unauthenticated" && account) {
+    signedOut();
+    return;
   }
   notice(dictionary[error?.code] ? error.code : "serverUnavailable", true);
 }
@@ -142,41 +116,47 @@ async function act(action, { rerender = true } = {}) {
     if (own === generation) busy = false;
   }
 }
-function resetIdle() {
-  clearTimeout(idleTimer);
-  // A browser its owner chose to keep unlocked has no idle lock; others lock after 30 quiet minutes.
-  if (client && !stayUnlocked) idleTimer = setTimeout(() => lock(), 30 * 60 * 1000);
+function setSync(state) {
+  syncState = state;
+  $("sync-status").textContent = account && state ? t(state) : "";
 }
-function lock() {
+function startLists() {
+  store = new ListStore();
+  lists = new ListsApi({ store, csrf: () => account.csrfToken, transport: api });
+  feed = new ListFeed({
+    store,
+    onUpdate: () => {
+      dialogRefresh?.();
+      if (screen === "lists") renderLists();
+    },
+    onStatus: setSync,
+    onSignedOut: () => signedOut(),
+  });
+  feed.start();
+}
+/** Ends everything that belongs to the signed-in account: its lists, its requests and any open dialog. */
+async function leaveAccount(message = null) {
   generation++;
-  refreshLoop.stop();
+  feed?.stop();
   uiScope.stop();
   uiScope = new RunScope();
-  const draining = client?.stop();
-  scope?.stop();
-  client = null;
-  scope = null;
-  vault?.lock(draining);
-  clearTimeout(idleTimer);
-  clearTimeout(expiryTimer);
+  store = lists = feed = selected = null;
+  account = null;
   busy = false;
+  view = "list";
   closeDialog();
-  if (dictionary.locked) {
-    clearNotice();
-    render().catch(() => {});
-  }
+  setSync("");
+  await render();
+  if (message) notice(message, true);
 }
+const signedOut = () => leaveAccount("unauthenticated").catch(() => {});
 function title(main, subtitle, extra = null) {
-  return el(
-    "section",
-    { class: "hero" },
-    el("div", {}, el("h1", {}, t(main)), paragraph(subtitle)),
-    extra,
-  );
+  return el("section", { class: "hero" }, el("div", {}, el("h1", {}, t(main)), paragraph(subtitle)), extra);
 }
-function openDialog(content, cleanup = null) {
+function openDialog(content, cleanup = null, refresh = null) {
   closeDialog();
   dialogCleanup = cleanup;
+  dialogRefresh = refresh;
   $("dialog").classList.toggle("pairing", content.classList.contains("pair-device"));
   $("dialog-content").replaceChildren(content);
   $("dialog").showModal();
@@ -184,19 +164,20 @@ function openDialog(content, cleanup = null) {
 function closeDialog() {
   const cleanup = dialogCleanup;
   dialogCleanup = null;
+  dialogRefresh = null;
   cleanup?.();
   $("dialog").close();
   $("dialog-content").replaceChildren();
 }
 function finishTutorial() {
   tutorialSeen = true;
-  completeTutorial(appearanceStorage());
+  completeTutorial(localStore());
   closeDialog();
 }
 function tutorialDialog() {
   let page = 0;
-  const steps = ["Welcome", "Household", "Vault", "List"];
-  const symbols = ["✓", "↗", "○", "✓"];
+  const steps = ["Welcome", "List", "Share"];
+  const symbols = ["✓", "+", "↗"];
   function draw() {
     const last = page === steps.length - 1;
     $("dialog-content").replaceChildren(
@@ -225,43 +206,29 @@ function tutorialDialog() {
   tutorialActive = true;
   draw();
 }
-function messageDialog(head, description, confirm) {
-  const form = el(
-    "form",
-    {
-      onsubmit: (event) => {
-        event.preventDefault();
-        closeDialog();
-        act(confirm);
-      },
+function messageDialog(head, description, confirm, values = {}) {
+  openDialog(el("form", {
+    onsubmit: (event) => {
+      event.preventDefault();
+      closeDialog();
+      act(confirm);
     },
-    el("h2", {}, t(head)),
-    paragraph(description),
-    el(
-      "div",
-      { class: "button-row" },
-      button(t("cancel"), closeDialog),
-      el("button", { type: "submit", class: "primary" }, t("confirm")),
-    ),
-  );
-  openDialog(form);
+  },
+  el("h2", {}, t(head, values)),
+  paragraph(description, "lede", values),
+  el("div", { class: "button-row" },
+    button(t("cancel"), closeDialog),
+    el("button", { type: "submit", class: "primary" }, t("confirm")))));
 }
 async function localeLoad(language) {
-  const response = await fetch(`/locales/${language}.json`, {
-    credentials: "same-origin",
-    cache: "no-store",
-    redirect: "error",
-  });
+  const response = await fetch(`/locales/${language}.json`, { credentials: "same-origin", cache: "no-store", redirect: "error" });
   requireThat(response.ok);
-  const catalog = await response.json();
-  dictionary = catalog;
+  dictionary = await response.json();
   locale = language;
   document.documentElement.lang = language;
   document.title = "Usuals";
-  for (const n of document.querySelectorAll("[data-i18n]"))
-    n.textContent = t(n.dataset.i18n);
-  for (const n of document.querySelectorAll("[data-i18n-label]"))
-    n.setAttribute("aria-label", t(n.dataset.i18nLabel));
+  for (const n of document.querySelectorAll("[data-i18n]")) n.textContent = t(n.dataset.i18n);
+  for (const n of document.querySelectorAll("[data-i18n-label]")) n.setAttribute("aria-label", t(n.dataset.i18nLabel));
   $("navigation").setAttribute("aria-label", t("navigation"));
   $("language").setAttribute("aria-label", t("language"));
   $("language").textContent = language.toUpperCase();
@@ -269,48 +236,22 @@ async function localeLoad(language) {
 async function languageDialog() {
   const own = generation;
   try {
-    const catalogs = await Promise.all(
-      availableLocales.map(async (code) => {
-        const response = await fetch(`/locales/${code}.json`, {
-          credentials: "same-origin",
-          cache: "no-store",
-          redirect: "error",
-        });
-        requireThat(response.ok);
-        return [code, (await response.json()).nativeName];
-      }),
-    );
+    const catalogs = await Promise.all(availableLocales.map(async (code) => {
+      const response = await fetch(`/locales/${code}.json`, { credentials: "same-origin", cache: "no-store", redirect: "error" });
+      requireThat(response.ok);
+      return [code, (await response.json()).nativeName];
+    }));
     if (own !== generation) return;
-    openDialog(
-      el(
-        "div",
-        {},
-        el("h2", {}, t("language")),
-        el(
-          "div",
-          { class: "locale-options" },
-          catalogs.map(([code, name]) =>
-            button(
-              name,
-              async () => {
-                try {
-                  await localeLoad(code);
-                  try {
-                    localStorage.setItem("usuals-language", code);
-                  } catch {}
-                  closeDialog();
-                  await render();
-                } catch (e) {
-                  failure(e);
-                }
-              },
-              code === locale ? "primary" : "secondary",
-            ),
-          ),
-        ),
-        el("div", { class: "button-row" }, button(t("close"), closeDialog)),
-      ),
-    );
+    openDialog(el("div", {}, el("h2", {}, t("language")),
+      el("div", { class: "locale-options" }, catalogs.map(([code, name]) => button(name, async () => {
+        try {
+          await localeLoad(code);
+          try { localStorage.setItem("usuals-language", code); } catch {}
+          closeDialog();
+          await render();
+        } catch (e) { failure(e); }
+      }, code === locale ? "primary" : "secondary"))),
+      el("div", { class: "button-row" }, button(t("close"), closeDialog))));
   } catch (error) {
     if (own === generation) failure(error);
   }
@@ -319,7 +260,7 @@ function appearanceDialog() {
   const choices = palettes.map((id) => el("label", { class: "theme-choice" },
     el("input", { type: "radio", name: "palette", value: id, checked: id === palette,
       onchange: () => {
-        palette = writePalette(id, appearanceStorage());
+        palette = writePalette(id, localStore());
         applyAppearance();
       },
     }),
@@ -340,296 +281,39 @@ async function loadAccount() {
   const configuration = await api("/auth/config");
   if (own !== generation) return;
   config = configuration;
+  let me = null;
   try {
-    const me = await api("/api/me");
-    if (own !== generation) return;
-    requireThat(
-      me.user &&
-        me.user.issuer &&
-        me.user.subject &&
-        me.user.id &&
-        Number.isSafeInteger(me.expiresAt),
-    );
-    account = me;
-    expiryTimer = setTimeout(
-      () => {
-        lock();
-        account = null;
-        notice("unauthenticated", true);
-        render().catch(() => {});
-      },
-      Math.max(0, me.expiresAt - Date.now()),
-    );
+    me = await api("/api/me");
+    requireThat(me.user && me.user.id && me.csrfToken);
   } catch (error) {
-    if (own !== generation) return;
-    if (error.code === "unauthenticated") account = null;
-    else throw error;
+    if (error.code !== "unauthenticated") throw error;
+    me = null;
   }
+  if (own !== generation) return;
+  account = me;
+  if (account && !feed) startLists();
   await render();
-  if (account && !client) await vaultCandidate().then((opened) => opened && resumeWith(opened)).catch(() => {});
 }
 function welcome() {
-  const signed = Boolean(account),
-    content = el(
-      "section",
-      { class: "welcome" },
-      el(
-        "div",
-        {},
-        el("p", { class: "eyebrow" }, t("yourEveryday")),
-        el("h1", {}, t("welcomeTitle")),
-        paragraph("welcomeText"),
-        el("div", { class: "welcome-actions" }, ...welcomeActions(signed)),
-        paragraph(
-          signed
-            ? "lockHelp"
-            : config?.localEnabled
-              ? "localSignInText"
-              : "signInText",
-          "helper",
-        ),
-      ),
-      el("div", { class: "welcome-art", "aria-hidden": "true" }),
-    );
-  return content;
-}
-const vaultBinding = (a) => JSON.stringify([location.origin, a.user.issuer, a.user.subject, a.user.id]);
-/** This browser's vault for the signed-in account, after checking the session is still the same account. */
-async function vaultCandidate() {
-  const own = generation,
-    verifiedAccount = await api("/api/me");
-  if (own !== generation) return null;
-  requireThat(
-    verifiedAccount.user.id === account.user.id &&
-      verifiedAccount.user.issuer === account.user.issuer &&
-      verifiedAccount.user.subject === account.user.subject,
-    "unauthenticated",
-  );
-  account = verifiedAccount;
-  const binding = vaultBinding(account);
-  const storage = await openStorage(binding);
-  if (own !== generation) return null;
-  return { own, candidate: new Vault(storage, binding) };
-}
-/** Unlocks with the remembered key when this browser stays unlocked, otherwise asks for the passphrase. */
-async function unlockBrowser() {
-  if (!account) {
-    notice("accountRequired", true);
-    return;
-  }
-  const opened = await vaultCandidate();
-  if (!opened || (await resumeWith(opened)) || opened.own !== generation) return;
-  await unlockDialog(opened);
-}
-/** Opens the vault with this browser's remembered key, and forgets a key that no longer opens it. */
-async function resumeWith({ own, candidate }) {
-  if (!(await candidate.remembered())) return false;
-  try {
-    return await openVault(new UnlockAttempt(candidate, () => own === generation), own, null);
-  } catch (e) {
-    if (e.code === "vault_in_use") {
-      notice(e.code, true);
-      return true;
-    }
-    if (["wrong_passphrase", "upgrade_required"].includes(e.code)) await candidate.forget().catch(() => {});
-    return false;
-  }
-}
-/**
- * Opens the vault and starts the client. A null passphrase uses the remembered key; otherwise `keep` says
- * whether this browser remembers it. Throws a dictionary code when the vault stays locked.
- */
-async function openVault(attempt, own, passphrase, keep = false) {
-  let activated = false,
-    activationGeneration = own;
-  try {
-    requireThat(isSecureContext && navigator.locks && crypto.subtle, "unsupported_browser");
-    const unlocked = await attempt.unlock(passphrase, (unlockedVault) => {
-      const nextScope = new RunScope();
-      const nextClient = new HouseholdClient(unlockedVault, account, {
-        scope: nextScope,
-      });
-      vault = unlockedVault;
-      scope = nextScope;
-      client = nextClient;
-      generation++;
-      activationGeneration = generation;
-      activated = true;
-    });
-    if (!unlocked) return false;
-    if (passphrase === null) stayUnlocked = true;
-    else if (keep) stayUnlocked = await vault.remember().then(() => true, () => false);
-    else {
-      stayUnlocked = false;
-      await vault.forget().catch(() => {});
-    }
-    clearTimeout(expiryTimer);
-    expiryTimer = setTimeout(
-      () => {
-        lock();
-        account = null;
-        notice("unauthenticated", true);
-        render().catch(() => {});
-      },
-      Math.max(0, account.expiresAt - Date.now()),
-    );
-    busy = false;
-    closeDialog();
-    clearNotice();
-    resetIdle();
-    refreshLoop.start();
-    await render();
-    await syncSelected();
-    return true;
-  } catch (e) {
-    const code = dictionary[e.code]
-      ? e.code
-      : e.name === "OperationError"
-        ? "wrong_passphrase"
-        : activated
-          ? "invalid"
-          : "unsupported_browser";
-    if (activated && activationGeneration === generation) {
-      lock();
-      notice(code, true);
-      return false;
-    }
-    attempt.candidate.lock();
-    throw new Problem(code);
-  }
-}
-/** Forgets this browser's remembered key for the signed-in account, so the passphrase is asked again. */
-async function forgetBrowser() {
-  stayUnlocked = false;
-  await openStorage(vaultBinding(account)).then((storage) => storage.forget()).catch(() => {});
-}
-async function unlockDialog({ own, candidate }) {
-  const attempt = new UnlockAttempt(candidate, () => own === generation);
-  const exists = await candidate.exists();
-  if (own !== generation) return;
-  const password = el("input", {
-      id: "vault-password",
-      type: "password",
-      class: "field",
-      autocomplete: exists ? "current-password" : "new-password",
-      minlength: 14,
-      maxlength: 1024,
-      required: true,
-    }),
-    confirm = exists
-      ? null
-      : el("input", {
-          id: "vault-confirm",
-          type: "password",
-          class: "field",
-          autocomplete: "new-password",
-          minlength: 14,
-          maxlength: 1024,
-          required: true,
-        }),
-    error = el("p", { class: "dialog-error", role: "alert" }),
-    keep = el("input", { type: "checkbox" }),
-    submit = el(
-      "button",
-      { type: "submit", class: "primary" },
-      t(exists ? "unlock" : "continue"),
-    );
-  const form = el(
-    "form",
-    {
-      onsubmit: async (event) => {
-        event.preventDefault();
-        if (submit.disabled) return;
-        if (confirm && password.value !== confirm.value) {
-          error.textContent = t("passphraseMismatch");
-          return;
-        }
-        submit.disabled = true;
-        try {
-          await openVault(attempt, own, password.value, keep.checked);
-          password.value = "";
-          if (confirm) confirm.value = "";
-        } catch (e) {
-          if (!attempt.cancelled && own === generation) error.textContent = t(e.code);
-        } finally {
-          submit.disabled = false;
-        }
-      },
-    },
-    el("h2", {}, t(exists ? "unlockVault" : "vaultTitle")),
-    paragraph(exists ? "unlockText" : "vaultText"),
-    el("label", { for: "vault-password", class: "label" }, t("passphrase")),
-    password,
-    ...(confirm
-      ? [
-          el(
-            "label",
-            { for: "vault-confirm", class: "label" },
-            t("confirmPassphrase"),
-          ),
-          confirm,
-        ]
-      : []),
-    paragraph("passphraseHelp", "helper"),
-    el("label", { class: "check-row" }, keep, t("keepUnlocked")),
-    paragraph("keepUnlockedHelp", "helper"),
-    error,
-    el(
-      "div",
-      { class: "button-row" },
-      button(t("cancel"), () => {
-        password.value = "";
-        if (confirm) confirm.value = "";
-        closeDialog();
-      }),
-      submit,
-    ),
-  );
-  openDialog(form, () => {
-    attempt.cancel();
-    password.value = "";
-    if (confirm) confirm.value = "";
-  });
-}
-function householdOptions() {
-  if (!vault?.key) return [];
-  return Object.values(vault.read().households).flatMap((h) =>
-    body(h.proofs.at(-1)).lists.map((l) => ({
-      household: h.id,
-      list: l.listId,
-      label: h.lists[l.listId]?.confirmed?.projection.name || t("listLabel"),
-    })),
-  );
+  return el("section", { class: "welcome" },
+    el("div", {},
+      el("p", { class: "eyebrow" }, t("yourEveryday")),
+      el("h1", {}, t("welcomeTitle")),
+      paragraph("welcomeText"),
+      el("div", { class: "welcome-actions" }, ...welcomeActions()),
+      paragraph(config?.localEnabled ? "localSignInText" : "signInText", "helper")),
+    el("div", { class: "welcome-art", "aria-hidden": "true" }));
 }
 async function render() {
   const own = generation;
-  $("lock").hidden = !client;
-  $("refresh").hidden = !client;
-  if (view !== "list") $("sync-status").textContent = t(client ? "vaultUnlocked" : "locked");
-  $("section-label").textContent = t(
-    view === "list"
-      ? "shoppingList"
-      : view === "sharing"
-        ? "sharing"
-        : view === "admin"
-          ? "admin"
-          : "account",
-  );
-  for (const n of document.querySelectorAll("[data-view]"))
-    n.classList.toggle("active", n.dataset.view === view);
+  screen = null;
+  setSync(syncState);
+  $("section-label").textContent = t(view === "admin" ? "admin" : view === "account" ? "account" : "lists");
+  for (const n of document.querySelectorAll("[data-view]")) n.classList.toggle("active", n.dataset.view === view);
   let adminButton = document.querySelector('[data-view="admin"]');
   if (account?.user.admin && !adminButton) {
-    adminButton = el(
-      "button",
-      {
-        type: "button",
-        class: "nav-button",
-        "data-view": "admin",
-        "data-i18n": "admin",
-      },
-      el("span", { class: "nav-icon" }, "✧"),
-      t("admin"),
-    );
+    adminButton = el("button", { type: "button", class: "nav-button", "data-view": "admin", "data-i18n": "admin" },
+      el("span", { class: "nav-icon" }, "✧"), t("admin"));
     $("navigation").append(adminButton);
   }
   if (!account?.user.admin) adminButton?.remove();
@@ -643,787 +327,304 @@ async function render() {
     $("content").replaceChildren(connectLanding());
     return;
   }
-  if (pendingInvite) {
-    $("content").replaceChildren(joinLanding());
-    return;
-  }
-  const connectingId = pendingConnectionId;
-  if (account && connectingId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(connectingId)) {
-    await renderConnectionApproval(own, connectingId); return;
-  }
-  if (view === "account") {
-    await renderAccount(own);
-    return;
-  }
-  if (view === "admin") {
-    await renderAdmin(own);
-    return;
-  }
-  if (!client) {
-    $("sync-status").textContent = t("locked");
+  if (!account) {
     $("content").replaceChildren(welcome());
     return;
   }
-  if (view === "sharing") {
-    await renderSharing(own);
+  if (pendingConnectionId && ticketPattern.test(pendingConnectionId)) {
+    await renderConnectionApproval(own, pendingConnectionId);
     return;
   }
-  const options = householdOptions();
-  if (
-    !selected ||
-    !options.some(
-      (o) => o.household === selected.household && o.list === selected.list,
-    )
-  )
-    selected = options[0] ?? null;
-  if (!selected) {
-    $("sync-status").textContent = t("synced");
-    $("content").replaceChildren(
-      title("connectTitle", "connectText"),
-      joinPanel(),
-    );
+  if (view === "account") return renderAccount(own);
+  if (view === "admin") return renderAdmin(own);
+  screen = "lists";
+  renderLists();
+}
+const listName = (list) => list.projection.name || t("untitledList");
+// The capture field survives re-rendering, so a change arriving from the phone never eats what is being typed.
+const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 1000, autocomplete: "off", required: true });
+function renderLists() {
+  if (!store.cursor) {
+    $("content").replaceChildren(title("listTitle", "listSubtitle"), paragraph("loading"));
     return;
   }
-  const h = client.read(selected.household),
-    local = h.lists[selected.list];
-  if (!local?.confirmed) {
-    $("content").replaceChildren(
-      title("listTitle", "listSubtitle"),
-      paragraph("loading"),
-    );
+  const all = [...store.lists.values()].sort((a, b) => listName(a).localeCompare(listName(b), locale) || (a.id < b.id ? -1 : 1));
+  if (!all.length) {
+    $("content").replaceChildren(title("listTitle", "listSubtitle"),
+      el("section", { class: "paper empty" },
+        el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+        el("h2", {}, t("firstListTitle")), paragraph("firstListText"),
+        button(t("newList"), newListDialog, "primary")));
     return;
   }
-  const p = await client.view(selected.household, selected.list);
-  if (own !== generation) return;
-  const rows = Object.values(p.rows)
-      .filter((r) => !r.archived && !p.tombstones[r.id])
-      .sort(
-        (a, b) =>
-          number(a.facts.position ?? 0) - number(b.facts.position ?? 0) ||
-          (a.facts.createdAt ?? 0) - (b.facts.createdAt ?? 0) ||
-          (a.id < b.id ? -1 : 1),
-      ),
-    needed = rows.filter((r) => !r.facts.checked),
-    picked = rows.filter((r) => r.facts.checked);
-  const select = el(
-    "select",
-    {
-      class: "list-select",
-      "aria-label": t("listLabel"),
-      onchange: (event) => {
-        const option = options[Number(event.target.value)];
-        selected = option;
-        act(async () => {
-          await syncSelected();
-        });
-      },
-    },
-    options.map((o, i) =>
-      el(
-        "option",
-        {
-          value: i,
-          ...(o.household === selected.household && o.list === selected.list
-            ? { selected: true }
-            : {}),
-        },
-        o.label,
-      ),
-    ),
-  );
-  const input = el("input", {
-      id: "capture-name",
-      type: "text",
-      maxlength: 1000,
-      autocomplete: "off",
-      placeholder: t("addPlaceholder"),
-      "aria-label": t("addPlaceholder"),
-      required: true,
-    }),
-    capture = el(
-      "form",
-      {
-        class: "capture",
-        onsubmit: (event) => {
-          event.preventDefault();
-          const name = input.value.trim();
-          if (!name || name.length > 1000) {
-            notice("invalidName", true);
-            return;
-          }
-          act(async () => {
-            await client.enqueue(selected.household, selected.list, "capture", {
-              proposedId: crypto.randomUUID(),
-              key: canonical(normalize(name), p.aliases),
-              name,
-              rawText: name,
-              quantity: null,
-              unit: null,
-              normalizerVersion: 1,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-              position: rows.length,
-            });
-            input.value = "";
-            await syncSelected();
-          });
-        },
-      },
-      input,
-      el("button", { type: "submit", "aria-label": t("add") }, "+"),
-    );
-  const section = (key, items) => [
-    el(
-      "div",
-      { class: "list-section-label" },
-      t(key),
-      el("span", {}, items.length),
-    ),
-    el(
-      "ul",
-      { class: "items" },
-      items.map((r) => itemNode(r)),
-    ),
+  if (!store.lists.has(selected)) selected = all[0].id;
+  const list = store.lists.get(selected), id = list.id, items = listRows(list.projection),
+    needed = items.filter((r) => !isChecked(r)), picked = items.filter(isChecked);
+  const focused = document.activeElement === captureInput;
+  captureInput.placeholder = t("addPlaceholder");
+  captureInput.setAttribute("aria-label", t("addPlaceholder"));
+  const select = el("select", { class: "list-select", "aria-label": t("listLabel"),
+    onchange: (event) => { selected = event.target.value; clearNotice(); render().catch(failure); } },
+  all.map((l) => el("option", { value: l.id, ...(l.id === id ? { selected: true } : {}) }, listName(l))));
+  const capture = el("form", { class: "capture", onsubmit: (event) => {
+    event.preventDefault();
+    const name = captureInput.value.trim();
+    if (busy) return;
+    if (!name || name.length > 1000) {
+      notice("invalidName", true);
+      return;
+    }
+    captureInput.value = "";
+    act(async () => {
+      try {
+        const current = store.lists.get(id);
+        requireThat(current, "not_found");
+        await change(id, "capture", captures(current.projection, [{ name }], Date.now())[0]);
+      } catch (error) {
+        if (!captureInput.value) captureInput.value = name;
+        throw error;
+      }
+    });
+  } }, captureInput, el("button", { type: "submit", "aria-label": t("add") }, "+"));
+  const section = (key, rows, extra = null) => [
+    el("div", { class: "list-section-label" }, t(key), el("span", { class: "header-actions" }, extra, el("span", {}, rows.length))),
+    el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
   ];
-  const list = el(
-    "section",
-    { class: "paper" },
-    el(
-      "div",
-      { class: "paper-header" },
-      select,
-      button(t("importTitle"), () => act(async () => {
-        const own = generation, active = client, destination = { ...selected };
-        const [packs, modelConfig, instance] = await loadImportResources();
-        if (own !== generation || active !== client) return;
-        importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
-          server: instance.ai ? { csrf: account.csrfToken } : null,
-          client: active, destination, valid: () => own === generation && active === client && selected?.household === destination.household && selected?.list === destination.list,
-          finished: async () => { await syncSelected(); await render(); } });
-      }, { rerender: false })),
-      el("span", { class: "badge" }, t("privateByDesign")),
-    ),
+  const people = access(list, account.user.id);
+  const paper = el("section", { class: "paper" },
+    el("div", { class: "paper-header" },
+      el("div", { class: "header-actions" }, select, button(t("newList"), newListDialog, "text-button")),
+      el("div", { class: "header-actions" },
+        button(t("share"), () => shareDialog(id)),
+        button("···", () => listMenu(id), "item-edit", { "aria-label": t("listMenu", { name: listName(list) }) }))),
     capture,
     ...(needed.length ? section("toPickUp", needed) : []),
-    ...(picked.length ? section("pickedUp", picked) : []),
-    ...(!rows.length
-      ? [
-          el(
-            "div",
-            { class: "empty" },
-            el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
-            el("h2", {}, t("emptyTitle")),
-            paragraph("emptyText"),
-          ),
-        ]
-      : []),
-    el("progress", {
-      class: "visually-hidden",
-      value: picked.length,
-      max: Math.max(rows.length, 1),
-      "aria-label": t("pickedUp"),
-    }),
-  );
-  const aside = el(
-    "aside",
-    { class: "aside-card" },
-    el("p", { class: "eyebrow" }, t("yourEveryday")),
-    el("h2", {}, t("quietTitle")),
-    el("p", {}, t("quietText")),
-    el(
-      "div",
-      { class: "fine-print" },
-      el("span", { "aria-hidden": "true" }, "◇"),
-      t("privateNote"),
-    ),
-  );
-  $("sync-status").textContent = t(local.pending.length ? "pending" : "synced");
+    ...(picked.length ? section("pickedUp", picked, button(t("finishShopping"), () => act(() => finishShopping(id)), "text-button")) : []),
+    ...(!items.length ? [el("div", { class: "empty" },
+      el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+      el("h2", {}, t("emptyTitle")), paragraph("emptyText"))] : []),
+    el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
+  const aside = el("aside", { class: "aside-card" },
+    el("p", { class: "eyebrow" }, t("peopleWithAccess")),
+    el("h2", {}, t(people.length > 1 ? "sharedTitle" : "justYou")),
+    el("p", {}, people.map((p) => p.you ? t("youName", { name: p.name }) : p.name).join(", ")),
+    el("p", {}, t(people.length > 1 ? "sharedText" : "privateText")));
   $("content").replaceChildren(
-    title(
-      "listTitle",
-      "listSubtitle",
-      el("span", { class: "pill" }, t("itemCount", { count: needed.length })),
-    ),
-    el("div", { class: "list-layout" }, list, aside),
-  );
-  if (Object.keys(p.conflicts).length || local.pending.some((x) => x.blocked))
-    notice("conflictNotice", true);
+    title("listTitle", "listSubtitle", el("span", { class: "pill" }, t("itemCount", { count: needed.length }))),
+    el("div", { class: "list-layout" }, paper, aside));
+  if (focused) captureInput.focus({ preventScroll: true });
 }
-function itemNode(row) {
-  const checked = row.facts.checked === true || row.facts.checked === "true",
-    check = el(
-      "button",
-      {
-        type: "button",
-        class: "check",
-        role: "checkbox",
-        id: `check-${row.id}`,
-        "aria-checked": checked,
-        "aria-label": t(checked ? "uncheckItem" : "checkItem", {
-          name: row.facts.name,
-        }),
-        onclick: () =>
-          act(async () => {
-            await client.enqueue(selected.household, selected.list, "check", {
-              target: row.id,
-              expected: { check: row.revisions.check ?? null },
-              checked: !checked,
-              checkedAt: checked ? null : Date.now(),
-              updatedAt: Date.now(),
-            });
-            await syncSelected();
-          }),
-      },
-      checked ? "✓" : "",
-    );
+/** Shows what the server recorded for this change: a conflict or a rejection, in the projection's own terms. */
+function report(reply) {
+  const issue = problem(reply);
+  if (issue) notice(dictionary[issue] ? issue : "conflict_stale", true);
+  else clearNotice();
+  return reply;
+}
+const change = async (listId, kind, payload) => report(await lists.apply(listId, kind, payload));
+function itemNode(listId, row) {
+  const checked = isChecked(row);
   const metadata = [];
   if (row.facts.quantity != null)
-    metadata.push(
-      t("quantityLabel", {
-        amount: new Intl.NumberFormat(locale, {
-          maximumFractionDigits: 10,
-        }).format(number(row.facts.quantity)),
-        unit: t(row.facts.unit),
-      }),
-    );
+    metadata.push(t("quantityLabel", {
+      amount: new Intl.NumberFormat(locale, { maximumFractionDigits: 10 }).format(Number(row.facts.quantity)),
+      unit: t(row.facts.unit),
+    }));
   if (row.facts.store) metadata.push(row.facts.store);
   if (row.facts.note) metadata.push(row.facts.note);
-  return el(
-    "li",
-    { class: `item${checked ? " checked" : ""}` },
-    check,
-    el(
-      "div",
-      { class: "item-info" },
+  return el("li", { class: `item${checked ? " checked" : ""}` },
+    el("button", { type: "button", class: "check", role: "checkbox", id: `check-${row.id}`, "aria-checked": checked,
+      "aria-label": t(checked ? "uncheckItem" : "checkItem", { name: row.facts.name }),
+      onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? "✓" : ""),
+    el("div", { class: "item-info" },
       el("div", { class: "item-name" }, row.facts.name),
-      metadata.length
-        ? el("div", { class: "item-meta" }, metadata.join(" · "))
-        : null,
-    ),
-    button("···", () => editDialog(row), "item-edit", {
-      "aria-label": t("editItem", { name: row.facts.name }),
-    }),
-  );
+      metadata.length ? el("div", { class: "item-meta" }, metadata.join(" · ")) : null),
+    button("···", () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
 }
-function editDialog(row) {
+function editDialog(listId, row) {
   const fields = {};
   const field = (key, type = "text", max = 1000) => {
-    const node = el("input", {
-      id: `edit-${key}`,
-      class: "field",
-      type,
-      maxlength: max,
-      value:
-        key === "quantity"
-          ? (row.facts.quantity ?? "")
-          : (row.facts[key] ?? ""),
-      ...(type === "number" ? { min: 0, step: "any" } : {}),
-    });
+    const node = el("input", { id: `edit-${key}`, class: "field", type, maxlength: max, value: row.facts[key] ?? "",
+      ...(type === "number" ? { min: 0, step: "any" } : {}) });
     fields[key] = node;
     return [el("label", { class: "label", for: `edit-${key}` }, t(key)), node];
   };
-  const unit = el(
-      "select",
-      { id: "edit-unit", class: "field" },
-      ["PIECE", "PACK", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE"].map((k) =>
-        el(
-          "option",
-          { value: k, ...(row.facts.unit === k ? { selected: true } : {}) },
-          t(k),
-        ),
-      ),
-    ),
-    error = el("p", { class: "dialog-error", role: "alert" });
-  const form = el(
-    "form",
-    {
-      onsubmit: (event) => {
-        event.preventDefault();
-        const name = fields.name.value.trim(),
-          amount = fields.quantity.value;
-        try {
-          requireThat(name && name.length <= 1000, "invalidName");
-          requireThat(
-            amount === "" ||
-              (Number.isFinite(Number(amount)) && Number(amount) >= 0),
-            "invalidQuantity",
-          );
-          const changes = {};
-          for (const k of ["name", "note", "store"]) {
-            const value = fields[k].value.trim() || null;
-            if (value !== (row.facts[k] ?? null)) changes[k] = value;
-          }
-          if (changes.name) changes.key = normalize(name);
-          const quantity = amount === "" ? null : decimal(Number(amount)),
-            selectedUnit = amount === "" ? null : unit.value;
-          if (
-            quantity !== (row.facts.quantity ?? null) ||
-            selectedUnit !== (row.facts.unit ?? null)
-          ) {
-            changes.quantity = quantity;
-            changes.unit = selectedUnit;
-          }
-          if (!Object.keys(changes).length) {
-            closeDialog();
-            return;
-          }
-          const expected = {};
-          for (const k of Object.keys(changes))
-            expected[
-              ["name", "key", "gtin"].includes(k)
-                ? "name"
-                : ["quantity", "unit"].includes(k)
-                  ? "quantity"
-                  : k
-            ] =
-              row.revisions[
-                ["name", "key", "gtin"].includes(k)
-                  ? "name"
-                  : ["quantity", "unit"].includes(k)
-                    ? "quantity"
-                    : k
-              ] ?? null;
-          changes.updatedAt = Date.now();
-          closeDialog();
-          act(async () => {
-            await client.enqueue(selected.household, selected.list, "edit", {
-              target: row.id,
-              changes,
-              expected,
-            });
-            await syncSelected();
-          });
-        } catch (e) {
-          error.textContent = t(e.code ?? "invalid");
-        }
-      },
-    },
-    el("h2", {}, t("editItem", { name: row.facts.name })),
-    ...field("name"),
-    el(
-      "div",
-      { class: "row-grid" },
-      el("div", {}, ...field("quantity", "number")),
-      el(
-        "div",
-        {},
-        el("label", { class: "label", for: "edit-unit" }, t("unit")),
-        unit,
-      ),
-    ),
-    ...field("note", "text", 8000),
-    ...field("store", "text", 80),
-    error,
-    el(
-      "div",
-      { class: "button-row" },
-      button(
-        t("remove"),
-        () => {
-          closeDialog();
-          act(async () => {
-            await client.enqueue(selected.household, selected.list, "delete", {
-              target: row.id,
-              expected: { lifecycle: row.lifecycle ?? null },
-              deletedAt: Date.now(),
-              updatedAt: Date.now(),
-            });
-            await syncSelected();
-          });
-        },
-        "danger",
-      ),
-      button(t("cancel"), closeDialog),
-      el("button", { type: "submit", class: "primary" }, t("save")),
-    ),
-  );
-  openDialog(form);
-}
-async function refreshSelected() {
-  if (!client) return;
-  const own = generation,
-    options = householdOptions();
-  if (
-    !selected ||
-    !options.some(
-      (o) => o.list === selected.list && o.household === selected.household,
-    )
-  )
-    selected = options[0] ?? null;
-  if (!selected) return;
-  try {
-    const focusId = document.activeElement?.id;
-    await client.synchronize(selected.household, selected.list);
-    if (own !== generation) return;
-    clearNotice();
-    await render();
-    if (own === generation && focusId)
-      $(focusId)?.focus({ preventScroll: true });
-  } catch (e) {
-    if (own !== generation) return;
-    await render();
-    failure(e);
-  }
-}
-function joinPanel() {
-  if (vault.read().creating) return el("section", { class: "paper panel-body" },
-    el("h2", {}, t("creationPending")), paragraph("creationPendingHelp"),
-    button(t("creationResume"), () => act(() => finishHouseholdSetup(c => c.completeCreation())), "primary"), vault.read().creating.rejected ? button(t("creationAbandon"), () =>
-      messageDialog("creationAbandon", "creationAbandonHelp", () => client.abandonRejectedCreation())) : null);
-  if (vault.read().joining) return joinCodePanel();
-  const input = el("textarea", {
-    id: "invite",
-    class: "field",
-    maxlength: 4096,
-    rows: 4,
-    required: true,
-    spellcheck: false,
-    autocomplete: "off",
-  });
-  return el(
-    "div",
-    { class: "panel" },
-    el("section", { class: "paper panel-body" }, el("h2", {}, t("createHouseholdTitle")),
-      paragraph("createHouseholdText"), button(t("createHousehold"), () => act(createHouseholdDialog), "primary")),
-    Object.keys(vault.read().households).length ? null : firstHouseholdPanel(),
-    el(
-      "section",
-      { class: "paper" },
-      el(
-        "form",
-        {
-          class: "panel-body",
-          onsubmit: (event) => {
-            event.preventDefault();
-            const value = input.value.trim();
-            input.value = "";
-            act(async () => {
-              await client.requestJoin(value);
-              view = "sharing";
-            });
-          },
-        },
-        el("h2", {}, t("joinTitle")),
-        paragraph("joinText"),
-        el("label", { class: "label", for: "invite" }, t("invitation")),
-        input,
-        paragraph("joinHelp", "helper"),
-        el(
-          "div",
-          { class: "button-row" },
-          el("button", { type: "submit", class: "primary" }, t("join")),
-        ),
-      ),
-    ),
-  );
-}
-function firstHouseholdPanel() {
-  return el(
-    "details",
-    { class: "paper panel-body" },
-    el("summary", {}, t("firstHouseholdTitle")),
-    paragraph("firstHouseholdText"),
-    el(
-      "ol",
-      { class: "setup-steps" },
-      el("li", {}, t("firstHouseholdStart"), " ",
-        el("code", { class: "server-address" }, location.origin)),
-      el("li", {}, t("firstHouseholdCode")),
-      el("li", {}, t("firstHouseholdShare")),
-      el("li", {}, t("firstHouseholdInvite")),
-    ),
-  );
-}
-async function finishHouseholdSetup(start) {
-  const own = generation;
-  try {
-    selected = await start(client); view = "list"; await syncSelected();
-  } catch (error) {
-    if (own === generation) await render();
-    throw error;
-  }
-}
-async function createHouseholdDialog() {
-  const own = generation, active = client;
-  let draft = await prepareHousehold(location.origin, await active.info());
-  if (own !== generation) return;
-  const url = URL.createObjectURL(new Blob([draft.file], { type: "application/json" }));
-  const name = el("input", { id: "new-list-name", class: "field", required: true, maxlength: 100, autocomplete: "off" });
-  const key = el("input", { id: "recovery-key-check", class: "field", type: "password", required: true, autocomplete: "off", spellcheck: false });
-  const file = el("input", { id: "recovery-file-check", type: "file", accept: ".json,application/json", required: true });
-  const saved = el("input", { type: "checkbox", required: true });
+  const unit = el("select", { id: "edit-unit", class: "field" },
+    ["PIECE", "PACK", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE"].map((k) =>
+      el("option", { value: k, ...(row.facts.unit === k ? { selected: true } : {}) }, t(k))));
   const error = el("p", { class: "dialog-error", role: "alert" });
-  openDialog(el("form", { onsubmit: event => {
+  openDialog(el("form", { onsubmit: (event) => {
     event.preventDefault();
-    act(async () => {
-      requireThat(draft && saved.checked && file.files.length === 1 && file.files[0].size <= 8 * 1024 * 1024);
-      error.textContent = "";
-      let verified;
-      try { verified = await verifySavedHousehold(draft, new Uint8Array(await file.files[0].arrayBuffer()), key.value.trim()); }
-      catch { if (own === generation) error.textContent = t("recoveryReadBackError"); return; }
-      if (own !== generation) return;
-      const label = name.value.trim();
+    const name = fields.name.value.trim(), amount = fields.quantity.value;
+    try {
+      requireThat(name && name.length <= 1000, "invalidName");
+      requireThat(amount === "" || (Number.isFinite(Number(amount)) && Number(amount) >= 0), "invalidQuantity");
+      const changes = {};
+      for (const k of ["name", "note", "store"]) {
+        const value = fields[k].value.trim() || null;
+        if (value !== (row.facts[k] ?? null)) changes[k] = value;
+      }
+      if (changes.name) changes.key = normalize(name);
+      const quantity = amount === "" ? null : decimal(Number(amount)), selectedUnit = amount === "" ? null : unit.value;
+      if (quantity !== (row.facts.quantity ?? null) || selectedUnit !== (row.facts.unit ?? null)) {
+        changes.quantity = quantity;
+        changes.unit = selectedUnit;
+      }
       closeDialog();
-      await finishHouseholdSetup(c => c.createHousehold(verified, label));
-    });
-  } }, el("h2", {}, t("createHouseholdTitle")), paragraph("recoverySaveHelp"),
-  el("label", { class: "label", for: "new-list-name" }, t("listName")), name,
-  el("a", { href: url, download: "usuals-recovery.json", class: "secondary" }, t("recoveryDownload")),
-  el("p", { class: "label" }, t("recoveryKey")), el("p", { class: "fingerprint" }, draft.secret),
-  paragraph("recoveryKeyHelp", "helper"),
-  el("label", { class: "label", for: "recovery-file-check" }, t("recoveryReadBack")), file,
-  el("label", { class: "label", for: "recovery-key-check" }, t("recoveryKeyCheck")), key,
-  el("label", { class: "check-row" }, saved, t("recoverySaved")), error,
-  el("div", { class: "button-row" }, button(t("cancel"), closeDialog),
-    el("button", { type: "submit", class: "primary" }, t("createHousehold")))),
-  () => { URL.revokeObjectURL(url); draft = null; key.value = ""; file.value = ""; });
-  name.focus();
+      if (Object.keys(changes).length) act(() => change(listId, "edit", edit(row, changes, Date.now())));
+    } catch (e) {
+      error.textContent = t(e.code ?? "invalid");
+    }
+  } },
+  el("h2", {}, t("editItem", { name: row.facts.name })),
+  ...field("name"),
+  el("div", { class: "row-grid" },
+    el("div", {}, ...field("quantity", "number")),
+    el("div", {}, el("label", { class: "label", for: "edit-unit" }, t("unit")), unit)),
+  ...field("note", "text", 8000),
+  ...field("store", "text", 80),
+  error,
+  el("div", { class: "button-row" },
+    button(t("remove"), () => {
+      closeDialog();
+      act(() => change(listId, "delete", remove(row, Date.now())));
+    }, "danger"),
+    button(t("cancel"), closeDialog),
+    el("button", { type: "submit", class: "primary" }, t("save")))));
 }
-async function invitationDialog(id) {
-  const own = generation, active = client, link = await active.invite(id);
-  if (own !== generation) return;
-  const expiresAt = active.read(id).invites[parseInviteLink(link).inviteId].expiresAt;
-  const input = el("textarea", { class: "field", rows: 3, readonly: true, value: link, spellcheck: false,
-    "aria-label": t("invitation") });
-  const qr = invitationQr(link), status = el("p", { class: "helper", role: "status" });
-  const requests = el("div", { class: "pair-requests", "aria-live": "polite" }, paragraph("pairWaiting", "helper"));
-  let closed = false, polling = false, shown = "";
-  const copy = button(t("pairCopy"), async () => {
-    if (closed || Date.now() >= expiresAt) return;
-    try {
-      await navigator.clipboard.writeText(link);
-      if (!closed) status.textContent = t("pairCopied");
-    } catch { if (!closed) { input.parentElement.open = true; input.focus(); input.select(); status.textContent = t("pairCopyHelp"); } }
-  });
-  const refresh = button(t("pairNewCode"), () => {
-    closeDialog(); act(() => invitationDialog(id));
-  });
-  const updateExpiry = () => {
-    const expired = Date.now() >= expiresAt;
-    refresh.hidden = !expired;
-    if (expired) {
-      qr.replaceChildren(); input.value = ""; copy.disabled = true; status.textContent = t("pairExpired");
-    } else status.textContent = t("pairExpires", { time: date(expiresAt) });
-  };
-  // The sheet stays open while the phone scans; a request appears here with its code.
-  const poll = async () => {
-    if (closed || polling || busy || own !== generation) return;
-    polling = true;
-    try {
-      const found = await active.applicants(id), key = found.map(r => r.requestId + r.verified).join();
-      if (closed || own !== generation || key === shown) return;
-      shown = key;
-      requests.replaceChildren(...(found.length ? found.map(r => requestRow(id, r, approved => {
-        closeDialog(); if (approved) notice("pairApproved");
-      })) : [paragraph("pairWaiting", "helper")]));
-    } catch {} finally { polling = false; }
-  };
-  const timer = setInterval(updateExpiry, 1000), poller = setInterval(poll, 3000);
-  const heading = el("h2", { tabindex: -1 }, t("pairTitle"));
-  openDialog(el("div", { class: "pair-device" }, heading,
-    paragraph("pairIntro"), el("p", { class: "server-address" }, location.origin),
-    el("div", { class: "pair-layout" }, el("div", {}, qr, status),
-      el("div", { class: "pair-instructions" },
-        el("ol", { class: "setup-steps" }, el("li", {}, t("pairStepScan")), el("li", {}, t("pairStepConnect")), el("li", {}, t("pairStepVerify"))),
-        requests)),
-    el("details", {}, el("summary", {}, t("pairManual")), paragraph("ownerInviteHelp", "helper"), input, copy,
-      paragraph("pairManualHelp", "helper")),
-    el("div", { class: "button-row" }, refresh, button(t("close"), closeDialog))), () => {
-      closed = true; clearInterval(timer); clearInterval(poller); qr.replaceChildren(); input.value = "";
-    });
-  updateExpiry(); heading.focus();
+/** Moves picked-up items into the list's history as one trip, with Undo while the notice shows. */
+async function finishShopping(listId) {
+  const list = store.lists.get(listId), payload = list && finish(list.projection, Date.now());
+  if (!payload) return;
+  const reply = await change(listId, "finish", payload);
+  const count = Object.values(reply.list.projection.purchases ?? {}).filter((p) => p.tripId === payload.tripId).length;
+  if (count && !problem(reply))
+    notice("finished", false, { count }, [t("undo"), () => act(() => change(listId, "undo", undo(reply.intent)))]);
 }
-function invitationQr(uri) {
-  const matrix = qrMatrix(uri), size = matrix.length + 8, ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", `0 0 ${size} ${size}`); svg.setAttribute("class", "pair-qr");
-  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", t("pairQr"));
-  const background = document.createElementNS(ns, "rect");
-  background.setAttribute("width", String(size)); background.setAttribute("height", String(size)); background.setAttribute("fill", "#fff");
-  const path = document.createElementNS(ns, "path");
-  path.setAttribute("fill", "#000");
-  path.setAttribute("d", matrix.flatMap((row, y) => row.flatMap((dark, x) => dark ? [`M${x + 4},${y + 4}h1v1h-1z`] : [])).join(""));
-  svg.append(background, path); return svg;
+function nameDialog(heading, initial, save) {
+  const input = el("input", { id: "list-name", class: "field", required: true, maxlength: 100, autocomplete: "off", value: initial });
+  openDialog(el("form", { onsubmit: (event) => {
+    event.preventDefault();
+    const name = input.value.trim();
+    if (!name) return;
+    closeDialog();
+    if (name !== initial) act(() => save(name));
+  } },
+  el("h2", {}, t(heading)),
+  el("label", { class: "label", for: "list-name" }, t("listName")), input,
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), el("button", { type: "submit", class: "primary" }, t("save")))));
+  input.focus();
+  input.select();
 }
-/** A join request: approvable only when this device's invite key verified it. */
-function requestRow(id, r, done) {
-  const own = generation, error = el("p", { class: "dialog-error", role: "alert" });
-  const deny = button(t("ownerDeny"), () => act(async () => { await client.denyApplicant(id, r.requestId); done(false); }));
-  if (!r.verified) return el("div", { class: "paper panel-body" }, paragraph("ownerUnverifiable", "helper"),
-    el("div", { class: "button-row" }, deny));
-  const input = el("input", { type: "checkbox", required: true });
-  return el("form", { class: "paper panel-body", onsubmit: event => {
-    event.preventDefault(); requireThat(input.checked);
-    act(async () => {
-      error.textContent = "";
-      try { await client.approve(id, r.pending); done(true); }
-      catch (e) { if (own === generation) error.textContent = t(e.code === "unverified" ? "ownerUnverifiable" : dictionary[e.code] ? e.code : "serverUnavailable"); }
-    });
-  } }, el("p", { class: "label" }, t("ownerCodeLabel")), el("p", { class: "pair-code" }, spaced(r.code)),
-    el("label", { class: "check-row" }, input, t("connectionCompared")), error,
-    el("div", { class: "button-row" }, deny, el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
+function newListDialog() {
+  nameDialog("newList", "", async (name) => { selected = (await lists.create(name)).id; });
 }
-async function applicantsDialog(id) {
-  const own = generation, requests = await client.applicants(id);
-  if (own !== generation) return;
-  openDialog(el("div", {}, el("h2", {}, t("ownerRequests")), paragraph("ownerApproveHelp"),
-    ...requests.map(r => requestRow(id, r, approved => { closeDialog(); if (approved) notice("pairApproved"); })),
-    requests.length ? null : paragraph("ownerNoRequests"),
+function listMenu(listId) {
+  const list = store.lists.get(listId);
+  if (!list) return;
+  const values = { name: listName(list) };
+  openDialog(el("div", {}, el("h2", {}, listName(list)),
+    el("div", { class: "menu-actions" },
+      button(t("share"), () => shareDialog(listId)),
+      // A rename is guarded by the name this browser showed, so two people renaming at once see a conflict.
+      button(t("renameList"), () => nameDialog("renameList", list.projection.name, (name) => change(listId, "list_name", rename(list.projection, name)))),
+      button(t("importTitle"), () => { closeDialog(); openImport(listId); }),
+      list.role === "owner"
+        ? button(t("deleteList"), () => messageDialog("deleteListTitle", "deleteListText", () => lists.delete(listId), values), "danger")
+        : button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(listId, account.user.id), values), "danger")),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
 }
-/** The /join page: hand the link to the installed app, or join with this browser's vault. */
-function joinLanding() {
-  const link = pendingInvite;
-  return el("section", { class: "paper panel-body" }, el("h2", {}, t("joinLandingTitle")), paragraph("joinLandingText"),
-    el("p", { class: "server-address" }, location.origin),
-    el("div", { class: "button-row" }, el("a", { class: "primary", href: appLink(link) }, t("openInUsuals")),
-      client ? button(t("joinInBrowser"), () => act(async () => {
-        await client.requestJoin(link);
-        forgetInvite(inviteTab); pendingInvite = null; view = "sharing";
-      })) : null,
-      button(t("close"), () => { forgetInvite(inviteTab); pendingInvite = null; render().catch(failure); })),
-    client ? null : el("div", { class: "welcome-actions" }, paragraph("joinUnlockFirst", "helper"), ...welcomeActions(Boolean(account))));
+function openImport(listId) {
+  act(async () => {
+    const own = generation;
+    const [packs, modelConfig, instance] = await loadImportResources();
+    if (own !== generation || !store?.lists.has(listId)) return;
+    const projection = () => (own === generation ? store.lists.get(listId)?.projection ?? null : null);
+    importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
+      server: instance.ai ? { csrf: account.csrfToken } : null, projection,
+      capture: async (items) => report(await lists.send(listId, captures(projection(), items, Date.now()).map((p) => intent(listId, "capture", p)))),
+      valid: () => projection() !== null, finished: () => render() });
+  }, { rerender: false });
 }
-function joinCodePanel() {
-  const value = el("p", {
-    class: "pair-code",
-    "aria-label": t("joinCode"),
+function personRow(name, detail, action) {
+  return el("div", { class: "account-row" },
+    el("div", { class: "avatar", "aria-hidden": "true" }, (name || "?").slice(0, 1).toUpperCase()),
+    el("div", { class: "account-info" }, el("div", { class: "account-name" }, name), detail ? el("div", { class: "account-detail" }, detail) : null),
+    action);
+}
+/** People with access, and a search over this server's accounts: picking someone shares the list at once. */
+function shareDialog(listId) {
+  let found = [], searched = null, lookups = 0, timer = null;
+  const heading = el("h2", {}), members = el("div", {}), results = el("div", { "aria-live": "polite" });
+  const error = el("p", { class: "dialog-error", role: "alert" });
+  const search = el("input", { id: "share-search", class: "field", type: "search", autocomplete: "off", maxlength: 200,
+    placeholder: t("shareSearch") });
+  const run = (action) => act(async () => {
+    error.textContent = "";
+    try { await action(); }
+    catch (e) {
+      if (e?.code === "unauthenticated") throw e;
+      error.textContent = t(dictionary[e?.code] ? e.code : "serverUnavailable");
+    }
+    draw();
   });
-  const own = generation;
-  client
-    .pendingCode()
-    .then((code) => {
-      if (own === generation && code) value.textContent = spaced(code);
-    })
-    .catch((error) => {
-      if (own === generation) failure(error);
-    });
-  return el(
-    "section",
-    { class: "paper panel" },
-    el(
-      "div",
-      { class: "panel-body" },
-      el("h2", {}, t("joinCodeTitle")),
-      paragraph("joinCodeText"),
-      value,
-      el(
-        "div",
-        { class: "button-row" },
-        button(
-          t("checkApproval"),
-          () =>
-            act(async () => {
-              const joined = await client.completeJoin();
-              if (!joined) {
-                notice("waitingApproval");
-                return;
-              }
-              view = "list";
-              selected = null;
-              await render();
-              await syncSelected();
-              notice("joined");
-            }),
-          "primary",
-        ),
-      ),
-    ),
-  );
-}
-async function renderSharing(own) {
-  const state = vault.read(),
-    panels = [];
-  for (const h of Object.values(state.households)) {
-    const m = body(h.proofs.at(-1)),
-      isOwner = ownsHousehold(h),
-      rows = [];
-    for (const member of m.members)
-      for (const device of member.devices) {
-        const print = hex(
-          unb64(await fingerprint(h.server.serverId, h.id, device), 32),
-        );
-        if (own !== generation) return;
-        rows.push(
-          el(
-            "div",
-            { class: "account-row" },
-            el("div", { class: "avatar", "aria-hidden": "true" }, "◇"),
-            el(
-              "div",
-              { class: "account-info" },
-              el(
-                "div",
-                { class: "account-name" },
-                device.id === h.device.publicKeys.id
-                  ? t("deviceThis")
-                  : t(member.role),
-              ),
-              el(
-                "div",
-                { class: "account-detail" },
-                print.match(/.{1,4}/g).join(" "),
-              ),
-            ),
-            el("span", { class: "badge" }, t(member.role)),
-            isOwner && device.id !== h.device.publicKeys.id ? button(t("ownerRemove"), () =>
-              messageDialog("ownerRemove", "ownerRemoveHelp", () => client.removeDevice(h.id, device.id))) : null,
-          ),
-        );
-      }
-    panels.push(
-      el(
-        "section",
-        { class: "paper" },
-        el(
-          "div",
-          { class: "panel-body" },
-          el("p", { class: "eyebrow" }, t("householdLabel")),
-          el("h2", {}, t("householdDevices")),
-          ...rows,
-          paragraph(isOwner ? "ownerHelp" : "householdHelp", "helper"),
-          isOwner ? el("div", { class: "button-row" },
-            button(t("connectionAddPhone"), () => act(() => connectPhoneDialog(h.id), { rerender: false }), "primary"),
-            button(t("pairTitle"), () => act(() => invitationDialog(h.id))),
-            button(t("ownerRequests"), () => act(() => applicantsDialog(h.id))),
-            h.pendingMembership ? button(t("ownerDiscardObsolete"), () =>
-              messageDialog("ownerDiscardObsolete", "ownerDiscardHelp", () => client.discardInvalidMembership(h.id))) : null) : null,
-        ),
-      ),
-    );
+  function draw() {
+    if (!heading.isConnected) return;
+    const list = store?.lists.get(listId);
+    if (!list) {
+      closeDialog();
+      return;
+    }
+    heading.textContent = t("shareTitle", { name: listName(list) });
+    members.replaceChildren(...access(list, account.user.id).map((m) => personRow(m.you ? t("youName", { name: m.name }) : m.name, t(m.role),
+      m.action === "remove" ? button(t("shareRemove"), () => run(() => lists.removeMember(listId, m.id)), "secondary", { "aria-label": t("shareRemovePerson", { name: m.name }) })
+        : m.action === "leave" ? button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(listId, m.id), { name: listName(list) }), "danger")
+          : null)));
+    const present = new Set([list.owner.id, ...list.members.map((m) => m.id)]);
+    const candidates = found.filter((p) => !present.has(p.id));
+    results.replaceChildren(...(searched === null ? [] : candidates.length
+      ? candidates.map((p) => personRow(p.name, p.detail, button(t("shareAdd"), () => run(() => lists.addMember(listId, p.id)), "primary", { "aria-label": t("shareAddPerson", { name: p.name }) })))
+      : [paragraph(searched ? "shareNoMatch" : found.length ? "shareEveryone" : "shareNoPeople", "helper")]));
   }
-  panels.push(joinPanel());
-  if (own !== generation) return;
-  $("content").replaceChildren(
-    title("connectTitle", "connectText"),
-    el(
-      "div",
-      { class: "panel" },
-      ...panels,
-      paragraph("browserTrust", "helper"),
-    ),
-  );
+  async function lookup() {
+    const mine = ++lookups, query = search.value.trim();
+    try {
+      const people = await lists.people(query);
+      if (mine !== lookups) return;
+      found = people;
+      searched = query;
+      draw();
+    } catch (e) {
+      if (mine === lookups) error.textContent = t(dictionary[e?.code] ? e.code : "serverUnavailable");
+    }
+  }
+  search.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(lookup, 250); });
+  openDialog(el("div", {}, heading,
+    el("p", { class: "label" }, t("peopleWithAccess")), members,
+    el("label", { class: "label", for: "share-search" }, t("shareAddPeople")), search, results, error,
+    paragraph("shareHelp", "helper"),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))),
+  () => { clearTimeout(timer); lookups++; }, draw);
+  draw();
+  lookup();
+  search.focus();
 }
-const date = (n) =>
-  Number.isFinite(n)
-    ? new Intl.DateTimeFormat(locale, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(n)
-    : t("dateUnknown");
-const accountLabel = (user) =>
-  user.displayName || user.username || user.email || user.subject;
+const date = (n) => Number.isFinite(n)
+  ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(n)
+  : t("dateUnknown");
+const accountLabel = (user) => user.displayName || user.username || user.email || user.subject;
 function clearConnectionRequest() {
   pendingConnectionId = null;
   try { sessionStorage.removeItem("usuals-connect-request"); } catch {}
   history.replaceState(null, "", "/");
 }
+/** A phone that signed in through this browser: approve it after checking it shows the same code. */
 async function renderConnectionApproval(own, id) {
   let ticket;
   try { ticket = await api("/api/connect/" + id); }
   catch (error) {
     if (own === generation && ["not_found", "invalid"].includes(error.code)) {
-      clearConnectionRequest(); notice("pairExpired", true); await render(); return;
+      clearConnectionRequest(); notice("connectExpired", true); await render(); return;
     }
     throw error;
   }
@@ -1437,16 +638,64 @@ async function renderConnectionApproval(own, id) {
     }); } }, el("p", { class: "server-address" }, location.origin),
       el("p", { class: "pair-code", "aria-label": t("connectionCodeLabel") }, spaced(connectionCode(ticket.fingerprint))),
       el("label", { class: "check-row" }, compare, t("connectionCompared")),
-      el("button", { type: "submit", class: "primary" }, t("ownerApprove")),
+      el("button", { type: "submit", class: "primary" }, t("approvePhone")),
       button(t("cancel"), () => { clearConnectionRequest(); render().catch(failure); })));
 }
-async function connectedPhonesDialog() {
-  const own = generation, value = await api("/api/connections");
+function qrCode(uri) {
+  const matrix = qrMatrix(uri), size = matrix.length + 8, ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`); svg.setAttribute("class", "pair-qr");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", t("connectQr"));
+  const background = document.createElementNS(ns, "rect");
+  background.setAttribute("width", String(size)); background.setAttribute("height", String(size)); background.setAttribute("fill", "#fff");
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("fill", "#000");
+  path.setAttribute("d", matrix.flatMap((row, y) => row.flatMap((dark, x) => dark ? [`M${x + 4},${y + 4}h1v1h-1z`] : [])).join(""));
+  svg.append(background, path); return svg;
+}
+/** One QR for the person's own phone. The phone that scans it connects to this account at once, with no code to compare. */
+async function connectPhoneDialog() {
+  const own = generation, secret = crypto.getRandomValues(new Uint8Array(32));
+  const offer = await api("/api/connect/offers", { method: "POST", csrf: account.csrfToken, body: { secretHash: await hash(secret) } });
   if (own !== generation) return;
-  openDialog(el("div", {}, el("h2", {}, t("connectionSessions")),
-    ...value.connections.map(phone => el("section", { class: "panel-body" }, el("p", {}, phone.id.slice(-6) + " · " + date(phone.expiresAt)),
-      button(t("connectionRevoke"), () => act(async () => { await api("/api/connections/" + phone.id + "/revoke", { method: "POST", csrf: account.csrfToken }); closeDialog(); })))),
-    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+  const qr = qrCode(connectLink(location.origin, offer.id, secret));
+  secret.fill(0);
+  const status = el("p", { class: "helper", role: "status" }, t("connectPhoneWaiting"));
+  const again = button(t("connectNewCode"), () => { closeDialog(); act(connectPhoneDialog, { rerender: false }); });
+  again.hidden = true;
+  let closed = false, polling = false;
+  const stop = () => { closed = true; clearInterval(poller); qr.remove(); };
+  const end = (key, retry = false) => { stop(); status.textContent = t(key); again.hidden = !retry; };
+  const poll = async () => {
+    if (closed || polling) return;
+    polling = true;
+    try {
+      const found = await api("/api/connect/offers/" + offer.id).catch(e => { if (e.code === "not_found") return null; throw e; });
+      if (closed) return;
+      if (found?.ticket) end("connectionApproved");
+      else if (!found || Date.now() >= offer.expiresAt) end("connectExpired", true);
+    } catch {} finally { polling = false; }
+  };
+  const poller = setInterval(poll, 2000);
+  const heading = el("h2", { tabindex: -1 }, t("connectionAddPhone"));
+  openDialog(el("div", { class: "pair-device" }, heading, paragraph("connectPhoneIntro"),
+    el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "pair-layout" }, qr,
+      el("div", { class: "pair-instructions" },
+        el("ol", { class: "setup-steps" }, el("li", {}, t("connectPhoneStepScan")), el("li", {}, t("connectPhoneStepOpen"))),
+        status)),
+    el("div", { class: "button-row" }, again, button(t("close"), closeDialog))), () => {
+    stop();
+    if (screen === "account") render().catch(failure);
+  });
+  heading.focus();
+}
+/** The /connect page a phone camera opens: it hands the code to the installed app. */
+function connectLanding() {
+  return el("section", { class: "paper panel-body" }, el("h2", {}, t("connectLandingTitle")), paragraph("connectLandingText"),
+    el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "button-row" }, el("a", { class: "primary", href: connectAppLink(pendingConnect) }, t("openInUsuals")),
+      button(t("close"), () => { pendingConnect = null; render().catch(failure); })));
 }
 async function serverSettingsDialog() {
   const own = generation, settings = await api("/v1/ai/settings", { csrf: account.csrfToken });
@@ -1468,227 +717,51 @@ async function serverSettingsDialog() {
     paragraph("serverAiPrivacy"), advanced,
     el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { key.value = ""; });
 }
-const ownsHousehold = (h) => !h.removed &&
-  body(h.proofs.at(-1)).members.some(member => member.role === "owner" && member.devices.some(d => d.id === h.device.publicKeys.id));
-/**
- * One QR for the person's own phone. This account approves it, so the phone needs no sign-in of its own, and when this
- * browser owns a household the QR also carries an invite that the same approval spends.
- */
-async function connectPhoneDialog(household = client ? Object.values(vault.read().households).find(ownsHousehold)?.id : null) {
-  const own = generation, active = client, secret = crypto.getRandomValues(new Uint8Array(32));
-  const offer = await api("/api/connect/offers", { method: "POST", csrf: account.csrfToken, body: { secretHash: await hash(secret) } });
-  const invite = household ? parseInviteLink(await active.invite(household)) : null;
-  if (own !== generation) return;
-  const link = connectLink(location.origin, offer.id, secret, invite), qr = invitationQr(link);
-  const input = el("textarea", { class: "field", rows: 3, readonly: true, value: link, spellcheck: false, "aria-label": t("invitation") });
-  const status = el("p", { class: "helper", role: "status" });
-  const copy = button(t("pairCopy"), async () => {
-    if (closed) return;
-    try { await navigator.clipboard.writeText(input.value); if (!closed) status.textContent = t("pairCopied"); }
-    catch { if (!closed) { input.parentElement.open = true; input.focus(); input.select(); status.textContent = t("pairCopyHelp"); } }
-  });
-  const request = el("div", { class: "pair-requests", "aria-live": "polite" }, paragraph("connectPhoneWaiting", "helper"));
-  const refresh = button(t("pairNewCode"), () => { closeDialog(); act(() => connectPhoneDialog(household), { rerender: false }); });
-  refresh.hidden = true;
-  let closed = false, polling = false, ticket = null, approved = false, shown = "";
-  const manual = el("details", {}, el("summary", {}, t("pairManual")), input, copy, paragraph("pairManualHelp", "helper"));
-  // A used or expired code leaves nothing to scan or copy.
-  const retire = () => { qr.remove(); manual.remove(); input.value = ""; copy.disabled = true; };
-  const stop = () => { closed = true; clearInterval(poller); retire(); secret.fill(0); };
-  const finish = (key) => { stop(); request.replaceChildren(paragraph(key, "helper")); };
-  const approval = () => {
-    const compare = el("input", { type: "checkbox", required: true });
-    return el("form", { class: "paper panel-body", onsubmit: event => { event.preventDefault(); act(async () => {
-      requireThat(compare.checked && Date.now() < ticket.expiresAt);
-      await api("/api/connect/" + ticket.id + "/approve", { method: "POST", csrf: account.csrfToken });
-      approved = true; retire();
-      if (invite) request.replaceChildren(paragraph("connectPhoneJoining", "helper")); else finish("connectionApproved");
-    }, { rerender: false }); } }, el("p", { class: "label" }, t("ownerCodeLabel")), el("p", { class: "pair-code" }, spaced(connectionCode(ticket.fingerprint))),
-      el("label", { class: "check-row" }, compare, t("connectionCompared")),
-      el("div", { class: "button-row" }, el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
-  };
-  // The phone claims the code, then, once approved, asks to join with the invite and the keys behind that code.
-  const poll = async () => {
-    if (closed || polling || busy || own !== generation) return;
-    polling = true;
-    try {
-      if (!approved) {
-        const view = await api("/api/connect/offers/" + offer.id).catch(e => { if (e.code === "not_found") return null; throw e; });
-        if (closed) return;
-        if (!view) { finish("pairExpired"); refresh.hidden = false; return; }
-        if (view.ticket && view.ticket.id !== ticket?.id) { ticket = view.ticket; request.replaceChildren(approval()); }
-      }
-      if (!invite || (ticket && !approved)) return;
-      const found = (await active.applicants(household)).filter(r => r.verified && r.inviteId === invite.inviteId);
-      if (closed || own !== generation) return;
-      if (!ticket) {
-        // A phone already connected to this account joins with the invite alone, so its code is compared as for any invite.
-        const key = found.map(r => r.requestId).join();
-        if (key && key !== shown) { shown = key; request.replaceChildren(...found.map(r => requestRow(household, r, ok => { closeDialog(); if (ok) notice("pairApproved"); }))); }
-        return;
-      }
-      const server = vault.read().households[household].server.serverId;
-      for (const r of found) if (await joinsConnection(ticket, server, r.device)) {
-        await active.approve(household, r.pending);
-        return finish("connectPhoneDone");
-      }
-    } catch {} finally { polling = false; }
-  };
-  const poller = setInterval(poll, 2000);
-  const heading = el("h2", { tabindex: -1 }, t("connectionAddPhone"));
-  openDialog(el("div", { class: "pair-device" }, heading, paragraph(invite ? "connectPhoneHousehold" : "connectPhoneIntro"),
-    el("p", { class: "server-address" }, location.origin),
-    el("div", { class: "pair-layout" }, el("div", {}, qr, status),
-      el("div", { class: "pair-instructions" },
-        el("ol", { class: "setup-steps" }, el("li", {}, t("connectPhoneStepScan")), el("li", {}, t("connectPhoneStepApprove"))),
-        request)),
-    client ? null : paragraph("connectPhoneLocked", "helper"),
-    manual,
-    el("div", { class: "button-row" }, refresh, button(t("close"), closeDialog))), stop);
-  heading.focus();
-}
-/** The /connect page a phone camera opens: it hands the code to the installed app, which the computer then approves. */
-function connectLanding() {
-  return el("section", { class: "paper panel-body" }, el("h2", {}, t("connectLandingTitle")), paragraph("connectLandingText"),
-    el("p", { class: "server-address" }, location.origin),
-    el("div", { class: "button-row" }, el("a", { class: "primary", href: connectAppLink(pendingConnect) }, t("openInUsuals")),
-      button(t("close"), () => { pendingConnect = null; render().catch(failure); })));
-}
 async function renderAccount(own) {
-  if (!account) {
-    $("content").replaceChildren(welcome());
-    return;
-  }
-  const user = account.user,
-    card = el(
-      "section",
-      { class: "paper" },
-      el(
-        "div",
-        { class: "panel-body" },
-        el("p", { class: "eyebrow" }, t("signedInAs")),
-        el(
-          "div",
-          { class: "account-row" },
-          el(
-            "div",
-            { class: "avatar", "aria-hidden": "true" },
-            accountLabel(user).slice(0, 1).toUpperCase(),
-          ),
-          el(
-            "div",
-            { class: "account-info" },
-            el("div", { class: "account-name" }, accountLabel(user)),
-            el(
-              "div",
-              { class: "account-detail" },
-              user.username || user.email || user.subject,
-            ),
-          ),
-          user.admin
-            ? el("span", { class: "badge" }, t("administrator"))
-            : null,
-        ),
-        paragraph("accountEncryption", "helper"),
-        el(
-          "div",
-          { class: "button-row" },
-          ...(user.issuer === "urn:usuals:local"
-            ? [button(t("changePassword"), passwordDialog)]
-            : []),
-          button(t("connectionAddPhone"), () => act(() => connectPhoneDialog(), { rerender: false })),
-          button(t("connectionSessions"), () => act(connectedPhonesDialog, { rerender: false })),
-          button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
-          ...(stayUnlocked
-            ? [button(t("forgetBrowser"), () => act(async () => {
-                await forgetBrowser();
-                resetIdle();
-                notice("browserForgotten");
-              }))]
-            : []),
-          button(t("signOut"), () =>
-            act(async () => {
-              const csrf = account.csrfToken;
-              await forgetBrowser();
-              lock();
-              await api("/auth/logout", { method: "POST", csrf, status: 204 });
-              account = null;
-              view = "list";
-              await render();
-            }),
-          ),
-        ),
-      ),
-    );
-  let sessions;
-  try {
-    sessions = (await api("/api/sessions")).sessions;
-  } catch (e) {
-    if (own !== generation) return;
-    failure(e);
-    sessions = [];
-  }
-  if (own !== generation) return;
-  const list = el(
-    "section",
-    { class: "paper" },
-    el(
-      "div",
-      { class: "panel-body" },
-      el("h2", {}, t("sessions")),
-      ...sessions.map((s) =>
-        el(
-          "div",
-          { class: "account-row" },
-          el(
-            "div",
-            { class: "account-info" },
-            el(
-              "div",
-              { class: "account-name" },
-              s.current
-                ? t("currentSession")
-                : t("sessionCreated", { date: date(s.createdAt) }),
-            ),
-            el(
-              "div",
-              { class: "account-detail" },
-              t("sessionExpiry", { date: date(s.expiresAt) }),
-            ),
-          ),
-          button(
-            t("revoke"),
-            () =>
-              messageDialog("confirmRevoke", "confirmRevokeText", async () => {
-                await api(`/api/sessions/${s.id}/revoke`, {
-                  method: "POST",
-                  csrf: account.csrfToken,
-                  status: 204,
-                });
-                if (s.current) {
-                  lock();
-                  account = null;
-                  view = "list";
-                  await render();
-                }
-              }),
-            "secondary",
-          ),
-        ),
-      ),
-      paragraph("sessionHelp", "helper"),
-    ),
-  );
-  $("content").replaceChildren(
-    title("accountTitle", "accountSubtitle"),
-    el(
-      "div",
-      { class: "panel" },
-      card,
-      list,
-      paragraph("browserTrust", "helper"),
-    ),
-  );
+  const user = account.user;
+  const card = el("section", { class: "paper" }, el("div", { class: "panel-body" },
+    el("p", { class: "eyebrow" }, t("signedInAs")),
+    el("div", { class: "account-row" },
+      el("div", { class: "avatar", "aria-hidden": "true" }, accountLabel(user).slice(0, 1).toUpperCase()),
+      el("div", { class: "account-info" },
+        el("div", { class: "account-name" }, accountLabel(user)),
+        el("div", { class: "account-detail" }, user.username || user.email || user.subject)),
+      user.admin ? el("span", { class: "badge" }, t("administrator")) : null),
+    el("div", { class: "button-row" },
+      ...(user.issuer === "urn:usuals:local" ? [button(t("changePassword"), passwordDialog)] : []),
+      button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
+      button(t("signOut"), () => act(async () => {
+        await api("/auth/logout", { method: "POST", csrf: account.csrfToken, status: 204 });
+        await leaveAccount();
+      })))));
+  const load = (path, field) => api(path).then((value) => value[field]).catch((e) => {
+    if (own === generation) failure(e);
+    return [];
+  });
+  const [phones, sessions] = await Promise.all([load("/api/connections", "connections"), load("/api/sessions", "sessions")]);
+  if (own !== generation || !account) return;
+  const phonesCard = el("section", { class: "paper" }, el("div", { class: "panel-body" },
+    el("h2", {}, t("connectionSessions")),
+    paragraph("phonesHelp", "helper"),
+    ...phones.map((phone) => personRow(t("phoneLabel", { id: phone.id.slice(-4) }), t("phoneExpiry", { date: date(phone.expiresAt) }),
+      button(t("connectionRevoke"), () => messageDialog("disconnectTitle", "disconnectText", async () => {
+        await api(`/api/connections/${phone.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: [200, 204] });
+      })))),
+    phones.length ? null : paragraph("noPhones"),
+    el("div", { class: "button-row" }, button(t("connectionAddPhone"), () => act(connectPhoneDialog, { rerender: false }), "primary"))));
+  const sessionsCard = el("section", { class: "paper" }, el("div", { class: "panel-body" },
+    el("h2", {}, t("sessions")),
+    ...sessions.map((s) => el("div", { class: "account-row" },
+      el("div", { class: "account-info" },
+        el("div", { class: "account-name" }, s.current ? t("currentSession") : t("sessionCreated", { date: date(s.createdAt) })),
+        el("div", { class: "account-detail" }, t("sessionExpiry", { date: date(s.expiresAt) }))),
+      button(t("revoke"), () => messageDialog("confirmRevoke", "confirmRevokeText", async () => {
+        await api(`/api/sessions/${s.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: 204 });
+        if (s.current) await leaveAccount();
+      })))),
+    paragraph("sessionHelp", "helper")));
+  screen = "account";
+  $("content").replaceChildren(title("accountTitle", "accountSubtitle"), el("div", { class: "panel" }, card, phonesCard, sessionsCard));
 }
 async function renderAdmin(own, after = null, previous = []) {
   if (!account?.user.admin) {
@@ -1698,153 +771,50 @@ async function renderAdmin(own, after = null, previous = []) {
   }
   let result;
   try {
-    result = await api(
-      "/api/admin/users" + (after ? "?after=" + encodeURIComponent(after) : ""),
-    );
+    result = await api("/api/admin/users" + (after ? "?after=" + encodeURIComponent(after) : ""));
   } catch (e) {
-    if (own !== generation) return;
-    failure(e);
+    if (own === generation) failure(e);
     return;
   }
   if (own !== generation) return;
-  const people = [...previous, ...result.users],
-    rows = people.map((u) =>
-      el(
-        "div",
-        { class: "account-row" },
-        el(
-          "div",
-          { class: "avatar", "aria-hidden": "true" },
-          accountLabel(u).slice(0, 1).toUpperCase(),
-        ),
-        el(
-          "div",
-          { class: "account-info" },
-          el("div", { class: "account-name" }, accountLabel(u)),
-          el(
-            "div",
-            { class: "account-detail" },
-            u.username || u.email || u.subject,
-          ),
-        ),
-        u.disabled
-          ? el("span", { class: "badge" }, t("disabled"))
-          : u.admin
-            ? el("span", { class: "badge" }, t("administrator"))
-            : null,
-        button(
-          t(u.disabled ? "enable" : "disable"),
-          () =>
-            u.disabled
-              ? act(async () => {
-                  await api(`/api/admin/users/${u.id}`, {
-                    method: "POST",
-                    body: { disabled: false },
-                    csrf: account.csrfToken,
-                  });
-                })
-              : messageDialog(
-                  "confirmDisable",
-                  "confirmDisableText",
-                  async () => {
-                    await api(`/api/admin/users/${u.id}`, {
-                      method: "POST",
-                      body: { disabled: true },
-                      csrf: account.csrfToken,
-                    });
-                    if (u.id === account.user.id) {
-                      lock();
-                      account = null;
-                      view = "list";
-                      await render();
-                    }
-                  },
-                ),
-          "secondary",
-        ),
-        ...(u.issuer === "urn:usuals:local" && u.id !== account.user.id
-          ? [
-              button(
-                t("resetPassword"),
-                () =>
-                  messageDialog(
-                    "resetPasswordTitle",
-                    "resetPasswordText",
-                    async () => {
-                      const own = generation;
-                      const result = await api(
-                        `/api/admin/users/${u.id}/reset-local-password`,
-                        { method: "POST", csrf: account.csrfToken },
-                      );
-                      if (own !== generation) return;
-                      await render();
-                      if (own === generation) secretDialog(result);
-                    },
-                  ),
-                "secondary",
-              ),
-            ]
-          : []),
-        button(
-          t("revokeAll"),
-          () =>
-            messageDialog("confirmRevoke", "confirmRevokeText", async () => {
-              await api(`/api/admin/users/${u.id}/revoke-sessions`, {
-                method: "POST",
-                csrf: account.csrfToken,
-                status: 204,
-              });
-              if (u.id === account.user.id) {
-                lock();
-                account = null;
-                view = "list";
-                await render();
-              }
-            }),
-          "secondary",
-        ),
-      ),
-    );
+  const people = [...previous, ...result.users];
+  const rows = people.map((u) => el("div", { class: "account-row" },
+    el("div", { class: "avatar", "aria-hidden": "true" }, accountLabel(u).slice(0, 1).toUpperCase()),
+    el("div", { class: "account-info" },
+      el("div", { class: "account-name" }, accountLabel(u)),
+      el("div", { class: "account-detail" }, u.username || u.email || u.subject)),
+    u.disabled ? el("span", { class: "badge" }, t("disabled")) : u.admin ? el("span", { class: "badge" }, t("administrator")) : null,
+    button(t(u.disabled ? "enable" : "disable"), () => u.disabled
+      ? act(async () => {
+        await api(`/api/admin/users/${u.id}`, { method: "POST", body: { disabled: false }, csrf: account.csrfToken });
+      })
+      : messageDialog("confirmDisable", "confirmDisableText", async () => {
+        await api(`/api/admin/users/${u.id}`, { method: "POST", body: { disabled: true }, csrf: account.csrfToken });
+        if (u.id === account.user.id) await leaveAccount();
+      })),
+    ...(u.issuer === "urn:usuals:local" && u.id !== account.user.id
+      ? [button(t("resetPassword"), () => messageDialog("resetPasswordTitle", "resetPasswordText", async () => {
+        const own = generation;
+        const reset = await api(`/api/admin/users/${u.id}/reset-local-password`, { method: "POST", csrf: account.csrfToken });
+        if (own !== generation) return;
+        await render();
+        if (own === generation) secretDialog(reset);
+      }))]
+      : []),
+    button(t("revokeAll"), () => messageDialog("confirmRevoke", "confirmRevokeText", async () => {
+      await api(`/api/admin/users/${u.id}/revoke-sessions`, { method: "POST", csrf: account.csrfToken, status: 204 });
+      if (u.id === account.user.id) await leaveAccount();
+    }))));
   $("content").replaceChildren(
     title("adminTitle", "adminSubtitle"),
-    el(
-      "div",
-      { class: "panel" },
+    el("div", { class: "panel" },
       paragraph("adminHelp", "warning-box"),
-      ...(config?.localEnabled
-        ? [
-            el(
-              "div",
-              { class: "button-row" },
-              button(t("createLocalUser"), localUserDialog, "primary"),
-            ),
-          ]
-        : []),
-      el(
-        "section",
-        { class: "paper" },
-        el(
-          "div",
-          { class: "panel-body" },
-          ...rows,
-          ...(!rows.length ? [paragraph("noPeople")] : []),
-          ...(result.next
-            ? [
-                el(
-                  "div",
-                  { class: "button-row" },
-                  button(t("morePeople"), () =>
-                    act(() => renderAdmin(own, result.next, people), {
-                      rerender: false,
-                    }),
-                  ),
-                ),
-              ]
-            : []),
-        ),
-      ),
-    ),
-  );
+      ...(config?.localEnabled ? [el("div", { class: "button-row" }, button(t("createLocalUser"), localUserDialog, "primary"))] : []),
+      el("section", { class: "paper" }, el("div", { class: "panel-body" },
+        ...rows,
+        ...(!rows.length ? [paragraph("noPeople")] : []),
+        ...(result.next ? [el("div", { class: "button-row" },
+          button(t("morePeople"), () => act(() => renderAdmin(own, result.next, people), { rerender: false })))] : [])))));
 }
 $("navigation").addEventListener("click", (event) => {
   const node = event.target.closest("[data-view]");
@@ -1854,25 +824,8 @@ $("navigation").addEventListener("click", (event) => {
     render().catch(failure);
   }
 });
-const refreshLoop = new RefreshLoop({
-  refresh: refreshSelected,
-  canRun: () =>
-    Boolean(client) &&
-    !document.hidden &&
-    !busy &&
-    view === "list" &&
-    !$("dialog").open &&
-    !(
-      $("content").contains(document.activeElement) &&
-      ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)
-    ),
-});
-function syncSelected() {
-  return refreshLoop.run(true);
-}
-window.addEventListener("online", () => {
-  if (client && !document.hidden && !busy) refreshLoop.run().catch(failure);
-});
+document.addEventListener("visibilitychange", () => feed?.nudge());
+window.addEventListener("online", () => feed?.nudge());
 $("dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
   if (tutorialActive) finishTutorial();
@@ -1881,26 +834,12 @@ $("dialog").addEventListener("cancel", (event) => {
 $("tutorial").addEventListener("click", tutorialDialog);
 $("language").addEventListener("click", languageDialog);
 $("appearance").addEventListener("click", appearanceDialog);
-$("lock").addEventListener("click", lock);
-$("refresh").addEventListener("click", () => act(syncSelected));
-window.addEventListener("pagehide", lock);
-for (const event of ["pointerdown", "keydown"])
-  document.addEventListener(event, resetIdle, { passive: true });
 (async () => {
-  const inventory = await fetch("/locales.json", {
-    credentials: "same-origin",
-    cache: "no-store",
-    redirect: "error",
-  });
+  const inventory = await fetch("/locales.json", { credentials: "same-origin", cache: "no-store", redirect: "error" });
   requireThat(inventory.ok);
   availableLocales = await inventory.json();
-  requireThat(
-    Array.isArray(availableLocales) &&
-      availableLocales.includes("en") &&
-      availableLocales.every((code) =>
-        /^[a-z]{2}(?:-[A-Za-z0-9]{2,8})?$/.test(code),
-      ),
-  );
+  requireThat(Array.isArray(availableLocales) && availableLocales.includes("en") &&
+    availableLocales.every((code) => /^[a-z]{2}(?:-[A-Za-z0-9]{2,8})?$/.test(code)));
   let preferred = "en";
   try {
     const saved = localStorage.getItem("usuals-language");
@@ -1908,335 +847,169 @@ for (const event of ["pointerdown", "keydown"])
   } catch {}
   await localeLoad(preferred);
   loadImportResources().catch(() => {});
-  if (location.hash) {
-    history.replaceState(null, "", location.pathname + location.search);
-  }
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   $("content").replaceChildren(paragraph("loading"));
   await loadAccount();
-  if (!tutorialSeen) tutorialDialog();
+  if (!tutorialSeen && !pendingConnect) tutorialDialog();
 })().catch(failure);
 
 function passwordValid(value) {
   const length = [...value].length;
-  return (
-    length >= 15 && length <= 128 && !/[\u0000-\u001f\u007f-\u009f]/.test(value)
-  );
+  return length >= 15 && length <= 128 && !/[\u0000-\u001f\u007f-\u009f]/.test(value);
 }
 function usernameValid(value) {
   return /^[a-zA-Z0-9._-]{3,64}$/.test(value);
 }
 function localAuthDialog(activation = false) {
-  const username = el("input", {
-      id: "local-username",
-      class: "field",
-      autocomplete: "username",
-      minlength: 3,
-      maxlength: 64,
-      required: true,
-    }),
-    password = el("input", {
-      id: "local-password",
-      class: "field",
-      type: "password",
-      autocomplete: activation ? "new-password" : "current-password",
-      required: true,
-    }),
-    secret = activation
-      ? el("input", {
-          id: "local-setup",
-          class: "field",
-          type: "password",
-          autocomplete: "off",
-          required: true,
-        })
-      : null,
+  const username = el("input", { id: "local-username", class: "field", autocomplete: "username", minlength: 3, maxlength: 64, required: true }),
+    password = el("input", { id: "local-password", class: "field", type: "password",
+      autocomplete: activation ? "new-password" : "current-password", required: true }),
+    secret = activation ? el("input", { id: "local-setup", class: "field", type: "password", autocomplete: "off", required: true }) : null,
     error = el("p", { class: "dialog-error", role: "alert" }),
-    submit = el(
-      "button",
-      { type: "submit", class: "primary" },
-      t(activation ? "activate" : "localSignIn"),
-    ),
+    submit = el("button", { type: "submit", class: "primary" }, t(activation ? "activate" : "localSignIn")),
     own = generation;
-  openDialog(
-    el(
-      "form",
-      {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          if (submit.disabled) return;
-          submit.disabled = true;
-          try {
-            requireThat(usernameValid(username.value), "invalidUsername");
-            if (activation)
-              requireThat(passwordValid(password.value), "invalidPassword");
-            const challenge = await api("/auth/local/challenge");
-            if (own !== generation) return;
-            requireThat(challenge.expiresAt > Date.now());
-            await api("/auth/local/" + (activation ? "activate" : "login"), {
-              method: "POST",
-              csrf: challenge.csrfToken,
-              body: {
-                username: username.value,
-                password: password.value,
-                ...(secret ? { setupToken: secret.value } : {}),
-              },
-              status: 204,
-            });
-            password.value = "";
-            if (secret) secret.value = "";
-            if (own !== generation) return;
-            closeDialog();
-            clearNotice();
-            await loadAccount();
-          } catch (e) {
-            if (own !== generation) return;
-            error.textContent = t(
-              e.code === "unauthenticated"
-                ? "localLoginFailed"
-                : dictionary[e.code]
-                  ? e.code
-                  : "invalid",
-            );
-          } finally {
-            submit.disabled = false;
-          }
-        },
-      },
-      el("h2", {}, t(activation ? "activateAccount" : "localTitle")),
-      paragraph(activation ? "activationText" : "localSignInText"),
-      el("label", { class: "label", for: "local-username" }, t("username")),
-      username,
-      ...(secret
-        ? [
-            el(
-              "label",
-              { class: "label", for: "local-setup" },
-              t("setupToken"),
-            ),
-            secret,
-          ]
-        : []),
-      el(
-        "label",
-        { class: "label", for: "local-password" },
-        t(activation ? "newAccountPassword" : "accountPassword"),
-      ),
-      password,
-      ...(activation ? [paragraph("passwordHelp", "helper")] : []),
-      error,
-      el(
-        "div",
-        { class: "button-row" },
-        button(t("cancel"), closeDialog),
-        submit,
-      ),
-    ),
-  );
+  openDialog(el("form", {
+    onsubmit: async (event) => {
+      event.preventDefault();
+      if (submit.disabled) return;
+      submit.disabled = true;
+      try {
+        requireThat(usernameValid(username.value), "invalidUsername");
+        if (activation) requireThat(passwordValid(password.value), "invalidPassword");
+        const challenge = await api("/auth/local/challenge");
+        if (own !== generation) return;
+        requireThat(challenge.expiresAt > Date.now());
+        await api("/auth/local/" + (activation ? "activate" : "login"), {
+          method: "POST",
+          csrf: challenge.csrfToken,
+          body: { username: username.value, password: password.value, ...(secret ? { setupToken: secret.value } : {}) },
+          status: 204,
+        });
+        password.value = "";
+        if (secret) secret.value = "";
+        if (own !== generation) return;
+        closeDialog();
+        clearNotice();
+        await loadAccount();
+      } catch (e) {
+        if (own !== generation) return;
+        error.textContent = t(e.code === "unauthenticated" ? "localLoginFailed" : dictionary[e.code] ? e.code : "invalid");
+      } finally {
+        submit.disabled = false;
+      }
+    },
+  },
+  el("h2", {}, t(activation ? "activateAccount" : "localTitle")),
+  paragraph(activation ? "activationText" : "localSignInText"),
+  el("label", { class: "label", for: "local-username" }, t("username")),
+  username,
+  ...(secret ? [el("label", { class: "label", for: "local-setup" }, t("setupToken")), secret] : []),
+  el("label", { class: "label", for: "local-password" }, t(activation ? "newAccountPassword" : "accountPassword")),
+  password,
+  ...(activation ? [paragraph("passwordHelp", "helper")] : []),
+  error,
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), submit)));
 }
 function passwordDialog() {
-  const current = el("input", {
-      id: "current-account-password",
-      type: "password",
-      class: "field",
-      autocomplete: "current-password",
-      required: true,
-    }),
-    next = el("input", {
-      id: "new-account-password",
-      type: "password",
-      class: "field",
-      autocomplete: "new-password",
-      required: true,
-    }),
+  const current = el("input", { id: "current-account-password", type: "password", class: "field", autocomplete: "current-password", required: true }),
+    next = el("input", { id: "new-account-password", type: "password", class: "field", autocomplete: "new-password", required: true }),
     error = el("p", { class: "dialog-error", role: "alert" }),
-    submit = el(
-      "button",
-      { type: "submit", class: "primary" },
-      t("changePassword"),
-    ),
+    submit = el("button", { type: "submit", class: "primary" }, t("changePassword")),
     own = generation;
-  openDialog(
-    el(
-      "form",
-      {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          if (submit.disabled) return;
-          submit.disabled = true;
-          try {
-            requireThat(passwordValid(next.value), "invalidPassword");
-            await api("/auth/local/password", {
-              method: "POST",
-              csrf: account.csrfToken,
-              body: { currentPassword: current.value, newPassword: next.value },
-              status: 204,
-            });
-            current.value = "";
-            next.value = "";
-            if (own !== generation) return;
-            lock();
-            account = null;
-            view = "list";
-            await render();
-            notice("passwordChanged");
-          } catch (e) {
-            if (own === generation)
-              error.textContent = t(dictionary[e.code] ? e.code : "invalid");
-          } finally {
-            submit.disabled = false;
-          }
-        },
-      },
-      el("h2", {}, t("changePassword")),
-      paragraph("passwordHelp"),
-      el(
-        "label",
-        { class: "label", for: "current-account-password" },
-        t("currentAccountPassword"),
-      ),
-      current,
-      el(
-        "label",
-        { class: "label", for: "new-account-password" },
-        t("newAccountPassword"),
-      ),
-      next,
-      error,
-      el(
-        "div",
-        { class: "button-row" },
-        button(t("cancel"), closeDialog),
-        submit,
-      ),
-    ),
-  );
+  openDialog(el("form", {
+    onsubmit: async (event) => {
+      event.preventDefault();
+      if (submit.disabled) return;
+      submit.disabled = true;
+      try {
+        requireThat(passwordValid(next.value), "invalidPassword");
+        await api("/auth/local/password", {
+          method: "POST",
+          csrf: account.csrfToken,
+          body: { currentPassword: current.value, newPassword: next.value },
+          status: 204,
+        });
+        current.value = "";
+        next.value = "";
+        if (own !== generation) return;
+        await leaveAccount();
+        notice("passwordChanged");
+      } catch (e) {
+        if (own === generation) error.textContent = t(dictionary[e.code] ? e.code : "invalid");
+      } finally {
+        submit.disabled = false;
+      }
+    },
+  },
+  el("h2", {}, t("changePassword")),
+  paragraph("passwordHelp"),
+  el("label", { class: "label", for: "current-account-password" }, t("currentAccountPassword")),
+  current,
+  el("label", { class: "label", for: "new-account-password" }, t("newAccountPassword")),
+  next,
+  error,
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), submit)));
 }
 function localUserDialog() {
-  const username = el("input", {
-      id: "create-username",
-      class: "field",
-      autocomplete: "off",
-      minlength: 3,
-      maxlength: 64,
-      required: true,
-    }),
-    name = el("input", {
-      id: "create-display-name",
-      class: "field",
-      autocomplete: "off",
-      maxlength: 160,
-      required: true,
-    }),
+  const username = el("input", { id: "create-username", class: "field", autocomplete: "off", minlength: 3, maxlength: 64, required: true }),
+    name = el("input", { id: "create-display-name", class: "field", autocomplete: "off", maxlength: 160, required: true }),
     error = el("p", { class: "dialog-error", role: "alert" }),
     submit = el("button", { type: "submit", class: "primary" }, t("create")),
     own = generation;
-  openDialog(
-    el(
-      "form",
-      {
-        onsubmit: async (event) => {
-          event.preventDefault();
-          if (submit.disabled) return;
-          submit.disabled = true;
-          try {
-            requireThat(usernameValid(username.value), "invalidUsername");
-            const result = await api("/api/admin/local-users", {
-              method: "POST",
-              status: 201,
-              body: {
-                username: username.value,
-                displayName: name.value.trim(),
-              },
-              csrf: account.csrfToken,
-            });
-            if (own !== generation) return;
-            closeDialog();
-            await render();
-            if (own === generation) secretDialog(result);
-          } catch (e) {
-            if (own === generation)
-              error.textContent = t(dictionary[e.code] ? e.code : "invalid");
-          } finally {
-            submit.disabled = false;
-          }
-        },
-      },
-      el("h2", {}, t("createLocalUser")),
-      paragraph("createUserText"),
-      el("label", { class: "label", for: "create-username" }, t("username")),
-      username,
-      paragraph("usernameHelp", "helper"),
-      el(
-        "label",
-        { class: "label", for: "create-display-name" },
-        t("displayName"),
-      ),
-      name,
-      error,
-      el(
-        "div",
-        { class: "button-row" },
-        button(t("cancel"), closeDialog),
-        submit,
-      ),
-    ),
-  );
+  openDialog(el("form", {
+    onsubmit: async (event) => {
+      event.preventDefault();
+      if (submit.disabled) return;
+      submit.disabled = true;
+      try {
+        requireThat(usernameValid(username.value), "invalidUsername");
+        const result = await api("/api/admin/local-users", {
+          method: "POST",
+          status: 201,
+          body: { username: username.value, displayName: name.value.trim() },
+          csrf: account.csrfToken,
+        });
+        if (own !== generation) return;
+        closeDialog();
+        await render();
+        if (own === generation) secretDialog(result);
+      } catch (e) {
+        if (own === generation) error.textContent = t(dictionary[e.code] ? e.code : "invalid");
+      } finally {
+        submit.disabled = false;
+      }
+    },
+  },
+  el("h2", {}, t("createLocalUser")),
+  paragraph("createUserText"),
+  el("label", { class: "label", for: "create-username" }, t("username")),
+  username,
+  paragraph("usernameHelp", "helper"),
+  el("label", { class: "label", for: "create-display-name" }, t("displayName")),
+  name,
+  error,
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), submit)));
 }
 function secretDialog(result) {
-  const secret = el("input", {
-    id: "one-use-secret",
-    class: "field",
-    readonly: true,
-    value: result.setupToken,
-    autocomplete: "off",
-    spellcheck: false,
-  });
-  openDialog(
-    el(
-      "div",
-      {},
-      el("h2", {}, t("activationSecretTitle")),
-      el(
-        "p",
-        { class: "lede" },
-        t("activationSecretText", { date: date(result.expiresAt) }),
-      ),
-      el("label", { class: "label", for: "one-use-secret" }, t("setupToken")),
-      secret,
-      el(
-        "div",
-        { class: "button-row" },
-        button(t("close"), () => {
-          secret.value = "";
-          closeDialog();
-        }),
-      ),
-    ),
-  );
+  const secret = el("input", { id: "one-use-secret", class: "field", readonly: true, value: result.setupToken, autocomplete: "off", spellcheck: false });
+  openDialog(el("div", {},
+    el("h2", {}, t("activationSecretTitle")),
+    el("p", { class: "lede" }, t("activationSecretText", { date: date(result.expiresAt) })),
+    el("label", { class: "label", for: "one-use-secret" }, t("setupToken")),
+    secret,
+    el("div", { class: "button-row" }, button(t("close"), () => {
+      secret.value = "";
+      closeDialog();
+    }))));
 }
-function welcomeActions(signed) {
-  if (signed)
-    return [button(t("unlockVault"), () => unlockBrowser().catch(failure), "primary")];
+function welcomeActions() {
   if (!config?.enabled) return [paragraph("ssoDisabled", "warning-box")];
   const actions = [];
   if (config.localEnabled) {
-    actions.push(
-      button(t("localSignIn"), () => localAuthDialog(false), "primary"),
-    );
-    actions.push(
-      button(t("activateAccount"), () => localAuthDialog(true), "secondary"),
-    );
+    actions.push(button(t("localSignIn"), () => localAuthDialog(false), "primary"));
+    actions.push(button(t("activateAccount"), () => localAuthDialog(true), "secondary"));
   }
   if (config.oidcEnabled)
-    actions.push(
-      el(
-        "a",
-        {
-          class: config.localEnabled ? "secondary" : "primary",
-          href: "/auth/login",
-        },
-        t("signIn"),
-      ),
-    );
+    actions.push(el("a", { class: config.localEnabled ? "secondary" : "primary", href: "/auth/login" }, t("signIn")));
   return actions;
 }

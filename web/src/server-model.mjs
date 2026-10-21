@@ -1,4 +1,4 @@
-import { Problem, requireThat, number } from "./wire.mjs";
+import { requireThat } from "./wire.mjs";
 import { request, RunScope } from "./client.mjs";
 
 /** Same-origin requests only. Provider keys are owned by the server account settings. */
@@ -49,7 +49,7 @@ export class ServerModel {
     const units = new Set(["PIECE", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE", "PACK"]);
     return reply.items.map(row => {
       requireThat(typeof row.name === "string" && row.name.trim() && row.name.length <= 120, "importModelOutput");
-      const quantity = row.amount == null ? null : number(row.amount);
+      const quantity = row.amount == null ? null : typeof row.amount === "number" || /^\d+(?:\.\d+)?$/.test(row.amount) ? Number(row.amount) : NaN;
       requireThat(quantity === null || Number.isFinite(quantity) && quantity > 0 && units.has(row.unit), "importModelOutput");
       return { name: row.name, quantity, unit: row.unit, note: row.note, original: row.name };
     });

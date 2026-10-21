@@ -1,4 +1,4 @@
-const key = "usuals-tutorial-v1";
+const key = "usuals-tutorial-v2";
 
 export function tutorialCompleted(storage) {
   try { return storage?.getItem(key) === "complete"; }
