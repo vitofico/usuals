@@ -20,11 +20,12 @@ import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 import { qrMatrix } from "./qr.mjs";
-import { appLink, connectionCode, parseInviteLink } from "./pairing.mjs";
+import { appLink, connectionCode, parseInviteLink, resumableInvite, forgetInvite } from "./pairing.mjs";
 import { importDialog } from "./import-dialog.mjs";
 let pendingConnectionId = null, connectionDone = false;
-// The /join fragment carries the invite key: it stays in memory and leaves the address bar at startup.
-let pendingInvite = location.pathname === "/join" && location.hash.startsWith("#2.") ? location.href : null;
+// The /join fragment carries the invite key: it leaves the address bar at startup and waits in this tab through sign-in.
+const inviteTab = (() => { try { return sessionStorage; } catch { return null; } })();
+let pendingInvite = resumableInvite(inviteTab, location.pathname === "/join" && location.hash.startsWith("#2.") ? location.href : null, Date.now());
 const spaced = (code) => code.slice(0, 3) + " " + code.slice(3);
 try {
   const candidate = new URL(location.href).searchParams.get("connect");
@@ -1228,8 +1229,9 @@ function joinLanding() {
     el("div", { class: "button-row" }, el("a", { class: "primary", href: appLink(link) }, t("openInUsuals")),
       client ? button(t("joinInBrowser"), () => act(async () => {
         await client.requestJoin(link);
-        pendingInvite = null; view = "sharing";
-      })) : null),
+        forgetInvite(inviteTab); pendingInvite = null; view = "sharing";
+      })) : null,
+      button(t("close"), () => { forgetInvite(inviteTab); pendingInvite = null; render().catch(failure); })),
     client ? null : el("div", { class: "welcome-actions" }, paragraph("joinUnlockFirst", "helper"), ...welcomeActions(Boolean(account))));
 }
 function joinCodePanel() {

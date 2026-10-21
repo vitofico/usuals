@@ -344,6 +344,6 @@
   "joinLandingText": "Vous êtes invité dans un foyer sur ce serveur. Ouvrez l’invitation dans l’app Usuals ou rejoignez avec ce navigateur.",
   "openInUsuals": "Ouvrir dans Usuals",
   "joinInBrowser": "Rejoindre dans ce navigateur",
-  "joinUnlockFirst": "Pour rejoindre avec ce navigateur, connectez-vous, déverrouillez-le, puis rouvrez le lien d’invitation.",
+  "joinUnlockFirst": "Pour rejoindre avec ce navigateur, connectez-vous et déverrouillez-le. Cet onglet garde l’invitation pendant 30 minutes.",
   "upgrade": "Cette invitation provient d’une ancienne version d’Usuals. Demandez au propriétaire de mettre Usuals à jour et d’envoyer une nouvelle invitation."
 }

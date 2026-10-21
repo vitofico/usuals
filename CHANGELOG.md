@@ -1,5 +1,12 @@
 # Changelog
 
+## Browser invites survive sign-in
+
+- Joining from the server's invite page in a browser no longer needs the link
+  opened twice: the tab keeps the invite through sign-in and unlock for up to
+  30 minutes, then forgets it once used or closed. The invite key never leaves
+  the browser.
+
 ## One-scan pairing and shared lists
 
 - Put server connection, household creation and invitations on one Android
