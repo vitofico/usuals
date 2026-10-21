@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { b64, unb64, hash } from "../src/wire.mjs";
 import { admitKey, macKey, joinMac, verifyJoinMac, joinCode, descriptorAnchor, inviteLink, appLink, parseInviteLink,
-  connectionCode } from "../src/pairing.mjs";
+  connectionCode, resumableInvite, forgetInvite, INVITE_RESUME_WINDOW } from "../src/pairing.mjs";
 
 const v = JSON.parse(await readFile(new URL("../../testing/src/test/resources/pairing-v2/vectors.json", import.meta.url), "utf8"));
 const key = unb64(v.key, 32), assertion = unb64(v.assertion);
@@ -46,3 +46,45 @@ test("legacy JSON invitations ask for an update and malformed links are rejected
 test("connection codes are six digits from the fingerprint prefix", () => {
   for (const [fingerprint, expected] of v.connectionCodes) assert.equal(connectionCode(fingerprint), expected);
 });
+
+const tab = () => {
+  const values = new Map();
+  return { values, getItem: (k) => values.get(k) ?? null, setItem: (k, value) => values.set(k, String(value)), removeItem: (k) => values.delete(k) };
+};
+const opened = () => inviteLink("https://usuals.example", "00000000-0000-4000-8000-000000000001", key, new Uint8Array(16));
+
+test("a /join link survives the sign-in redirect in the same tab", () => {
+  const storage = tab(), link = opened();
+  assert.equal(resumableInvite(storage, link, 1_000), link);
+  assert.equal(resumableInvite(storage, null, 1_000 + INVITE_RESUME_WINDOW - 1), link);
+});
+
+test("a kept invite is forgotten once the resume window has passed", () => {
+  const storage = tab();
+  resumableInvite(storage, opened(), 1_000);
+  assert.equal(resumableInvite(storage, null, 1_000 + INVITE_RESUME_WINDOW), null);
+  assert.equal(storage.values.size, 0);
+});
+
+test("using or dismissing the invite removes its key from the tab", () => {
+  const storage = tab();
+  resumableInvite(storage, opened(), 1_000);
+  forgetInvite(storage);
+  assert.equal(storage.values.size, 0);
+  assert.equal(resumableInvite(storage, null, 2_000), null);
+});
+
+test("a damaged kept invite is discarded and blocked storage still offers a fresh link", () => {
+  for (const damaged of ["{", JSON.stringify({ link: "https://usuals.example/join#2.short", at: 1_000 }), JSON.stringify({ link: opened(), at: 5_000 })]) {
+    const storage = tab();
+    resumableInvite(storage, opened(), 1_000);
+    for (const k of storage.values.keys()) storage.values.set(k, damaged);
+    assert.equal(resumableInvite(storage, null, 2_000), null);
+    assert.equal(storage.values.size, 0);
+  }
+  const blocked = { getItem() { throw new Error("blocked"); }, setItem() { throw new Error("blocked"); }, removeItem() { throw new Error("blocked"); } };
+  assert.equal(resumableInvite(blocked, opened(), 1_000), opened());
+  assert.equal(resumableInvite(blocked, null, 1_000), null);
+  assert.equal(resumableInvite(null, null, 1_000), null);
+});
+
