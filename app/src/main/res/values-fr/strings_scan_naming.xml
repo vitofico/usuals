@@ -29,4 +29,6 @@
     <string name="edit_store">Étiquette de magasin (facultative)</string>
     <string name="store_all">Tous les magasins</string>
     <string name="store_empty">Aucun article pour ce magasin. Choisissez Tous les magasins pour voir les autres.</string>
+    <string name="scan_merge_question">Fusionner l’emballage scanné (%1$s) avec %2$s ? La quantité actuelle (%3$s) sera conservée. La quantité scannée ne sera pas ajoutée. Les prochains scans utiliseront ce nom.</string>
+    <string name="scan_merge_no_quantity">aucune quantité définie</string>
 </resources>

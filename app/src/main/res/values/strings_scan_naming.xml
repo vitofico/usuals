@@ -28,4 +28,6 @@
     <string name="edit_store">Store tag (optional)</string>
     <string name="store_all">All stores</string>
     <string name="store_empty">No items for this store. Choose All stores to see the rest.</string>
+    <string name="scan_merge_question">Combine the scanned package (%1$s) with %2$s? Keep the existing quantity (%3$s). The scanned amount will not be added. Future scans will use this item name.</string>
+    <string name="scan_merge_no_quantity">no quantity set</string>
 </resources>

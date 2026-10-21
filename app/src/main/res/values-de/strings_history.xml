@@ -42,7 +42,7 @@
     <string name="history_carry_over">Diese Artikel sind seit mehreren Einkäufen offen: %1$s</string>
     <string name="history_keep">Behalten</string>
     <string name="history_remove">Entfernen</string>
-    <string name="share_list">Liste teilen</string>
+    <string name="share_list">Als Text senden</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
 </resources>

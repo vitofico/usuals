@@ -17,7 +17,7 @@ internal fun SmartAssistanceDialogs(state: ListUiState, actions: ListActions) {
                 review.source.quantity?.let { quantityText(it) } ?: stringResource(R.string.scan_merge_no_quantity), review.destination.name,
                 review.destination.quantity?.let { quantityText(it) } ?: stringResource(R.string.scan_merge_no_quantity))) },
             confirmButton = { TextButton(enabled = !state.busy, onClick = { actions.onScanMerge(true) }) { Text(stringResource(R.string.merge_yes)) } },
-            dismissButton = { TextButton(enabled = !state.busy, onClick = { actions.onScanMerge(false) }) { Text(stringResource(R.string.sharing_cancel)) } })
+            dismissButton = { TextButton(enabled = !state.busy, onClick = { actions.onScanMerge(false) }) { Text(stringResource(R.string.edit_cancel)) } })
     }
     state.mergeReview?.let { review ->
         AlertDialog(onDismissRequest = { if (!state.busy) actions.onMergeChoice(false) },

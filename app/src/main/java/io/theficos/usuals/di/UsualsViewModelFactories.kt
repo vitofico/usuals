@@ -6,6 +6,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.theficos.usuals.ui.list.ListViewModel
 import io.theficos.usuals.ui.history.HistoryViewModel
 import io.theficos.usuals.ui.settings.SettingsViewModel
+import io.theficos.usuals.ui.settings.AccountSummary
+import io.theficos.usuals.ui.account.AccountSession
+import io.theficos.usuals.ui.account.AccountViewModel
+import io.theficos.usuals.ui.share.ShareViewModel
 
 /**
  * How a view model gets its dependencies.
@@ -43,41 +47,11 @@ object UsualsViewModelFactories {
         }
     }
 
-    fun sharing(): ViewModelProvider.Factory = viewModelFactory {
-        initializer<io.theficos.usuals.ui.sharing.SharingViewModel> { io.theficos.usuals.ui.sharing.SharingViewModel(ServiceLocator.householdClient,
-            connection = ServiceLocator.connectionClient,
-            choices = {
-                val enrolled = runCatching { ServiceLocator.householdClient.households().map { it.id }.toSet() }.getOrNull()
-                ServiceLocator.listRepository.all().filterNot { it.archived }.map {
-                    io.theficos.usuals.ui.sharing.SharingList(it.id, it.name, it.householdId, it.shared,
-                        it.shared && (ServiceLocator.sharingCoordinator.status.value[it.id] == io.theficos.usuals.ui.list.SharingStatus.REMOVED || enrolled != null && it.householdId !in enrolled))
-                }
-            },
-            shareList = { household, source, history -> ServiceLocator.sharingCoordinator.share(household, source, history); Unit },
-            retryList = { household, list -> ServiceLocator.sharingCoordinator.retryShare(household, list) },
-            synchronize = { ServiceLocator.sharingCoordinator.request() },
-            statusChanges = ServiceLocator.sharingCoordinator.status,
-            pendingWork = { ServiceLocator.replica.exportPending().toByteArray() },
-            readFrozen = { uri, kit, secret ->
-                val context = ServiceLocator.appContext
-                context.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { input -> ServiceLocator.householdClient.previewFrozen(input, kit, secret) } ?: throw java.io.IOException()
-            },
-            saveFrozen = { copy, name -> ServiceLocator.listRepository.importFrozen(copy, name, ServiceLocator.replica); Unit },
-            retainList = { id, name -> ServiceLocator.listRepository.retainCopy(id, ServiceLocator.replica, name); Unit },
-            removeList = { id ->
-                ServiceLocator.sharingCoordinator.withTransportPaused {
-                    val list = requireNotNull(ServiceLocator.listRepository.all().firstOrNull { it.id == id && it.shared })
-                    require(ServiceLocator.sharingCoordinator.status.value[id] == io.theficos.usuals.ui.list.SharingStatus.REMOVED || ServiceLocator.householdClient.households().none { it.id == list.householdId })
-                    if (ServiceLocator.listRepository.all().none { it.shared && it.householdId == list.householdId && it.id != id })
-                        ServiceLocator.householdClient.forgetLocalHousehold(list.householdId)
-                    ServiceLocator.listRepository.removeLocalCopy(id)
-                }
-            },
-            resetKeys = {
-                ServiceLocator.sharingCoordinator.withTransportPaused {
-                    if (ServiceLocator.householdClient.resetUnavailable { ServiceLocator.syncVault.resetUnavailable() }) ServiceLocator.syncState.clearBlobs()
-                }
-            }) }
+    fun account(): ViewModelProvider.Factory = viewModelFactory {
+        initializer<AccountViewModel> { AccountViewModel(ServiceLocator.connectionClient, AccountWiring) }
+    }
+    fun share(list: String): ViewModelProvider.Factory = viewModelFactory {
+        initializer<ShareViewModel> { ShareViewModel(list, ServiceLocator.shareStore) }
     }
     fun history(): ViewModelProvider.Factory = viewModelFactory {
         initializer<HistoryViewModel> { HistoryViewModel(ServiceLocator.historyStore) }
@@ -103,14 +77,16 @@ object UsualsViewModelFactories {
                 modelProbe = ServiceLocator.modelProbe,
                 budget = ServiceLocator.modelBudget,
                 info = ServiceLocator.appInfo,
-                sharingSummary = {
-                    val client = ServiceLocator.householdClient
-                    val households = client.households().filter { !it.removed }
-                    (ServiceLocator.connectionClient.current()?.origin ?: households.firstOrNull()?.origin)?.let { origin ->
-                        io.theficos.usuals.ui.settings.SharingSummary(java.net.URI(origin).host, households.sumOf { household -> client.members(household.id).sumOf { it.devices.size } })
-                    }
-                },
+                accountSummary = { ServiceLocator.connectionClient.current()?.let { AccountSummary(java.net.URI(it.origin).host) } },
             )
         }
     }
+}
+
+/** The account screen's session: the sync engine, and a sync as soon as a connection completes. */
+private object AccountWiring : AccountSession {
+    override suspend fun expired() = ServiceLocator.listSync.expired()
+    override suspend fun name() = ServiceLocator.listSync.name()
+    override suspend fun connected() { ServiceLocator.listSync.connected(); ServiceLocator.listSyncScheduler.request() }
+    override suspend fun signOut(force: Boolean) = ServiceLocator.listSync.signOut(force)
 }

@@ -5,7 +5,7 @@
     <string name="tutorial_back">Zurück</string>
     <string name="tutorial_next">Weiter</string>
     <string name="tutorial_finish">Meine Liste starten</string>
-    <string name="tutorial_setup_sharing">Teilen einrichten</string>
+    <string name="tutorial_setup_sharing">Konto einrichten</string>
     <string name="tutorial_step">%1$d von %2$d</string>
     <string name="tutorial_welcome_title">Willkommen bei %1$s.</string>
     <string name="tutorial_welcome_body">Deine Einkaufsliste funktioniert offline, ohne Konto oder Server. Beginne mit den Dingen, die du brauchst, und gestalte sie nach deinen Wünschen.</string>
@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Wähle Einkauf starten und hake Artikel beim Einkaufen ab. Einkauf abschließen speichert abgehakte Artikel im Verlauf; die anderen bleiben auf der Liste.</string>
     <string name="tutorial_shop_hint">Der Verlauf hilft dir, Wichtiges erneut zu kaufen. Wiederholungsregeln fügen Artikel nur nach deinem Zeitplan hinzu.</string>
     <string name="tutorial_share_title">Dein Alltag, gemeinsam.</string>
-    <string name="tutorial_share_body">Tippe zum gemeinsamen Einkaufen auf das Teilen-Symbol der Liste. Scanne den Server-QR-Code oder füge den Link ein, melde dich an und bestätige die Verbindung. Erstelle einen Haushalt oder öffne eine Einladung.</string>
-    <string name="tutorial_share_hint">Speichere und überprüfe beim Erstellen eines Haushalts das Wiederherstellungspaket. Öffne zum Beitreten eine Einladung und vergleiche den vollständigen Gerätefingerabdruck mit der besitzenden Person.</string>
+    <string name="tutorial_share_body">Um gemeinsam einzukaufen, melde dich bei deinem Konto auf einem Usuals-Server an: Scanne den QR-Code der Web-App oder melde dich im Browser an. Tippe dann auf das Teilen-Symbol einer Liste und füge Personen hinzu.</string>
+    <string name="tutorial_share_hint">Deine Listen funktionieren auch offline. Angemeldet werden sie mit deinem Konto und mit allen synchronisiert, mit denen du sie teilst.</string>
 </resources>

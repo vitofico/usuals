@@ -40,25 +40,22 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
             text = { ConflictDetails(conflict) }, confirmButton = { TextButton(enabled = conflict.itemId != null, onClick = { review = false; actions.onReviewConflict(conflict) }) { Text(stringResource(R.string.lists_review_item)) } },
             dismissButton = { TextButton(onClick = { actions.onDismissConflict(conflict.id); if (directory.conflicts.size <= 1) review = false }) { Text(stringResource(R.string.lists_keep_current)) } })
     }
-    if (selected?.shared == true && directory.status != null) Text(stringResource(when (directory.status) {
-        SharingStatus.RECOVERY -> R.string.sharing_recovery_required
-        SharingStatus.SYNCED -> R.string.sharing_status_synced
-        SharingStatus.PENDING -> R.string.sharing_status_pending
-        SharingStatus.OFFLINE -> R.string.sharing_status_offline
-        SharingStatus.CONFLICT -> R.string.sharing_status_conflict
-        SharingStatus.NEEDS_KEY -> R.string.sharing_locked_keys
-        SharingStatus.REMOVED -> R.string.sharing_access
-        SharingStatus.UPGRADE -> R.string.sharing_upgrade
-        SharingStatus.CAPACITY -> R.string.sharing_capacity
-        SharingStatus.VERIFICATION -> R.string.sharing_verification
-    }, stringResource(R.string.app_name)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    when (directory.status) {
+        null, SyncStatus.SYNCED -> Unit
+        SyncStatus.SIGN_IN -> TextButton(onClick = actions.onOpenAccount, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.sync_sign_in)) }
+        else -> Text(stringResource(when (directory.status) {
+            SyncStatus.UPGRADE -> R.string.sync_upgrade
+            SyncStatus.CAPACITY -> R.string.sync_capacity
+            else -> R.string.sync_offline
+        }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(stringResource(R.string.lists_choose)) },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             directory.lists.forEach { list ->
                 TextButton(onClick = { open = false; actions.onSelectList(list.id) }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {
                         Text(listTitle(list), maxLines = 2)
-                        Text(stringResource(if (list.shared) R.string.lists_shared_label else R.string.lists_local_label),
+                        if (list.shared) Text(stringResource(R.string.lists_shared_label),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (list.id == directory.selected) Text(stringResource(R.string.lists_selected))

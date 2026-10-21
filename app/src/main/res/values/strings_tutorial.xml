@@ -5,7 +5,7 @@
     <string name="tutorial_back">Back</string>
     <string name="tutorial_next">Next</string>
     <string name="tutorial_finish">Start my list</string>
-    <string name="tutorial_setup_sharing">Set up sharing</string>
+    <string name="tutorial_setup_sharing">Set up account</string>
     <string name="tutorial_step">%1$d of %2$d</string>
     <string name="tutorial_welcome_title">Welcome to %1$s.</string>
     <string name="tutorial_welcome_body">Your everyday shopping list works offline, without an account or a server. Start with the things you need and make it your own.</string>
@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Choose Start shopping and check items as you buy them. Finish shop saves checked items in History; unchecked items stay on your list.</string>
     <string name="tutorial_shop_hint">History helps you rebuy essentials. Repeat rules add items only on the schedule you choose.</string>
     <string name="tutorial_share_title">Your everyday, together.</string>
-    <string name="tutorial_share_body">To shop together, tap the sharing icon on your list. Scan a server QR or paste its link, then sign in and approve the connection. Create a household or open an invitation to join.</string>
-    <string name="tutorial_share_hint">Save and verify the recovery kit when creating a household. To join one, open its invitation and compare the full device fingerprint with its owner.</string>
+    <string name="tutorial_share_body">To shop together, sign in to your account on a Usuals server: scan the QR from the web app, or sign in in the browser. Then tap the share icon on a list and add people.</string>
+    <string name="tutorial_share_hint">Your lists keep working offline. Signed in, they sync to your account and to everyone you share them with.</string>
 </resources>

@@ -70,11 +70,12 @@ class ShareIngestionTest {
     }
 
     @Test
-    fun an_invitation_deep_link_is_consumed_once() {
-        val uri = "usuals://join#synthetic-invitation"
+    fun a_connect_deep_link_is_consumed_once() {
+        val uri = "usuals://connect#synthetic-code"
         val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri))
         assertThat(pendingShare(intent, null)).isEqualTo(uri)
         assertThat(pendingShare(intent, recreation(consumed = true))).isNull()
+        assertThat(pendingShare(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("usuals://join#synthetic-invitation")), null)).isNull()
         assertThat(pendingShare(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://example.test/recipe")), null)).isNull()
     }
 

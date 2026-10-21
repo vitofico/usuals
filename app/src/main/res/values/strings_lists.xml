@@ -20,7 +20,6 @@
     <string name="lists_check">Check state</string>
     <string name="lists_imported_home">Imported Home</string>
     <string name="lists_shared_label">Shared list</string>
-    <string name="lists_local_label">Local list</string>
     <string name="lists_alias_requested">Requested: use %2$s for %1$s</string>
     <string name="lists_alias_current">Current: use %2$s for %1$s</string>
 </resources>

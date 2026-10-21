@@ -1,29 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="connection_title">Connexion au serveur</string>
-    <string name="connection_intro">Connectez-vous une fois pour partager des listes et utiliser l’IA facultative du serveur. Collez un lien ou scannez son QR ci-dessous.</string>
-    <string name="connection_link">Lien du serveur</string>
-    <string name="connection_connect">Connecter ce serveur</string>
     <string name="connection_compare">Vérifiez que votre navigateur affiche le même code avant d’approuver.</string>
     <string name="connection_signin">Se connecter dans le navigateur</string>
     <string name="connection_waiting">En attente de l’approbation du navigateur…</string>
-    <string name="connection_cancel">Annuler la connexion</string>
-    <string name="connection_disconnect">Déconnecter les services du compte</string>
-    <string name="connection_ai">Utiliser l’IA du serveur</string>
-    <string name="connection_privacy">Seuls les textes ou photos que vous envoyez explicitement atteignent ce serveur et son fournisseur. Les listes restent chiffrées.</string>
+    <string name="connection_privacy">Seuls les textes ou photos que vous envoyez explicitement atteignent ce serveur et son fournisseur.</string>
     <string name="connection_local">L’opérateur déclare un traitement sur sa propre infrastructure.</string>
     <string name="connection_external">Le traitement utilise un fournisseur externe.</string>
-    <string name="connection_usage">%1$d tentatives sur %2$d utilisées aujourd’hui</string>
-    <string name="connection_default">Utiliser le choix du serveur</string>
-    <string name="connection_personal">Utiliser mon fournisseur</string>
-    <string name="connection_key">Clé personnelle du fournisseur</string>
-    <string name="connection_key_help">L’enregistrement envoie cette clé au serveur choisi, qui la conserve chiffrée. Une clé vide utilise la configuration de l’opérateur.</string>
-    <string name="connection_choose">Utiliser %1$s</string>
-    <string name="connection_migrate">Envoyer ma clé de fournisseur direct enregistrée à ce serveur pour %1$s</string>
-    <string name="connection_share_source">Prêt à partager « %1$s ». Connectez-vous et créez un foyer, ou choisissez un foyer existant, pour continuer.</string>
-    <string name="connection_retry_copy">La nouvelle tentative envoie la copie déjà préparée, avec le même choix pour l’historique. Les modifications ultérieures restent dans votre liste locale.</string>
-    <string name="connection_offer_title">Connecter ce téléphone à votre compte sur %1$s ?</string>
-    <string name="connection_offer_help">Votre ordinateur affiche un code. Approuvez ce téléphone là-bas ; aucune connexion n’est nécessaire sur le téléphone.</string>
-    <string name="connection_offer_later">Plus tard</string>
-    <string name="connection_approve_elsewhere">Approuvez ce téléphone sur votre ordinateur lorsqu’il affiche le même code.</string>
 </resources>

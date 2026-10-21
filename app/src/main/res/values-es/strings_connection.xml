@@ -1,29 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="connection_title">Conexión al servidor</string>
-    <string name="connection_intro">Conecta una vez para compartir listas y usar la IA opcional del servidor. Pega un enlace o escanea su QR abajo.</string>
-    <string name="connection_link">Enlace del servidor</string>
-    <string name="connection_connect">Conectar este servidor</string>
     <string name="connection_compare">Comprueba que tu navegador muestra el mismo código antes de aprobar.</string>
     <string name="connection_signin">Iniciar sesión en el navegador</string>
     <string name="connection_waiting">Esperando la aprobación del navegador…</string>
-    <string name="connection_cancel">Cancelar conexión</string>
-    <string name="connection_disconnect">Desconectar servicios de la cuenta</string>
-    <string name="connection_ai">Usar IA del servidor</string>
-    <string name="connection_privacy">Solo el texto o las fotos que envíes expresamente llegan al servidor y a su proveedor. Las listas siguen cifradas.</string>
+    <string name="connection_privacy">Solo el texto o las fotos que envíes expresamente llegan al servidor y a su proveedor.</string>
     <string name="connection_local">El operador declara que procesa en su propia infraestructura.</string>
     <string name="connection_external">El procesamiento usa un proveedor externo.</string>
-    <string name="connection_usage">%1$d de %2$d intentos diarios usados</string>
-    <string name="connection_default">Usar configuración del servidor</string>
-    <string name="connection_personal">Usar mi proveedor</string>
-    <string name="connection_key">Clave personal del proveedor</string>
-    <string name="connection_key_help">Al guardar se envía la clave al servidor elegido, que la almacena cifrada. Una clave vacía usa la configuración del operador.</string>
-    <string name="connection_choose">Usar %1$s</string>
-    <string name="connection_migrate">Enviar mi clave guardada del proveedor directo a este servidor para %1$s</string>
-    <string name="connection_share_source">Listo para compartir «%1$s». Conecta y crea un hogar, o elige uno existente, para continuar.</string>
-    <string name="connection_retry_copy">El reintento envía la copia ya preparada, con la misma opción de historial. Los cambios posteriores permanecen en tu lista local.</string>
-    <string name="connection_offer_title">¿Conectar este teléfono a tu cuenta en %1$s?</string>
-    <string name="connection_offer_help">Tu ordenador muestra un código. Aprueba este teléfono allí; no hace falta iniciar sesión en el teléfono.</string>
-    <string name="connection_offer_later">Ahora no</string>
-    <string name="connection_approve_elsewhere">Aprueba este teléfono en tu ordenador cuando muestre el mismo código.</string>
 </resources>

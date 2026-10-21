@@ -1,22 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_server">Server und Teilen</string>
-    <string name="settings_server_help">Einmal verbinden, um Listen zu teilen und KI zu nutzen. Der Server übernimmt die Modelleinrichtung.</string>
     <string name="settings_help">Hilfe und Info</string>
     <string name="settings_advanced">Erweitert: direkte KI</string>
-    <string name="settings_direct_help">Direkte KI sendet Rezepte und Fotos an diesen Anbieter. Trenne den Server, um diese Einstellungen zu nutzen.</string>
+    <string name="settings_direct_help">Direkte KI sendet Rezepte und Fotos an diesen Anbieter. Melde dich von deinem Konto ab, um diese Einstellungen zu nutzen.</string>
     <string name="settings_offline">Lokale Listen funktionieren ohne Server und Konto.</string>
-    <string name="settings_connected">Verbunden</string>
     <string name="settings_ai">KI-Unterstützung</string>
     <string name="settings_ai_help">Nutze die auf deinem Server eingerichtete KI. Daten werden nur bei einer gewählten KI-Aktion gesendet.</string>
     <string name="settings_server_account">Konto auf dem Server verwalten</string>
-    <string name="settings_manage_server">Teilen verwalten</string>
     <string name="settings_ai_changed">Die KI-Einstellungen haben sich geändert. Prüfe den Anbieter, bevor du die KI erneut nutzt.</string>
     <string name="settings_ai_details">Modell- und Verarbeitungsdetails</string>
     <string name="settings_ai_update">Aktualisierte KI nutzen</string>
-    <string name="settings_sharing_none">Nicht eingerichtet</string>
-    <plurals name="settings_sharing_phones">
-        <item quantity="one">%1$s · %2$d Telefon</item>
-        <item quantity="other">%1$s · %2$d Telefone</item>
-    </plurals>
 </resources>

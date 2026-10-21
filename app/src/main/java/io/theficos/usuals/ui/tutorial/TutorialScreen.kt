@@ -34,7 +34,7 @@ import io.theficos.usuals.R
 
 @Composable
 @Suppress("DEPRECATION")
-fun TutorialScreen(onFinish: (openSharing: Boolean) -> Unit) {
+fun TutorialScreen(onFinish: (openAccount: Boolean) -> Unit) {
     var page by rememberSaveable { mutableIntStateOf(0) }
     val titles = listOf(R.string.tutorial_welcome_title, R.string.tutorial_capture_title,
         R.string.tutorial_scan_title, R.string.tutorial_shop_title, R.string.tutorial_share_title)
