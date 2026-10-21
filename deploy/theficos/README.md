@@ -3,9 +3,36 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `093a4f3`, merged in PR #15 and deployed
+current server/web image is built from `1409226`, merged in PR #18 and deployed
 with Vito's explicit approval on 2026-10-21. The initial deployment used source `9c3bd57`.
-The current upgrade keeps a browser invite through sign-in on the join page.
+The current upgrade connects a phone with one scan from a signed-in computer, with
+migration 007, and lets a trusted browser stay unlocked.
+
+## 2026-10-21 one-scan phone connection and stay-unlocked browser
+
+[PR #17](https://github.com/vitofico/usuals/pull/17) (trusted browser stays unlocked) merged
+as `881f556` and [PR #18](https://github.com/vitofico/usuals/pull/18) (one-scan phone
+connection) merged as `1409226` after all CI checks passed. One image was built from the
+`1409226` merge commit and deployed with Vito's explicit approval. The source-bound image
+and platform manifest are `usuals-relay:sha256-9b8829a3df2a7da1d65ca941b07f706073443e624d3c7fe69856102f0dc74306`.
+
+Before rollout the relay was scaled to zero, and `usuals-preonescan-20261021` produced a
+base backup with WAL; the job and an independent `pg_verifybackup` passed. Fresh encrypted
+database and key copies in
+`/Users/vito/personal-repos/usuals-operator-backups/20261021-one-scan/` match the node
+checksums. No plaintext credentials were transferred.
+
+The `usuals-migrate-connect-offer` Job applied migration 007 (`connection_offer`) with
+migrations 001 to 006 unchanged, then the relay image and source annotation changed and
+the relay scaled back to one replica. The ready pod reports the expected config digest
+with zero restarts. PostgreSQL configuration and identity, fence and AI-key hashes are
+unchanged; the wrapping key remains mode 0600 owned by UID/GID 10001. Migration 007 ends
+image-only rollback to `093a4f3`: a rollback restores the backup above. Live
+TLS/readiness, 34 exact packaged browser assets, the `/join` and `/connect` pages,
+security headers, both authentication modes, protected anonymous APIs (including
+connection offers), the pairing v2 invite route and stable server identity passed. Node
+evidence is `~/usuals/deployments/20261021-one-scan/`; local evidence is
+`/Users/vito/personal-repos/usuals-operator-backups/20261021-one-scan/`.
 
 ## 2026-10-21 browser invite resume
 
