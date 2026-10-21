@@ -197,13 +197,13 @@ def prepare(args):
             (staging/'operator-jobs'/(job['metadata']['name']+'.json')).write_text(json.dumps(job,indent=2)+'\n')
         (staging/'inventory.json').write_text(json.dumps(config,indent=2)+'\n')
         (staging/'identity-inventory.json').write_text(json.dumps(oidc,indent=2)+'\n')
-        for source, target in [('docs/sync/runbook.md','RUNBOOK.md'),('docs/sync/recovery-copy.md','RECOVERY.md'),('deploy/README.md','DEPLOYMENT.md')]:
+        for source, target in [('docs/sync/runbook.md','RUNBOOK.md'),('deploy/README.md','DEPLOYMENT.md')]:
             shutil.copyfile(ROOT/source,staging/target)
         shutil.copyfile(ROOT/'docs/sync/web-identity.md',staging/'IDENTITY.md')
         shutil.copyfile(ROOT/'web/PROTOCOL.md',staging/'BROWSER.md')
         (staging/'REVIEW.txt').write_text('Deployment is NOT approved. Do not apply or import this bundle yet.\n'
             'Candidate bundles retain an invalid trusted-proxy marker and cannot serve traffic.\n'
-            'Before approval: verify inventory, TLS/CNI/storage, private secrets and independent identity storage; rehearse encrypted off-site restore and authenticated capacity; arrange the household pilot.\n'
+            'Before approval: verify inventory, TLS/CNI/storage, private secrets and independent identity storage; rehearse encrypted off-site restore and authenticated capacity; provision the list key file; arrange the pilot.\n'
             'Operator jobs are separate files: initialize identity once, inspect its result, then migrate separately in runbook order.\n'
             'After approval, import both image tar files using the cluster runtime and verify its tag/image ID and platform. These are local content-derived tags, not registry references.\n')
         distribution = ROOT/'server/build/install/usuals-relay'

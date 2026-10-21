@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build and exercise the wrapper-built distribution under proposed container limits."""
-import concurrent.futures, http.client, json, os, pathlib, secrets, shutil, subprocess, tempfile, threading, time
+import concurrent.futures, http.client, json, os, pathlib, secrets, shutil, subprocess, tempfile, threading, time, uuid
 os.umask(0o077)
 if not __debug__:
     raise SystemExit('Local deployment checks require Python validation enabled; remove -O/PYTHONOPTIMIZE')
@@ -11,27 +11,28 @@ prefix = 'usuals-profile-'+str(os.getpid())
 pg, relay = prefix+'-pg', prefix+'-relay'
 volumes = [prefix+'-'+x for x in ['data','identity','pg-secrets','app-secret','backup','tools']]
 directory = pathlib.Path(tempfile.mkdtemp(prefix=prefix+'-'))
-client_directory = root/'server/build'/prefix
-client_created = False
+origin = 'https://usuals.invalid'
+anonymous = {'Authorization':'Bearer '+'A'*43}
 def run(args, **kw): return subprocess.check_output(args, stderr=subprocess.PIPE, **kw).decode().strip()
-def request(port, method, path, body=None):
-    c = http.client.HTTPConnection('127.0.0.1', port, timeout=20)
+def request(port, method, path, body=None, headers=anonymous):
+    c = http.client.HTTPConnection('127.0.0.1', port, timeout=60)
     try:
-        c.request(method,path,body=body,headers={'Content-Type':'application/json','Authorization':'Bearer '+'A'*43})
-        response = c.getresponse(); data = response.read(); return response.status, data
+        c.request(method,path,body=body,headers={'Content-Type':'application/json',**headers})
+        response = c.getresponse(); data = response.read(); return response.status, data, response.getheaders()
     finally: c.close()
-peak = [0]; sampling = threading.Event()
+def cookie(headers, name):
+    return next(v.split(';')[0] for k,v in headers if k.lower() == 'set-cookie' and v.startswith(name+'='))
+# memory.current includes reclaimable page cache and so sits near the limit; anon is what the process itself holds.
+peak = [0, 0]; sampling = threading.Event()
 def sample():
     while not sampling.wait(.1):
         try:
-            used = run(['docker','exec',relay,'cat','/sys/fs/cgroup/memory.current'])
-            peak[0] = max(peak[0],int(used))
+            used, stat = run(['docker','exec',relay,'cat','/sys/fs/cgroup/memory.current','/sys/fs/cgroup/memory.stat']).split('\n',1)
+            peak[0] = max(peak[0],int(used)); peak[1] = max(peak[1],int(stat.split('anon ',1)[1].split()[0]))
         except subprocess.CalledProcessError: pass
 try:
     log = (directory/'image-build.log').open('wb')
     subprocess.run([str(root/'scripts/dgradle'),'-p','server','installDist','--no-watch-fs'],cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
-    client_directory.mkdir(mode=0o700)
-    client_created = True
     subprocess.run(['docker','build','--platform','linux/amd64','-f',str(root/'server/Dockerfile'),'-t',image,str(root/'server/build/install/usuals-relay')],stdout=log,stderr=subprocess.STDOUT,check=True)
     subprocess.run(['docker','pull','--platform','linux/amd64',pgimage],stdout=log,stderr=subprocess.STDOUT,check=True)
     log.close()
@@ -46,7 +47,7 @@ try:
     for volume in volumes: run(['docker','volume','create',volume])
     run(['docker','network','create',prefix])
     run(['docker','run','--platform','linux/amd64','--rm','-v',str(directory)+':/seed:ro','-v',volumes[0]+':/data','-v',volumes[1]+':/identity','-v',volumes[2]+':/pg-secret','-v',volumes[3]+':/app-secret','-v',volumes[4]+':/backup','-v',volumes[5]+':/tools','-v',str(root/'deploy/k8s')+':/manifest:ro',pgimage,'sh','-ec',
-        'chown 70:70 /data /backup; chown 10001:10001 /identity; chmod 700 /data /backup /identity; cp /seed/*-password /pg-secret/; cp /seed/app-password /app-secret/; chown -R 0:70 /pg-secret; chown -R 0:10001 /app-secret; chmod 750 /pg-secret /app-secret; chmod 640 /pg-secret/* /app-secret/*; cp /manifest/initialize.sql /manifest/initialize-replication.sh /tools/; chown -R 0:70 /tools; chmod 750 /tools; chmod 550 /tools/*'])
+        'chown 70:70 /data /backup; chown 10001:10001 /identity; chmod 700 /data /backup /identity; cp /seed/*-password /pg-secret/; cp /seed/app-password /app-secret/; chown -R 0:70 /pg-secret; chown -R 0:10001 /app-secret; chmod 750 /pg-secret /app-secret; chmod 640 /pg-secret/* /app-secret/*; cp /manifest/initialize.sql /manifest/initialize-replication.sh /tools/; chown -R 0:70 /tools; chmod 750 /tools; chmod 550 /tools/*; head -c 32 /dev/urandom > /identity/list-key; chown 10001:10001 /identity/list-key; chmod 600 /identity/list-key'])
     hardened = ['--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--tmpfs','/tmp:rw,size=32m']
     run(['docker','run','--platform','linux/amd64','-d','--name',pg,'--network',prefix,'--user','70:70','--memory','1g','--cpus','1',*hardened,
         '--tmpfs','/var/run/postgresql:rw,uid=70,gid=70,size=16m','-v',volumes[0]+':/var/lib/postgresql/data','-v',volumes[2]+':/run/secrets:ro','-v',volumes[4]+':/backup',
@@ -60,8 +61,11 @@ try:
     roles = run(['docker','exec',pg,'psql','-qAt','-U','postgres','-d','postgres','-c',"SELECT rolname,rolsuper,rolreplication FROM pg_roles WHERE rolname IN ('usuals','usuals_backup') ORDER BY rolname"])
     assert roles == 'usuals|f|f\nusuals_backup|f|t'
     common = ['--platform','linux/amd64','--network',prefix,'--user','10001:10001','--memory','512m','--cpus','1',*hardened,'-v',volumes[1]+':/identity','-v',volumes[3]+':/run/secrets:ro',
-        '-e','USUALS_IDENTITY_FILE=/identity/identity','-e','USUALS_FENCE_FILE=/identity/fence','-e','USUALS_ORIGIN=https://usuals.invalid','-e','USUALS_JDBC_URL=jdbc:postgresql://'+pg+':5432/usuals','-e','USUALS_DB_USER=usuals','-e','USUALS_DB_PASSWORD_FILE=/run/secrets/app-password','-e','USUALS_OPS_BIND=0.0.0.0']
+        '-e','USUALS_IDENTITY_FILE=/identity/identity','-e','USUALS_FENCE_FILE=/identity/fence','-e','USUALS_ORIGIN=https://usuals.invalid','-e','USUALS_JDBC_URL=jdbc:postgresql://'+pg+':5432/usuals','-e','USUALS_DB_USER=usuals','-e','USUALS_DB_PASSWORD_FILE=/run/secrets/app-password','-e','USUALS_OPS_BIND=0.0.0.0',
+        '-e','USUALS_LIST_KEY_FILE=/identity/list-key','-e','USUALS_LOCAL_AUTH_ENABLED=true']
     run(['docker','run','--rm',*common,image,'init-identity']); run(['docker','run','--rm',*common,image,'migrate'])
+    run(['docker','run','--rm',*common,image,'local-admin','profile_owner','/identity/setup.json'])
+    setup = json.loads(run(['docker','run','--platform','linux/amd64','--rm','-v',volumes[1]+':/identity',pgimage,'sh','-ec','cat /identity/setup.json; rm /identity/setup.json']))['setupToken']
     run(['docker','run','-d','--name',relay,'-p','127.0.0.1::8080','-p','127.0.0.1::9090',*[x.replace(volumes[1]+':/identity', volumes[1]+':/identity:ro') if x == volumes[1]+':/identity' else x for x in common],image])
     port = int(run(['docker','port',relay,'8080/tcp']).split(':')[-1]); ops = int(run(['docker','port',relay,'9090/tcp']).split(':')[-1])
     for _ in range(90):
@@ -71,24 +75,43 @@ try:
         time.sleep(.5)
     else: raise RuntimeError('Bounded relay did not become ready')
     thread = threading.Thread(target=sample,daemon=True); thread.start()
-    body = json.dumps({'envelope':{'header':'AA','ciphertext':'A'*(8*1024*1024),'signature':'AA'},'seq':0,'head':'A'*43}).encode()
+    # Stored lists are at most 7 MB encoded: send that much, anonymously first.
+    body = json.dumps({'projection':{'name':'Synthetic capacity fixture','preferences':{'filler':{'text':'x'*(7*1024*1024-4096)}}}}).encode()
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
-        statuses = list(pool.map(lambda _: request(port,'PUT','/v1/lists/00000000-0000-4000-8000-000000000001/snapshot',body)[0],range(32)))
+        statuses = list(pool.map(lambda _: request(port,'PUT','/api/lists/'+str(uuid.uuid4()),body)[0],range(32)))
     assert all(status in [401,503] for status in statuses)
     assert request(port,'GET','/metrics')[0] == 404
     assert request(port,'GET','/readyz')[0] == 200
-    bootstrap = run(['docker','run','--rm',*common,image,'bootstrap-token'])
-    assert len(bootstrap) == 43 and all(c.isalnum() or c in '-_' for c in bootstrap)
-    configuration = client_directory/'input.json'
-    configuration.write_text(json.dumps({'address':'http://host.docker.internal:'+str(port),'bootstrapToken':bootstrap}))
-    configuration.chmod(0o600)
-    with (directory/'authenticated-client.log').open('wb') as client_log:
-        subprocess.run([str(root/'scripts/dgradle'),'-p','server','profileClient','-PprofileInput=build/'+prefix+'/input.json','--no-watch-fs'],cwd=root,
-            stdout=client_log,stderr=subprocess.STDOUT,check=True)
-    authenticated = json.loads((client_directory/'authenticated-results.json').read_text())
-    assert authenticated['passed']
+    status, data, headers = request(port,'GET','/auth/local/challenge',headers={})
+    challenge = {'Cookie':cookie(headers,'__Host-usuals-local-login'),'Origin':origin,'X-CSRF-Token':json.loads(data)['csrfToken']}
+    status, _, headers = request(port,'POST','/auth/local/activate',json.dumps({'username':'profile_owner','setupToken':setup,'password':secrets.token_urlsafe(24)}).encode(),challenge)
+    assert status == 204, 'Local activation failed: '+str(status)
+    session = cookie(headers,'__Host-usuals-session')
+    account = {'Cookie':session,'Origin':origin,'X-CSRF-Token':json.loads(request(port,'GET','/api/me',headers={'Cookie':session})[1])['csrfToken']}
+    assert request(port,'PUT','/api/lists/'+str(uuid.uuid4()),body,account)[0] == 201, 'Near-limit list was refused'
+    cursor = json.loads(request(port,'GET','/api/lists/changes?limit=1',headers=account)[1])['cursor']
+    start = threading.Event()
+    def bulk(index):
+        start.wait()
+        return request(port,'PUT','/api/lists/'+str(uuid.uuid4()),body,account)[0] if index % 2 == 0 else request(port,'GET','/api/lists/changes?limit=1',headers=account)[0]
+    def catchup():
+        start.wait(); times = []
+        for _ in range(24):
+            before = time.monotonic(); status = request(port,'GET','/api/lists/changes?cursor='+cursor,headers=account)[0]
+            assert status in [200,503]; times.append((status,(time.monotonic()-before)*1000)); time.sleep(.02)
+        return times
+    with concurrent.futures.ThreadPoolExecutor(max_workers=9) as pool:
+        loads = [pool.submit(bulk,i) for i in range(8)]; reads = pool.submit(catchup); start.set()
+        bulk_statuses = [f.result() for f in loads]; catch = reads.result()
+    assert all(status in [200,201,503] for status in bulk_statuses)
+    status, data, _ = request(port,'GET','/api/lists/changes?limit=1',headers=account)
+    assert status == 200 and json.loads(data)['lists'][0]['projection']['name'] == 'Synthetic capacity fixture'
+    times = sorted(t for _,t in catch)
+    authenticated = {'passed':True,'listRequestBytes':len(body),'bulkRequests':len(bulk_statuses),'bulkAccepted':sum(s in [200,201] for s in bulk_statuses),
+        'bulkShed':bulk_statuses.count(503),'catchupRequests':len(catch),'catchupAccepted':sum(s == 200 for s,_ in catch),
+        'catchupP95IncludingShedMs':round(times[min(int(len(times)*.95),len(times)-1)],1)}
     metrics = request(ops,'GET','/metrics')[1].decode(); assert 'usuals_storage_probe_ok 1' in metrics, 'Post-load storage probe failed'
-    assert 'device' not in metrics and 'household' not in metrics, 'Metrics expose an identity label'
+    assert 'profile_owner' not in metrics and session.split('=')[1] not in metrics, 'Metrics expose an account'
     sampling.set(); thread.join(timeout=3)
     state = json.loads(run(['docker','inspect',relay]))[0]['State']
     postgres_id = run(['docker','inspect',pg,'--format','{{.Image}}'])
@@ -98,18 +121,17 @@ try:
     assert state['Running'] and not state['OOMKilled'], 'Relay stopped or was OOM-killed'
     assert 0 < peak[0] < 512*1024*1024, 'Sampled cgroup memory: '+str(peak[0])+' bytes; limit: '+str(512*1024*1024)
     print(json.dumps({'passed':True,'imageId':run(['docker','image','inspect',image,'--format','{{.Id}}']),
-        'postgresImageId':postgres_id,'postgresPlatform':'linux/amd64','relayLimitMiB':512,'sampledPeakMiB':round(peak[0]/1024/1024,2),'unauthenticatedBulkRequests':len(statuses),'authenticated':authenticated,
+        'postgresImageId':postgres_id,'postgresPlatform':'linux/amd64','relayLimitMiB':512,'sampledPeakMiB':round(peak[0]/1024/1024,2),'sampledPeakAnonMiB':round(peak[1]/1024/1024,2),'unauthenticatedBulkRequests':len(statuses),'authenticated':authenticated,
         'publicMetricsAbsent':True,'postgresNonRootAndLeastPrivilegeRoles':True,'oomKilled':False,
-        'scope':'local amd64 anonymous and authenticated near-limit single-household smoke, not many-household/long-duration or cluster capacity'}))
+        'scope':'local amd64 anonymous and authenticated near-limit single-account smoke, not many-account/long-duration or cluster capacity'}))
 except Exception as error:
-    (directory/'failure.txt').write_text(type(error).__name__+'\n'+str(error)+'\n'+getattr(error,'stderr',b'').decode(errors='replace'))
+    (directory/'failure.txt').write_text(type(error).__name__+'\n'+str(error)+'\n'+(getattr(error,'stderr',None) or b'').decode(errors='replace'))
     for name in [pg,relay]:
         result = subprocess.run(['docker','logs',name],capture_output=True)
         (directory/(name+'.log')).write_bytes(result.stdout+result.stderr)
     print('FAIL: protected diagnostic directory '+str(directory)); raise SystemExit(1)
 finally:
     sampling.set()
-    if client_created: shutil.rmtree(client_directory,ignore_errors=True)
     for name in [pg,relay]: subprocess.run(['docker','rm','-f',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     for volume in volumes: subprocess.run(['docker','volume','rm',volume],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     subprocess.run(['docker','network','rm',prefix],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
