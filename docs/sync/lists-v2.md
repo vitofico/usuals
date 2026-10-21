@@ -75,8 +75,16 @@ per intent and the list after the batch.
   `upgrade_required`. Each is final: the client removes the intent from its outbox
   whatever the outcome. Conflicts and rejections are recorded in the projection
   exactly as the reducer records them.
-- Resending an intent that was already applied answers `no_op` (the reducer's
-  `seen` map), so a client retries a batch whose response it never received.
+- Resending an intent that was already applied answers `no_op`, so a client
+  retries a batch whose response it never received. This holds within the resend
+  horizon: the projection's `seen` map keeps the last 1,000 intents applied to the
+  list, in the order they were applied, and drops the oldest. An older resend is
+  not recognised, but the list's revision checks still stop it from taking effect
+  twice: it answers `conflict` or `rejected` (an undo answers `no_op`) and is
+  recorded like any other. A client also reads `seen` to tell its own applied
+  intents from unsent ones, so an intent missing from it counts as not applied.
+  The next repeat suggestion after a deleted one likewise needs that deletion to
+  be within the horizon; otherwise the rule waits for the next purchase.
 - If the projection would exceed 7 MB encoded, nothing is applied: 413 `too_large`.
 - The list gets a new `seq` when the batch changed the projection.
 

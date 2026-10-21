@@ -80,6 +80,15 @@ frozen copies, the browser vault and the WebSocket change stream are removed.
 - Every account on a server can see the display names and email addresses of
   the other enabled accounts when sharing. Servers are run for one family or
   group, so this is the intended directory.
-- A projection carries the ids of every intent it has applied, so it grows over
-  time. Feed entries carry whole projections; responses are compressed. The
-  7 MB snapshot cap stays.
+- A projection remembers only the last 1,000 intents applied to it, the resend
+  horizon in [lists v2](../sync/lists-v2.md). Keeping every intent with its
+  payload grew a list by about 45 KB a week for a 25-item weekly shop, which
+  reached the 7 MB cap in under two years and, past 20,000 intents, made the list
+  undecodable for phones. A phone that sends changes and misses the answer while
+  the list takes 1,000 further changes gets a conflict or a rejection for them
+  instead of `no_op`, never a second application. The shape of the projection
+  did not change, so a phone on an earlier release still decodes every list, and
+  its own reducer, which does not drop intents, only affects its local copy until
+  the server answers. The purchase history still grows, about 33 KB a week for
+  the same shop. Feed entries carry whole projections; responses are compressed.
+  The 7 MB snapshot cap stays.
