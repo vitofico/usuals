@@ -20,11 +20,9 @@ import io.theficos.usuals.ui.history.NoHistoryStore
 import io.theficos.usuals.ui.history.PromptMemory
 import io.theficos.usuals.ui.history.InMemoryPromptMemory
 import io.theficos.usuals.model.Gtin
-import io.theficos.usuals.model.Household
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemVersion
 import io.theficos.usuals.model.ItemId
-import io.theficos.usuals.model.MemberId
 import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.parse.UtteranceParser
 import io.theficos.usuals.parse.toItem
@@ -59,8 +57,6 @@ class ListViewModel(
     private val store: ItemStore,
     private val parser: UtteranceParser,
     private val speech: SpeechSource,
-    /** Who is holding this phone. Stamped on every item they add. */
-    private val member: MemberId? = null,
     private val newItemId: () -> ItemId = { ItemId(UUID.randomUUID().toString()) },
     private val clock: () -> Long = System::currentTimeMillis,
     private val historyStore: HistoryStore = NoHistoryStore,
@@ -110,7 +106,7 @@ class ListViewModel(
 
     /**
      * Shared eagerly rather than while-subscribed, on purpose. It is one local
-     * query over a household grocery list, so keeping it warm costs nothing,
+     * query over one grocery list, so keeping it warm costs nothing,
      * and it means a rotation or a trip to settings comes back to a drawn list
      * instead of one empty frame.
      */
@@ -119,13 +115,13 @@ class ListViewModel(
     private val directory = directoryStore.observe().stateIn(viewModelScope, SharingStarted.Eagerly, ListDirectory())
 
     val state: StateFlow<ListUiState> =
-        combine(shopping, store.household(), screen, shoppingTools.state) { snapshot, household, screenState, personal ->
-            project(snapshot.items, household, screenState, snapshot.history, personal, snapshot.listId) to snapshot.listId
+        combine(shopping, screen, shoppingTools.state) { snapshot, screenState, personal ->
+            project(snapshot.items, screenState, snapshot.history, personal, snapshot.listId) to snapshot.listId
         }.combine(directory) { (state, scope), lists ->
-            val name = lists.lists.firstOrNull { it.id == lists.selected }?.name?.ifBlank { null } ?: state.header.householdName
+            val name = lists.lists.firstOrNull { it.id == lists.selected }?.name?.ifBlank { null }
             if (directoryStore !== NoListDirectory && lists.selected.isNotEmpty() && scope != lists.selected) {
-                ListUiState(directory = lists, header = ListHeader(householdName = name), busy = true)
-            } else state.copy(directory = lists, header = state.header.copy(householdName = name))
+                ListUiState(directory = lists, header = ListHeader(name = name), busy = true)
+            } else state.copy(directory = lists, header = state.header.copy(name = name))
         }.stateIn(viewModelScope, SharingStarted.Eagerly, ListUiState())
 
     init {
@@ -447,7 +443,7 @@ class ListViewModel(
             val now = clock()
             val start = nextPosition()
             store.add(drafts.mapIndexed { index, draft -> draft.toItem(
-                id = newItemId(), rawText = typing.draft, addedBy = member,
+                id = newItemId(), rawText = typing.draft,
                 position = start + index, clock = { now },
             ) })
         }
@@ -658,7 +654,6 @@ class ListViewModel(
             draft.toItem(
                 id = newItemId(),
                 rawText = utterance,
-                addedBy = member,
                 position = start + index,
                 clock = { now },
             )
@@ -693,7 +688,6 @@ class ListViewModel(
             val item = ParsedItem(name = gtin.value).toItem(
                 id = newItemId(),
                 rawText = gtin.value,
-                addedBy = member,
                 position = nextPosition(),
                 gtin = gtin,
                 clock = { now },
@@ -785,7 +779,7 @@ class ListViewModel(
 
     // Projection ---------------------------------------------------------
 
-    private fun project(all: List<Item>, household: Household?, screen: ScreenState, facts: HistorySnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, scope: String): ListUiState {
+    private fun project(all: List<Item>, screen: ScreenState, facts: HistorySnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, scope: String): ListUiState {
         // Position first, then the timestamp, then the id: two items dropped at
         // the same position by two phones still land in the same order on both.
         val ordered = all.sortedWith(
@@ -794,7 +788,6 @@ class ListViewModel(
         val stores = ordered.mapNotNull { it.store }.distinct().sorted()
         val filter = screen.selectedStore?.takeIf { it in stores }
         val visible = if (filter == null) ordered else ordered.filter { it.store == filter }
-        val contributors = contributors(visible, household)
         val presentation = smartStore.present(ordered, facts)
         val typing = screen.capture as? CaptureState.Typing
         val query = typing?.draft?.let { parser.parse(it).lastOrNull()?.name ?: it }.orEmpty()
@@ -813,14 +806,9 @@ class ListViewModel(
             stores = stores, selectedStore = filter,
             scanNames = screen.scanNames.filter { offer -> ordered.any { it.id == offer.id } },
             lastScannedItem = ordered.firstOrNull { it.id == screen.lastScanId },
-            header = ListHeader(
-                householdName = household?.name,
-                // Everything on the list, bought or not. It is the size of the
-                // shop, which is what the number is being read for.
-                itemCount = visible.size,
-                contributors = contributors.first,
-                includesYou = contributors.second,
-            ),
+            // Everything on the list, bought or not. It is the size of the
+            // shop, which is what the number is being read for.
+            header = ListHeader(itemCount = visible.size),
             pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id]) },
             checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id]) },
             checkedExpanded = screen.checkedExpanded,
@@ -866,18 +854,4 @@ class ListViewModel(
         } else {
             name
         }
-
-    /**
-     * Who has been adding, in the order their first item appears, with the
-     * person holding the phone flagged separately so the composable can render
-     * them as "tú" in whatever language it is speaking.
-     */
-    private fun contributors(ordered: List<Item>, household: Household?): Pair<List<String>, Boolean> {
-        val ids = ordered.mapNotNull { it.addedBy }.distinct()
-        val includesYou = member != null && member in ids
-        val others = ids
-            .filter { it != member }
-            .mapNotNull { id -> household?.member(id)?.displayName }
-        return others to includesYou
-    }
 }

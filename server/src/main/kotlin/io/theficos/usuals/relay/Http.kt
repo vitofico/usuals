@@ -49,7 +49,6 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             call.respondText(Wire.json.encodeToString(ErrorResponse.serializer(), e.response()), ContentType.Application.Json, HttpStatusCode.fromValue(e.status))
         }
         exception<WireTooLarge> { call, _ -> call.respondText("{\"code\":\"too_large\"}", ContentType.Application.Json, HttpStatusCode.PayloadTooLarge) }
-        exception<UnsupportedWireVersion> { call, _ -> call.respondText("{\"code\":\"upgrade_required\"}", ContentType.Application.Json, HttpStatusCode.UpgradeRequired) }
         exception<IllegalArgumentException> { call, _ -> call.respondText("{\"code\":\"invalid\"}", ContentType.Application.Json, HttpStatusCode.BadRequest) }
         exception<java.nio.BufferUnderflowException> { call, _ -> call.respondText("{\"code\":\"invalid\"}", ContentType.Application.Json, HttpStatusCode.BadRequest) }
         exception<Throwable> { call, error ->
@@ -76,7 +75,6 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             status = when (error) {
                 is RelayError -> error.status
                 is WireTooLarge -> 413
-                is UnsupportedWireVersion -> 426
                 is IllegalArgumentException, is java.nio.BufferUnderflowException -> 400
                 is java.sql.SQLException -> if (error.sqlState?.startsWith("23") == true) 400 else 503
                 else -> 503

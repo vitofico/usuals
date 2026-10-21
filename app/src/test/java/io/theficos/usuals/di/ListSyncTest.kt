@@ -234,10 +234,6 @@ class ListSyncTest {
 private class MemoryState(var state: ClientState = ClientState()) : SyncStateStore {
     override fun read() = state
     override fun update(change: (ClientState) -> ClientState) = change(state).also { state = it }
-    override fun reserve(scope: String) = error("unused")
-    override fun saveBlob(id: String, bytes: ByteArray) = error("unused")
-    override fun readBlob(id: String): ByteArray? = error("unused")
-    override fun removeBlob(id: String) = error("unused")
 }
 
 /** Just enough of docs/sync/lists-v2.md: one account at a time, a server-wide seq and a restore epoch. */

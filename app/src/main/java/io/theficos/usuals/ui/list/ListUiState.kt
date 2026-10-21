@@ -53,18 +53,10 @@ data class ListUiState(
     val isEmpty: Boolean get() = pending.isEmpty() && checked.isEmpty() && deferred.isEmpty()
 }
 
-/**
- * The header: household name, then a subline that answers "how much is left"
- * and "who has been adding" in one line.
- *
- * [contributors] holds display names only, and [includesYou] is separate
- * because "tú" is a translated word rather than a person's name.
- */
+/** The header: the list's name, then a subline that answers "how much is left". */
 data class ListHeader(
-    val householdName: String? = null,
+    val name: String? = null,
     val itemCount: Int = 0,
-    val contributors: List<String> = emptyList(),
-    val includesYou: Boolean = false,
 )
 
 /** One line on the list, already reduced to what the row draws. */

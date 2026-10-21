@@ -71,9 +71,9 @@ class ListScreenTest {
     }
 
     @Test
-    fun items_are_listed_with_their_quantities_and_the_household_above_them() {
+    fun items_are_listed_with_their_quantities_and_the_list_above_them() {
         val state = ListUiState(
-            header = ListHeader(householdName = null, itemCount = 3, contributors = listOf("Marta"), includesYou = true),
+            header = ListHeader(itemCount = 3),
             pending = listOf(
                 row("a", "Leche entera", Quantity.pieces(2)),
                 row("b", "Tomates"),
@@ -91,9 +91,9 @@ class ListScreenTest {
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Aceite de oliva"))
         compose.onNodeWithText("Aceite de oliva").assertIsDisplayed()
         compose.onNodeWithText("0.5 l").assertIsDisplayed()
-        // No household yet, so the header falls back rather than showing a blank.
+        // An unnamed list falls back rather than showing a blank.
         compose.onNodeWithText("Home").assertIsDisplayed()
-        compose.onNodeWithText("3 items · Marta, you").assertIsDisplayed()
+        compose.onNodeWithText("3 items").assertIsDisplayed()
     }
 
     @Test

@@ -1,9 +1,7 @@
 package io.theficos.usuals.ui.list
 
-import io.theficos.usuals.model.Household
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemId
-import io.theficos.usuals.model.MemberId
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.parse.Normalizer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,11 +28,9 @@ import org.junit.runner.Description
  */
 class FakeItemStore(
     initial: List<Item> = emptyList(),
-    household: Household? = null,
 ) : ItemStore {
 
     private val rows = MutableStateFlow(initial)
-    private val house = MutableStateFlow(household)
 
     /** Every call to [add], kept as batches rather than flattened. */
     val batches = mutableListOf<List<Item>>()
@@ -43,8 +39,6 @@ class FakeItemStore(
     val current: List<Item> get() = rows.value
 
     override fun items(): Flow<List<Item>> = rows
-
-    override fun household(): Flow<Household?> = house
 
     override suspend fun add(items: List<Item>) {
         batches += items
@@ -58,10 +52,6 @@ class FakeItemStore(
     override suspend fun remove(id: ItemId) {
         removed += id
         rows.update { list -> list.filterNot { it.id == id } }
-    }
-
-    fun setHousehold(household: Household?) {
-        house.value = household
     }
 }
 
@@ -118,7 +108,6 @@ fun item(
     note: String? = null,
     checked: Boolean = false,
     position: Double = 0.0,
-    addedBy: MemberId? = null,
     createdAt: Long = 1_000L,
 ): Item = Item(
     id = ItemId(id),
@@ -130,7 +119,6 @@ fun item(
     gtin = null,
     checked = checked,
     position = position,
-    addedBy = addedBy,
     createdAt = createdAt,
     updatedAt = createdAt,
 )

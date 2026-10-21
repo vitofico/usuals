@@ -5,9 +5,6 @@
         <item quantity="one">%1$d Artikel</item>
         <item quantity="other">%1$d Artikel</item>
     </plurals>
-    <string name="list_subtitle">%1$s · %2$s</string>
-    <string name="contributor_you">du</string>
-    <string name="contributor_separator">", "</string>
     <string name="open_settings">Einstellungen</string>
     <string name="list_empty_instruction">Halte die Leiste gedrückt und sage, was du brauchst.</string>
     <plurals name="list_checked_count">

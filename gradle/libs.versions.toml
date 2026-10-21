@@ -91,9 +91,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 
 relay-ktor-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 relay-ktor-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
-relay-ktor-websockets = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" }
 relay-ktor-statuspages = { module = "io.ktor:ktor-server-status-pages-jvm", version.ref = "ktor" }
-relay-ktor-client-websockets = { module = "io.ktor:ktor-client-websockets-jvm", version.ref = "ktor" }
 relay-ktor-test = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
 relay-pgjdbc = { module = "org.postgresql:postgresql", version.ref = "pgjdbc" }
 relay-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }

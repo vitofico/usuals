@@ -10,12 +10,8 @@ class ConnectionTest {
     private class Store : SyncStateStore {
         var state = ClientState()
         // The Keystore store deserializes on every read, including the read inside an update.
-        override fun read() = Wire.json.decodeFromString(ClientState.serializer(), Wire.json.encodeToString(ClientState.serializer(), state))
+        override fun read() = ClientState.decode(Wire.json.encodeToString(ClientState.serializer(), state))
         override fun update(change: (ClientState) -> ClientState) = change(read()).also { state = it }
-        override fun reserve(scope: String) = Unit
-        override fun saveBlob(id: String, bytes: ByteArray) = Unit
-        override fun readBlob(id: String): ByteArray? = null
-        override fun removeBlob(id: String) = Unit
     }
     @Test fun chosenOriginIsStrictAndConnectionLinksCarryNoCredentials() {
         assertThat(serverOrigin("https://usuals.example/connect")).isEqualTo("https://usuals.example")
@@ -23,7 +19,7 @@ class ConnectionTest {
         for (bad in listOf("http://usuals.example", "https://user:key@usuals.example", "https://usuals.example/?token=secret", "https://usuals.example#secret", "https://usuals.example/api"))
             assertThrows(IllegalArgumentException::class.java) { serverOrigin(bad) }
     }
-    @Test fun approvalResumesWithTheSameVerifierAndNeverCreatesHouseholdMembership() = runBlocking {
+    @Test fun approvalResumesWithTheSameVerifier() = runBlocking {
         val store = Store(); var approved = false; var verifierHash = ""
         val signing = SyncCrypto.device().publicKeys.signingPublicKey
         val info = InstanceInfo(name = "Private", server = ServerInfo(Wire.hash(Wire.decode(signing, 32)), signing), accounts = true, ai = true)
@@ -46,18 +42,18 @@ class ConnectionTest {
         val client = ConnectionClient(store, transport) { 1000 }
         val pending = client.begin("https://usuals.example/connect")
         assertThat(pending.toString()).doesNotContain(pending.verifier)
+        assertThat(pending.device.toString()).doesNotContain(pending.device.signingSeed)
         assertThat(client.finish()).isNull()
         approved = true
         val restored = ConnectionClient(store, transport) { 1000 }
         val connected = requireNotNull(restored.finish())
         assertThat(connected.token).isEqualTo(connectionToken(ticket.id, pending.verifier, ticket.pollToken))
-        assertThat(store.state.households).isEmpty()
         assertThat(store.state.connecting).isNull()
         assertThat(connected.aiEnabled).isFalse()
         restored.enableAi(true, "accepted-revision")
         assertThat(restored.current()?.aiRevision).isEqualTo("accepted-revision")
     }
-    @Test fun aScannedConnectCodeClaimsItsOfferAndKeepsTheInviteForAfterApproval() = runBlocking {
+    @Test fun aScannedConnectCodeClaimsItsOffer() = runBlocking {
         val store = Store(); var claim: OfferClaim? = null
         val signing = SyncCrypto.device().publicKeys.signingPublicKey
         val info = InstanceInfo(name = "Private", server = ServerInfo(Wire.hash(Wire.decode(signing, 32)), signing), accounts = true, ai = true)
@@ -72,14 +68,11 @@ class ConnectionTest {
                 return WireResponse(200, result.toByteArray())
             }
         }
-        val invite = InviteCode("https://usuals.example", "00000000-0000-4000-8000-000000000003", InviteKey(ByteArray(32) { 4 }), ByteArray(16) { 5 })
-        val code = ConnectCode("https://usuals.example", "00000000-0000-4000-8000-000000000002", ByteArray(32) { 3 }, invite)
-        val pending = ConnectionClient(store, transport) { 1000 }.begin(code.link())
-        assertThat(claim).isEqualTo(code.claim())
+        val link = "https://usuals.example/connect#1." + Wire.encode(ByteArray(16) { 2 } + ByteArray(32) { 3 })
+        val pending = ConnectionClient(store, transport) { 1000 }.begin(link)
+        assertThat(claim).isEqualTo(ConnectCode.parse(link).claim())
         assertThat(pending.offered).isTrue()
-        assertThat(pending.invite).isEqualTo(invite.link())
-        assertThat(store.read().connecting?.invite).isEqualTo(invite.link())
-        assertThat(pending.toString()).doesNotContain(invite.link().substringAfter('#'))
+        assertThat(store.read().connecting?.offered).isTrue()
         val plain = ConnectionClient(Store(), transport) { 1000 }.begin("https://usuals.example/connect")
         assertThat(claim).isNull()
         assertThat(plain.offered).isFalse()
@@ -128,21 +121,6 @@ class ConnectionTest {
         assertThat(first.await()).isEqualTo(second.await())
         assertThat(client.current()).isNotNull(); assertThat(revoked).isEqualTo(0)
     }
-    @Test fun sharingIntentAndRetryIdentitySurviveClientRecreation() {
-        val store = Store()
-        val transport = object : RelayTransport {
-            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = error("no network")
-        }
-        fun client() = HouseholdClient(store, transport, CheckpointSource { _, _ -> error("no checkpoint") })
-        client().rememberSharingSource("local-list")
-        val target = client().reserveShare("household", "local-list", false)
-        assertThat(client().sharingSource()).isEqualTo("local-list")
-        assertThat(client().reserveShare("household", "local-list", false)).isEqualTo(target)
-        assertThrows(IllegalArgumentException::class.java) { client().reserveShare("household", "local-list", true) }
-        client().completeShare("household", target)
-        assertThat(client().sharingSource()).isNull(); assertThat(store.state.pendingShares).isEmpty()
-    }
-
     @Test fun expectedConnectionCannotSendToAReplacementServer() = runBlocking {
         val store = Store()
         val saved = ServerConnection("https://usuals.example", pending().info, "user", "synthetic-token", 20000, aiEnabled = true)
@@ -157,4 +135,26 @@ class ConnectionTest {
         assertThat(calls).isEqualTo(0)
     }
 
+    @Test fun stateSavedWhileHouseholdsExistedKeepsItsConnection() {
+        val connection = ServerConnection("https://usuals.example", pending().info, "user", "synthetic-token", 20000)
+        val saved = """{"households":{},"pendingShares":{},"invites":{},"sharingSource":"list","connection":""" +
+            Wire.json.encodeToString(ServerConnection.serializer(), connection) + "}"
+        val state = ClientState.decode(saved)
+        assertThat(state.connection).isEqualTo(connection)
+        assertThat(Wire.json.encodeToString(ClientState.serializer(), state)).doesNotContain("households")
+    }
+
+    @Test fun aCredentialPastItsStoredExpiryStillReachesTheServer() = runBlocking {
+        // The server slides the credential on every use, so only its 401 says it has expired.
+        val store = Store()
+        store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "user", "synthetic-token", 20000))
+        var sent: String? = null
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                sent = token; return WireResponse(200, "{}".toByteArray())
+            }
+        }
+        ConnectionClient(store, transport) { 30000 }.requestBytes("GET", "/v1/ai/settings")
+        assertThat(sent).isEqualTo("synthetic-token")
+    }
 }

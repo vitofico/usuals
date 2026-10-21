@@ -14,7 +14,6 @@ import io.theficos.usuals.ui.history.HistoryStore
 import io.theficos.usuals.ui.history.PromptMemory
 import io.theficos.usuals.llm.LlmClient
 import io.theficos.usuals.llm.ModelBudget
-import io.theficos.usuals.model.MemberId
 import io.theficos.usuals.parse.LocalUtteranceParser
 import io.theficos.usuals.parse.InputLanguages
 import io.theficos.usuals.smart.CategoryClassifier
@@ -219,13 +218,6 @@ object ServiceLocator {
     val recipeImportFiles by resettable { AndroidRecipeImportFiles(context) }
 
     val speechSource: SpeechSource by resettable { AndroidSpeechSource(context) }
-
-    /**
-     * Who is holding this phone. Null until households exist, which means
-     * items are added by nobody in particular and the header names no
-     * contributors. An invented member id would end up stamped on real rows.
-     */
-    val currentMember: MemberId? = null
 
     // The model ----------------------------------------------------------
 

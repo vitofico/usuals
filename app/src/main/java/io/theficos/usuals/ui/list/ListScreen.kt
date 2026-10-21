@@ -465,9 +465,9 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                 Icon(Icons.Outlined.Settings, stringResource(R.string.open_settings), modifier = Modifier.size(20.dp))
             }
         }
-        NamedListPicker(header.householdName, directory, busy, actions)
+        NamedListPicker(header.name, directory, busy, actions)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(subtitle(header), style = MaterialTheme.typography.bodySmall,
+            Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant, modifier = Modifier.weight(1f).padding(end = 8.dp))
             if (!actions.shoppingMode) {
                 TextButton(onClick = actions.onOpenRecipe) { Text(stringResource(R.string.recipe_import)) }
@@ -493,7 +493,7 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var removing by rememberSaveable { mutableStateOf(false) }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
-    val name = selected?.name?.ifBlank { null } ?: header.householdName ?: stringResource(R.string.household_fallback_name)
+    val name = selected?.name?.ifBlank { null } ?: header.name ?: stringResource(R.string.household_fallback_name)
     val leaves = selected?.editor == true
     Box {
         IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
@@ -517,21 +517,6 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
         text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
         confirmButton = { TextButton(onClick = { removing = false; actions.onRemoveList() }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
         dismissButton = { TextButton(onClick = { removing = false }) { Text(stringResource(R.string.edit_cancel)) } })
-}
-
-/** "14 artículos · Marta, tú", or just the count when nobody is named. */
-@Composable
-private fun subtitle(header: ListHeader): String {
-    val count = pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount)
-    val separator = stringResource(R.string.contributor_separator)
-    val you = stringResource(R.string.contributor_you)
-    // The person holding the phone reads last, the way they would say it.
-    val names = if (header.includesYou) header.contributors + you else header.contributors
-    return if (names.isEmpty()) {
-        count
-    } else {
-        stringResource(R.string.list_subtitle, count, names.joinToString(separator))
-    }
 }
 
 @Composable

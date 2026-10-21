@@ -18,12 +18,6 @@ value class ItemId(val value: String) {
 
 @Serializable
 @JvmInline
-value class HouseholdId(val value: String) {
-    override fun toString(): String = value
-}
-
-@Serializable
-@JvmInline
 value class MemberId(val value: String) {
     override fun toString(): String = value
 }

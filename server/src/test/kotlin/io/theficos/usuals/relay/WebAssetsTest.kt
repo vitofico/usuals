@@ -53,7 +53,7 @@ class WebAssetsTest {
     }
     @Test fun assetsCannotExposeServerResourcesTestsOrApiFallbacks() = testApplication {
         application { routing { webAssets() } }
-        for (path in listOf("/db/001_relay.sql", "/src/../../db/001_relay.sql", "/src/%2e%2e/db/001_relay.sql", "/test/interop.test.mjs", "/PROTOCOL.md", "/v1/unknown", "/api/me", "/assets/missing.svg")) {
+        for (path in listOf("/db/001_relay.sql", "/src/../../db/001_relay.sql", "/src/%2e%2e/db/001_relay.sql", "/test/interop.test.mjs", "/PROTOCOL.md", "/join", "/v1/unknown", "/api/me", "/assets/missing.svg")) {
             val response = client.get(path)
             assertThat(response.status.value).isEqualTo(404)
             assertThat(response.bodyAsText()).doesNotContain("<title>Usuals</title>")

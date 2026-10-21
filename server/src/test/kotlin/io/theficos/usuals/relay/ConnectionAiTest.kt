@@ -1,6 +1,7 @@
 package io.theficos.usuals.relay
 
 import com.google.common.truth.Truth.assertThat
+import com.google.crypto.tink.subtle.Random
 import com.zaxxer.hikari.HikariDataSource
 import io.theficos.usuals.llm.*
 import io.theficos.usuals.model.*
@@ -94,7 +95,7 @@ class ConnectionAiTest {
         return Triple(ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32)), OfferClaim(offer.id, Wire.encode(secret))), verifier, device)
     }
     @Test fun offerClaimApprovesOnlyThePhoneHoldingItsSecretAtOnce() {
-        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        val secret = Random.randBytes(32); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
         assertThat(connections.offerView(caller, offer.id)).isEqualTo(ConnectOfferView(offer.id, offer.expiresAt, null))
         val (start, verifier, device) = scan(offer, secret)
         assertThat(assertThrows(RelayError::class.java) { connections.start(start.copy(offer = OfferClaim(offer.id, randomToken())), "test") }.code).isEqualTo("not_found")
@@ -107,28 +108,28 @@ class ConnectionAiTest {
         assertThat(db.transaction { it.query("SELECT count(*) FROM connection_ticket") { r -> r.getInt(1) }.single() }).isEqualTo(1)
     }
     @Test fun anOfferDiesWithTheBrowserSessionThatShowedIt() {
-        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        val secret = Random.randBytes(32); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
         web.logout(caller)
         assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
         assertThat(db.transaction { it.query("SELECT count(*) FROM connection_ticket") { r -> r.getInt(1) }.single() }).isEqualTo(0)
     }
     @Test fun offerIsPrivateToItsAccountExpiresAndIsBounded() {
-        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        val secret = Random.randBytes(32); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
         val stranger = uuid(); val token = randomToken(); val csrf = randomToken()
         db.transaction { c ->
             c.execute("INSERT INTO web_user(id,issuer,subject,display_name,created_at,last_login_at) VALUES (?,?,?,?,?,?)", id(stranger), WebIdentityConfig.LOCAL_ISSUER, stranger, "Other", now, now)
             c.execute("INSERT INTO web_session VALUES (?,?,?,?,?,?,false)", id(uuid()), digest(token), id(stranger), csrf, now, now + 900000)
         }
         assertThat(assertThrows(RelayError::class.java) { connections.offerView(web.csrf(token, f.origin, csrf), offer.id) }.code).isEqualTo("not_found")
-        repeat(4) { connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey()))) }
-        assertThat(assertThrows(RelayError::class.java) { connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey()))) }.code).isEqualTo("rate_limited")
+        repeat(4) { connections.offer(caller, ConnectOfferRequest(Wire.hash(Random.randBytes(32)))) }
+        assertThat(assertThrows(RelayError::class.java) { connections.offer(caller, ConnectOfferRequest(Wire.hash(Random.randBytes(32)))) }.code).isEqualTo("rate_limited")
         now = offer.expiresAt
         assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
         assertThat(assertThrows(RelayError::class.java) { connections.offerView(caller, offer.id) }.code).isEqualTo("not_found")
-        connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey())))
+        connections.offer(caller, ConnectOfferRequest(Wire.hash(Random.randBytes(32))))
     }
     @Test fun claimedOfferLivesExactlyAsLongAsItsTicket() {
-        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        val secret = Random.randBytes(32); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
         now = offer.expiresAt - 1000
         val ticket = connections.start(scan(offer, secret).first, "test")
         now = offer.expiresAt + 1000
