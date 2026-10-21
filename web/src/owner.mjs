@@ -264,8 +264,9 @@ export async function applicants(c, id) {
   return c.scope.wait(Promise.all(shown.map(async pending => {
     try {
       requireThat(pending.assertion && parseJoin(unb64(pending.assertion)).expiresAt > c.clock(), "invite_expired");
-      return { requestId: pending.requestId, code: (await verifiedJoin(c, id, pending)).code, verified: true, pending };
-    } catch { return { requestId: pending.requestId, code: null, verified: false, pending }; }
+      const { assertion, code } = await verifiedJoin(c, id, pending);
+      return { requestId: pending.requestId, code, inviteId: assertion.inviteId, device: assertion.device, verified: true, pending };
+    } catch { return { requestId: pending.requestId, code: null, inviteId: null, device: null, verified: false, pending }; }
   })));
 }
 export async function approve(c, id, pending) {

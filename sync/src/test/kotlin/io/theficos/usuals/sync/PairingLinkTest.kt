@@ -20,6 +20,14 @@ class PairingLinkTest {
         }
     }
 
+    @Test fun aSignedInBrowsersConnectCodeIsKeptVerbatimForTheConnectionFlow() {
+        val link = "https://usuals.example/connect#1.AAAA"
+        for (text in listOf(link, "usuals://connect#" + Wire.encode(link.toByteArray()))) {
+            assertThat(PairingLink.parse(text)).isEqualTo(PairingLink.Connect(text))
+            assertThat(PairingLink.parse(text).toString()).doesNotContain("AAAA")
+        }
+    }
+
     @Test fun unrelatedCodesAreNotUsualsLinks() {
         for (text in listOf("https://usuals.example/other", "hello", "4006381333931", "usuals://device#x", "")) {
             assertThrows(IllegalArgumentException::class.java) { PairingLink.parse(text) }

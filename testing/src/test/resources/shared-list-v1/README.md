@@ -26,5 +26,6 @@ It preserves next-shop deferral without resurrecting accepted old occurrences.
 
 `../pairing-v2/vectors.json` is a Python-authored pairing v2 golden: HKDF
 admission and MAC keys from a fixed invite key, the join MAC and 6-digit code
-over synthetic assertion bytes, the descriptor anchor and both link forms.
+over synthetic assertion bytes, the descriptor anchor and both link forms, plus
+the one-scan connect link with and without its invite.
 Kotlin (`PairingTest`) and the browser (`pairing.test.mjs`) check every field.

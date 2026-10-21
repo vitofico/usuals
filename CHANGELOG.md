@@ -1,5 +1,17 @@
 # Changelog
 
+## Connect your phone from the computer
+
+- A signed-in computer's **Connect a phone** shows one QR. The phone scans it,
+  the computer shows the phone's six-digit code, and one approval there signs
+  the phone in and, for an owner browser, adds it to the household. The phone no
+  longer needs its own browser sign-in, which failed when the server was open
+  only on the computer.
+- **Invite someone** is now the separate action for another person's phone or a
+  browser.
+- Server migration 007 stores connection offers. Older app versions keep the
+  address-and-sign-in path.
+
 ## Fewer browser unlocks
 
 - The browser no longer locks when you switch tabs or apps. It locks when the

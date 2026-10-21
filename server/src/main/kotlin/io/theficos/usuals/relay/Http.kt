@@ -114,6 +114,8 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         get("/v1/instance") { call.privateResponse(); call.json(InstanceInfo(name = "Usuals", server = relay.identity.info(), accounts = webIdentity != null, ai = webIdentity != null && ai.configuration.profiles.isNotEmpty())) }
         if (webIdentity != null && connections != null) {
             post("/v1/connect") { run { call.privateResponse(); call.json(connections.start(call.body(4096), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
+            post("/api/connect/offers") { run { call.privateResponse(); call.json(connections.offer(call.webCaller(webIdentity), call.body(1024))) } }
+            get("/api/connect/offers/{id}") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.offerView(WebCaller("", me.user, "", me.expiresAt), call.routeId("id"))) } }
             get("/api/connect/{id}") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.view(WebCaller("", me.user, "", me.expiresAt), call.routeId("id"))) } }
             post("/api/connect/{id}/approve") { run { call.privateResponse(); connections.approve(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(true)) } }
             get("/api/connections") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.sessions(WebCaller("", me.user, "", me.expiresAt))) } }

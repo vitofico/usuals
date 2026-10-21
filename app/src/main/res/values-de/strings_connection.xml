@@ -22,4 +22,8 @@
     <string name="connection_migrate">Meinen gespeicherten direkten Anbieterschlüssel für %1$s an diesen Server senden</string>
     <string name="connection_share_source">„%1$s“ ist zum Teilen bereit. Verbinde dich und erstelle einen Haushalt oder wähle einen bestehenden aus, um fortzufahren.</string>
     <string name="connection_retry_copy">Der erneute Versuch sendet die bereits vorbereitete Kopie mit derselben Verlaufsauswahl. Spätere Änderungen bleiben in deiner lokalen Liste.</string>
+    <string name="connection_offer_title">Dieses Telefon mit deinem Konto auf %1$s verbinden?</string>
+    <string name="connection_offer_help">Dein Computer zeigt einen Code. Gib dieses Telefon dort frei; auf dem Telefon ist keine Anmeldung nötig.</string>
+    <string name="connection_offer_later">Nicht jetzt</string>
+    <string name="connection_approve_elsewhere">Gib dieses Telefon auf deinem Computer frei, wenn er denselben Code zeigt.</string>
 </resources>
