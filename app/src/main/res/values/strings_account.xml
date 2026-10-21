@@ -61,6 +61,10 @@
     <string name="list_delete">Delete list</string>
     <string name="list_delete_title">Delete %1$s?</string>
     <string name="list_delete_help">The list and its history are removed for everyone who has it.</string>
+    <string name="list_archive">Archive</string>
+    <string name="list_archive_title">Archive %1$s?</string>
+    <string name="list_archive_help">The list is archived for everyone who has access to it. You can restore it from Archived in your lists.</string>
+    <string name="list_archive_help_editor">The list is archived only for you. The others who have it keep it, and you can restore it from Archived in your lists.</string>
 
     <string name="sync_sign_in">Signed out by the server. Sign in again to sync.</string>
     <string name="sync_offline">Not synced yet. Changes are sent when the server can be reached.</string>

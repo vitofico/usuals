@@ -28,6 +28,7 @@ class ConnectionTransportTest {
             server.start()
             server.enqueue(MockResponse().setBody("{\"cursor\":\"2.7\",\"reset\":true,\"hasMore\":false,\"lists\":[],\"removed\":[]}"))
             server.enqueue(MockResponse().setResponseCode(409).setBody("{\"code\":\"list_exists\"}"))
+            server.enqueue(MockResponse().setResponseCode(404).setBody("{\"code\":\"not_found\"}"))
             val origin = server.url("/").toString().trimEnd('/')
             val saved = ServerConnection(origin, InstanceInfo(name = "Usuals", server = ServerInfo(Wire.hash(byteArrayOf(1)), Wire.hash(byteArrayOf(2))),
                 accounts = true, ai = false), "me", "synthetic-token", Long.MAX_VALUE)
@@ -41,6 +42,11 @@ class ConnectionTransportTest {
             val put = requireNotNull(server.takeRequest(2, TimeUnit.SECONDS))
             assertThat(put.method to put.path).isEqualTo("PUT" to "/api/lists/list-1")
             assertThat(put.body.readUtf8()).contains("\"name\":\"Home\"")
+            val gone = runCatching { lists.archive("list-1", true) }.exceptionOrNull() as RelayProblem
+            assertThat(gone.code to gone.status).isEqualTo("not_found" to 404)
+            val archive = requireNotNull(server.takeRequest(2, TimeUnit.SECONDS))
+            assertThat(archive.method to archive.path).isEqualTo("PUT" to "/api/lists/list-1/archived")
+            assertThat(archive.body.readUtf8()).isEqualTo("{\"archived\":true}")
             val signedOut = runCatching { HttpListsService(OkHttpRelayTransport(true)) { null }.people("") }.exceptionOrNull() as RelayProblem
             assertThat(signedOut.status).isEqualTo(401)
         }

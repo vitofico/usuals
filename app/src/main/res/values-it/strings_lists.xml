@@ -29,6 +29,9 @@
     <string name="lists_check">Stato della spunta</string>
     <string name="lists_imported_home">Casa importata</string>
     <string name="lists_shared_label">Lista condivisa</string>
+    <string name="lists_archived">Archiviate</string>
+    <string name="lists_restore">Ripristina</string>
+    <string name="lists_archived_by_owner">Archiviata dal proprietario. Solo il proprietario può ripristinarla.</string>
     <string name="lists_alias_requested">Richiesto: usa %2$s per %1$s</string>
     <string name="lists_alias_current">Attuale: usa %2$s per %1$s</string>
 </resources>

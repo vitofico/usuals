@@ -86,6 +86,18 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
         }
     }
 
+    /**
+     * Archives or restores a list. On the server the owner does it for everyone and an editor only for
+     * themself; only the owner restores what the owner archived. A list only this phone holds changes here.
+     */
+    suspend fun archive(list: String, archived: Boolean) {
+        val entry = lists.find(list) ?: return
+        require(archived || entry.role != "editor" || !entry.archivedByOwner)
+        if (!entry.synced) return writes.withLock { replica.archive(list, archived) }
+        if (!entry.created) push()
+        online { token, _ -> service.archive(list, archived).also { commit(token) { replica.accept(it) } } }
+    }
+
     suspend fun people(query: String): List<Person> = online { _, _ -> service.people(query) }
 
     /** Adds someone to a list, uploading the list first if the server does not have it yet. */
@@ -161,7 +173,9 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
         var id = list
         while (true) {
             try {
-                val created = service.create(id, replica.creation(id).let { if (it.name.isBlank()) it.copy(name = unnamed) else it })
+                var created = service.create(id, replica.creation(id).let { if (it.name.isBlank()) it.copy(name = unnamed) else it })
+                // A list archived on the phone before any server confirmed it stays archived in the account.
+                if (lists.find(id)?.let { it.archived && it.seq == 0L } == true && !created.archived) created = service.archive(id, true)
                 commit(token) { replica.accept(created) }
                 return id
             } catch (problem: RelayProblem) {

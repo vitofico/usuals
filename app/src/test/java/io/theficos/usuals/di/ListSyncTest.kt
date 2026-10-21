@@ -261,6 +261,77 @@ class ListSyncTest {
         assertThat(db.listDao().all().map { it.id }).containsNoneOf(home, theirs)
     }
 
+    @Test fun archivingASyncedListAsksTheServerAndKeepsBothFlags() = runTest {
+        val home = lists.create("Home"); val camping = lists.create("Camping")
+        signIn(); sync.sync()
+        lists.select(home)
+        sync.archive(home, true)
+        assertThat(server.calls).contains("PUT $home/archived true")
+        assertThat(db.listDao().find(home)!!.let { it.archived to it.archivedByOwner }).isEqualTo(true to true)
+        assertThat(db.listDao().selected()).isEqualTo(camping)
+        sync.archive(home, false)
+        assertThat(server.calls.last()).isEqualTo("PUT $home/archived false")
+        assertThat(db.listDao().find(home)!!.let { it.archived to it.archivedByOwner }).isEqualTo(false to false)
+        assertThat(db.listDao().selected()).isEqualTo(camping)
+    }
+
+    @Test fun anOwnersArchiveArrivingThroughTheFeedMovesTheSelectionOff() = runTest {
+        val home = lists.create("Home")
+        val theirs = server.seed("Camping", owner = "ana", members = listOf("me"))
+        signIn(); sync.sync()
+        lists.select(theirs)
+        server.archive(theirs, by = "ana")
+        assertThat(sync.pull()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(db.listDao().find(theirs)!!.let { it.archived to it.archivedByOwner }).isEqualTo(true to true)
+        assertThat(db.listDao().selected()).isEqualTo(home)
+    }
+
+    @Test fun archivingTheLastListStartsOneFreshLocalListThatSyncingKeeps() = runTest {
+        val home = lists.create("Home"); add(home, "Milk")
+        signIn(); sync.sync()
+        sync.archive(home, true)
+        val fresh = db.listDao().selected()
+        assertThat(fresh).isNotEqualTo(home)
+        assertThat(db.listDao().find(fresh)!!.synced).isFalse()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(db.listDao().all().map { it.id }).containsExactly(home, fresh).inOrder()
+        assertThat(db.listDao().selected()).isEqualTo(fresh)
+        assertThat(server.lists.keys).containsExactly(home)
+        assertThat(names(home)).containsExactly("Milk")
+    }
+
+    @Test fun anEditorArchivesOnlyForThemselfAndCannotRestoreWhatTheOwnerArchived() = runTest {
+        lists.create("Home")
+        val theirs = server.seed("Camping", owner = "ana", members = listOf("me"))
+        signIn(); sync.sync()
+        sync.archive(theirs, true)
+        assertThat(db.listDao().find(theirs)!!.let { it.archived to it.archivedByOwner }).isEqualTo(true to false)
+        sync.archive(theirs, false)
+        assertThat(db.listDao().find(theirs)!!.archived).isFalse()
+        server.archive(theirs, by = "ana")
+        sync.pull()
+        val calls = server.calls.size
+        assertThat(runCatching { sync.archive(theirs, false) }.isFailure).isTrue()
+        assertThat(server.calls).hasSize(calls)
+        assertThat(db.listDao().find(theirs)!!.let { it.archived to it.archivedByOwner }).isEqualTo(true to true)
+    }
+
+    @Test fun aLocalListIsArchivedOnThePhoneAndStaysArchivedOnceSignedIn() = runTest {
+        val home = lists.create("Home"); add(home, "Milk")
+        val camping = lists.create("Camping"); add(camping, "Tent")
+        sync.archive(camping, true)
+        assertThat(server.calls).isEmpty()
+        assertThat(db.listDao().find(camping)!!.archived).isTrue()
+        assertThat(db.listDao().selected()).isEqualTo(home)
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.calls).containsAtLeast("PUT $camping", "PUT $camping/archived true").inOrder()
+        assertThat(server.names(camping)).containsExactly("Tent")
+        assertThat(db.listDao().find(camping)!!.let { it.archived to it.archivedByOwner }).isEqualTo(true to true)
+        assertThat(db.listDao().find(home)!!.archived).isFalse()
+    }
+
     @Test fun addingSomeoneUploadsANewListFirstAndStoresTheNewMembers() = runTest {
         val home = lists.create("Home")
         signIn()
@@ -279,7 +350,8 @@ private class MemoryState(var state: ClientState = ClientState()) : SyncStateSto
 
 /** Just enough of docs/sync/lists-v2.md: one account at a time, a server-wide seq and a restore epoch. */
 private class FakeServer : ListsService {
-    class Stored(var seq: Long, var projection: Projection, val owner: String, val members: MutableMap<String, String>)
+    /** [archivedBy] holds who archived the list: the owner for everyone, an editor for themself. */
+    class Stored(var seq: Long, var projection: Projection, val owner: String, val members: MutableMap<String, String>, val archivedBy: MutableSet<String> = mutableSetOf())
     var me = "me"
     val lists = linkedMapOf<String, Stored>()
     val taken = mutableSetOf<String>()
@@ -314,6 +386,8 @@ private class FakeServer : ListsService {
     /** A restore from backup: the epoch changes, so every cursor handed out before is stale. */
     fun restore(without: String) { lists.remove(without); epoch++ }
     fun evict(list: String, user: String) { lists.getValue(list).members.remove(user); removed += user to RemovedList(list, ++seq) }
+    /** Someone archives the list from another device: the owner for everyone, an editor for themself. */
+    fun archive(list: String, by: String) { lists.getValue(list).archivedBy += by; lists.getValue(list).seq = ++seq }
     fun cursorAfter(list: String) = "$epoch.${lists.getValue(list).seq}"
 
     private fun check() {
@@ -322,7 +396,8 @@ private class FakeServer : ListsService {
     }
     private fun member(list: String) = lists[list]?.takeIf { me in it.members } ?: throw RelayProblem("not_found", 404)
     private fun shared(id: String) = lists.getValue(id).let { stored ->
-        SharedList(id, stored.seq, stored.members.getValue(me), Person(stored.owner, stored.owner), stored.members.map { Member(it.key, it.key, it.value) }, stored.projection)
+        SharedList(id, stored.seq, stored.members.getValue(me), Person(stored.owner, stored.owner), stored.members.map { Member(it.key, it.key, it.value) }, stored.projection,
+            archived = stored.owner in stored.archivedBy || me in stored.archivedBy, archivedByOwner = stored.owner in stored.archivedBy)
     }
 
     override suspend fun changes(cursor: String?, wait: Int): ListChanges {
@@ -364,6 +439,13 @@ private class FakeServer : ListsService {
         val stored = member(list)
         if (stored.owner != me) throw RelayProblem("forbidden", 403)
         lists.remove(list); taken += list
+    }
+    override suspend fun archive(list: String, archived: Boolean): SharedList {
+        calls += "PUT $list/archived $archived"; check()
+        val stored = member(list)
+        val changed = if (archived) stored.archivedBy.add(me) else stored.archivedBy.remove(me)
+        if (changed) stored.seq = ++seq
+        return shared(list)
     }
     override suspend fun people(query: String) = listOf(Person("ana", "Ana", "ana@usuals.example.org")).filter { query in it.name }
     override suspend fun addMember(list: String, user: String): SharedList {

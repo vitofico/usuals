@@ -9,12 +9,14 @@ const val LOCAL_LIST_ID = "00000000-0000-4000-8000-000000000001"
  * A list on this phone. A [synced] list belongs to the signed-in account and keeps the server's last
  * projection as confirmed, with pending intents on top. [created] stays false until the server holds
  * the list. [owner] and [members] are the server's JSON, kept for the share sheet. [stale] marks a list
- * a feed reset has not returned yet.
+ * a feed reset has not returned yet. An [archived] list stays on the phone but is never the selected one;
+ * [archivedByOwner] means the owner archived it for everyone, so only the owner can restore it.
  */
 @Entity(tableName = "list_scope")
 data class ListEntity(@PrimaryKey val id: String, val name: String, val archiveSource: String? = null,
     val synced: Boolean = false, val created: Boolean = false, val seq: Long = 0, val role: String? = null,
-    val owner: String? = null, val members: String? = null, val stale: Boolean = false)
+    val owner: String? = null, val members: String? = null, val stale: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false, @ColumnInfo(defaultValue = "0") val archivedByOwner: Boolean = false)
 @Entity(tableName = "list_selection")
 data class ListSelectionEntity(@PrimaryKey val singleton: Int = 1, val listId: String)
 @Entity(tableName = "item_pref", primaryKeys = ["listId", "key"])

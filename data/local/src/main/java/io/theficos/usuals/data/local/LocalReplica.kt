@@ -78,7 +78,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         for (list in database.listDao().all().filter { !it.synced && !unused(it) }) {
             val encoded = json.encodeToString(projection(list.id))
             database.syncDao().saveProjection(ProjectionEntity(list.id, encoded, encoded))
-            database.listDao().update(ListEntity(list.id, list.name, list.archiveSource, synced = true))
+            database.listDao().update(list.copy(synced = true))
         }
     }
     /** Signing in again, perhaps to another account: every list is offered to the server again and the feed restarts. */
@@ -115,6 +115,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     suspend fun accept(server: SharedList, acknowledged: Collection<String> = emptyList()) = database.withTransaction {
         if (acknowledged.isNotEmpty()) database.syncDao().acknowledge(server.id, acknowledged)
         store(server, force = false)
+        keepSelection()
     }
     /** Drops pending intents the server can never take, so later ones can still be sent. */
     suspend fun discard(list: String, intents: Collection<String>) = database.withTransaction {
@@ -143,7 +144,9 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
             for (list in lists.all()) if (list.stale) drop(list.id)
             resetting = false
         }
-        if (lists.all().any { it.synced }) for (list in lists.all()) if (unused(list)) drop(list.id)
+        // Only a synced list that is not archived replaces the blank one, or an account whose lists are all archived would loop.
+        if (lists.all().any { it.synced && !it.archived }) for (list in lists.all()) if (unused(list)) drop(list.id)
+        keepSelection()
         database.syncDao().saveFeed(FeedEntity(cursor = page.cursor, resetting = resetting))
     }
     suspend fun cursor(): String? = database.syncDao().feed()?.cursor
@@ -151,7 +154,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     suspend fun copyAsNew(source: String): String = database.withTransaction {
         val original = requireNotNull(database.listDao().find(source))
         val id = newId()
-        database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced))
+        database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced, archived = original.archived))
         copyTo(source, id)
         database.historyDao().saveLocalPreferences(database.historyDao().preferences(source).map { LocalPreferenceEntity(id, it.key, it.muted, it.snoozedUntil) })
         val selected = database.listDao().selected() == source
@@ -159,25 +162,33 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         if (selected) database.listDao().select(ListSelectionEntity(listId = id))
         id
     }
+    /** A list only this phone holds is archived or restored here; a synced one changes through the server. */
+    suspend fun archive(list: String, archived: Boolean) = database.withTransaction {
+        database.listDao().update(requireNotNull(database.listDao().find(list)).copy(archived = archived))
+        keepSelection()
+    }
     /** Removes a list and everything scoped to it, keeping a valid selection. */
     suspend fun drop(list: String) = database.withTransaction {
         val sql = database.openHelper.writableDatabase
         for (table in listOf("items", "purchase", "trip", "item_pref", "local_item_pref", "item_alias", "sync_projection", "sync_outbox", "conflict_dismissal"))
             sql.execSQL("DELETE FROM `$table` WHERE listId = ?", arrayOf(list))
         sql.execSQL("DELETE FROM list_scope WHERE id = ?", arrayOf(list))
+        keepSelection()
+    }
+    /** The selected list is always one that is not archived; with none left, work continues in a fresh local list. */
+    private suspend fun keepSelection() {
         val lists = database.listDao()
-        val remaining = lists.all()
-        if (remaining.none { it.id == lists.selected() }) {
-            val target = remaining.firstOrNull()?.id ?: newId().also { lists.insert(ListEntity(it, "")) }
-            lists.select(ListSelectionEntity(listId = target))
-        }
+        val shown = lists.all().filter { !it.archived }
+        if (shown.none { it.id == lists.selected() })
+            lists.select(ListSelectionEntity(listId = shown.firstOrNull()?.id ?: newId().also { lists.insert(ListEntity(it, "")) }))
     }
     private suspend fun store(server: SharedList, force: Boolean) {
         val lists = database.listDao(); val dao = database.syncDao()
         val owner = json.encodeToString(server.owner); val members = json.encodeToString(server.members)
         val existing = lists.find(server.id)
         if (existing == null) {
-            lists.insert(ListEntity(server.id, server.projection.name, synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members))
+            lists.insert(ListEntity(server.id, server.projection.name, synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members,
+                archived = server.archived, archivedByOwner = server.archivedByOwner))
             materialize(server.id, Projection(name = server.projection.name), server.projection)
             val encoded = json.encodeToString(server.projection)
             dao.saveProjection(ProjectionEntity(server.id, encoded, encoded))
@@ -187,7 +198,8 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val before = saved?.optimistic?.let { json.decodeFromString<Projection>(it) } ?: seed(server.id)
         val newer = force || !existing.created || server.seq >= existing.seq
         val confirmed = if (newer) server.projection else saved?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: before
-        if (newer) lists.update(existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false))
+        if (newer) lists.update(existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false,
+            archived = server.archived, archivedByOwner = server.archivedByOwner))
         val optimistic = rebase(server.id, confirmed)
         materialize(server.id, before, optimistic)
         dao.saveProjection(ProjectionEntity(server.id, json.encodeToString(confirmed), json.encodeToString(optimistic)))

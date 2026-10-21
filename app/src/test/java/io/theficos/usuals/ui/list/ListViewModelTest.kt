@@ -58,19 +58,23 @@ class ListViewModelTest {
     fun the_list_menu_acts_on_the_list_it_was_opened_for_even_after_the_selection_moved() = runTest(main.dispatcher) {
         val renamed = mutableListOf<Pair<String, String>>()
         val removed = mutableListOf<String>()
+        val archivedLists = mutableListOf<Pair<String, Boolean>>()
         val directory = object : ListDirectoryStore {
             override fun observe() = flowOf(ListDirectory(selected = "other", lists = listOf(NamedList("mine", "Mine", shared = true), NamedList("other", "Other", shared = false))))
             override suspend fun select(id: String) = Unit
             override suspend fun create(name: String) = Unit
             override suspend fun rename(id: String, name: String) { renamed += id to name }
             override suspend fun remove(id: String) { removed += id }
+            override suspend fun archive(id: String, archived: Boolean) { archivedLists += id to archived }
         }
         val vm = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(),
             newItemId = { ItemId("item-${++minted}") }, clock = { FIXED_CLOCK }, directoryStore = directory)
         vm.onRenameList("mine", "Groceries")
         vm.onRemoveList("mine")
+        vm.onArchiveList("mine", true)
         assertThat(renamed).containsExactly("mine" to "Groceries")
         assertThat(removed).containsExactly("mine")
+        assertThat(archivedLists).containsExactly("mine" to true)
     }
 
     @Test
