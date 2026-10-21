@@ -11,12 +11,6 @@ object SnapshotCodec {
         validate(projection)
         return Wire.json.encodeToString(SnapshotPayload(projection = projection)).toByteArray().also { if (it.size > 7 * 1024 * 1024 - 288) throw WireTooLarge() }
     }
-    fun decode(bytes: ByteArray): Projection {
-        val value = Wire.json.decodeFromJsonElement<SnapshotPayload>(Wire.strictJson(bytes, 7 * 1024 * 1024, payload = true))
-        if (value.schema != 1 || value.normalizer != NORMALIZER_VERSION) throw UnsupportedWireVersion()
-        validate(value.projection)
-        return value.projection
-    }
     private fun validate(p: Projection) {
         require(p.rows.size <= 20000 && p.purchases.size <= 20000 && p.trips.size <= 20000 && p.aliases.size <= 20000 && p.name.length <= 100)
         fun validId(value: String) = value.isNotBlank() && value.length <= 500

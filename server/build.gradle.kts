@@ -36,8 +36,6 @@ allprojects {
     }
     tasks.withType<Test>().configureEach { maxParallelForks = 1 }
 }
-tasks.test { systemProperty("usuals.root", file("..").absolutePath) }
-sourceSets.test { resources.srcDir("../testing/src/test/resources") }
 
 // Explicit synthetic fixture, isolated from all production startup paths.
 tasks.register<JavaExec>("browserPreview") {

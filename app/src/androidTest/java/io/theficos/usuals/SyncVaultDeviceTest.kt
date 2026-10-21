@@ -21,7 +21,7 @@ class SyncVaultDeviceTest {
     }
     @Test fun wrappedStateSurvivesReopenAndInterruptedMutation() = isolated { name, directory ->
         val first = SyncVault(context, name)
-        val secret = Wire.encode(SyncCrypto.randomKey())
+        val secret = Wire.encode(ByteArray(32).also { java.security.SecureRandom().nextBytes(it) })
         first.put("fixture", secret)
         assertTrue(SyncVault(context, name).get("fixture") == secret)
         assertFalse(File(directory, "keys.v1").readBytes().toString(Charsets.UTF_8).contains(secret))
@@ -30,7 +30,7 @@ class SyncVaultDeviceTest {
         assertTrue(SyncVault(context, name).get("fixture") == secret)
     }
     @Test fun aLostWrappingKeyFailsClosedWithoutReplacingThePrivateState() = isolated { name, directory ->
-        val vault = SyncVault(context, name); vault.put("fixture", Wire.encode(SyncCrypto.randomKey()))
+        val vault = SyncVault(context, name); vault.put("fixture", "synthetic-private-state")
         val before = File(directory, "keys.v1").readBytes()
         KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry("usuals_sync_wrap_v1_$name") }
         val error = assertThrows(VaultException::class.java) { SyncVault(context, name).get("fixture") }

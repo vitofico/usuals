@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { b64, unb64 } from "../src/wire.mjs";
 import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "../src/connect.mjs";
 
-// The same vector the phone's parser is tested against (testing/src/test/resources/pairing-v2/vectors.json).
+// The same vector the phone's parser is tested against (sync PairingTest).
 const golden = {
   origin: "https://usuals.example",
   offerId: "00000000-0000-4000-8000-000000000002",
