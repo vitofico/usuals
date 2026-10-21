@@ -33,7 +33,6 @@ object UsualsViewModelFactories {
                 store = ServiceLocator.itemStore,
                 parser = ServiceLocator.parser,
                 speech = ServiceLocator.speechSource,
-                member = ServiceLocator.currentMember,
                 historyStore = ServiceLocator.historyStore,
                 smartStore = ServiceLocator.smartStore,
                 recipeStore = ServiceLocator.recipeStore,

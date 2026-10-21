@@ -1,6 +1,5 @@
 package io.theficos.usuals.ui.list
 
-import io.theficos.usuals.model.Household
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemId
 import kotlinx.coroutines.flow.Flow
@@ -21,11 +20,8 @@ import kotlinx.coroutines.flow.Flow
  */
 interface ItemStore {
 
-    /** Every item in the household list, checked and unchecked, in any order. */
+    /** Every item in the list, checked and unchecked, in any order. */
     fun items(): Flow<List<Item>>
-
-    /** The household this list belongs to. Null before the first one exists. */
-    fun household(): Flow<Household?>
 
     /**
      * Appends items to the list. Takes a batch because one utterance can

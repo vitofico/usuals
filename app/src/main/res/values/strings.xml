@@ -17,10 +17,6 @@
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
-    <string name="list_subtitle">%1$s · %2$s</string>
-    <string name="contributor_you">you</string>
-    <!-- Quoted so the trailing space survives: Android trims unquoted string resources. -->
-    <string name="contributor_separator">", "</string>
     <string name="open_settings">Settings</string>
 
     <!-- The list itself -->

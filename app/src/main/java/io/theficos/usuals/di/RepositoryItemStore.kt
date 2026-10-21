@@ -1,13 +1,11 @@
 package io.theficos.usuals.di
 
 import io.theficos.usuals.data.local.ItemRepository
-import io.theficos.usuals.model.Household
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.ui.list.ItemStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 
 /**
  * Room, behind the list screen's port.
@@ -20,8 +18,6 @@ import kotlinx.coroutines.flow.flowOf
 class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
 
     override fun items(): Flow<List<Item>> = repository.observeItems()
-
-    override fun household(): Flow<Household?> = flowOf(null)
 
     /**
      * Hands each row back to the repository as the parse that produced it.
