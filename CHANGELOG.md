@@ -10,6 +10,11 @@
   same server. Everyone added can edit the list and add others; the owner can
   remove people or delete the list, and anyone else can **Leave list**. Sharing
   needs no household, invitation, code or recovery file any more.
+- **Archive** a list from its menu to move it out of your lists without deleting
+  it. The owner archives it for everyone who has access, and only the owner can
+  restore it; anyone else archives it just for themself. Archived lists wait in
+  an **Archived** section, on the phone's list picker and below the list on the
+  web, with **Restore**, and they keep syncing.
 - Connect a phone by scanning the QR from **Account > Connect a phone** in the web
   app. The phone asks once to confirm the server and connects, with no code to
   compare. **Connected phones** in the web app lists them, each with

@@ -164,9 +164,9 @@ pending intents applied on top through the same reducer.
    Failures back off and keep the outbox.
 5. An archived list (`archived: true`) stays synced but leaves the main list
    picker for an **Archived** section, where it can be restored, except by an
-   editor when `archivedByOwner` is set. The selected list
-   is always one that is not archived; when none is left, the phone starts a fresh
-   empty local list.
+   editor when `archivedByOwner` is set: that editor can only leave it. The
+   selected list is always one that is not archived; when none is left, the
+   phone starts a fresh empty local list.
 6. A 401 shows "Sign in again" and keeps everything local until the person signs
    in or signs out.
 
