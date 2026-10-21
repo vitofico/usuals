@@ -515,6 +515,13 @@ class ListViewModel(
         viewModelScope.launch { ids.forEach { store.remove(it) } }
     }
 
+    /** Empties the list. Purchase history stays, so the usuals are still suggested. */
+    fun onClearItems() {
+        val rows = shopping.value.items
+        screen.update { it.copy(editingId = null) }
+        viewModelScope.launch { rows.forEach { store.remove(it.id, it.version) } }
+    }
+
     private var listening: Job? = null
 
     // Capture ------------------------------------------------------------

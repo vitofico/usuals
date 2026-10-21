@@ -52,6 +52,8 @@ import io.theficos.usuals.smart.Category
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -96,6 +98,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -198,6 +201,7 @@ data class ListActions(
     val onDismissFinished: () -> Unit = {},
     val onDismissHistoryError: () -> Unit = {},
     val onRemoveItems: (Set<ItemId>) -> Unit = {},
+    val onClearItems: () -> Unit = {},
 )
 
 /**
@@ -358,6 +362,7 @@ fun ListScreen(
             onDismissFinished = vm::onDismissFinished,
             onDismissHistoryError = vm::onDismissHistoryError,
             onRemoveItems = vm::onRemoveItems,
+            onClearItems = vm::onClearItems,
         ),
         modifier = modifier,
     )
@@ -404,6 +409,7 @@ fun ListContent(
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
+          Column(modifier = Modifier.weight(1f).closesDraft(typing != null, actions.onDraftDismiss)) {
             ListHeaderBar(
                 header = state.header,
                 directory = state.directory,
@@ -448,8 +454,21 @@ fun ListContent(
                     Text(pluralStringResource(R.plurals.finish_shop_saved, finished.count, finished.count))
                 }
             }
+          }
             CaptureBand(capture = state.capture, actions = actions, autocomplete = state.autocomplete)
         }
+    }
+}
+
+/** While typing, a tap above the band closes the field and its keyboard instead of reaching what is under it. */
+private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier = if (!typing) this else pointerInput(onClose) {
+    awaitEachGesture {
+        awaitFirstDown(pass = PointerEventPass.Initial).consume()
+        onClose()
+        do {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            event.changes.forEach { it.consume() }
+        } while (event.changes.any { it.pressed })
     }
 }
 
@@ -497,6 +516,7 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
     var draft by rememberSaveable { mutableStateOf("") }
     var archiving by rememberSaveable { mutableStateOf<String?>(null) }
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
+    var clearing by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     Box {
         IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
@@ -506,6 +526,7 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_clear)) }, enabled = header.itemCount > 0, onClick = { open = false; clearing = selected?.id ?: "" })
             if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
             DropdownMenuItem(text = { Text(stringResource(if (selected?.editor == true) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = selected?.id })
         }
@@ -524,6 +545,14 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
     directory.lists.firstOrNull { it.id == removing }?.let { list -> RemoveListDialog(list, { removing = null }, actions) }
+    clearing?.let { id ->
+        val name = (directory.lists.firstOrNull { it.id == id }?.name ?: header.name).orEmpty().ifBlank { stringResource(R.string.household_fallback_name) }
+        AlertDialog(onDismissRequest = { clearing = null },
+            title = { Text(stringResource(R.string.list_clear_title, name)) },
+            text = { Text(stringResource(R.string.list_clear_help)) },
+            confirmButton = { TextButton(onClick = { clearing = null; actions.onClearItems() }) { Text(stringResource(R.string.list_clear)) } },
+            dismissButton = { TextButton(onClick = { clearing = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
 }
 
 /** Confirms deleting a list, or leaving it when someone else owns it. */

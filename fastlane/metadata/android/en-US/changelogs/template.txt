@@ -1,1 +1,1 @@
-Your lists now live in your account on your Usuals server, so the phone and the web app show the same lists and stay in sync. Share a list by picking people who have an account on the same server. Connect a phone by scanning the QR code in the web app. Archive a list to put it away without deleting it.
+While typing an item, tap anywhere outside the field to close it and the keyboard. Remove every item from a list at once with Remove all items in its menu. A Google Keep note now imports even when every item is ticked, and repeated emoji such as 🍺🍺🍺 become the quantity.

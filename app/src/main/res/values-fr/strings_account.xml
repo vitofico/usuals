@@ -62,6 +62,9 @@
     <string name="list_delete">Supprimer la liste</string>
     <string name="list_delete_title">Supprimer %1$s ?</string>
     <string name="list_delete_help">La liste et son historique sont supprimés pour toutes les personnes qui l’ont.</string>
+    <string name="list_clear">Retirer tous les articles</string>
+    <string name="list_clear_title">Retirer tous les articles de %1$s ?</string>
+    <string name="list_clear_help">Tous les articles de la liste sont retirés, cochés ou non, pour toutes les personnes qui l’ont. L’historique des achats est conservé.</string>
     <string name="list_archive">Archiver</string>
     <string name="list_archive_title">Archiver %1$s ?</string>
     <string name="list_archive_help">La liste est archivée pour toutes les personnes qui y ont accès. Vous pouvez la restaurer depuis Archivées dans vos listes.</string>

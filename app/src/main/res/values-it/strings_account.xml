@@ -62,6 +62,9 @@
     <string name="list_delete">Elimina lista</string>
     <string name="list_delete_title">Eliminare %1$s?</string>
     <string name="list_delete_help">La lista e la sua cronologia vengono eliminate per tutte le persone che la hanno.</string>
+    <string name="list_clear">Rimuovi tutti gli articoli</string>
+    <string name="list_clear_title">Rimuovere tutti gli articoli da %1$s?</string>
+    <string name="list_clear_help">Tutti gli articoli della lista vengono rimossi, spuntati o no, per tutte le persone che la hanno. La cronologia degli acquisti resta.</string>
     <string name="list_archive">Archivia</string>
     <string name="list_archive_title">Archiviare %1$s?</string>
     <string name="list_archive_help">La lista viene archiviata per tutte le persone che vi hanno accesso. Puoi ripristinarla da Archiviate nelle tue liste.</string>

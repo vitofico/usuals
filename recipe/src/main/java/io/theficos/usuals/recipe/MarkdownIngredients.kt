@@ -17,7 +17,7 @@ class MarkdownIngredients {
         var ingredientDepth: Int? = null
         var ignoredDepth: Int? = null
         var accept = !recipe
-        val lines = mutableListOf<String>()
+        val rows = mutableListOf<Pair<String, Boolean>>()
         source.forEach { raw ->
             val line = raw.trim()
             val heading = heading(line)
@@ -36,11 +36,13 @@ class MarkdownIngredients {
             }
             if (!accept || line.isBlank() || line.startsWith('>') || RULE.matches(line)) return@forEach
             val entry = entry(line) ?: line
-            if (CHECKED.containsMatchIn(entry)) return@forEach
-            val content = clean(UNCHECKED.replaceFirst(entry, ""))
-            if (content.isNotBlank() && !URL.matches(content)) lines += content
-            require(lines.size <= MAX_ITEMS)
+            val content = counted(clean(CHECKBOX.replaceFirst(entry, "")))
+            if (content.isNotBlank() && !URL.matches(content)) rows += content to CHECKED.containsMatchIn(entry)
         }
+        // A reused note, such as a Keep list ticked off on the last trip, is still the list.
+        val open = rows.any { !it.second }
+        val lines = rows.filter { !open || !it.second }.map { it.first }
+        require(lines.size <= MAX_ITEMS)
         return RecipeDocument(title, lines, null, emptyList())
     }
 
@@ -74,6 +76,14 @@ class MarkdownIngredients {
         ?: line.takeIf { CHECKBOX.containsMatchIn(it) }
     private fun clean(raw: String): String = HtmlText.clean(LINK.replace(IMAGE.replace(raw, ""), "$1")
         .replace("**", "").replace("__", "").replace("`", "").replace("*", "").replace("_", ""))
+    /** Notes mark quantities with repeated emoji, "Cerveza 🍺🍺🍺"; the item name keeps only the words. */
+    private fun counted(content: String): String {
+        val trailing = TRAILING_EMOJI.find(content)
+        val name = (trailing?.let { content.substring(0, it.range.first) } ?: content).replaceFirst(LEADING_EMOJI, "").trim()
+        if (name.isBlank()) return content
+        val marks = trailing?.let { EMOJI.findAll(it.value).map { mark -> mark.value }.toList() }.orEmpty()
+        return if (marks.size > 1 && marks.distinct().size == 1 && !name.first().isDigit()) "${marks.size} $name" else name
+    }
     private fun headingKey(raw: String): String = Normalizer.normalize(raw.lowercase(Locale.ROOT), Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "").trim().trimEnd(':')
 
@@ -89,6 +99,10 @@ class MarkdownIngredients {
         private val UNCHECKED = Regex("^(?:\\[ ]|☐)\\s*")
         private val IMAGE = Regex("!\\[[^]]*]\\([^)]*\\)")
         private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
+        private const val PICTOGRAPH = "[\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{2B00}-\\x{2BFF}]"
+        private val EMOJI = Regex("$PICTOGRAPH[\\x{FE0F}\\x{20E3}]*(?:\\x{200D}$PICTOGRAPH\\x{FE0F}?)*")
+        private val TRAILING_EMOJI = Regex("(?:\\s*${EMOJI.pattern})+\\s*$")
+        private val LEADING_EMOJI = Regex("^(?:${EMOJI.pattern}\\s*)+")
         private val URL = Regex("https?://\\S+", RegexOption.IGNORE_CASE)
     }
 }

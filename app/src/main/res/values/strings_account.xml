@@ -61,6 +61,9 @@
     <string name="list_delete">Delete list</string>
     <string name="list_delete_title">Delete %1$s?</string>
     <string name="list_delete_help">The list and its history are removed for everyone who has it.</string>
+    <string name="list_clear">Remove all items</string>
+    <string name="list_clear_title">Remove all items from %1$s?</string>
+    <string name="list_clear_help">Every item on the list is removed, checked or not, for everyone who has it. Your purchase history stays.</string>
     <string name="list_archive">Archive</string>
     <string name="list_archive_title">Archive %1$s?</string>
     <string name="list_archive_help">The list is archived for everyone who has access to it. You can restore it from Archived in your lists.</string>

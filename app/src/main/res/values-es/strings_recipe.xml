@@ -34,7 +34,7 @@
     <string name="recipe_source_url">Enlace</string>
     <string name="recipe_source_markdown">Texto o Markdown</string>
     <string name="recipe_source_photo">Foto</string>
-    <string name="recipe_markdown_help">Pega una nota de Google Keep u otra aplicación, o abre un archivo de texto o Markdown UTF-8. Usa un artículo por línea, viñetas o casillas. La importación se procesa en este dispositivo; se omiten los artículos marcados.</string>
+    <string name="recipe_markdown_help">Pega una nota de Google Keep u otra aplicación, o abre un archivo de texto o Markdown UTF-8. Usa un artículo por línea, viñetas o casillas. La importación se procesa en este dispositivo; se omiten los artículos marcados, salvo que lo estén todos.</string>
     <string name="recipe_markdown_text">Pega tu lista</string>
     <string name="recipe_markdown_file">Abrir archivo de texto o Markdown</string>
     <string name="recipe_read_markdown">Revisar artículos</string>

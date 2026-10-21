@@ -1,6 +1,8 @@
 package io.theficos.usuals.recipe
 
 import com.google.common.truth.Truth.assertThat
+import io.theficos.usuals.model.Quantity
+import io.theficos.usuals.parse.IngredientLineParser
 import org.junit.Test
 
 class MarkdownIngredientsTest {
@@ -14,7 +16,7 @@ class MarkdownIngredientsTest {
     @Test fun copiedNoteBulletsAndStandaloneCheckboxesSkipTitlesAndCompletedItems() {
         assertThat(reader.read("Shopping list\n\n• 2 l milk\n◦ eggs\n☐ apples\n☑ bought bread\n☒ bought salt\n[ ] pears\n[x] bought rice").ingredients)
             .containsExactly("2 l milk", "eggs", "apples", "pears").inOrder()
-        assertThat(reader.read("Shopping list\n☑ milk\n[x] bread").ingredients).isEmpty()
+        assertThat(reader.read("Shopping list\n☑ milk\n[x] bread").ingredients).containsExactly("milk", "bread").inOrder()
         assertThat(reader.read("milk\n[x] bought bread\neggs\n• apples\n☐ pears").ingredients)
             .containsExactly("milk", "eggs", "apples", "pears").inOrder()
     }
@@ -70,8 +72,22 @@ class MarkdownIngredientsTest {
                 .containsExactly("2 apples")
         }
     }
-    @Test fun emptyAndCompletedSourcesStayEmpty() {
-        assertThat(reader.read("# Shopping list\n- [x] milk\n## Notes\nSome instructions").ingredients).isEmpty()
+    @Test fun aKeepListTickedOffOnTheLastTripImportsWithEmojiCountsAsQuantities() {
+        val note = "[X] Alici  🐟🐟 \n[X] Cerveza 🍺🍺🍺\n[X] Piselli 🟢🟢🟢🟢   \n[X] Zucca 🎃🎃 \n[X] Pomodorini 🍅 🍅 \n" +
+            "[X] Feta 🧀🧀 \n[X] Anticalcare doccia\n[X] Babybell\n[X] Yogurt naturale BIO \n[X] Aglio 🧄🧄   \n[X] Cipolle rosse 🧅🧅 "
+        val lines = reader.read(note).ingredients
+        assertThat(lines).containsExactly("2 Alici", "3 Cerveza", "4 Piselli", "2 Zucca", "2 Pomodorini", "2 Feta",
+            "Anticalcare doccia", "Babybell", "Yogurt naturale BIO", "2 Aglio", "2 Cipolle rosse").inOrder()
+        val beer = IngredientLineParser().parse(lines[1])!!
+        assertThat(beer.name).isEqualTo("Cerveza")
+        assertThat(beer.quantity).isEqualTo(Quantity.pieces(3))
+    }
+    @Test fun aSingleOrMixedEmojiDecoratesTheNameWithoutBecomingAQuantity() {
+        assertThat(reader.read("- 🍅 Tomatoes\n- Beer 🍺\n- Party 🎉🍺\n- 2 Lemons 🍋🍋\n- 🍺🍺").ingredients)
+            .containsExactly("Tomatoes", "Beer", "Party", "2 Lemons", "🍺🍺").inOrder()
+    }
+    @Test fun emptySourcesStayEmpty() {
+        assertThat(reader.read("# Shopping list\n## Notes\nSome instructions").ingredients).isEmpty()
     }
     @Test(expected = IllegalArgumentException::class) fun oversizedTextIsRejectedRatherThanTruncated() {
         reader.read("x".repeat(MarkdownIngredients.MAX_TEXT + 1))
