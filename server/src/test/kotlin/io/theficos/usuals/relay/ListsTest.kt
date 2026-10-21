@@ -126,6 +126,24 @@ class ListsTest {
         assertThat(oversized.status).isEqualTo(HttpStatusCode.PayloadTooLarge)
     }
 
+    @Test fun aListRemembersTheLastThousandIntentsForResends() = http {
+        val list = client.create(alice).id
+        val sent = (1..1200).map { capture(list, "Item $it") }
+        var shared: SharedList? = null
+        for (batch in sent.chunked(100)) {
+            val response = client.apply(alice, list, *batch.toTypedArray())
+            assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+            shared = Wire.json.decodeFromString(IntentBatchResult.serializer(), response.bodyAsText()).list
+        }
+        assertThat(shared!!.projection.seen.keys.toList()).isEqualTo(sent.takeLast(1000).map { it.id })
+        val inside = Wire.json.decodeFromString(IntentBatchResult.serializer(), client.apply(alice, list, sent[200]).bodyAsText())
+        assertThat(inside.results).containsExactly(IntentResult(sent[200].id, "no_op"))
+        assertThat(inside.list).isEqualTo(shared)
+        val older = Wire.json.decodeFromString(IntentBatchResult.serializer(), client.apply(alice, list, sent[199]).bodyAsText())
+        assertThat(older.results).containsExactly(IntentResult(sent[199].id, "rejected"))
+        assertThat(older.list.projection.rows).isEqualTo(shared.projection.rows)
+    }
+
     @Test fun feedPagesInSeqOrderAndResetsWithoutAKnownCursor() = http {
         val lists = (1..3).map { client.create(alice, name = "List $it").id }
         val reset = client.changes(alice)

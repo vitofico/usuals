@@ -80,8 +80,9 @@ per intent and the list after the batch.
   horizon: the projection's `seen` map keeps the last 1,000 intents applied to the
   list, in the order they were applied, and drops the oldest. An older resend is
   not recognised, but the list's revision checks still stop it from taking effect
-  twice: it answers `conflict` or `rejected` (an undo answers `no_op`) and is
-  recorded like any other. A client also reads `seen` to tell its own applied
+  twice: it answers `conflict` or `rejected` and is recorded like any other. (An
+  undo answers `no_op`, and an import of past purchases `applied` without
+  changing anything.) A client also reads `seen` to tell its own applied
   intents from unsent ones, so an intent missing from it counts as not applied.
   The next repeat suggestion after a deleted one likewise needs that deletion to
   be within the horizon; otherwise the rule waits for the next purchase.
