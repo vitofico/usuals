@@ -3,9 +3,43 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `0fd2cac`, merged in PR #11 and deployed
-with Vito's explicit approval on 2026-10-20. The initial deployment used source `9c3bd57`.
-The current upgrade adds local import of copied notes and Markdown lists.
+current server/web image is built from `80ad1b6`, merged in PR #13 and deployed
+with Vito's explicit approval on 2026-10-21. The initial deployment used source `9c3bd57`.
+The current upgrade adds one-scan pairing and one sharing workflow, with migration 006.
+
+## 2026-10-21 one-scan pairing
+
+[PR #13](https://github.com/vitofico/usuals/pull/13) merged as `c64a635` after all CI
+checks passed. Preserved source `80ad1b6dcb69f66f28c8ffb5e11509f0aacca7b8` has the
+same complete Git tree as that merge. The source-bound image and platform manifest
+are `usuals-relay:sha256-c41f119b3e2fe87626eeb7048ae1574e22dedf347d6b3c214808d0f5174e3f57`.
+The verified bundle is `/private/tmp/usuals-pairing-bundle-80ad1b6`.
+
+With relay traffic stopped, `usuals-prepairing-20261021` created a fresh online
+base backup with WAL; the job and an independent `pg_verifybackup` passed. The
+live AI key still matches its escrow. Fresh encrypted database and key copies in
+`/Users/vito/personal-repos/usuals-operator-backups/20261021-pairing/` match the
+node checksums. No plaintext credentials were transferred.
+
+`usuals-migrate-pairing-v2` applied migration 006, which adds two nullable
+columns (the invite descriptor and the join request's link-key MAC). Migrations
+001 to 005 and their checksums are unchanged. The `0fd2cac` image is no longer an
+image-only rollback target: use a compatible binary for forward recovery or the
+fenced database restore procedure.
+
+Only the relay image and source annotation changed. All other runtime settings,
+AI profiles, network policy, identity and PVC mounts are unchanged. The ready pod
+reports the expected config digest with zero restarts. Identity, fence and AI-key
+hashes are unchanged; the wrapping key remains mode 0600 owned by UID/GID 10001.
+
+Live TLS/readiness, 34 exact packaged browser assets including all five
+locales, the new `/join` page, security headers, both authentication modes,
+protected anonymous APIs, the pairing v2 invite route and stable server identity
+passed. Functional Android and browser checks are in the
+[verification record](../../docs/verification/2026-10-21-unified-pairing.md).
+Node evidence is `~/usuals/deployments/20261021-pairing/`; local evidence is
+`/private/tmp/usuals-pairing-deploy/`. Android uses the automatic signed release
+workflow from main.
 
 ## 2026-10-20 copied notes and Markdown import
 
