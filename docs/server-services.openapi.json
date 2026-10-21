@@ -3,7 +3,7 @@
   "info": {
     "title": "Usuals account connection and optional AI services",
     "version": "1.0.0",
-    "description": "Additive services alongside the unchanged encrypted shopping protocol. See ADR-0014 for trust boundaries and the native household creation extension."
+    "description": "Account connection and optional AI services. Server-held lists, sharing and connection offers are specified in sync/lists-v2.md (ADR-0017). See ADR-0014 for the AI trust boundary."
   },
   "paths": {
     "/v1/instance": {
@@ -209,7 +209,7 @@
     },
     "/v1/connection/logout": {
       "post": {
-        "description": "Revoke this native account token. Household membership is independent. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "description": "Revoke this native account token. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
         "security": [
           {
             "nativeAccount": []
@@ -566,49 +566,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AiRequest"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/account/households": {
-      "post": {
-        "operationId": "createNativeAccountHousehold",
-        "description": "Create a household for an admitted native account after recovery-kit verification. Uses the existing signed empty-genesis request and receipt contract. Account quota and admission are checked transactionally; no operator bootstrap code or browser device binding is created.",
-        "security": [
-          {
-            "nativeAccount": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "sync/openapi.json#/components/schemas/Membership"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Structured protocol error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "sync/openapi.json#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "sync/openapi.json#/components/schemas/CreateHousehold"
               }
             }
           }
