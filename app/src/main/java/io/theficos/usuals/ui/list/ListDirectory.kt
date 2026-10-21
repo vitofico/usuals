@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.flowOf
  */
 data class NamedList(val id: String, val name: String, val shared: Boolean, val imported: Boolean = false, val editor: Boolean = false,
     val archived: Boolean = false, val archivedByOwner: Boolean = false)
-data class ListDirectory(val selected: String = "", val lists: List<NamedList> = emptyList(), val pending: Int = 0, val conflicts: List<ListConflict> = emptyList(), val status: SyncStatus? = null)
+/** [unused] means the selected list is the blank starting list nothing was added to: archiving it would only start another. */
+data class ListDirectory(val selected: String = "", val lists: List<NamedList> = emptyList(), val pending: Int = 0, val conflicts: List<ListConflict> = emptyList(), val status: SyncStatus? = null,
+    val unused: Boolean = false)
 data class ListConflict(val id: String, val itemId: String?, val current: Map<String, String?>, val incoming: Map<String, String?>, val kind: String)
 interface ListDirectoryStore {
     suspend fun dismissConflict(id: String) = Unit

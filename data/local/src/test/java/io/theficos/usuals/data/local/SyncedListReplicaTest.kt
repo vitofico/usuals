@@ -330,6 +330,18 @@ class SyncedListReplicaTest {
         assertThat(db.listDao().find(replica.copyAsNew("camping"))!!.archived).isTrue()
         db.close()
     }
+    @Test fun restoringALocalListDropsTheBlankListArchivingLeftBehind() = runTest {
+        val db = memory()
+        val replica = LocalReplica(db, newId = { "fresh" })
+        db.listDao().insert(ListEntity("home", "Home")); db.listDao().select(ListSelectionEntity(listId = "home"))
+        replica.archive("home", true)
+        assertThat(db.listDao().all().map { it.id }).containsExactly("home", "fresh").inOrder()
+        assertThat(db.listDao().selected()).isEqualTo("fresh")
+        replica.archive("home", false)
+        assertThat(db.listDao().all().map { it.id }).containsExactly("home")
+        assertThat(db.listDao().selected()).isEqualTo("home")
+        db.close()
+    }
     @Test fun renamingAListIsAnIntentThatUpdatesItsName() = runTest {
         val db = memory(); synced(db)
         val replica = LocalReplica(db)

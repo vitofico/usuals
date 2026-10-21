@@ -165,6 +165,8 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     /** A list the server does not hold is archived or restored here; one it holds changes through the server. */
     suspend fun archive(list: String, archived: Boolean) = database.withTransaction {
         database.listDao().update(requireNotNull(database.listDao().find(list)).copy(archived = archived))
+        // A list back from the archive replaces the blank one archiving left behind, as a synced list does in applyPage.
+        if (!archived) for (other in database.listDao().all()) if (other.id != list && unused(other)) drop(other.id)
         keepSelection()
     }
     /** Removes a list and everything scoped to it, keeping a valid selection. */
@@ -248,7 +250,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         count
     }
     /** A blank local list nothing was ever added to, like the one a fresh install or signing out starts with. */
-    private suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && projection(list.id) == Projection()
+    suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && projection(list.id) == Projection()
     private suspend fun seed(scope: String): Projection {
         val history = database.historyDao()
         val aliases = history.aliases(scope).associate { it.fromKey to it.toKey }
