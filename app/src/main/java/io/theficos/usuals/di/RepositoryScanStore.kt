@@ -74,7 +74,8 @@ class RepositoryScanStore(
         val quantity = if (pinned == null) item.quantity else if (pinned.isNull("quantity")) null else
             Quantity(pinned.getString("quantity").toDouble(), MeasureUnit.valueOf(pinned.getString("unit")))
         val store = if (pinned == null) item.store else if (pinned.isNull("store")) null else pinned.getString("store")
+        val note = if (pinned == null) item.note else if (pinned.isNull("note")) null else pinned.getString("note")
         return smart.edit(ItemEdit(item.id, name, quantity, presentation?.override ?: offer.category,
-            presentation?.repeatEveryDays, store, offer.version, changeRepeat = false))
+            presentation?.repeatEveryDays, store, offer.version, changeRepeat = false, note = note))
     }
 }

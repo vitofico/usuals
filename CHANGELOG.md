@@ -1,5 +1,13 @@
 # Changelog
 
+## Edit an item's note
+
+- The edit sheet, opened by holding an item, has a **Note** field. Change the
+  small line shown under an item's name, add one, or clear it. The note syncs
+  like the rest of the item.
+- Typing still adds notes directly: `Milk (lactose free)` or `Milk for the
+  cake`.
+
 ## Keep notes import whole
 
 - Importing a note brings in every item, ticked or not. A Keep list with some

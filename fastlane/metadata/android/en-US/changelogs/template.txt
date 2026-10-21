@@ -1,1 +1,1 @@
-Importing a Google Keep note now brings in every item, ticked or not. Repeated emoji after an item set its quantity, so Beer 🍺🍺🍺 adds 3 beers; the import screen now explains this.
+Edit an item's note: hold the item and change or clear the Note field. Notes still come from typing too, as in Milk (lactose free) or Milk for the cake.

@@ -1,1 +1,1 @@
-Beim Import einer Google-Keep-Notiz kommen jetzt alle Artikel mit, abgehakt oder nicht. Wiederholte Emoji nach einem Artikel geben die Menge an, Bier 🍺🍺🍺 fügt also 3 Bier hinzu; der Importbildschirm erklärt das jetzt.
+Bearbeite die Notiz eines Artikels: Artikel gedrückt halten und das Feld Notiz ändern oder leeren. Notizen lassen sich weiterhin direkt eintippen, etwa Milch (laktosefrei) oder Milch für den Kuchen.

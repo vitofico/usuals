@@ -44,6 +44,7 @@ class RepositoryScanStoreTest {
         var constructed = 0
         val scans = store({ false }) { constructed++; error("network must stay disconnected") }
         val id = scans.add(code)
+        items.edit(id, code.value, null, emptyList(), note = "two packs")
         val offer = scans.lookup(id, code)!!
         assertThat(constructed).isEqualTo(0)
         assertThat(offer.name).isNull()
@@ -51,6 +52,7 @@ class RepositoryScanStoreTest {
         assertThat(items.find(id)!!.name).isEqualTo(code.value)
         assertThat(scans.confirm(offer, "washing liquid")).isTrue()
         assertThat(items.find(id)!!.name).isEqualTo("washing liquid")
+        assertThat(items.find(id)!!.note).isEqualTo("two packs")
         assertThat(history.snapshot().aliases).containsExactly(ItemAlias("gtin:${code.value}", "washing liquid"))
     }
 

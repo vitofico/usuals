@@ -44,7 +44,7 @@ The web editor offers the same choices from its Appearance control.
 
 | When you want to… | Usuals helps you… |
 | --- | --- |
-| **Catch what you need** | Type, dictate, share text or scan a barcode. Edit names, quantities, categories and store tags. Add the home-screen widget for a quicker way back in. |
+| **Catch what you need** | Type, dictate, share text or scan a barcode. Edit names, notes, quantities, categories and store tags. Add the home-screen widget for a quicker way back in. |
 | **Remember the last shop** | Finish a shop to save checked items as dated purchases. Keep unchecked rows open, undo a finish, search history and rebuy selected items. |
 | **Keep the essentials coming** | Set explicit repeat rules, pin essentials and choose from up to six suggestions. Quantity hints wait for a tap; similar names merge only with your approval. |
 | **Turn a recipe into a list** | Share a recipe link, review its ingredients and choose what to add. Already-listed items are excluded; pantry staples and recent purchases start unticked. |

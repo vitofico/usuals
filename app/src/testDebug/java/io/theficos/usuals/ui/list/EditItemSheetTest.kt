@@ -19,13 +19,15 @@ class EditItemSheetTest {
     @get:Rule val compose = createComposeRule()
     @Test fun `the sheet saves the entered amount and explicit category and rule`() {
         var saved: ItemEdit? = null
-        val row = ListRow(ItemId("milk"), "Milk", Quantity(2.0, MeasureUnit.LITRE), rawName = "milk", category = Category.DAIRY)
+        val row = ListRow(ItemId("milk"), "Milk", Quantity(2.0, MeasureUnit.LITRE), note = "for the cake", rawName = "milk", category = Category.DAIRY)
         compose.setContent { UsualsTheme { EditItemSheet(row, false, { saved = it }, {}, {}) } }
+        compose.onNodeWithText("for the cake").assertExists()
         val fields = compose.onAllNodes(hasSetTextAction())
         fields[0].performTextReplacement("oat milk")
-        fields[1].performTextReplacement("1")
-        fields[2].performTextReplacement("21")
-        fields[3].performTextReplacement("greengrocer")
+        fields[1].performTextReplacement(" lactose free ")
+        fields[2].performTextReplacement("1")
+        fields[3].performTextReplacement("21")
+        fields[4].performTextReplacement("greengrocer")
         compose.onNodeWithText("Automatic").performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Household").performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Save").assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
@@ -34,6 +36,15 @@ class EditItemSheetTest {
         assertThat(saved!!.category).isEqualTo(Category.HOUSEHOLD)
         assertThat(saved!!.repeatEveryDays).isEqualTo(21)
         assertThat(saved!!.store).isEqualTo("greengrocer")
+        assertThat(saved!!.note).isEqualTo("lactose free")
+    }
+
+    @Test fun `clearing the note saves none`() {
+        var saved: ItemEdit? = null
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk", note = "for the cake", rawName = "milk"), false, { saved = it }, {}, {}) } }
+        compose.onAllNodes(hasSetTextAction())[1].performTextReplacement("  ")
+        compose.onNodeWithText("Save").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        assertThat(saved!!.note).isNull()
     }
 
     @Test fun `long press edits without checking or deleting`() {

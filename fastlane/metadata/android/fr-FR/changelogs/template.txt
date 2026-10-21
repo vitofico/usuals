@@ -1,1 +1,1 @@
-L’importation d’une note Google Keep reprend désormais tous les articles, cochés ou non. Les emoji répétés après un article donnent sa quantité, donc Bière 🍺🍺🍺 ajoute 3 bières ; l’écran d’importation l’explique désormais.
+Modifiez la note d’un article : appuyez longuement sur l’article et changez ou videz le champ Note. Les notes se saisissent toujours aussi directement, comme Lait (sans lactose) ou Lait pour le café.

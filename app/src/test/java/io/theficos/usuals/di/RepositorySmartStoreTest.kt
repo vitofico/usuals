@@ -87,6 +87,16 @@ class RepositorySmartStoreTest {
         assertThat(presentation.override).isEqualTo(Category.HOUSEHOLD)
     }
 
+    @Test fun `an edit writes, keeps and clears the note`() = runTest {
+        val milk = items.add(ParsedItem("milk", note = "for the cake"))
+        assertThat(smart.edit(ItemEdit(milk, "milk", null, null, null, note = "lactose free"))).isTrue()
+        assertThat(items.find(milk)!!.note).isEqualTo("lactose free")
+        assertThat(smart.edit(ItemEdit(milk, "oat milk", null, null, null, note = "lactose free"))).isTrue()
+        assertThat(items.find(milk)!!.note).isEqualTo("lactose free")
+        assertThat(smart.edit(ItemEdit(milk, "oat milk", null, null, null))).isTrue()
+        assertThat(items.find(milk)!!.note).isNull()
+    }
+
     @Test fun `day 21 adds one marked row and leaves quantity unknown`() = runTest {
         val milk = items.add(ParsedItem("milk"))
         smart.edit(ItemEdit(milk, "milk", Quantity(2.0, MeasureUnit.LITRE), null, 21))

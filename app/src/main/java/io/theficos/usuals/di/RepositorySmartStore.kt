@@ -152,6 +152,7 @@ class RepositorySmartStore(
             require(value.quantity?.amount?.let { it.isFinite() && it >= 0 } != false)
             require(value.repeatEveryDays == null || value.repeatEveryDays > 0)
             require(value.store == null || value.store.length <= 80)
+            require(value.note == null || value.note.length <= ItemEdit.MAX_NOTE)
             val original = items.find(value.id) ?: return@transaction false
             val facts = history.snapshot()
             val aliases = facts.aliases.associate { it.fromKey to it.toKey }
@@ -169,7 +170,7 @@ class RepositorySmartStore(
             val updates = if (oldKey != newKey && old.repeatEveryDays != null) {
                 listOf(old.copy(repeatEveryDays = null), preference)
             } else listOf(preference)
-            items.edit(value.id, name, value.quantity, updates, value.store, value.version)
+            items.edit(value.id, name, value.quantity, updates, value.store, value.version, value.note)
         }
     }
 }
