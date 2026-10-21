@@ -3,9 +3,33 @@
 Initial deployment authorized directly by Vito on 2026-10-18. Service URL:
 [usuals.theficos.dedyn.io](https://usuals.theficos.dedyn.io).
 This overlay records the live configuration; it contains no credentials. The
-current server/web image is built from `80ad1b6`, merged in PR #13 and deployed
+current server/web image is built from `093a4f3`, merged in PR #15 and deployed
 with Vito's explicit approval on 2026-10-21. The initial deployment used source `9c3bd57`.
-The current upgrade adds one-scan pairing and one sharing workflow, with migration 006.
+The current upgrade keeps a browser invite through sign-in on the join page.
+
+## 2026-10-21 browser invite resume
+
+[PR #15](https://github.com/vitofico/usuals/pull/15) merged as `093a4f3` after all CI
+checks passed, and the image was built from that merge commit. Only browser pages
+changed since `80ad1b6`; server code and schema are identical. The source-bound
+image and platform manifest are
+`usuals-relay:sha256-8ce91e8d85fa86fbf2769ffec2f28ec589bdf3177d8d4a013221417b7b80d77c`.
+The verified bundle is `/private/tmp/usuals-resume-bundle-093a4f3`.
+
+Before rollout, `usuals-preresume-20261021` produced an online base backup with WAL;
+the job and an independent `pg_verifybackup` passed. Fresh encrypted database and
+key copies in `/Users/vito/personal-repos/usuals-operator-backups/20261021-invite-resume/`
+match the node checksums. No plaintext credentials were transferred.
+
+Only the relay image and source annotation changed. The ready pod reports the
+expected config digest with zero restarts. Schema 006, PostgreSQL configuration and
+identity, fence and AI-key hashes are unchanged; the wrapping key remains mode 0600
+owned by UID/GID 10001. No migration was needed, so `80ad1b6` remains an image-only
+rollback target. Live TLS/readiness, 34 exact packaged browser assets, the `/join`
+page, security headers, both authentication modes, protected anonymous APIs, the
+pairing v2 invite route and stable server identity passed. Node evidence is
+`~/usuals/deployments/20261021-invite-resume/`; local evidence is
+`/private/tmp/usuals-resume-deploy/`.
 
 ## 2026-10-21 one-scan pairing
 

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: usuals-relay
   annotations:
-    usuals.io/source-commit: 80ad1b6dcb69f66f28c8ffb5e11509f0aacca7b8
+    usuals.io/source-commit: 093a4f34874f84c313370528bf1f8077af56e15e
 spec:
   template:
     spec:
