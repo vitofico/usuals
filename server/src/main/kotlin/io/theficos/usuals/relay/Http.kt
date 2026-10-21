@@ -6,49 +6,43 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.statuspages.*
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
+import io.ktor.util.AttributeKey
 import io.theficos.usuals.sync.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.decodeFromJsonElement
 import java.io.ByteArrayOutputStream
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.seconds
 
-private data class AccountAccess(val user: String, val verify: (java.sql.Connection) -> Unit)
+/** Time a request spent waiting for a list change, left out of its measured duration. */
+private val idle = AttributeKey<Long>("idle")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetrics(relay.db), ingress: TrustedIngress = TrustedIngress(), webIdentity: WebIdentity? = null,
     browserModels: BrowserModels = BrowserModels(), ai: AiGateway = AiGateway(relay.db, AiConfiguration())) {
-    val service = MembershipService(relay)
     val connections = webIdentity?.let { Connections(relay.db, relay, it) }
     val aiSlots = Semaphore(2)
     val aiIo = Dispatchers.IO.limitedParallelism(2)
+    /** A phone's bearer or a browser's cookie; browser mutations also need the CSRF token. */
     fun ApplicationCall.accountAccess(mutation: Boolean = true): AccountAccess {
-        val native = request.headers[HttpHeaders.Authorization]
-        return if (native != null) {
+        if (request.headers[HttpHeaders.Authorization] != null) {
             val token = bearer(); val binding = requireNotNull(connections)
             val user = relay.db.transaction { binding.caller(it, token) }
-            AccountAccess(user) { c -> expect(binding.caller(c, token) == user, "unauthenticated", 401) }
+            return AccountAccess(user) { c -> expect(binding.caller(c, token) == user, "unauthenticated", 401) }
         }
-        else {
-            val web = webIdentity ?: reject("unauthenticated", 401)
-            if (mutation) {
-                val caller = webCaller(web)
-                AccountAccess(caller.user.id) { c -> web.current(c, caller); Unit }
-            } else AccountAccess(web.me(webToken(web)).user.id) { }
-        }
+        val web = webIdentity ?: reject("unauthenticated", 401)
+        val caller = if (mutation) webCaller(web) else reader(web)
+        return AccountAccess(caller.user.id) { c -> web.current(c, caller) }
     }
     val io = Dispatchers.IO.limitedParallelism(4)
     val identityIo = Dispatchers.IO.limitedParallelism(1)
     val requests = Semaphore(8)
     val identityRequests = Semaphore(1)
-    val bulkRequests = Semaphore(1)
-    val sockets = SocketHub(relay, operations)
-    relay.changed = sockets::changed
+    // A stored list is up to 7 MB encoded and several times that decoded, so at most two requests hold one.
+    val listWork = Semaphore(2)
     install(StatusPages) {
         exception<RelayError> { call, e ->
             if (e.status == 429) call.response.headers.append(HttpHeaders.RetryAfter, "60")
@@ -66,28 +60,17 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 if (invalid) HttpStatusCode.BadRequest else HttpStatusCode.ServiceUnavailable)
         }
     }
-    install(WebSockets) { pingPeriod = 15.seconds; timeout = 15.seconds; maxFrameSize = 16384; masking = false }
-    suspend fun RoutingContext.run(bulk: Boolean = false, identity: Boolean = false, block: suspend RoutingContext.() -> Unit) {
-        val started = System.nanoTime(); var status = 200; var admitted = false; var bulkAdmitted = false
+    /** One of the request slots, the 15 s limit and the database dispatcher. */
+    suspend fun <T> admit(identity: Boolean = false, block: suspend () -> T): T {
+        val admission = if (identity) identityRequests else requests
+        expect(admission.tryAcquire(), "unavailable", 503)
+        try { return withTimeout(15000) { withContext(if (identity) identityIo else io) { block() } } } finally { admission.release() }
+    }
+    suspend fun RoutingContext.run(identity: Boolean = false, admitted: Boolean = true, block: suspend RoutingContext.() -> Unit) {
+        val started = System.nanoTime(); var status = 200
         operations.active.incrementAndGet()
         try {
-            val admission = if (identity) identityRequests else requests
-            expect(admission.tryAcquire().also { admitted = it }, "unavailable", 503)
-            withTimeout(15000) { withContext((if (identity) identityIo else io) + relay.auth.browserContext(webIdentity?.let { call.request.cookies[it.sessionCookieName()] })) {
-                if (bulk) {
-                    // Authenticate routing headers before admitting or reading a potentially slow large body.
-                    relay.db.transaction { c ->
-                        val token = call.bearer()
-                        when {
-                            call.parameters["h"] != null -> relay.auth.authorize(c, token, call.routeId("h"), owner = call.request.httpMethod != HttpMethod.Get, recovery = true)
-                            call.parameters["l"] != null -> relay.listAccess(c, token, call.routeId("l"), owner = call.request.httpMethod == HttpMethod.Put, recovery = call.request.httpMethod == HttpMethod.Get)
-                            else -> relay.auth.checkBootstrap(c, token)
-                        }
-                    }
-                    expect(bulkRequests.tryAcquire().also { bulkAdmitted = it }, "unavailable", 503)
-                }
-                block()
-            } }
+            if (admitted) admit(identity) { block() } else block()
             status = call.response.status()?.value ?: 200
         } catch (error: Throwable) {
             status = when (error) {
@@ -100,10 +83,13 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             }
             throw error
         } finally {
-            if (bulkAdmitted) bulkRequests.release()
-            if (admitted) (if (identity) identityRequests else requests).release()
-            operations.active.decrementAndGet(); operations.finished(status, System.nanoTime() - started)
+            operations.active.decrementAndGet(); operations.finished(status, System.nanoTime() - started - (call.attributes.getOrNull(idle) ?: 0))
         }
+    }
+    /** Builds and encodes a list response under [listWork]; the bytes are written after it is released. */
+    suspend fun <T> ApplicationCall.listed(serializer: KSerializer<T>, status: () -> HttpStatusCode = { HttpStatusCode.OK }, block: suspend () -> T) {
+        val bytes = listWork.withPermit { Wire.json.encodeToString(serializer, block()).toByteArray() }
+        respondBytes(bytes, ContentType.Application.Json, status())
     }
     routing {
         webAssets(browserModels)
@@ -115,19 +101,13 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         if (webIdentity != null && connections != null) {
             post("/v1/connect") { run { call.privateResponse(); call.json(connections.start(call.body(4096), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
             post("/api/connect/offers") { run { call.privateResponse(); call.json(connections.offer(call.webCaller(webIdentity), call.body(1024))) } }
-            get("/api/connect/offers/{id}") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.offerView(WebCaller("", me.user, "", me.expiresAt), call.routeId("id"))) } }
-            get("/api/connect/{id}") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.view(WebCaller("", me.user, "", me.expiresAt), call.routeId("id"))) } }
+            get("/api/connect/offers/{id}") { run { call.privateResponse(); call.json(connections.offerView(call.reader(webIdentity), call.routeId("id"))) } }
+            get("/api/connect/{id}") { run { call.privateResponse(); call.json(connections.view(call.reader(webIdentity), call.routeId("id"))) } }
             post("/api/connect/{id}/approve") { run { call.privateResponse(); connections.approve(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(true)) } }
-            get("/api/connections") { run { call.privateResponse(); val me = webIdentity.me(call.webToken(webIdentity)); call.json(connections.sessions(WebCaller("", me.user, "", me.expiresAt))) } }
+            get("/api/connections") { run { call.privateResponse(); call.json(connections.sessions(call.reader(webIdentity))) } }
             post("/api/connections/{id}/revoke") { run { call.privateResponse(); connections.revoke(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(false)) } }
             post("/v1/connect/{id}/complete") { run { call.privateResponse(); call.json(connections.complete(call.routeId("id"), call.body(2048), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
             post("/v1/connection/logout") { run { call.privateResponse(); call.json(connections.logout(call.bearer())) } }
-            post("/v1/account/households") { run {
-                call.privateResponse(); val token = call.bearer()
-                val user = relay.db.transaction { connections.caller(it, token) }
-                val proof = webIdentity.createHouseholdFor(user, call.body(65536), relay, false) { c -> expect(connections.caller(c, token) == user, "unauthenticated", 401) }
-                call.json(Membership(listOf(proof), 2), HttpStatusCode.Created)
-            } }
             get("/v1/ai/settings") { run { call.privateResponse(); call.json(ai.settings(call.accountAccess(mutation = false).user)) } }
             post("/v1/ai/settings") { run { call.privateResponse(); val access = call.accountAccess(); call.json(ai.select(access.user, call.body(8192), access.verify)) } }
             for (action in listOf("probe", "probe-image", "text", "image")) post("/v1/ai/$action") {
@@ -143,14 +123,62 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                     } }
                 } finally { aiSlots.release() }
             }
+            val lists = Lists(relay, webIdentity.config)
+            route("/api/lists") {
+                install(Compression) { mode = CompressionConfig.Mode.CompressResponse; gzip { minimumSize(1024) } }
+                get("changes") { run(admitted = false) {
+                    call.privateResponse()
+                    val cursor = call.request.queryParameters["cursor"]
+                    val limit = (call.request.queryParameters["limit"] ?: "100").toInt()
+                    val wait = (call.request.queryParameters["wait"] ?: "0").toInt().also { expect(it in 0..25) }
+                    val access = admit { call.accountAccess(mutation = false) }
+                    // Registered before the first read, so a change committed in between still wakes this request.
+                    val waiter = if (wait > 0) lists.waiters.register(access.user).also { operations.waiting.incrementAndGet() } else null
+                    try {
+                        suspend fun answer(always: Boolean) = admit {
+                            val bytes = listWork.withPermit {
+                                lists.changes(access, cursor, limit).takeIf { always || it.reset || it.lists.isNotEmpty() || it.removed.isNotEmpty() }
+                                    ?.let { Wire.json.encodeToString(ListPage.serializer(), it).toByteArray() }
+                            }
+                            bytes?.let { call.respondBytes(it, ContentType.Application.Json) } != null
+                        }
+                        // Waiting holds no request slot and runs outside the 15 s limit.
+                        if (!answer(waiter == null)) {
+                            val started = System.nanoTime()
+                            withTimeoutOrNull(wait * 1000L) { requireNotNull(waiter).await() }
+                            call.attributes.put(idle, System.nanoTime() - started)
+                            answer(true)
+                        }
+                    } finally { if (waiter != null) { lists.waiters.release(access.user, waiter); operations.waiting.decrementAndGet() } }
+                } }
+                // Uploads are read before taking a list-work permit, so a slow sender cannot hold one.
+                put("{id}") { run {
+                    call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id"); var created = false
+                    val body = call.bytes(8 * 1024 * 1024)
+                    call.listed(ListView.serializer(), { if (created) HttpStatusCode.Created else HttpStatusCode.OK }) {
+                        lists.create(access, list, decode(body, 8 * 1024 * 1024, payload = true)).also { created = it.second }.first
+                    }
+                } }
+                post("{id}/intents") { run {
+                    call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id"); val body = call.bytes(2 * 1024 * 1024)
+                    call.listed(BatchView.serializer()) { lists.apply(access, list, decode(body, 2 * 1024 * 1024, payload = true)) }
+                } }
+                delete("{id}") { run { call.privateResponse(); lists.delete(call.accountAccess(), call.routeId("id")); call.respond(HttpStatusCode.NoContent) } }
+                post("{id}/members") { run {
+                    call.privateResponse(); val access = call.accountAccess(); val list = call.routeId("id")
+                    call.listed(ListView.serializer()) { lists.add(access, list, call.body(1024)) }
+                } }
+                delete("{id}/members/{userId}") { run {
+                    call.privateResponse(); lists.remove(call.accountAccess(), call.routeId("id"), call.routeId("userId")); call.respond(HttpStatusCode.NoContent)
+                } }
+            }
+            get("/api/people") { run { call.privateResponse(); call.json(lists.people(call.accountAccess(mutation = false), call.request.queryParameters["q"] ?: "")) } }
+        }
+        // The household relay is gone; older apps read this and ask their user to update.
+        for (path in listOf("/v1/households", "/v1/invites", "/v1/join-requests", "/v1/lists", "/v1/devices", "/v1/changes", "/v1/account/households", "/api/households", "/api/devices/link")) {
+            route("$path/{...}") { handle { call.respondText("{\"code\":\"upgrade_required\"}", ContentType.Application.Json, HttpStatusCode.UpgradeRequired) } }
         }
 
-        post("/v1/devices/challenge") { run { call.json(relay.auth.challenge(call.body(), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
-        post("/v1/devices/session") { run {
-            val webSession = if (webIdentity != null && call.request.cookies[webIdentity.sessionCookieName()] != null)
-                call.webCaller(webIdentity).session else null
-            call.json(relay.auth.session(call.body(), webSession))
-        } }
         get("/auth/config") { run { call.privateResponse(); call.json(WebAuthConfig(webIdentity != null, if (webIdentity?.config?.oidc != null) "/auth/login" else null, webIdentity?.config?.oidc != null, webIdentity?.config?.localEnabled == true)) } }
         if (webIdentity != null) {
             get("/auth/login") { run(identity = true) {
@@ -168,10 +196,10 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 expect(call.request.queryParameters["error"] == null, "unauthenticated", 401)
                 val complete = webIdentity.complete(single("code"), single("state"), call.request.cookies[webIdentity.loginCookieName()] ?: "",
                     ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))
-                call.webCookie(webIdentity, webIdentity.sessionCookieName(), complete.token, 900)
+                call.webCookie(webIdentity, webIdentity.sessionCookieName(), complete.token, WebIdentity.SESSION_SECONDS)
                 call.respondRedirect("/")
             } }
-            get("/api/me") { run { call.privateResponse(); call.json(webIdentity.me(call.webToken(webIdentity))) } }
+            get("/api/me") { run { call.privateResponse(); call.json(call.reader(webIdentity).me()) } }
             get("/api/sessions") { run { call.privateResponse(); call.json(webIdentity.sessions(call.webToken(webIdentity))) } }
             post("/auth/logout") { run {
                 call.privateResponse(); webIdentity.logout(call.webCaller(webIdentity))
@@ -179,12 +207,6 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             } }
             post("/api/sessions/{id}/revoke") { run {
                 call.privateResponse(); webIdentity.revoke(call.webCaller(webIdentity), call.routeId("id")); call.respond(HttpStatusCode.NoContent)
-            } }
-            post("/api/devices/link") { run {
-                call.privateResponse(); webIdentity.link(call.webCaller(webIdentity), call.body(16384)); call.respond(HttpStatusCode.NoContent)
-            } }
-            post("/api/households") { run {
-                call.privateResponse(); call.json(webIdentity.createHousehold(call.webCaller(webIdentity), call.body(65536), relay), HttpStatusCode.Created)
             } }
             get("/api/admin/users") { run { call.privateResponse(); call.json(webIdentity.users(call.webToken(webIdentity), call.request.queryParameters["after"])) } }
             post("/api/admin/users/{id}") { run {
@@ -204,13 +226,13 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                     call.privateResponse(); call.webCookie(webIdentity, webIdentity.localCookieName(), "", 0)
                     val result = webIdentity.localLogin(call.request.cookies[webIdentity.localCookieName()] ?: "", call.request.headers[HttpHeaders.Origin], call.request.headers["X-CSRF-Token"],
                         ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty())) { call.identityBody(2048) }
-                    call.webCookie(webIdentity, webIdentity.sessionCookieName(), result.token, 900); call.respond(HttpStatusCode.NoContent)
+                    call.webCookie(webIdentity, webIdentity.sessionCookieName(), result.token, WebIdentity.SESSION_SECONDS); call.respond(HttpStatusCode.NoContent)
                 } }
                 post("/auth/local/activate") { run(identity = true) {
                     call.privateResponse(); call.webCookie(webIdentity, webIdentity.localCookieName(), "", 0)
                     val result = webIdentity.localActivate(call.request.cookies[webIdentity.localCookieName()] ?: "", call.request.headers[HttpHeaders.Origin], call.request.headers["X-CSRF-Token"],
                         ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty())) { call.identityBody(2048) }
-                    call.webCookie(webIdentity, webIdentity.sessionCookieName(), result.token, 900); call.respond(HttpStatusCode.NoContent)
+                    call.webCookie(webIdentity, webIdentity.sessionCookieName(), result.token, WebIdentity.SESSION_SECONDS); call.respond(HttpStatusCode.NoContent)
                 } }
                 post("/auth/local/password") { run(identity = true) {
                     call.privateResponse()
@@ -225,35 +247,17 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 } }
             }
         }
-        post("/v1/households") { run(bulk = true) { call.json(relay.create(call.bearer(), call.body(8 * 1024 * 1024)).response(), HttpStatusCode.Created) } }
-        post("/v1/households/{h}/invites") { run { call.json(service.invite(call.bearer(), call.routeId("h"), call.body())) } }
-        post("/v1/invites/{i}/open") { run { call.privateResponse(); call.json(service.open(call.routeId("i"), call.body(1024), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
-        post("/v1/join-requests") { run { call.json(service.join(call.body(), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty())), HttpStatusCode.Accepted) } }
-        get("/v1/households/{h}/join-requests") { run { call.json(service.pending(call.bearer(), call.routeId("h"))) } }
-        post("/v1/households/{h}/join-requests/{r}/deny") { run { service.deny(call.bearer(), call.routeId("h"), call.routeId("r")); call.respond(HttpStatusCode.OK) } }
-        post("/v1/households/{h}/join-requests/{r}/expired") { run { call.json(service.expired(call.bearer(), call.routeId("h"), call.routeId("r"), call.body(16384))) } }
-        get("/v1/households/{h}/membership") { run(bulk = true) { call.json(relay.membership(call.bearer(), call.routeId("h"), call.cursor("afterEpoch"))) } }
-        post("/v1/households/{h}/membership") { run(bulk = true) { call.json(service.change(call.bearer(), call.routeId("h"), call.body(8 * 1024 * 1024)).response()) } }
-        get("/v1/households/{h}/lists") { run { call.json(relay.lists(call.bearer(), call.routeId("h"))) } }
-        post("/v1/households/{h}/lists") { run(bulk = true) { call.json(service.change(call.bearer(), call.routeId("h"), call.body(8 * 1024 * 1024), creatingList = true).response(), HttpStatusCode.Created) } }
-        get("/v1/households/{h}/key-packages") { run { call.json(relay.packages(call.bearer(), call.routeId("h"), call.queryId("listId"), call.positive("epoch"))) } }
-        put("/v1/households/{h}/snapshot-candidates/{c}") { run(bulk = true) { call.json(service.stage(call.bearer(), call.routeId("h"), call.routeId("c"), call.body(10 * 1024 * 1024))) } }
-        get("/v1/lists/{l}/operations") { run(bulk = true) { call.json(relay.operations(call.bearer(), call.routeId("l"), call.cursor("after"), call.request.queryParameters["limit"]?.toInt() ?: 100)) } }
-        post("/v1/lists/{l}/operations") { run { call.json(relay.append(call.bearer(), call.routeId("l"), call.body())) } }
-        get("/v1/lists/{l}/intents/{i}") { run { call.json(relay.intent(call.bearer(), call.routeId("l"), call.routeId("i"))) } }
-        get("/v1/lists/{l}/snapshot") { run(bulk = true) { call.json(relay.snapshot(call.bearer(), call.routeId("l"))) } }
-        put("/v1/lists/{l}/snapshot") { run(bulk = true) { val token = call.bearer(); val list = call.routeId("l"); val snapshot: Snapshot = call.body(10 * 1024 * 1024); relay.putSnapshot(token, list, snapshot); call.json(snapshot) } }
-        webSocket("/v1/changes") {
-            try { withContext(relay.auth.browserContext(webIdentity?.let { call.request.cookies[it.sessionCookieName()] })) { sockets.connect(this@webSocket, call.bearer(), io) } }
-            catch (_: RelayError) { close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "forbidden")) }
-        }
     }
 }
 private fun WebIdentity.sessionCookieName() = if (config.secureCookies) "__Host-usuals-session" else "usuals-session"
 private fun WebIdentity.loginCookieName() = if (config.secureCookies) "__Host-usuals-login" else "usuals-login"
 private fun WebIdentity.localCookieName() = if (config.secureCookies) "__Host-usuals-local-login" else "usuals-local-login"
 private fun ApplicationCall.webToken(identity: WebIdentity) = request.cookies[identity.sessionCookieName()] ?: reject("unauthenticated", 401)
-private fun ApplicationCall.webCaller(identity: WebIdentity) = identity.csrf(webToken(identity), request.headers[HttpHeaders.Origin], request.headers["X-CSRF-Token"])
+private fun ApplicationCall.webCaller(identity: WebIdentity) = session(identity, identity.csrf(webToken(identity), request.headers[HttpHeaders.Origin], request.headers["X-CSRF-Token"]))
+private fun ApplicationCall.reader(identity: WebIdentity) = session(identity, identity.reader(webToken(identity)))
+/** The cookie follows the session's sliding expiry, so an active browser stays signed in. */
+private fun ApplicationCall.session(identity: WebIdentity, caller: WebCaller) =
+    caller.also { if (it.renewed) webCookie(identity, identity.sessionCookieName(), webToken(identity), WebIdentity.SESSION_SECONDS) }
 private fun ApplicationCall.webCookie(identity: WebIdentity, name: String, value: String, maxAge: Int) {
     response.cookies.append(Cookie(name, value, path = "/", maxAge = maxAge, secure = identity.config.secureCookies, httpOnly = true, extensions = mapOf("SameSite" to "Lax")))
 }
@@ -265,7 +269,10 @@ private fun ApplicationCall.privateResponse() {
 }
 private suspend inline fun <reified T> ApplicationCall.identityBody(max: Int): T =
     try { withTimeout(3000) { body<T>(max) } } catch (_: TimeoutCancellationException) { reject("unavailable", 503) }
-private suspend inline fun <reified T> ApplicationCall.body(max: Int = 1024 * 1024): T {
+private suspend inline fun <reified T> ApplicationCall.body(max: Int = 1024 * 1024): T = decode(bytes(max), max)
+/** [payload] admits the JSON nulls and larger objects that list projections and intents carry. */
+private inline fun <reified T> decode(bytes: ByteArray, max: Int, payload: Boolean = false): T = Wire.json.decodeFromJsonElement(Wire.strictJson(bytes, max, payload))
+private suspend fun ApplicationCall.bytes(max: Int): ByteArray {
     expect(request.headers[HttpHeaders.ContentEncoding].let { it == null || it == "identity" })
     request.headers[HttpHeaders.ContentLength]?.let { expect(it.toLong() in 0..max.toLong(), "too_large", 413) }
     expect(request.contentType().match(ContentType.Application.Json))
@@ -275,7 +282,7 @@ private suspend inline fun <reified T> ApplicationCall.body(max: Int = 1024 * 10
         if (n < 0) break
         output.write(buffer, 0, n); expect(output.size() <= max, "too_large", 413)
     }
-    return Wire.json.decodeFromJsonElement(Wire.strictJson(output.toByteArray(), max))
+    return output.toByteArray()
 }
 private suspend inline fun <reified T> ApplicationCall.json(value: T, status: HttpStatusCode = HttpStatusCode.OK) = respondText(Wire.json.encodeToString(kotlinx.serialization.serializer<T>(), value), ContentType.Application.Json, status)
 private fun ApplicationCall.bearer(): String {
@@ -284,50 +291,3 @@ private fun ApplicationCall.bearer(): String {
     return header.substring(7)
 }
 private fun ApplicationCall.routeId(name: String) = parameters[name]?.also { id(it) } ?: reject()
-private fun ApplicationCall.queryId(name: String) = request.queryParameters[name]?.also { id(it) } ?: reject()
-private fun ApplicationCall.positive(name: String) = (request.queryParameters[name] ?: reject()).toLong().also { expect(it > 0) }
-private fun ApplicationCall.cursor(name: String) = (request.queryParameters[name] ?: "0").toLong().also { expect(it >= 0) }
-
-private class SocketHub(private val relay: Relay, private val operations: RelayMetrics) {
-    private data class Socket(val device: String, val households: Set<String>, val hint: Channel<String>)
-    private val handshakes = Semaphore(32)
-    private val sockets = ConcurrentHashMap<DefaultWebSocketServerSession, Socket>()
-    fun changed(household: String) { sockets.values.filter { household in it.households }.forEach { it.hint.trySend(household) } }
-    suspend fun connect(session: DefaultWebSocketServerSession, token: String, io: CoroutineDispatcher) {
-        // Explicit subscriptions contain routing ids only. There is no URL token.
-        expect(handshakes.tryAcquire(), "rate_limited", 429)
-        val subscriptions = try {
-            withContext(io) { relay.db.transaction { c -> relay.auth.caller(c, token) } }
-            val frame = withTimeout(10000) { session.incoming.receive() } as? Frame.Text ?: reject()
-            val element = Wire.strictJson(frame.readBytes(), 16384)
-            val households = Wire.json.decodeFromJsonElement<List<String>>(element).toSortedSet()
-            expect(households.size in 1..20)
-            val device = withContext(io) { relay.db.transaction { c -> households.map { relay.auth.authorize(c, token, it).first.device }.distinct().single() } }
-            households to device
-        } finally { handshakes.release() }
-        val (households, device) = subscriptions
-        synchronized(sockets) {
-            expect(sockets.size < 320 && sockets.values.count { it.device == device } < 2, "rate_limited", 429)
-            sockets[session] = Socket(device, households, Channel(Channel.CONFLATED))
-            operations.sockets.incrementAndGet()
-        }
-        try {
-            households.forEach { session.send(Frame.Text("{\"householdId\":\"$it\"}")) }
-            coroutineScope {
-                val reader = launch { for (ignored in session.incoming) expect(ignored is Frame.Ping || ignored is Frame.Pong) }
-                try {
-                    while (reader.isActive) {
-                        val changed = withTimeoutOrNull(1000) { sockets[session]?.hint?.receive() }
-                        // Also recheck expiry and revocation without requiring any list edit.
-                        withContext(io) { relay.db.transaction { c -> households.forEach { relay.auth.authorize(c, token, it) } } }
-                        if (changed != null) session.send(Frame.Text("{\"householdId\":\"$changed\"}"))
-                    }
-                } finally { reader.cancel() }
-            }
-        } catch (_: RelayError) {
-            session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "forbidden"))
-        } finally { sockets.remove(session)?.let { it.hint.close(); operations.sockets.decrementAndGet() } }
-    }
-}
-
-private fun ManifestProof.response() = Membership(listOf(this), signed().body().epoch)

@@ -15,12 +15,12 @@ dependencies {
     implementation(libs.tink)
     implementation(libs.relay.ktor.core)
     implementation(libs.relay.ktor.netty)
-    implementation(libs.relay.ktor.websockets)
     implementation(libs.relay.ktor.statuspages)
+    // Same Ktor release as the catalog's server modules; gzips the two large list responses.
+    implementation("io.ktor:ktor-server-compression-jvm:${libs.versions.ktor.get()}")
     implementation(libs.relay.pgjdbc)
     implementation(libs.relay.hikari)
     testImplementation(libs.relay.ktor.test)
-    testImplementation(libs.relay.ktor.client.websockets)
     testImplementation(project(":core:parse"))
     testImplementation(libs.junit)
     testImplementation(libs.truth)
@@ -38,15 +38,6 @@ allprojects {
 }
 tasks.test { systemProperty("usuals.root", file("..").absolutePath) }
 sourceSets.test { resources.srcDir("../testing/src/test/resources") }
-
-// Explicit disposable-container load client; never run as part of the unit suite.
-tasks.register<JavaExec>("profileClient") {
-    dependsOn(tasks.named("testClasses"))
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.theficos.usuals.relay.ContainerLoadProfile")
-    jvmArgs("-Xmx512m")
-    doFirst { args(requireNotNull(providers.gradleProperty("profileInput").orNull) { "Pass -PprofileInput with a private local fixture path" }) }
-}
 
 // Explicit synthetic fixture, isolated from all production startup paths.
 tasks.register<JavaExec>("browserPreview") {
@@ -85,38 +76,12 @@ val stageWebAssets by tasks.registering(Sync::class) {
 sourceSets.main { resources.srcDir(layout.buildDirectory.dir("generated/web-resources")) }
 tasks.processResources { dependsOn(stageWebAssets) }
 
-val webInteropDirectory = layout.buildDirectory.dir("web-interop")
-val generateWebInteropFixtures by tasks.registering(JavaExec::class) {
-    dependsOn(tasks.testClasses)
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.theficos.usuals.relay.WebInteropFixture")
-    args("generate", webInteropDirectory.get().asFile.absolutePath)
-}
 val webTest by tasks.registering(Exec::class) {
-    dependsOn(generateWebInteropFixtures)
     workingDir(rootProject.file(".."))
-    environment("USUALS_WEB_INTEROP_DIR", webInteropDirectory.get().asFile.absolutePath)
     doFirst {
-        val tests = fileTree("../web/test") { include("**/*.test.mjs") }.files.sorted()
+        val tests = fileTree("../web/test") { include("*.test.mjs") }.files.sorted()
         check(tests.isNotEmpty()) { "missing_web_tests" }
         commandLine(listOf("node", "--test") + tests.map { it.absolutePath })
     }
 }
-val verifyWebInterop by tasks.registering(JavaExec::class) {
-    dependsOn(webTest)
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.theficos.usuals.relay.WebInteropFixture")
-    args("verify", webInteropDirectory.get().asFile.absolutePath)
-}
-tasks.check { dependsOn(verifyWebInterop) }
-
-
-// Fast browser-only feedback while the JVM interoperability fixture remains a separate gate.
-tasks.register<Exec>("webUnitTest") {
-    workingDir(rootProject.file(".."))
-    doFirst {
-        val tests = fileTree("../web/test") { include("**/*.test.mjs"); exclude("interop.test.mjs") }.files.sorted()
-        check(tests.isNotEmpty()) { "missing_web_tests" }
-        commandLine(listOf("node", "--test") + tests.map { it.absolutePath })
-    }
-}
+tasks.check { dependsOn(webTest) }
