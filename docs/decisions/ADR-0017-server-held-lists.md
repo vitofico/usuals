@@ -89,6 +89,14 @@ frozen copies, the browser vault and the WebSocket change stream are removed.
   instead of `no_op`, never a second application. The shape of the projection
   did not change, so a phone on an earlier release still decodes every list, and
   its own reducer, which does not drop intents, only affects its local copy until
-  the server answers. The purchase history still grows, about 33 KB a week for
-  the same shop. Feed entries carry whole projections; responses are compressed.
-  The 7 MB snapshot cap stays.
+  the server answers. Feed entries carry whole projections; responses are
+  compressed. The 7 MB snapshot cap stays.
+- The history is bounded too ([what a list keeps](../sync/lists-v2.md#what-a-list-keeps)).
+  Every bought item stayed as a row beside its purchase, about 20 KB a week for
+  that shop, and purchases carried every fact of the row, so a list still
+  reached the cap in about four years. Now an item's row leaves with the intent
+  that took it off the list, a purchase keeps only the facts phones store, and a
+  list keeps its latest 5,000 purchases. The same shop levels off at about
+  2.8 MB. In exchange, a finish can be undone only within the resend horizon,
+  and history and suggestions on every device reach back about four years for
+  that shop, less for a busier one.

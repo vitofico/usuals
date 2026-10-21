@@ -84,7 +84,21 @@ class Reducer(private val normalizer: Int = 1) {
             else -> work.state
         }
         val seen = (result.seen + (intent.id to intent)).entries.toList().takeLast(RESEND_HORIZON).associate { it.toPair() }
-        return Reduction(result.copy(seen = seen), outcome)
+        return Reduction(bounded(result.copy(seen = seen)), outcome)
+    }
+
+    /**
+     * What a list keeps (docs/sync/lists-v2.md): what an intent left behind, including the rows it took off the list,
+     * goes with it past the resend horizon, and only the latest [PURCHASE_HISTORY] purchases stay.
+     */
+    private fun bounded(p: Projection): Projection {
+        val gone = p.rows.values.filter { (it.archived || it.id in p.tombstones) && it.lifecycle !in p.seen }.map { it.id }
+        val purchases = if (p.purchases.size <= PURCHASE_HISTORY) p.purchases
+            else p.purchases.values.sortedWith(compareByDescending<JsonObject> { it.long("boughtAt") }.thenBy { it.text("id") })
+                .take(PURCHASE_HISTORY).associateBy { it.text("id") }
+        return p.copy(rows = p.rows - gone.toSet(), purchases = purchases, closes = p.closes.filterKeys { it in p.seen },
+            cancelledCloses = p.cancelledCloses.filterTo(mutableSetOf()) { it in p.seen },
+            conflicts = p.conflicts.filterKeys { it in p.seen }, rejected = p.rejected.filterKeys { it in p.seen })
     }
 
     private fun incompatibleVersion(value: JsonElement): Boolean = when (value) {
@@ -140,7 +154,7 @@ class Reducer(private val normalizer: Int = 1) {
         private fun capture(): Outcome {
             val proposed = p.text("proposedId")
             val key = canonical(p.text("key"))
-            require(proposed !in state.rows && proposed !in state.redirects && proposed !in state.tombstones)
+            require(proposed !in state.rows && proposed !in state.redirects && proposed !in state.tombstones && proposed !in state.purchases)
             validateQuantity(p)
             validateFacts(p)
             require(key.isNotBlank())
@@ -261,7 +275,7 @@ class Reducer(private val normalizer: Int = 1) {
                 }
                 require(facts.keys.containsAll(setOf("key", "name", "quantity", "unit", "checkedAt")))
                 require(facts["checkedAt"]?.jsonPrimitive?.longOrNull != null)
-                val purchase = JsonObject(facts.filterKeys { it != "checkedAt" } + mapOf("id" to JsonPrimitive(target), "tripId" to JsonPrimitive(trip), "boughtAt" to facts.getValue("checkedAt")))
+                val purchase = JsonObject(facts.filterKeys { it in PURCHASE_FIELDS } + mapOf("id" to JsonPrimitive(target), "tripId" to JsonPrimitive(trip), "boughtAt" to facts.getValue("checkedAt")))
                 state = state.copy(purchases = state.purchases + (target to purchase))
                 put(row.copy(archived = true, lifecycle = id, facts = JsonObject(row.facts + ("deletedAt" to p.getValue("closedAt")))))
                 accepted += target
@@ -301,7 +315,8 @@ class Reducer(private val normalizer: Int = 1) {
             val proposed = p.text("proposedId")
             require(proposed !in state.rows && proposed !in state.redirects)
             state.occurrences[occurrence]?.let { winner ->
-                state = state.copy(redirects = state.redirects + (proposed to winner))
+                // The winner's own resend, once its row has left the list, must not redirect to itself.
+                if (winner != proposed) state = state.copy(redirects = state.redirects + (proposed to winner))
                 return Outcome.NO_OP
             }
             val rule = state.rules[key] ?: return Outcome.REJECTED
@@ -421,6 +436,10 @@ class Reducer(private val normalizer: Int = 1) {
          * older resend from taking effect twice.
          */
         const val RESEND_HORIZON = 1000
+        /** How many of the latest purchases a list keeps, about four years of a 25-item weekly shop. */
+        const val PURCHASE_HISTORY = 5000
+        /** The facts a purchase records, those phones keep for their history; the rest stay with the item's row. */
+        private val PURCHASE_FIELDS = setOf("key", "name", "quantity", "unit", "gtin", "fromSuggestion", "normalizerVersion")
         private val ROW_FIELDS = setOf("key", "name", "rawText", "quantity", "unit", "note", "gtin", "store", "checked", "checkedAt", "position", "createdAt", "updatedAt", "fromSuggestion", "normalizerVersion", "addedBy", "deletedAt")
         private val REVISION_FIELDS = ROW_FIELDS - setOf("createdAt", "updatedAt", "normalizerVersion", "fromSuggestion", "addedBy", "deletedAt")
         private fun revisionField(field: String): String = when (field) { "unit" -> "quantity"; "checked", "checkedAt" -> "check"; "key", "gtin" -> "name"; else -> field }

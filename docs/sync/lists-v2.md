@@ -81,8 +81,8 @@ per intent and the list after the batch.
   list, in the order they were applied, and drops the oldest. An older resend is
   not recognised, but the list's revision checks still stop it from taking effect
   twice: it answers `conflict` or `rejected` and is recorded like any other. (An
-  undo answers `no_op`, and an import of past purchases `applied` without
-  changing anything.) A client also reads `seen` to tell its own applied
+  undo or a repeat answers `no_op`, and an import of past purchases `applied`
+  without changing anything.) A client also reads `seen` to tell its own applied
   intents from unsent ones, so an intent missing from it counts as not applied.
   The next repeat suggestion after a deleted one likewise needs that deletion to
   be within the horizon; otherwise the rule waits for the next purchase.
@@ -116,6 +116,39 @@ Stored projections are encrypted at rest with AES-256-GCM under a required
 32-byte server key file, with additional data `USUALS/LIST/1`, a zero byte and
 the list id, so a ciphertext cannot be moved to another list. Clients never see
 this layer.
+
+## What a list keeps
+
+The reducer bounds what a projection remembers, so a list in use for years stays
+well under the 7 MB cap:
+
+- What one intent left behind lasts as long as that intent is within the resend
+  horizon: the intent in `seen`, its outcome in `conflicts` or `rejected`, a
+  finish in `closes` and `cancelledCloses`, and the row of each item the intent
+  took off the list (bought, deleted, or merged into another). So a finish can be
+  undone while it is among the last 1,000 intents; an older undo answers `no_op`
+  and the purchases stay. A conflict that old no longer shows for review.
+- An item's id outlives its row: a bought item's id is its purchase's id, and a
+  deleted or merged item's id stays in `tombstones` or `redirects`. A capture
+  resent with that id is rejected instead of adding the item again.
+- `purchases` keeps the latest 5,000 purchases, by `boughtAt` and then id: about
+  four years of a 25-item weekly shop. Older ones are dropped; `trips` stay. A
+  purchase records only `id`, `tripId`, `boughtAt`, `key`, `name`, `quantity`,
+  `unit`, `gtin`, `fromSuggestion` and `normalizerVersion`, the facts phones keep.
+- Live items, `trips`, `tombstones`, `redirects`, `occurrences`, `repeatHeads`,
+  aliases, preferences and rules stay. They grow by a few bytes per trip and per
+  item deleted, merged or repeated.
+
+Phones mirror the list, so their history and suggestions cover the same
+purchases. A 25-item weekly shop with two deleted items a week levels off at
+about 2.8 MB: 0.8 MB of `seen`, 0.4 MB of rows and 1.4 MB of purchases.
+
+The shape of the projection does not change, so the bound ships without a
+version step. Phones on the previous release do not read lists v2: the household
+routes answer them 426, and their local lists keep everything until they update.
+After the update, the first intent applied to a list, on the phone or the
+server, drops what lies past the bounds, and the phone removes those rows and
+purchases from its database as it does any other removal.
 
 ## Sharing
 

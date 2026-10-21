@@ -73,7 +73,8 @@ class ReducerTest {
 
     @Test fun repeatRetryAfterCloseDoesNotResurrectOrLoseRedirect() {
         val occurrence = Reducer.occurrenceId("home", "milk", "rule", "buy")
-        val initial = Projection(rows = mapOf("winner" to Row("winner", jsonObject("key" to JsonPrimitive("milk")), lifecycle = "closed", archived = true)), occurrences = mapOf(occurrence to "winner"))
+        val initial = Projection(rows = mapOf("winner" to Row("winner", jsonObject("key" to JsonPrimitive("milk")), lifecycle = "closed", archived = true)), occurrences = mapOf(occurrence to "winner"),
+            seen = mapOf("closed" to Intent("closed", "home", "finish", JsonObject(emptyMap()))))
         val op = Intent("retry", "home", "repeat", json.parseToJsonElement("""{"proposedId":"loser","key":"milk","ruleRevision":"rule","enablingPurchase":"buy","occurrence":"$occurrence"}""").jsonObject)
         val result = reducer.apply(initial, op)
         assertThat(result.outcome).isEqualTo(Outcome.NO_OP)
