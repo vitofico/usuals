@@ -739,7 +739,8 @@ async function renderAccount(own) {
     return [];
   });
   const [phones, sessions] = await Promise.all([load("/api/connections", "connections"), load("/api/sessions", "sessions")]);
-  if (own !== generation || !account) return;
+  // The person may have moved to another view while these loaded.
+  if (own !== generation || !account || view !== "account") return;
   const phonesCard = el("section", { class: "paper" }, el("div", { class: "panel-body" },
     el("h2", {}, t("connectionSessions")),
     paragraph("phonesHelp", "helper"),
@@ -776,7 +777,7 @@ async function renderAdmin(own, after = null, previous = []) {
     if (own === generation) failure(e);
     return;
   }
-  if (own !== generation) return;
+  if (own !== generation || view !== "admin") return;
   const people = [...previous, ...result.users];
   const rows = people.map((u) => el("div", { class: "account-row" },
     el("div", { class: "avatar", "aria-hidden": "true" }, accountLabel(u).slice(0, 1).toUpperCase()),
