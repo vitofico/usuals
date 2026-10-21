@@ -157,4 +157,17 @@ class ConnectionTest {
         assertThat(calls).isEqualTo(0)
     }
 
+    @Test fun aCredentialPastItsStoredExpiryStillReachesTheServer() = runBlocking {
+        // The server slides the credential on every use, so only its 401 says it has expired.
+        val store = Store()
+        store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "user", "synthetic-token", 20000))
+        var sent: String? = null
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                sent = token; return WireResponse(200, "{}".toByteArray())
+            }
+        }
+        ConnectionClient(store, transport) { 30000 }.requestBytes("GET", "/v1/ai/settings")
+        assertThat(sent).isEqualTo("synthetic-token")
+    }
 }

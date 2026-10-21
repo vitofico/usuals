@@ -119,7 +119,6 @@ class ConnectionClient(private val store: SyncStateStore, private val transport:
     suspend fun requestBytes(method: String, path: String, body: Any? = null, expected: ServerConnection? = null): ByteArray {
         val saved = current() ?: throw RelayProblem("unauthenticated", 401)
         require(expected == null || saved == expected)
-        require(saved.expiresAt > clock())
         return bytes(saved.origin, method, path, encode(body), saved.token)
     }
     private suspend inline fun <reified T> call(origin: String, method: String, path: String, body: Any? = null): T = decode(bytes(origin, method, path, encode(body)))
