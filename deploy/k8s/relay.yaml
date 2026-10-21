@@ -39,6 +39,7 @@ spec:
           env:
             - {name: USUALS_IDENTITY_FILE, value: /identity/identity}
             - {name: USUALS_FENCE_FILE, value: /identity/fence}
+            - {name: USUALS_LIST_KEY_FILE, value: /identity/list.key}
             - {name: USUALS_JDBC_URL, value: 'jdbc:postgresql://usuals-postgres:5432/usuals'}
             - {name: USUALS_DB_USER, value: usuals}
             - {name: USUALS_DB_PASSWORD_FILE, value: /run/secrets/app-password}
@@ -51,7 +52,7 @@ spec:
             capabilities: {drop: [ALL]}
           resources:
             requests: {cpu: 100m, memory: 256Mi}
-            limits: {cpu: '1', memory: 512Mi}
+            limits: {cpu: '1', memory: 768Mi}
           ports:
             - {name: http, containerPort: 8080}
           startupProbe:
