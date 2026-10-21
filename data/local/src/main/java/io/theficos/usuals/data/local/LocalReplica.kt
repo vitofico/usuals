@@ -148,7 +148,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val original = requireNotNull(database.listDao().find(source))
         val id = newId()
         database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced))
-        copyTo(source, id, includeHistory = true)
+        copyTo(source, id)
         database.historyDao().saveLocalPreferences(database.historyDao().preferences(source).map { LocalPreferenceEntity(id, it.key, it.muted, it.snoozedUntil) })
         val selected = database.listDao().selected() == source
         drop(source)
@@ -211,13 +211,10 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         }
         return optimistic
     }
-    suspend fun copyTo(source: String, destination: String, includeHistory: Boolean) = database.withTransaction {
+    private suspend fun copyTo(source: String, destination: String) {
         // Rebuild genesis from materialized facts, excluding device choices and prior command lineage.
         val seeded = seed(source)
-        val rows = seeded.rows.filterValues { !it.archived || includeHistory }
-        val initial = seeded.copy(rows = rows, purchases = if (includeHistory) seeded.purchases else emptyMap(),
-            trips = if (includeHistory) seeded.trips else emptyMap(), closes = if (includeHistory) seeded.closes else emptyMap(),
-            tombstones = seeded.tombstones.filterKeys { it in rows }, name = requireNotNull(database.listDao().find(destination)).name)
+        val initial = seeded.copy(tombstones = seeded.tombstones.filterKeys { it in seeded.rows }, name = requireNotNull(database.listDao().find(destination)).name)
         materialize(destination, Projection(), initial)
         val encoded = json.encodeToString(initial)
         database.syncDao().saveProjection(ProjectionEntity(destination, encoded, encoded))
