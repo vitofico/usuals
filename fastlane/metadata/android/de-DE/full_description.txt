@@ -6,7 +6,7 @@ Teile einen Rezeptlink, prüfe die Zutaten und wähle aus, was auf die Liste kom
 
 Die optionale Open-Food-Facts-Abfrage erkennt Verpackungen und zeigt Marke, Packungsgröße, Zutaten, Nährwertbewertungen sowie deklarierte Allergene und Spuren. Du bestätigst den Namen. Die Daten können unvollständig sein: Prüfe die Verpackung. Ohne Abfrage benennst du das Produkt selbst.
 
-Teile verschlüsselte Listen über deinen eigenen Usuals-Server und die Web-App. Erstelle den Haushalt unter Android oder im Web, sichere das Wiederherstellungspaket und bestätige Geräte nach Vergleich ihres vollständigen Fingerabdrucks. Die Web-App unterstützt lokale Konten oder eingerichtetes SSO. Lokale Android-Listen benötigen keine Anmeldung.
+Melde dich optional bei deinem eigenen Usuals-Server an: Deine Listen bleiben dann zwischen Telefon und Web-App synchron, und du kannst jede Liste mit Personen teilen, die ein Konto auf diesem Server haben. Das Telefon verbindest du, indem du einen QR-Code aus der Web-App scannst. Der Server kann die gespeicherten Listen lesen, wähle also einen, dem du vertraust. Die Web-App unterstützt lokale Konten oder eingerichtetes SSO. Listen auf einem nicht angemeldeten Telefon verlassen es nie.
 
 Drei Designs mit Dunkelmodus, Einführung, Widget sowie Export und Import des Verlaufs. Oberfläche auf Deutsch, Englisch, Spanisch, Italienisch und Französisch.
 

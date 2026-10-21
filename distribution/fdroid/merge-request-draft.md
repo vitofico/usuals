@@ -11,8 +11,9 @@ exception or automated submission is requested.
 Usuals is an Android shopping list with local purchase history, per-item repeat
 rules, history-ranked suggestions and quantity hints. It works without an account,
 server or model. Checking items and choosing **Finish shop** records a dated trip;
-Undo restores that shop. Optional household sharing uses a self-hosted encrypted
-relay and separately approved device keys.
+Undo restores that shop. Optionally, signing in to a self-hosted Usuals server
+keeps the lists in sync with its web app and lets accounts on that server share
+lists with each other.
 
 Recipe URLs are read on the device and ingredients require review. Open Food Facts
 lookup is optional and suggested product names need confirmation. Keyboard input
@@ -36,24 +37,26 @@ additional value proposed for review is this combined workflow:
 - Ingredient extraction from structured recipe pages and optional barcode naming
   happen directly on the device. Imported ingredients are reviewed against the
   current list and recent purchases before adding them.
-- Household sharing is optional. Device approval and list decryption are separate
-  from server sign-in, with membership changes rotating list keys. Android's local
-  list remains usable without either account type.
+- Sharing is optional and self-hosted. Signed in, the phone keeps an offline copy
+  of the account's lists and syncs it with the server; the person picks who to
+  share a list with by name. Android's local lists remain usable without any
+  account.
 
 These claims can be inspected in the released source:
 [trip history](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/data/local/src/main/java/io/theficos/usuals/data/local/HistoryRepository.kt),
 [repeat rules](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/RepeatPlanner.kt),
 [suggestion ranking](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/SuggestionEngine.kt),
 [quantity hints](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/QuantityHints.kt),
-[recipe extraction](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/recipe/src/main/java/io/theficos/usuals/recipe/RecipeFetcher.kt),
-and [device membership](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/sync/src/main/kotlin/io/theficos/usuals/sync/HouseholdClient.kt).
+and [recipe extraction](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/recipe/src/main/java/io/theficos/usuals/recipe/RecipeFetcher.kt).
+The pinned release still used the earlier encrypted household sharing; link the
+server-held list sync from the future candidate instead.
 
 Comparison checked on 2026-10-20 against the projects' published descriptions:
 
 | Similar F-Droid application | Documented focus | Usuals workflow proposed for review |
 |---|---|---|
 | [ShoppingList](https://f-droid.org/packages/com.wbpxre150.shoppinglist/) | Offline lists, quantities/prices, reminders and file sharing. | Dated completed-shop history feeding per-item repeats, staple suggestions and confirmed quantity hints. |
-| [KitchenOwl](https://f-droid.org/packages/com.tombursch.kitchenowl/) | Self-hosted grocery lists, recipes, meal planning and expenses; its [README](https://github.com/tombursch/kitchenowl) documents partial offline support. | Account-free Android purchase memory, with encrypted household sharing as an optional extension. |
+| [KitchenOwl](https://f-droid.org/packages/com.tombursch.kitchenowl/) | Self-hosted grocery lists, recipes, meal planning and expenses; its [README](https://github.com/tombursch/kitchenowl) documents partial offline support. | Account-free Android purchase memory, with self-hosted list sync and sharing as an optional extension. |
 | [Grocy Android](https://github.com/patzly/grocy-android) | A companion for an existing Grocy server, including inventory workflows and barcode processing. | A standalone shopping/purchase-history workflow that needs no inventory server. |
 
 This comparison describes documented workflows, not an exhaustive audit or a claim

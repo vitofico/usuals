@@ -6,7 +6,7 @@ Comparte una receta, revisa sus ingredientes y elige qué añadir. Las recetas c
 
 La consulta opcional de Open Food Facts identifica envases y muestra marca, tamaño, ingredientes, valores nutricionales, alérgenos y trazas declarados. Tú confirmas el nombre. Los datos pueden estar incompletos: comprueba el envase. Sin consulta puedes nombrar el producto manualmente.
 
-Comparte listas cifradas mediante tu propio servidor Usuals y su aplicación web. Crea el hogar en Android o en la web, guarda el paquete de recuperación y aprueba cada dispositivo comprobando su huella completa. La web admite contraseñas locales o SSO configurado. Las listas locales de Android no requieren iniciar sesión.
+Si quieres, inicia sesión en tu propio servidor Usuals: tus listas se mantienen sincronizadas entre el teléfono y la aplicación web, y puedes compartir cualquier lista con personas que tengan cuenta en ese servidor. Conecta el teléfono escaneando un código QR de la aplicación web. El servidor puede leer las listas que guarda, así que elige uno de confianza. La web admite contraseñas locales o SSO configurado. Las listas de un teléfono sin sesión iniciada nunca salen de él.
 
 Tres temas con modo oscuro, tutorial inicial, widget, exportación e importación del historial e interfaz en español, inglés, italiano, francés y alemán.
 
