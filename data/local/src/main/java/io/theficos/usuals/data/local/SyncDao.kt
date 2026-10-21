@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SyncDao {
-    /** Everything the server has yet to receive: lists to create and pending intents. */
-    @Query("SELECT id FROM list_scope WHERE synced = 0 OR created = 0 UNION ALL SELECT o.listId || ':' || o.intentId FROM sync_outbox o JOIN list_scope l ON l.id=o.listId WHERE l.synced=1 AND o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId)")
+    /** Everything the server has yet to receive: lists to create, with how much a local list holds, and pending intents. */
+    @Query("SELECT l.id || ':' || (SELECT COUNT(*) FROM sync_outbox o WHERE o.listId = l.id) FROM list_scope l WHERE l.synced = 0 OR l.created = 0 UNION ALL SELECT o.listId || ':' || o.intentId FROM sync_outbox o JOIN list_scope l ON l.id=o.listId WHERE l.synced=1 AND o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId)")
     fun observeOutgoing(): Flow<List<String>>
     @Query("SELECT DISTINCT o.listId FROM sync_outbox o WHERE o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId)")
     suspend fun pendingLists(): List<String>

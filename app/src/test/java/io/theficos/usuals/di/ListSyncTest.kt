@@ -10,6 +10,7 @@ import io.theficos.usuals.parse.Normalizer
 import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.sync.*
 import io.theficos.usuals.ui.list.SyncStatus
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -69,6 +70,28 @@ class ListSyncTest {
         assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
         assertThat(server.lists.getValue("first").projection.name).isEqualTo("Home")
         assertThat(db.listDao().find("first")?.name).isEqualTo("Home")
+    }
+
+    @Test fun aPhoneWithOnlyItsUnusedStartingListShowsTheAccountsListsAndUploadsNothing() = runTest {
+        db.listDao().insert(ListEntity("blank", "")); lists.select("blank")
+        val market = server.seed("Market")
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.lists.keys).containsExactly(market)
+        assertThat(db.listDao().all().map { it.id }).containsExactly(market)
+        assertThat(db.listDao().selected()).isEqualTo(market)
+    }
+
+    @Test fun theUnusedStartingListUploadsOnceSomethingIsAddedToIt() = runTest {
+        db.listDao().insert(ListEntity("blank", "")); lists.select("blank")
+        signIn()
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.lists).isEmpty()
+        val waiting = db.syncDao().observeOutgoing().first()
+        add("blank", "Eggs")
+        assertThat(db.syncDao().observeOutgoing().first()).isNotEqualTo(waiting)
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.names("blank")).containsExactly("Eggs")
     }
 
     @Test fun aListTheServerCannotTakeDoesNotHoldBackTheListsAfterIt() = runTest {

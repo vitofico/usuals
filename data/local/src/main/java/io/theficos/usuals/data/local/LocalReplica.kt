@@ -70,9 +70,12 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         })
     }
 
-    /** Signed in, every list belongs to the account: a local list's current state becomes its creation snapshot. */
+    /**
+     * Signed in, every list belongs to the account: a local list's current state becomes its creation snapshot.
+     * The phone's unused starting list stays local, so connecting a phone does not add an empty list to the account.
+     */
     suspend fun adoptLocalLists() = database.withTransaction {
-        for (list in database.listDao().all().filter { !it.synced }) {
+        for (list in database.listDao().all().filter { !it.synced && !unused(it) }) {
             val encoded = json.encodeToString(projection(list.id))
             database.syncDao().saveProjection(ProjectionEntity(list.id, encoded, encoded))
             database.listDao().update(ListEntity(list.id, list.name, list.archiveSource, synced = true))
@@ -140,6 +143,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
             for (list in lists.all()) if (list.stale) drop(list.id)
             resetting = false
         }
+        if (lists.all().any { it.synced }) for (list in lists.all()) if (unused(list)) drop(list.id)
         database.syncDao().saveFeed(FeedEntity(cursor = page.cursor, resetting = resetting))
     }
     suspend fun cursor(): String? = database.syncDao().feed()?.cursor
@@ -231,6 +235,8 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         }
         count
     }
+    /** A blank local list nothing was ever added to, like the one a fresh install or signing out starts with. */
+    private suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && projection(list.id) == Projection()
     private suspend fun seed(scope: String): Projection {
         val history = database.historyDao()
         val aliases = history.aliases(scope).associate { it.fromKey to it.toKey }
