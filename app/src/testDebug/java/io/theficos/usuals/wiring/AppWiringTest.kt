@@ -17,11 +17,12 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -334,12 +335,16 @@ class AppWiringTest {
      */
     @Test
     fun the_service_locator_builds_the_view_model_behind_every_route() {
-        val list = UsualsViewModelFactories.list
-            .create(ListViewModel::class.java, CreationExtras.Empty)
-        val settings = UsualsViewModelFactories.settings()
-            .create(SettingsViewModel::class.java, CreationExtras.Empty)
+        // Cleared before the graph is reset: a view model nothing clears keeps watching a closed database.
+        val store = ViewModelStore()
+        try {
+            val list = ViewModelProvider.create(store, UsualsViewModelFactories.list)[ListViewModel::class]
+            val settings = ViewModelProvider.create(store, UsualsViewModelFactories.settings())[SettingsViewModel::class]
 
-        assertThat(list.state.value.pending).isEmpty()
-        assertThat(settings.state.value.loaded).isFalse()
+            assertThat(list.state.value.pending).isEmpty()
+            assertThat(settings.state.value.loaded).isFalse()
+        } finally {
+            store.clear()
+        }
     }
 }
