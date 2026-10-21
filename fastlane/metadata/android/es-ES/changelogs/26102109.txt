@@ -1,0 +1,1 @@
+Edita la nota de un artículo: mantén pulsado el artículo y cambia o vacía el campo Nota. Las notas también se siguen escribiendo directamente, como Leche (sin lactosa) o Leche para el café.

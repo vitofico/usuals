@@ -1,0 +1,1 @@
+Modifiez la note d’un article : appuyez longuement sur l’article et changez ou videz le champ Note. Les notes se saisissent toujours aussi directement, comme Lait (sans lactose) ou Lait pour le café.

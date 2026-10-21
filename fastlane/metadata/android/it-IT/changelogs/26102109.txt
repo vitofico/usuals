@@ -1,0 +1,1 @@
+Modifica la nota di un articolo: tieni premuto l’articolo e cambia o svuota il campo Nota. Le note si possono ancora scrivere direttamente, come Latte (senza lattosio) o Latte per il caffè.

@@ -1,0 +1,1 @@
+Edit an item's note: hold the item and change or clear the Note field. Notes still come from typing too, as in Milk (lactose free) or Milk for the cake.
