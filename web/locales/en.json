@@ -344,6 +344,6 @@
   "joinLandingText": "You were invited to a household on this server. Open the invite in the Usuals app, or join with this browser.",
   "openInUsuals": "Open in Usuals",
   "joinInBrowser": "Join in this browser",
-  "joinUnlockFirst": "To join with this browser, sign in and unlock it, then open the invite link again.",
+  "joinUnlockFirst": "To join with this browser, sign in and unlock it. This tab keeps the invite for 30 minutes.",
   "upgrade": "This invite comes from an older Usuals version. Ask the owner to update Usuals and send a new invite."
 }

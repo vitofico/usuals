@@ -344,6 +344,6 @@
   "joinLandingText": "Du wurdest in einen Haushalt auf diesem Server eingeladen. Öffne die Einladung in der Usuals-App oder tritt mit diesem Browser bei.",
   "openInUsuals": "In Usuals öffnen",
   "joinInBrowser": "In diesem Browser beitreten",
-  "joinUnlockFirst": "Um mit diesem Browser beizutreten, melde dich an, entsperre ihn und öffne dann den Einladungslink erneut.",
+  "joinUnlockFirst": "Um mit diesem Browser beizutreten, melde dich an und entsperre ihn. Dieser Tab behält die Einladung 30 Minuten lang.",
   "upgrade": "Diese Einladung stammt aus einer älteren Usuals-Version. Bitte den Eigentümer, Usuals zu aktualisieren und eine neue Einladung zu senden."
 }

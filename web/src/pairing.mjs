@@ -57,3 +57,24 @@ export function parseInviteLink(value) {
   const raw = unb64(fragment.slice(2), 64);
   return { origin: origin(base.slice(0, -"/join".length)), inviteId: uuidText(raw.slice(0, 16)), key: raw.slice(16, 48), anchor: raw.slice(48) };
 }
+/** How long a /join link waits in its tab for a sign-in round trip. */
+export const INVITE_RESUME_WINDOW = 30 * 60_000;
+const RESUME_KEY = "usuals-join-invite";
+/**
+ * The /join link to offer: the one just opened, else one this tab kept through a sign-in redirect.
+ * The link key stays in this tab's sessionStorage, never in a URL, cookie or request, for at most 30 minutes.
+ */
+export function resumableInvite(storage, opened, now) {
+  try {
+    if (opened) { storage?.setItem(RESUME_KEY, JSON.stringify({ link: opened, at: now })); return opened; }
+    const kept = JSON.parse(storage?.getItem(RESUME_KEY) ?? "null");
+    if (kept === null) return null;
+    requireThat(now >= kept.at && now - kept.at < INVITE_RESUME_WINDOW);
+    parseInviteLink(kept.link);
+    return kept.link;
+  } catch {
+    forgetInvite(storage);
+    return opened;
+  }
+}
+export function forgetInvite(storage) { try { storage?.removeItem(RESUME_KEY); } catch {} }
