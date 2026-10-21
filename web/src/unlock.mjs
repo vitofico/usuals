@@ -10,10 +10,11 @@ export class UnlockAttempt {
     this.cancelled = true;
     if (!this.transferred) this.candidate.lock();
   }
+  /** A null passphrase opens the vault with the key this browser remembered. */
   async unlock(passphrase, activate) {
     if (this.cancelled || !this.isCurrent()) return false;
     try {
-      await this.candidate.unlock(passphrase);
+      await (passphrase === null ? this.candidate.unlockRemembered() : this.candidate.unlock(passphrase));
       if (this.cancelled || !this.isCurrent()) {
         this.candidate.lock();
         return false;

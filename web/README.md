@@ -89,9 +89,12 @@ households. See [the security boundary](PROTOCOL.md).
 
 Private state remains encrypted in IndexedDB under a separate strong browser
 passphrase, bound to immutable account identity and origin. Web Locks prevents
-simultaneous unlocked tabs. Leaving the page or five minutes of inactivity
-locks it. There is no device-key export/import or server password recovery for
-this vault. A fresh invitation is needed if its passphrase is lost.
+simultaneous unlocked tabs. Closing the page or 30 minutes of inactivity locks
+it. On a trusted computer the person can keep the browser unlocked: the vault's
+non-extractable AES key is stored in IndexedDB and opens the vault without the
+passphrase while the account is signed in, with no idle lock. Signing out or
+**Forget this browser** deletes that key. There is no device-key export/import or
+server password recovery for this vault. A fresh invitation is needed if its passphrase is lost.
 
 The active web origin supplies the executable code. A malicious operator who
 replaces that code can observe an unlocked browser; use the independently

@@ -76,3 +76,18 @@ test("lifecycle change discards a delayed candidate before activation", async ()
   );
   assert.equal(activations, 0);
 });
+
+test("an attempt without a passphrase opens the vault with the remembered key", async () => {
+  const calls = [],
+    candidate = {
+      unlock: async (passphrase) => calls.push(["passphrase", passphrase]),
+      unlockRemembered: async () => calls.push(["remembered"]),
+      lock() {},
+    };
+  let active = null;
+  const attempt = new UnlockAttempt(candidate, () => true);
+  assert.equal(await attempt.unlock(null, (v) => (active = v)), true);
+  assert.deepEqual(calls, [["remembered"]]);
+  assert.equal(active, candidate);
+});
+

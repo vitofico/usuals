@@ -136,6 +136,31 @@ export class Vault {
     return (await this.storage.read()) !== undefined;
   }
   async unlock(passphrase, locks = globalThis.navigator?.locks) {
+    await this.#open(async (record) => {
+      const salt = record ? unb64(record.salt, 16) : random(16);
+      return { salt, key: await derive(passphrase, salt) };
+    }, locks);
+  }
+  /** Opens with the key this browser was asked to remember; only an existing vault can be opened this way. */
+  async unlockRemembered(locks = globalThis.navigator?.locks) {
+    await this.#open(async (record) => {
+      const key = await this.storage.recall();
+      requireThat(record && key, "locked");
+      return { salt: unb64(record.salt, 16), key };
+    }, locks);
+  }
+  /** Keeps this vault's key in the browser so it reopens without the passphrase. The key stays non-extractable. */
+  async remember() {
+    requireThat(this.key, "locked");
+    await this.storage.remember(this.key);
+  }
+  async forget() {
+    await this.storage.forget();
+  }
+  async remembered() {
+    return (await this.storage.recall()) !== undefined;
+  }
+  async #open(keying, locks) {
     requireThat(locks && crypto?.subtle, "unsupported_browser");
     requireThat(!this.key, "locked");
     let readyResolve, readyReject;
@@ -154,8 +179,7 @@ export class Vault {
         }
         try {
           const record = await this.storage.read();
-          const salt = record ? unb64(record.salt, 16) : random(16),
-            key = await derive(passphrase, salt);
+          const { salt, key } = await keying(record);
           const state = record
             ? await decryptRecord(record, key, this.binding)
             : vaultInitial();
@@ -237,23 +261,27 @@ export async function openStorage(binding) {
     req.onblocked = () => reject(new Problem("storage_unavailable"));
     req.onsuccess = () => resolve(req.result);
   });
+  const get = (key) =>
+    new Promise((resolve, reject) => {
+      const req = db.transaction("vault", "readonly").objectStore("vault").get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(new Problem("storage_unavailable"));
+    });
+  const change = (apply) =>
+    new Promise((resolve, reject) => {
+      const tx = db.transaction("vault", "readwrite", { durability: "strict" });
+      apply(tx.objectStore("vault"));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(new Problem("storage_unavailable"));
+      tx.onabort = () => reject(new Problem("storage_unavailable"));
+    });
+  // An array key never equals the vault's string key, so the remembered key cannot overwrite a record.
+  const remembered = ["remembered", binding];
   return {
-    read: () =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction("vault", "readonly"),
-          req = tx.objectStore("vault").get(binding);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(new Problem("storage_unavailable"));
-      }),
-    write: (record) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction("vault", "readwrite", {
-          durability: "strict",
-        });
-        tx.objectStore("vault").put(record, binding);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(new Problem("storage_unavailable"));
-        tx.onabort = () => reject(new Problem("storage_unavailable"));
-      }),
+    read: () => get(binding),
+    write: (record) => change((store) => store.put(record, binding)),
+    recall: () => get(remembered),
+    remember: (key) => change((store) => store.put(key, remembered)),
+    forget: () => change((store) => store.delete(remembered)),
   };
 }
