@@ -9,7 +9,8 @@ import java.util.UUID
 import javax.sql.DataSource
 
 class Database(val source: DataSource) {
-    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql", "005_connection_ai.sql", "006_pairing_v2.sql", "007_connection_offer.sql").mapIndexed { index, name ->
+    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql", "005_connection_ai.sql", "006_pairing_v2.sql", "007_connection_offer.sql",
+        "008_server_lists.sql").mapIndexed { index, name ->
         (index + 1) to checkNotNull(javaClass.getResourceAsStream("/db/$name")).use { it.readBytes() }
     }
     fun <T> transaction(block: (Connection) -> T): T = source.connection.use { c ->
@@ -43,7 +44,8 @@ class Database(val source: DataSource) {
         c.query("SELECT pg_advisory_xact_lock(740520261017)") { Unit }
         val existing = c.query("SELECT server_id,fence FROM relay_meta WHERE singleton=1") { Unit }
         if (existing.isEmpty()) {
-            val tables = listOf("household", "principal", "bootstrap_token", "auth_challenge", "auth_session", "invitation", "join_request", "shared_list", "manifest", "operation", "snapshot_candidate", "published_snapshot", "key_package", "rate_bucket", "web_user", "web_login", "web_session", "web_device", "web_device_session", "local_credential", "local_login", "web_created_household", "connection_ticket", "native_session", "ai_preference", "ai_usage", "ai_vision_check")
+            val tables = listOf("list", "list_member", "rate_bucket", "web_user", "web_login", "web_session", "local_credential", "local_login",
+                "connection_ticket", "connection_offer", "native_session", "ai_preference", "ai_usage", "ai_vision_check")
             val occupied = tables.joinToString(" OR ") { "EXISTS(SELECT 1 FROM $it)" }
             check(c.query("SELECT $occupied") { it.getBoolean(1) }.single().not()) { "missing_restore_metadata" }
             c.execute("INSERT INTO relay_meta VALUES (1,?,?)", Wire.decode(serverId, 32), fence)
@@ -51,8 +53,8 @@ class Database(val source: DataSource) {
         val metadata = c.query("SELECT server_id,fence FROM relay_meta WHERE singleton=1 FOR UPDATE") { Wire.encode(it.getBytes(1)) to it.getString(2) }.single()
         check(metadata.first == serverId) { "identity_mismatch" }
         if (metadata.second != fence) {
-            c.execute("UPDATE household SET frozen=true")
-            c.execute("UPDATE auth_session SET revoked=true")
+            // A restored backup can hold credentials revoked or changed since it was taken. The new fence is also
+            // the list epoch, so every client reads its lists again.
             c.execute("UPDATE web_session SET revoked=true")
             c.execute("DELETE FROM native_session")
             c.execute("DELETE FROM connection_ticket")
@@ -60,11 +62,6 @@ class Database(val source: DataSource) {
             c.execute("DELETE FROM web_login")
             c.execute("DELETE FROM local_login")
             c.execute("UPDATE local_credential SET password_hash=NULL,salt=NULL,setup_hash=NULL,setup_expires=NULL")
-            c.execute("DELETE FROM bootstrap_token")
-            c.execute("DELETE FROM auth_challenge")
-            c.execute("UPDATE invitation SET consumed=true")
-            c.execute("UPDATE join_request SET denied=true")
-            c.execute("DELETE FROM snapshot_candidate")
             c.execute("UPDATE relay_meta SET fence=? WHERE singleton=1", fence)
         }
     }

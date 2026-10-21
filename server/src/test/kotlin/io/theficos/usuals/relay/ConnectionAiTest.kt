@@ -34,7 +34,7 @@ class ConnectionAiTest {
         admin.connection.use { it.autoCommit = true; it.execute("CREATE SCHEMA $schema") }
         pool = Database.pool(url + if ('?' in url) "&currentSchema=$schema" else "?currentSchema=$schema", dbUser, password)
         db = Database(pool); db.migrate()
-        f = RelayFixture(db, Identity.generate()) { now }.bootstrap()
+        f = RelayFixture(db, Identity.generate()) { now }
         web = WebIdentity(WebIdentityConfig(f.origin, null, true), db, f.auth, clock = { now })
         connections = Connections(db, f.relay, web) { now }
         user = uuid(); val token = randomToken(); cookieToken = token; val csrf = randomToken()
@@ -93,7 +93,7 @@ class ConnectionAiTest {
         val device = SyncCrypto.device(); val verifier = randomToken()
         return Triple(ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32)), OfferClaim(offer.id, Wire.encode(secret))), verifier, device)
     }
-    @Test fun offerLetsOnlyThePhoneHoldingItsSecretWaitForThisAccountsApproval() {
+    @Test fun offerClaimApprovesOnlyThePhoneHoldingItsSecretAtOnce() {
         val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
         assertThat(connections.offerView(caller, offer.id)).isEqualTo(ConnectOfferView(offer.id, offer.expiresAt, null))
         val (start, verifier, device) = scan(offer, secret)
@@ -101,11 +101,16 @@ class ConnectionAiTest {
         val ticket = connections.start(start, "test")
         val view = connections.offerView(caller, offer.id)
         assertThat(view.ticket).isEqualTo(ConnectView(ticket.id, connectionFingerprint(f.identity.serverId, ticket.id, device.publicKeys), ticket.expiresAt))
-        // One phone per code: scanning the same QR again cannot replace the phone waiting for approval.
+        // One phone per code: scanning the same QR again cannot replace the phone already connecting.
         assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
-        connections.approve(caller, ticket.id)
         assertThat(connections.complete(ticket.id, ConnectFinish(ticket.pollToken, verifier), "test").userId).isEqualTo(user)
         assertThat(db.transaction { it.query("SELECT count(*) FROM connection_ticket") { r -> r.getInt(1) }.single() }).isEqualTo(1)
+    }
+    @Test fun anOfferDiesWithTheBrowserSessionThatShowedIt() {
+        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        web.logout(caller)
+        assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
+        assertThat(db.transaction { it.query("SELECT count(*) FROM connection_ticket") { r -> r.getInt(1) }.single() }).isEqualTo(0)
     }
     @Test fun offerIsPrivateToItsAccountExpiresAndIsBounded() {
         val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
@@ -230,17 +235,6 @@ class ConnectionAiTest {
         }
         replacement.execute(user, "text", AiRequest(text = "milk", revision = replacement.settings(user).revision))
         assertThat(keys).containsExactly("synthetic-secret")
-    }
-    @Test fun versionFourDatabaseUpgradesWithoutChangingExistingHouseholdsOrAccounts() {
-        val previous = db.transaction { it.query("SELECT id FROM household") { r -> r.getObject(1).toString() } }
-        db.transaction { c ->
-            c.execute("DROP TABLE connection_offer,ai_vision_check,ai_usage,ai_preference,native_session,connection_ticket")
-            c.execute("ALTER TABLE invitation DROP COLUMN descriptor"); c.execute("ALTER TABLE join_request DROP COLUMN mac")
-            c.execute("DELETE FROM schema_migration WHERE version>=5")
-        }
-        db.migrate(); db.checkSchema()
-        assertThat(db.transaction { it.query("SELECT id FROM household") { r -> r.getObject(1).toString() } }).containsExactlyElementsIn(previous)
-        assertThat(gateway().settings(user).used).isEqualTo(0)
     }
     @Test fun httpRejectsAnonymousAndCrossOriginRequestsBeforeReadingImageBodies() = testApplication {
         application { relayModule(f.relay, webIdentity = web, ai = gateway()) }

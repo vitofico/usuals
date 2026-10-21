@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 /** Aggregate operator counters only. This listener must never be routed through public ingress. */
 class RelayMetrics(private val db: Database) {
     val active = AtomicLong()
-    val sockets = AtomicLong()
+    val waiting = AtomicLong()
     private val requests = AtomicLong()
     private val clientErrors = AtomicLong()
     private val serverErrors = AtomicLong()
@@ -28,7 +28,7 @@ class RelayMetrics(private val db: Database) {
         appendLine("usuals_request_client_errors_total ${clientErrors.get()}")
         appendLine("usuals_request_server_errors_total ${serverErrors.get()}")
         appendLine("usuals_requests_active ${active.get()}")
-        appendLine("usuals_sockets_active ${sockets.get()}")
+        appendLine("usuals_requests_waiting ${waiting.get()}")
         bounds.forEachIndexed { index, ms -> appendLine("usuals_request_duration_seconds_bucket{le=\"${ms / 1000.0}\"} ${buckets[index].get()}") }
         appendLine("usuals_request_duration_seconds_bucket{le=\"+Inf\"} ${requests.get()}")
         appendLine("usuals_request_duration_seconds_count ${requests.get()}")
@@ -40,10 +40,10 @@ class RelayMetrics(private val db: Database) {
             appendLine("usuals_jdbc_waiting ${it.threadsAwaitingConnection}")
         }
         val storage = runCatching { db.transaction { c ->
-            c.query("SELECT pg_database_size(current_database()),coalesce((SELECT sum(storage_bytes) FROM shared_list),0)") { it.getLong(1) to it.getLong(2) }.single()
+            c.query("SELECT pg_database_size(current_database()),coalesce((SELECT sum(octet_length(projection)) FROM list),0)") { it.getLong(1) to it.getLong(2) }.single()
         } }.getOrNull()
         appendLine("usuals_storage_probe_ok ${if (storage == null) 0 else 1}")
-        storage?.let { appendLine("usuals_database_bytes ${it.first}"); appendLine("usuals_ciphertext_bytes ${it.second}") }
+        storage?.let { appendLine("usuals_database_bytes ${it.first}"); appendLine("usuals_list_bytes ${it.second}") }
     }
     fun listen(host: String, port: Int): HttpServer = HttpServer.create(InetSocketAddress(host, port), 4).also { server ->
         // HttpServer's default single dispatcher bounds scrapes without another worker pool.

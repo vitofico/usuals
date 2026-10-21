@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Real relay with synthetic household/accounts in an isolated disposable database.
-# No cluster, no external identity provider, no production keys or app data.
+# Real server with two synthetic local accounts and a shared list in an isolated disposable database.
+# No cluster, no external identity provider, no production keys or app data. The generated passwords go
+# only to a private (0600) credentials.json in the git-ignored output directory, never to the terminal.
 set -euo pipefail
 umask 077
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -36,5 +37,5 @@ export USUALS_TEST_JDBC_URL="jdbc:postgresql://host.docker.internal:$PORT/usuals
 export USUALS_TEST_DB_USER=usuals_test
 export USUALS_TEST_DB_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$OUTPUT/postgres.env")"
 export USUALS_PREVIEW_PORT="${USUALS_PREVIEW_PORT:-18746}"
-printf 'Synthetic browser preview: http://localhost:%s\nPrivate fixture files: %s/%s\nStop by creating %s/stop\n' "$USUALS_PREVIEW_PORT" "$ROOT" "$OUTPUT" "$OUTPUT"
+printf 'Synthetic browser preview: http://localhost:%s\nAccounts and passwords: %s/%s/credentials.json\nStop by creating %s/stop\n' "$USUALS_PREVIEW_PORT" "$ROOT" "$OUTPUT" "$OUTPUT"
 scripts/dgradle -p server browserPreview "-PpreviewPort=$USUALS_PREVIEW_PORT" "-PpreviewOutput=/workspace/$OUTPUT" --no-watch-fs "$@"

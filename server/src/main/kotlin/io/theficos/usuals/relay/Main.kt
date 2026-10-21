@@ -32,24 +32,22 @@ fun main(args: Array<String>) {
         if (restoring) { RestoreFence.apply(db, identity.serverId, fencePath); return }
         db.checkSchema()
         db.fence(identity.serverId, requireNotNull(fence))
-        if (args.contentEquals(arrayOf("bootstrap-token"))) {
-            // Only this explicit operator command emits a bearer secret. Redirect to a protected file.
-            print(Auth(db, identity, origin).bootstrapToken()); return
-        }
-        if (args.size == 3 && args[0] == "recovery-export") {
-            FrozenExporter(db, identity, origin).export(Path.of(args[1]), Path.of(args[2])); return
-        }
         if (args.size == 3 && args[0] == "ai-rewrap") {
             AiGateway(db, AiConfiguration(wrappingKey = AiConfiguration.readKey(Path.of(args[1])))).rewrap(AiConfiguration.readKey(Path.of(args[2]))); return
         }
+        if (args.size == 3 && args[0] == "list-rewrap") {
+            ListCipher(AiConfiguration.readKey(Path.of(args[1]))).rewrap(db, ListCipher(AiConfiguration.readKey(Path.of(args[2])))); return
+        }
         val identityConfig = WebIdentityConfig.fromEnvironment(origin)
-        val auth = Auth(db, identity, origin, webIssuer = identityConfig?.oidc?.issuer, localIdentity = identityConfig?.localEnabled == true)
+        val auth = Auth(db)
         val webIdentity = identityConfig?.let { WebIdentity.create(it, db, auth) }
         if (args.size == 3 && args[0] in setOf("local-admin", "local-reset")) {
             requireNotNull(webIdentity).localOperator(args[1], Path.of(args[2]), args[0] == "local-reset"); return
         }
         require(args.isEmpty())
-        val relay = Relay(db, identity, auth)
+        // Lists are stored encrypted: the server does not start without the key that opens them.
+        val cipher = ListCipher.fromEnvironment().also { it.check(db) }
+        val relay = Relay(db, identity, auth, cipher)
         val ingress = TrustedIngress(System.getenv("USUALS_TRUSTED_PROXY_CIDRS")?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty())
         val operations = RelayMetrics(db)
         val browserModels = BrowserModels.fromEnvironment()

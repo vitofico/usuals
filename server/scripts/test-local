@@ -33,4 +33,4 @@ export USUALS_TEST_DOCKER_NETWORK="$NETWORK"
 export USUALS_TEST_JDBC_URL="jdbc:postgresql://database:5432/usuals_test"
 export USUALS_TEST_DB_USER=usuals_test
 export USUALS_TEST_DB_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$TASK_TMP/postgres.env")"
-scripts/dgradle -p server test verifyWebInterop installDist --no-watch-fs "$@"
+scripts/dgradle -p server test webTest installDist --no-watch-fs "$@"
