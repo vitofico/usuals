@@ -4,7 +4,7 @@
 
 2026-10-18. Vito authorized parallel implementation of a more glamorous name,
 icon and Android design, browser access to the shared-list server, user management
-and SSO with the existing Authentik installation. Work remains local on
+and SSO through an existing Authentik installation. Work remains local on
 `feat/smart-list`. No publication, cluster changes or deployment is authorized.
 
 ## Decisions
