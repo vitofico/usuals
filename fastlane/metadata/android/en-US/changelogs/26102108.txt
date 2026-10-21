@@ -1,0 +1,1 @@
+While typing an item, tap anywhere outside the field to close it and the keyboard. Remove every item from a list at once with Remove all items in its menu. A Google Keep note now imports even when every item is ticked, and repeated emoji such as 🍺🍺🍺 become the quantity.

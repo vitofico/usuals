@@ -1,0 +1,1 @@
+Pendant la saisie d’un article, touchez n’importe où hors du champ pour le fermer avec le clavier. Videz une liste d’un coup avec Retirer tous les articles dans son menu. Une note Google Keep s’importe désormais même si tous les articles sont cochés, et les emoji répétés comme 🍺🍺🍺 deviennent la quantité.
