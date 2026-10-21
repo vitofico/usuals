@@ -88,14 +88,15 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
 
     /**
      * Archives or restores a list. On the server the owner does it for everyone and an editor only for
-     * themself; only the owner restores what the owner archived. A list only this phone holds changes here.
+     * themself; only the owner restores what the owner archived. A list the server does not hold yet
+     * changes only on the phone, under the push lock so an upload in flight cannot undo it; [create]
+     * says what its upload carries.
      */
-    suspend fun archive(list: String, archived: Boolean) {
-        val entry = lists.find(list) ?: return
+    suspend fun archive(list: String, archived: Boolean) = pushing.withLock {
+        val entry = lists.find(list) ?: return@withLock
         require(archived || entry.role != "editor" || !entry.archivedByOwner)
-        if (!entry.synced) return writes.withLock { replica.archive(list, archived) }
-        if (!entry.created) push()
-        online { token, _ -> service.archive(list, archived).also { commit(token) { replica.accept(it) } } }
+        if (!entry.synced || !entry.created) return@withLock writes.withLock { replica.archive(list, archived) }
+        online { token, _ -> val shared = service.archive(list, archived); commit(token) { replica.accept(shared) } }
     }
 
     suspend fun people(query: String): List<Person> = online { _, _ -> service.people(query) }

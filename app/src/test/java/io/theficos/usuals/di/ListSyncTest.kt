@@ -301,6 +301,24 @@ class ListSyncTest {
         assertThat(names(home)).containsExactly("Milk")
     }
 
+    @Test fun anArchivedListTheServerDoesNotHoldYetIsRestoredOnThePhoneAndUploadedAsItIs() = runTest {
+        lists.create("Home")
+        val camping = lists.create("Camping"); add(camping, "Tent")
+        sync.archive(camping, true)
+        signIn()
+        server.invalid = camping
+        assertThat(sync.sync()).isEqualTo(SyncStatus.CAPACITY)
+        assertThat(db.listDao().find(camping)!!.let { it.synced to it.created }).isEqualTo(true to false)
+        server.offline = true
+        sync.archive(camping, false)
+        assertThat(server.calls.none { "/archived" in it }).isTrue()
+        assertThat(db.listDao().find(camping)!!.archived).isFalse()
+        server.offline = false; server.invalid = null
+        assertThat(sync.sync()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.calls.none { "/archived" in it }).isTrue()
+        assertThat(server.names(camping)).containsExactly("Tent")
+    }
+
     @Test fun anEditorArchivesOnlyForThemselfAndCannotRestoreWhatTheOwnerArchived() = runTest {
         lists.create("Home")
         val theirs = server.seed("Camping", owner = "ana", members = listOf("me"))

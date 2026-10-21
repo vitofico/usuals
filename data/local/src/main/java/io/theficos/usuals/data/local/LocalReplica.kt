@@ -162,7 +162,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         if (selected) database.listDao().select(ListSelectionEntity(listId = id))
         id
     }
-    /** A list only this phone holds is archived or restored here; a synced one changes through the server. */
+    /** A list the server does not hold is archived or restored here; one it holds changes through the server. */
     suspend fun archive(list: String, archived: Boolean) = database.withTransaction {
         database.listDao().update(requireNotNull(database.listDao().find(list)).copy(archived = archived))
         keepSelection()
