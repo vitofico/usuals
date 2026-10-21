@@ -367,7 +367,7 @@ class SyncedListReplicaTest {
         val name = "synced-replica-large"; context.deleteDatabase(name)
         fun open() = Room.databaseBuilder(context, UsualsDatabase::class.java, name).allowMainThreadQueries().build()
         // Android reads a row through a 2 MB cursor window; the server accepts a list of up to 7 MB.
-        val large = largeProjection(30_000)
+        val large = largeProjection(4_000)
         assertThat(Json { encodeDefaults = true }.encodeToString(large).encodeToByteArray().size).isIn(Range.closed(6_000_000, 7_000_000))
         var db = open(); synced(db)
         var replica = LocalReplica(db)
@@ -389,7 +389,7 @@ class SyncedListReplicaTest {
         assertThat(replica.projection(LOCAL_LIST_ID)).isEqualTo(confirmed)
         assertThat(replica.creation(LOCAL_LIST_ID)).isEqualTo(confirmed)
         assertThat(replica.pendingIntents(LOCAL_LIST_ID, 100)).isEmpty()
-        assertThat(db.historyDao().purchases(LOCAL_LIST_ID)).hasSize(30_000)
+        assertThat(db.historyDao().purchases(LOCAL_LIST_ID)).hasSize(4_000)
         assertThat(ItemRepository(db).items().single().name).isEqualTo("Milk")
         db.close(); context.deleteDatabase(name)
     }
@@ -407,9 +407,12 @@ class SyncedListReplicaTest {
     }
 }
 
-/** A list with [purchases] past purchases. Multi-byte names put character boundaries where parts are cut. */
+/**
+ * A list of about 1.6 KB per past purchase, few enough that the reducer keeps them all. The long multi-byte names put
+ * character boundaries where parts are cut.
+ */
 internal fun largeProjection(purchases: Int, name: String = "Home") = Projection(name = name,
     trips = (0 until 300).associate { "trip-$it" to buildJsonObject { put("closedAt", it * 1_000L) } },
     purchases = (0 until purchases).associate { i ->
-        "purchase-$i" to PurchaseEntity("purchase-$i", "trip-${i % 300}", "café-$i", "Café crème 🥐 $i", null, null, null, i.toLong(), false, NORMALIZER_VERSION, LOCAL_LIST_ID).facts()
+        "purchase-$i" to PurchaseEntity("purchase-$i", "trip-${i % 300}", "café-$i", "Café crème 🥐 ".repeat(80) + i, null, null, null, i.toLong(), false, NORMALIZER_VERSION, LOCAL_LIST_ID).facts()
     })

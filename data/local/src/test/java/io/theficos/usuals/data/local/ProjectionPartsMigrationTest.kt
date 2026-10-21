@@ -38,7 +38,7 @@ class ProjectionPartsMigrationTest {
 
     @Test fun eachCopyIsSplitIntoPartsThatFitTheCursorWindowEvenFromARowThatDidNot() = runTest {
         val name = "projection-parts-migration.db"
-        val confirmed = largeProjection(8_000)
+        val confirmed = largeProjection(1_100)
         val shown = confirmed.copy(name = "Kitchen", nameRevision = "intent-1")
         val small = Projection(name = "Camping")
         val rows = listOf(Triple("busy", json.encodeToString(confirmed), json.encodeToString(shown)),

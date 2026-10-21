@@ -12,6 +12,7 @@ import io.theficos.usuals.sync.*
 import io.theficos.usuals.ui.list.SyncStatus
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -124,8 +125,9 @@ class ListSyncTest {
         val home = server.seed("Home")
         server.lists.getValue(home).projection = Projection(name = "Home",
             trips = (0 until 300).associate { "trip-$it" to buildJsonObject { put("closedAt", it * 1_000L) } },
-            purchases = (0 until 19_000).associate { i -> "purchase-$i" to buildJsonObject {
-                put("id", "purchase-$i"); put("tripId", "trip-${i % 300}"); put("key", "café-$i"); put("name", "Café crème 🥐 $i")
+            purchases = (0 until 2_500).associate { i -> "purchase-$i" to buildJsonObject {
+                put("id", "purchase-$i"); put("tripId", "trip-${i % 300}"); put("key", "café-$i"); put("name", "Café crème 🥐 ".repeat(80) + i)
+                put("quantity", JsonNull); put("unit", JsonNull); put("gtin", JsonNull)
                 put("boughtAt", i.toLong()); put("fromSuggestion", false); put("normalizerVersion", NORMALIZER_VERSION)
             } })
         signIn()
@@ -136,7 +138,7 @@ class ListSyncTest {
         assertThat(server.names(home)).containsExactly("Bread", "Milk")
         assertThat(names(home)).containsExactly("Bread", "Milk")
         assertThat(replica.projection(home)).isEqualTo(server.lists.getValue(home).projection)
-        assertThat(db.historyDao().purchases(home)).hasSize(19_000)
+        assertThat(db.historyDao().purchases(home)).hasSize(2_500)
     }
 
     @Test fun resendingAfterALostAnswerChangesNothingTwice() = runTest {
