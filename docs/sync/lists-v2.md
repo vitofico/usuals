@@ -83,6 +83,21 @@ per intent and the list after the batch.
 `DELETE /api/lists/{id}`: owner only (204). An editor gets 403 `forbidden`. The id
 is never reused.
 
+`PUT /api/lists/{id}/archived` with `ArchiveList` (`{"archived":true}` to archive,
+`{"archived":false}` to restore) answers 200 with the `SharedList`.
+
+- The owner archives or restores the list for every member.
+- An editor archives or restores it for themself only. An editor's restore does
+  not undo the owner's archive: the list stays archived for them until the owner
+  restores it.
+- In a `SharedList`, `archived` says whether the list is archived for the caller,
+  by the owner or by the caller, and `archivedByOwner` whether the owner archived
+  it for everyone.
+- An archived list keeps syncing and can still be edited; clients only move it out
+  of their main lists. A change of either flag gives the list a new `seq`, so every
+  member's devices see it in the feed; a request that changes nothing does not.
+  Being added to a list again clears the editor's own flag.
+
 A caller who is not a member gets 404 `not_found` from every list route, whether
 or not the list exists. The one exception is creating a list: `PUT` with an id
 that already belongs to a list the caller cannot access answers 409
@@ -147,7 +162,12 @@ pending intents applied on top through the same reducer.
 4. Sync runs 2 s after a local change, in a loop with `wait=25` while the app is in
    the foreground, and every 15 minutes in the background while signed in.
    Failures back off and keep the outbox.
-5. A 401 shows "Sign in again" and keeps everything local until the person signs
+5. An archived list (`archived: true`) stays synced but leaves the main list
+   picker for an **Archived** section, where it can be restored, except by an
+   editor when `archivedByOwner` is set. The selected list
+   is always one that is not archived; when none is left, the phone starts a fresh
+   empty local list.
+6. A 401 shows "Sign in again" and keeps everything local until the person signs
    in or signs out.
 
 **Browser.** No local copy: it reads the feed with a reset on load, waits on it

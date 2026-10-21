@@ -11,6 +11,8 @@ CREATE TABLE list (
     seq bigint NOT NULL,
     created_at bigint NOT NULL,
     deleted_at bigint,
+    -- The owner archived the list for every member; only the owner restores it.
+    archived boolean NOT NULL DEFAULT false,
     CHECK ((deleted_at IS NULL) = (projection IS NOT NULL))
 );
 CREATE INDEX list_owner ON list(owner) WHERE deleted_at IS NULL;
@@ -20,6 +22,8 @@ CREATE TABLE list_member (
     user_id uuid NOT NULL REFERENCES web_user(id),
     role text NOT NULL CHECK (role IN ('owner','editor')),
     removed bigint,
+    -- An editor's own choice to hide the list from their main lists; other members are unaffected.
+    archived boolean NOT NULL DEFAULT false,
     PRIMARY KEY (list_id, user_id)
 );
 CREATE INDEX list_member_user ON list_member(user_id);

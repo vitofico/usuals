@@ -40,7 +40,9 @@ authority for it.
 - **Sharing.** A list is shared by picking another account on the same server
   from a searchable list of people. Any member can add people; the owner can
   remove members; a member can leave. Deleting a list is owner only and removes
-  it for everyone.
+  it for everyone. The owner can also archive a list for everyone, and restore
+  it; an editor can archive it only for themself. An archived list leaves the
+  main lists on every device and keeps syncing until it is restored.
 - **Connecting a phone.** The web app's **Connect a phone** QR connects the
   phone as soon as it is scanned: the 32-byte offer secret is single-use and
   lasts 10 minutes, and the web app shows the connected phone with a
