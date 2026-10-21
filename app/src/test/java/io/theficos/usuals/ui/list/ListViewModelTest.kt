@@ -55,6 +55,15 @@ class ListViewModelTest {
     // The list -----------------------------------------------------------
 
     @Test
+    fun clearing_the_list_removes_every_item_checked_or_not() = runTest(main.dispatcher) {
+        val store = FakeItemStore(listOf(item("a", "leche"), item("b", "pan", checked = true, position = 2.0)))
+        val vm = viewModel(store)
+        vm.onClearItems()
+        assertThat(store.removed).containsExactly(ItemId("a"), ItemId("b"))
+        assertThat(vm.state.value.isEmpty).isTrue()
+    }
+
+    @Test
     fun the_list_menu_acts_on_the_list_it_was_opened_for_even_after_the_selection_moved() = runTest(main.dispatcher) {
         val renamed = mutableListOf<Pair<String, String>>()
         val removed = mutableListOf<String>()

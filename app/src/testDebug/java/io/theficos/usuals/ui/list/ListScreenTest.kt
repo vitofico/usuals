@@ -178,6 +178,39 @@ class ListScreenTest {
     }
 
     @Test
+    fun a_tap_on_the_list_while_typing_closes_the_field_without_checking_the_item() {
+        var dismissed = 0
+        var checked = 0
+        val state = ListUiState(header = ListHeader(itemCount = 1), pending = listOf(row("a", "Milk")),
+            capture = CaptureState.Typing(draft = "eg"))
+        compose.setContent {
+            UsualsTheme { ListContent(state, ListActions(onDraftDismiss = { dismissed++ }, onCheckedChange = { _, _ -> checked++ })) }
+        }
+        compose.onNodeWithText("Milk").performClick()
+        compose.runOnIdle {
+            assertThat(dismissed).isEqualTo(1)
+            assertThat(checked).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun removing_all_items_asks_first() {
+        var cleared = 0
+        compose.setContent {
+            UsualsTheme {
+                ListContent(ListUiState(header = ListHeader(name = "Home", itemCount = 1), pending = listOf(row("a", "Milk"))),
+                    ListActions(onClearItems = { cleared++ }))
+            }
+        }
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Remove all items").performClick()
+        compose.onNodeWithText("Remove all items from Home?").assertIsDisplayed()
+        compose.runOnIdle { assertThat(cleared).isEqualTo(0) }
+        compose.onNodeWithText("Remove all items").performClick()
+        compose.runOnIdle { assertThat(cleared).isEqualTo(1) }
+    }
+
+    @Test
     fun a_phone_without_dictation_types_in_the_same_place_with_no_dialog() {
         val state = ListUiState(
             capture = CaptureState.Typing(draft = "", becauseSpeechIsUnavailable = true),

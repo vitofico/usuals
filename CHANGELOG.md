@@ -1,5 +1,19 @@
 # Changelog
 
+## Quicker typing, empty a list, Keep imports
+
+- While typing an item, a tap anywhere outside the field closes it and the
+  keyboard, so the list and its menus are reachable again. The tap does not
+  also check the item under it.
+- **Remove all items** in a list's menu empties the list after a confirmation,
+  for everyone who has it. Purchase history stays, so the usuals are still
+  suggested.
+- A Google Keep note imports even when every item in it is ticked, which is how
+  a list reused from the last trip looks. Checked items are still skipped when
+  the note also has unticked ones.
+- Repeated emoji after an item become its quantity: `Cerveza 🍺🍺🍺` imports as
+  3 Cerveza. A single or mixed emoji is dropped from the name.
+
 ## Lists that follow you, and sharing by name
 
 - Signed in to a Usuals server, your lists now live in your account there. The

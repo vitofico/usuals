@@ -33,7 +33,7 @@
     <string name="recipe_source_url">Link</string>
     <string name="recipe_source_markdown">Text or Markdown</string>
     <string name="recipe_source_photo">Photo</string>
-    <string name="recipe_markdown_help">Paste a note from Google Keep or another app, or open a UTF-8 text or Markdown file. Use one item per line, bullets or checkboxes. Import stays on this device; checked items are skipped.</string>
+    <string name="recipe_markdown_help">Paste a note from Google Keep or another app, or open a UTF-8 text or Markdown file. Use one item per line, bullets or checkboxes. Import stays on this device; checked items are skipped unless every item is checked.</string>
     <string name="recipe_markdown_text">Paste your list</string>
     <string name="recipe_markdown_file">Open text or Markdown file</string>
     <string name="recipe_read_markdown">Review items</string>

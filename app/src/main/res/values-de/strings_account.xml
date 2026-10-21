@@ -61,6 +61,9 @@
     <string name="list_delete">Liste löschen</string>
     <string name="list_delete_title">%1$s löschen?</string>
     <string name="list_delete_help">Die Liste und ihr Verlauf werden für alle entfernt, die sie haben.</string>
+    <string name="list_clear">Alle Artikel entfernen</string>
+    <string name="list_clear_title">Alle Artikel aus %1$s entfernen?</string>
+    <string name="list_clear_help">Alle Artikel der Liste werden entfernt, abgehakt oder nicht, für alle, die sie haben. Der Einkaufsverlauf bleibt erhalten.</string>
     <string name="list_archive">Archivieren</string>
     <string name="list_archive_title">%1$s archivieren?</string>
     <string name="list_archive_help">Die Liste wird für alle archiviert, die Zugriff darauf haben. Du kannst sie unter „Archiviert“ in deinen Listen wiederherstellen.</string>
