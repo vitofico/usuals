@@ -1,5 +1,7 @@
 # Usuals paid hosting preparation
 
+> Superseded premise: this plan assumes end-to-end encrypted households, which [ADR 0017](decisions/ADR-0017-server-held-lists.md) replaced with server-held account lists. Revisit its household, key and ciphertext steps before using it.
+
 2026-10-18. Prepared locally at Vito's request. This is a proposed implementation
 plan for **Usuals Cloud**, a paid managed service using the existing encrypted
 relay. Billing, public registration, customer provisioning and hosted access

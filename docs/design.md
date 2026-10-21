@@ -28,24 +28,24 @@ app. The store's PNG is a render of that artwork, not a separate design.
 ## First-run tour
 
 The first normal Android launch opens a five-step guided tour: the offline list,
-capture, scans/recipes, shopping/history and optional household sharing. Next,
-Back and Skip remain explicit; the final step offers a local start or the sharing
-screen. It scrolls independently of its controls for smaller displays and large
+capture, scans/recipes, shopping/history and optional sharing through an account.
+Next, Back and Skip remain explicit; the final step offers **Start my list** or
+**Set up account**, which opens the Account screen. It scrolls independently of its controls for smaller displays and large
 text. Completion is local to the installation, and Settings can reopen the tour.
-Incoming text shares, invitations and widget launches defer automatic onboarding
-so their requested action can continue.
+Incoming text shares, connection links and widget launches defer automatic
+onboarding so their requested action can continue.
 
-The web client's four-step tour opens on its first visit, before sign-in. Its
-completion flag is local to the browser, with a Guided tour navigation action for
-replay. Keyboard users can move through the dialog; Escape skips it. An interrupted
-tour can start again. Neither client requests permissions, enables product lookup
-or creates accounts/households through the tutorial.
+The web client's three-step tour (Welcome, List, Share) opens on its first visit.
+Its completion flag is local to the browser, with a Guided tour navigation action
+for replay. Keyboard users can move through the dialog; Escape skips it. An
+interrupted tour can start again. Neither client requests permissions, enables
+product lookup or creates accounts through the tutorial.
 
 ## Palettes
 
 Choose a palette in Android **Settings > Appearance**, or use **Appearance** in
 the browser sidebar. Selection applies immediately and survives restart on that
-device/browser. It does not sync or change model, lookup, household or privacy
+device/browser. It does not sync or change model, lookup, account or privacy
 settings. Every palette follows the device's light/dark mode. The widget follows
 the Android choice, using resource-based colors even when the app is closed.
 
@@ -85,7 +85,7 @@ category, including supporting text on tinted containers.
 - Put the mark and brand on a quiet masthead. Give the list title its own line
   so long list names do not compete with recipe, history and sharing actions.
   Keep counts and those actions together below it, separated from the list by
-  a fine rule. Preserve list selection and every sync or recovery status.
+  a fine rule. Preserve list selection and every sync status.
 - Group grocery rows on ivory paper with 16 dp outer corners and inset dividers.
   Quantity badges use the background colour and 6 dp corners. Keep check circles
   visible and completed names struck through. Preserve checkbox semantics.

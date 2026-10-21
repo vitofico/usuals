@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>A shopping list with a memory. And room for your household.</strong><br>
-  Capture on Android. Remember what you buy. Share an encrypted list on your own server.
+  Capture on Android. Remember what you buy. Share lists through your own server.
 </p>
 
 <p align="center">
@@ -90,46 +90,52 @@ it can also read photos of written lists. Photos stay local until you
 request a read and its image check succeeds. Both Android and web offer a
 review before anything is added. See [provider setup](docs/providers.md) for the server gateway and advanced
 direct-provider options.
-Connect once under **Settings > Server connection** and enable AI assistance.
+Sign in under **Settings > Account** and turn on **AI assistance**.
 Your server supplies the provider setup; model details remain available before
 use. AI is off by default and inputs are sent only after your explicit action.
 The everyday list needs no AI service.
 
 ## Your everyday, together
 
-Use Android alone, or connect a household to your own encrypted relay. Approved
-devices share lists with explicit roles, membership changes and conflict review.
-The relay stores encrypted shopping contents; membership and routing metadata
-remain visible to the server.
+Use Android alone, or sign in to a Usuals server that you or someone you trust
+runs. Signed in, your lists live in your account on that server: the phone and
+the web app show the same lists, and a change on one appears on the other within
+a second or two. The phone keeps an offline copy and sends its changes when it is
+back online.
 
-In Android, **Settings > Server and sharing** walks through one step at a time:
-sign in to the server, save the recovery file, then **Invite someone**. The other
-phone scans the invite QR and taps **Join**; the owner approves with one tap. See
-the [server connection guide](docs/server-connection.md) and the
-[QR connection guide](web/README.md#connect-a-phone-with-qr) for camera-free options.
+To connect your phone, open **Account > Connect a phone** in the web app. On the
+phone, choose **Settings > Account > Scan the QR from the web app**, or scan the
+code with the camera. Confirm the server address once and the phone is connected,
+with no code to compare. Without a computer at hand, enter the server address on
+the phone and choose **Sign in in your browser**.
+
+To shop together, choose **Share** on a list and add people who have an
+account on the same server. Everyone added can edit the list and add others; the
+owner can remove people or delete the list, and anyone else can leave it. There
+are no invitations or codes to send. See the
+[server connection guide](docs/server-connection.md) for the details.
 
 <p align="center">
-  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web editor in dark mode: an encrypted household list, quantities, checked items and account navigation" width="100%"></a>
+  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web editor in dark mode: a shopping list with quantities, checked items and account navigation" width="100%"></a>
 </p>
 
 <p align="center"><em>Android in your pocket. A larger workspace in your browser.</em></p>
 
 | Part | What it does |
 | --- | --- |
-| **Android** | Offline lists, purchase history, capture and shopping tools. Encrypted sharing is optional; everyday use needs no sign-in. |
-| **Web** | Create a household or join an existing one, then edit its lists through an encrypted browser vault. Standalone accounts or optional Authentik SSO provide sign-in; owners approve joining devices. |
-| **Relay** | A small Kotlin/Ktor service with PostgreSQL, signed authorization, encrypted operations and backup/recovery tools. You run it on your infrastructure. |
+| **Android** | Offline lists, purchase history, capture and shopping tools. Signing in is optional; it syncs your lists with your account and lets you share them. |
+| **Web** | Your account's lists in the browser, sharing, **Connect a phone** and connected-phone management. Local accounts or optional Authentik SSO provide sign-in. |
+| **Server** | A small Kotlin/Ktor service with PostgreSQL that holds every list of its accounts, applies changes and serves the web app. Lists are encrypted at rest. You run it on your infrastructure. |
 
-Browser encryption trusts the code served by your instance: an operator who
-changes that code could observe an unlocked vault. Save and verify the recovery
-kit when creating a household on either platform. Recovery and advanced owner
-actions remain on Android. Read the [browser boundary](web/PROTOCOL.md),
-[Android sharing guide](docs/sync/android-sharing.md) and
-[account/SSO guide](docs/sync/web-identity.md) before inviting a household.
+The server applies every change, so it can read the lists of its accounts, and so
+can whoever operates it. Encryption at rest protects a copied database or backup,
+not a running server. Lists on a phone that is not signed in never leave it. Read
+the [privacy policy](PRIVACY.md), the [browser boundary](web/PROTOCOL.md) and the
+[account/SSO guide](docs/sync/web-identity.md) before choosing a server.
 
 The server and clients are implemented and tested locally. Cluster deployment,
-production capacity, off-site recovery and a household pilot still need their
-operational checks. The [deployment package](deploy/README.md) is preparation
+production capacity, off-site recovery and a pilot with real users still need
+their operational checks. The [deployment package](deploy/README.md) is preparation
 material, not a running hosted service.
 
 **Usuals Cloud** is planned as optional paid managed hosting. Offline and
@@ -149,8 +155,8 @@ The [hosting plan](docs/hosted-service-plan.md) records the work and launch gate
 - **Speech follows Android's service.** Availability and audio processing depend
   on the selected speech service; keyboard capture works offline.
 - **Portable shopping data.** Export/import and Android device transfer preserve
-  shopping history. Cloud backup and secret transfer are excluded. Encryption
-  keys, household membership and the product cache are outside shopping exports.
+  shopping history. Cloud backup and secret transfer are excluded. Account
+  credentials, sync state and the product cache are outside shopping exports.
 
 See the [security model](docs/security-model.md) for the complete trust boundaries.
 
@@ -158,7 +164,7 @@ See the [security model](docs/security-model.md) for the complete trust boundari
 
 The first launch includes a guided tour. Skip it whenever you like and reopen
 it from **Settings > Guided tour** on Android, or **Guided tour** in the web
-navigation. Sharing setup explains the separate account and household steps.
+navigation. Its last step explains how to sign in and share.
 
 Download the signed **[Android APK](https://github.com/vitofico/usuals/releases/latest/download/app-release.apk)** from GitHub Releases, or add
 `https://github.com/vitofico/usuals` to **[Obtainium](https://obtainium.imranr.dev/)**
@@ -172,8 +178,8 @@ checksums and the inclusion status.
 The [corrected F-Droid draft](distribution/fdroid/README.md) remains unsubmitted while
 the maintenance requirement is unmet; no resubmission is scheduled.
 
-Android works offline without an account. Shared lists are optional and use your
-own compatible server. There is no managed hosting subscription in this release.
+Android works offline without an account. Syncing and shared lists are optional
+and use your own compatible server. There is no managed hosting subscription in this release.
 Read the [privacy policy](PRIVACY.md) before enabling external services.
 
 To build Android, install Git and Docker, then run:
@@ -199,8 +205,7 @@ server/scripts/test-local
 ```
 
 Use the [server guide](server/README.md) and [deployment runbook](deploy/README.md)
-for instance preparation. Account setup and household enrollment are separate
-steps. Production deployment is an explicit operator action.
+for instance preparation. Production deployment is an explicit operator action.
 
 The [development guide](docs/development.md) covers full tests, native 16 KB
 alignment, emulator checks and suggestion replay. The

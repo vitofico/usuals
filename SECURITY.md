@@ -7,8 +7,9 @@ and aliases, and an optional model API key. The key uses Android Keystore-backed
 encrypted preferences and is never included in logs or shopping-data exports.
 The settings screen is wired to that store. The configured model endpoint
 receives the key for authentication when required. There are no retailer sessions
-or payment credentials. Optional household sharing uses an
-end-to-end encrypted relay; its web client supports standalone accounts and SSO.
+or payment credentials. Optionally, a self-hosted Usuals server holds a signed-in
+account's lists, encrypted at rest, and shares them with other accounts on that
+server; its web client supports standalone accounts and SSO.
 
 Security reports can cover the Android app and its modules: `app`, `auth`,
 `capture`, `core`, `data/local`, `smart`, `recipe`, `llm`, `enrich`, `sync`,
@@ -20,9 +21,11 @@ Security reports can cover the Android app and its modules: `app`, `auth`,
 - Untrusted page/model content escaping its data and reviewed-output boundary.
 - Archive import violating validation, immutable purchase facts or secret isolation.
 - Cloud backup or transfer policies exposing excluded preferences and secrets.
-- Membership, key rotation, recovery, rollback protection and receipt validation.
-- Account/session authorization, CSRF, origin checks, quotas and restore fencing.
-- Browser-vault encryption, cross-account isolation and unintended key export.
+- List access: an account reading or changing a list it does not own or was not
+  added to, or sharing rules (add, remove, leave, delete) applied wrongly.
+- Account/session authorization, phone connection, CSRF, origin checks, quotas
+  and restore fencing.
+- Encryption at rest of stored lists, list-key handling and cross-account isolation.
 
 Third-party reads run on the phone. Recipe sites see requested URLs; Open Food
 Facts sees barcodes only with opt-in. A selected model sees recipe text only
@@ -60,8 +63,9 @@ all proposed ingredients still require review. A local endpoint label does not
 prove that traffic is encrypted or that its server stores nothing. Explicit
 shopping exports are readable files at the chosen location.
 
-Account administrators cannot grant household keys. Recovery replaces membership;
-keep recovery material separate and private. Browsers trust code delivered by
-their server, so the installed Android app offers a stronger boundary against a
-malicious operator. A compromised device remains able to disclose data already
-received. Documented limitations are in [known issues](docs/known-issues.md).
+The server reads the lists of its accounts to apply changes, so its operator can
+read them too; that is by design and not a vulnerability. Encryption at rest
+protects a copied database or backup, not a compromised running server. Browsers
+trust code delivered by their server. A compromised device remains able to
+disclose data already received. Documented limitations are in
+[known issues](docs/known-issues.md).
