@@ -102,8 +102,9 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=?", id(request.userId)) { config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "not_found", 404)
             if (role(c, request.userId, list) != null) return@transaction view(c, access.user, list, locked.seq, cipher.open(list, locked.sealed))
             expect(current(c, list).size < 50, "limit_reached", 409)
-            val seq = next(c)
+            // Before the counter: the insert's foreign key check waits on the added account's row.
             c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL", id(list), id(request.userId))
+            val seq = next(c)
             c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
             members = current(c, list)
             view(c, access.user, list, seq, cipher.open(list, locked.sealed))
