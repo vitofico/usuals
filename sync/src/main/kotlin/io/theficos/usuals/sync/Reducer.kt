@@ -83,7 +83,8 @@ class Reducer(private val normalizer: Int = 1) {
             Outcome.REJECTED -> before.copy(rejected = before.rejected + (intent.id to "invalid"))
             else -> work.state
         }
-        return Reduction(result.copy(seen = result.seen + (intent.id to intent)), outcome)
+        val seen = (result.seen + (intent.id to intent)).entries.toList().takeLast(RESEND_HORIZON).associate { it.toPair() }
+        return Reduction(result.copy(seen = seen), outcome)
     }
 
     private fun incompatibleVersion(value: JsonElement): Boolean = when (value) {
@@ -414,6 +415,12 @@ class Reducer(private val normalizer: Int = 1) {
 
     }
     companion object {
+        /**
+         * How many of the latest applied intents a projection remembers, in order, so a resend answers no_op
+         * (docs/sync/lists-v2.md). Remembering every one outgrew the snapshot cap; revision checks keep an
+         * older resend from taking effect twice.
+         */
+        const val RESEND_HORIZON = 1000
         private val ROW_FIELDS = setOf("key", "name", "rawText", "quantity", "unit", "note", "gtin", "store", "checked", "checkedAt", "position", "createdAt", "updatedAt", "fromSuggestion", "normalizerVersion", "addedBy", "deletedAt")
         private val REVISION_FIELDS = ROW_FIELDS - setOf("createdAt", "updatedAt", "normalizerVersion", "fromSuggestion", "addedBy", "deletedAt")
         private fun revisionField(field: String): String = when (field) { "unit" -> "quantity"; "checked", "checkedAt" -> "check"; "key", "gtin" -> "name"; else -> field }
