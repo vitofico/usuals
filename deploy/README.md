@@ -77,9 +77,10 @@ Lists are stored encrypted with AES-256-GCM under a 32-byte key file named by
 refuses to start without it, or when it cannot open the stored lists. Create it
 once on the identity volume before the first start of a release with migration
 008: 32 random bytes (`head -c 32 /dev/urandom`), a regular file owned by UID
-10001 with mode 0600. Keep an encrypted escrow copy with the database backups:
-a database backup without this key is unreadable, and losing the key loses every
-list. To rotate it, stop traffic and run `list-rewrap <old key file> <new key file>`.
+10001 with mode 0600. Escrow an encrypted copy separately from the database
+backups, for as long as any backup needs it: a backup stored next to its key
+reveals every list, a backup without it is unreadable, and losing the key loses
+every list. To rotate it, stop traffic and run `list-rewrap <old key file> <new key file>`.
 
 Migration 008 replaces the household tables with server-held lists and drops
 them. Take and verify a database backup first: rolling back past 008 means
