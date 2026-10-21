@@ -306,10 +306,6 @@ main {
   gap: 10px;
   margin-top: 20px;
 }
-.paper-title {
-  font-size: 12px;
-  font-weight: 700;
-}
 .list-select {
   max-width: 75%;
   border: 0;
@@ -463,18 +459,6 @@ main {
   font-size: 11px;
   line-height: 1.9;
   color: var(--gold);
-}
-.progress {
-  height: 3px;
-  background: var(--line);
-  margin: 0 26px 25px;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  width: 0;
-  background: var(--primary);
 }
 .page-footer {
   display: flex;
@@ -792,12 +776,6 @@ dialog .lede {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-.file-button input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
 }
 .locale-options {
   display: grid;
