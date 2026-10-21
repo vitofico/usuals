@@ -68,6 +68,7 @@ let availableLocales = ["en"],
   busy = false,
   idleTimer = null,
   expiryTimer = null,
+  stayUnlocked = false,
   dialogCleanup = null;
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
@@ -138,7 +139,8 @@ async function act(action, { rerender = true } = {}) {
 }
 function resetIdle() {
   clearTimeout(idleTimer);
-  if (client) idleTimer = setTimeout(() => lock(), 5 * 60 * 1000);
+  // A browser its owner chose to keep unlocked has no idle lock; others lock after 30 quiet minutes.
+  if (client && !stayUnlocked) idleTimer = setTimeout(() => lock(), 30 * 60 * 1000);
 }
 function lock() {
   generation++;
@@ -359,6 +361,7 @@ async function loadAccount() {
     else throw error;
   }
   await render();
+  if (account && !client) await vaultCandidate().then((opened) => opened && resumeWith(opened)).catch(() => {});
 }
 function welcome() {
   const signed = Boolean(account),
@@ -385,14 +388,12 @@ function welcome() {
     );
   return content;
 }
-async function unlockDialog() {
-  if (!account) {
-    notice("accountRequired", true);
-    return;
-  }
+const vaultBinding = (a) => JSON.stringify([location.origin, a.user.issuer, a.user.subject, a.user.id]);
+/** This browser's vault for the signed-in account, after checking the session is still the same account. */
+async function vaultCandidate() {
   const own = generation,
     verifiedAccount = await api("/api/me");
-  if (own !== generation) return;
+  if (own !== generation) return null;
   requireThat(
     verifiedAccount.user.id === account.user.id &&
       verifiedAccount.user.issuer === account.user.issuer &&
@@ -400,15 +401,104 @@ async function unlockDialog() {
     "unauthenticated",
   );
   account = verifiedAccount;
-  const binding = JSON.stringify([
-    location.origin,
-    account.user.issuer,
-    account.user.subject,
-    account.user.id,
-  ]);
+  const binding = vaultBinding(account);
   const storage = await openStorage(binding);
-  if (own !== generation) return;
-  const candidate = new Vault(storage, binding);
+  if (own !== generation) return null;
+  return { own, candidate: new Vault(storage, binding) };
+}
+/** Unlocks with the remembered key when this browser stays unlocked, otherwise asks for the passphrase. */
+async function unlockBrowser() {
+  if (!account) {
+    notice("accountRequired", true);
+    return;
+  }
+  const opened = await vaultCandidate();
+  if (!opened || (await resumeWith(opened)) || opened.own !== generation) return;
+  await unlockDialog(opened);
+}
+/** Opens the vault with this browser's remembered key, and forgets a key that no longer opens it. */
+async function resumeWith({ own, candidate }) {
+  if (!(await candidate.remembered())) return false;
+  try {
+    return await openVault(new UnlockAttempt(candidate, () => own === generation), own, null);
+  } catch (e) {
+    if (e.code === "vault_in_use") {
+      notice(e.code, true);
+      return true;
+    }
+    if (["wrong_passphrase", "upgrade_required"].includes(e.code)) await candidate.forget().catch(() => {});
+    return false;
+  }
+}
+/**
+ * Opens the vault and starts the client. A null passphrase uses the remembered key; otherwise `keep` says
+ * whether this browser remembers it. Throws a dictionary code when the vault stays locked.
+ */
+async function openVault(attempt, own, passphrase, keep = false) {
+  let activated = false,
+    activationGeneration = own;
+  try {
+    requireThat(isSecureContext && navigator.locks && crypto.subtle, "unsupported_browser");
+    const unlocked = await attempt.unlock(passphrase, (unlockedVault) => {
+      const nextScope = new RunScope();
+      const nextClient = new HouseholdClient(unlockedVault, account, {
+        scope: nextScope,
+      });
+      vault = unlockedVault;
+      scope = nextScope;
+      client = nextClient;
+      generation++;
+      activationGeneration = generation;
+      activated = true;
+    });
+    if (!unlocked) return false;
+    if (passphrase === null) stayUnlocked = true;
+    else if (keep) stayUnlocked = await vault.remember().then(() => true, () => false);
+    else {
+      stayUnlocked = false;
+      await vault.forget().catch(() => {});
+    }
+    clearTimeout(expiryTimer);
+    expiryTimer = setTimeout(
+      () => {
+        lock();
+        account = null;
+        notice("unauthenticated", true);
+        render().catch(() => {});
+      },
+      Math.max(0, account.expiresAt - Date.now()),
+    );
+    busy = false;
+    closeDialog();
+    clearNotice();
+    resetIdle();
+    refreshLoop.start();
+    await render();
+    await syncSelected();
+    return true;
+  } catch (e) {
+    const code = dictionary[e.code]
+      ? e.code
+      : e.name === "OperationError"
+        ? "wrong_passphrase"
+        : activated
+          ? "invalid"
+          : "unsupported_browser";
+    if (activated && activationGeneration === generation) {
+      lock();
+      notice(code, true);
+      return false;
+    }
+    attempt.candidate.lock();
+    throw new Problem(code);
+  }
+}
+/** Forgets this browser's remembered key for the signed-in account, so the passphrase is asked again. */
+async function forgetBrowser() {
+  stayUnlocked = false;
+  await openStorage(vaultBinding(account)).then((storage) => storage.forget()).catch(() => {});
+}
+async function unlockDialog({ own, candidate }) {
   const attempt = new UnlockAttempt(candidate, () => own === generation);
   const exists = await candidate.exists();
   if (own !== generation) return;
@@ -433,6 +523,7 @@ async function unlockDialog() {
           required: true,
         }),
     error = el("p", { class: "dialog-error", role: "alert" }),
+    keep = el("input", { type: "checkbox" }),
     submit = el(
       "button",
       { type: "submit", class: "primary" },
@@ -449,64 +540,12 @@ async function unlockDialog() {
           return;
         }
         submit.disabled = true;
-        let activated = false,
-          activationGeneration = own;
         try {
-          requireThat(
-            isSecureContext && navigator.locks && crypto.subtle,
-            "unsupported_browser",
-          );
-          const unlocked = await attempt.unlock(
-            password.value,
-            (unlockedVault) => {
-              const nextScope = new RunScope();
-              const nextClient = new HouseholdClient(unlockedVault, account, {
-                scope: nextScope,
-              });
-              vault = unlockedVault;
-              scope = nextScope;
-              client = nextClient;
-              generation++;
-              activationGeneration = generation;
-              activated = true;
-            },
-          );
+          await openVault(attempt, own, password.value, keep.checked);
           password.value = "";
           if (confirm) confirm.value = "";
-          if (!unlocked) return;
-          clearTimeout(expiryTimer);
-          expiryTimer = setTimeout(
-            () => {
-              lock();
-              account = null;
-              notice("unauthenticated", true);
-              render().catch(() => {});
-            },
-            Math.max(0, account.expiresAt - Date.now()),
-          );
-          busy = false;
-          closeDialog();
-          clearNotice();
-          resetIdle();
-          refreshLoop.start();
-          await render();
-          await syncSelected();
         } catch (e) {
-          const code = dictionary[e.code]
-            ? e.code
-            : e.name === "OperationError"
-              ? "wrong_passphrase"
-              : activated
-                ? "invalid"
-                : "unsupported_browser";
-          if (activated && activationGeneration === generation) {
-            lock();
-            notice(code, true);
-          } else {
-            candidate.lock();
-            if (!attempt.cancelled && own === generation)
-              error.textContent = t(code);
-          }
+          if (!attempt.cancelled && own === generation) error.textContent = t(e.code);
         } finally {
           submit.disabled = false;
         }
@@ -527,6 +566,8 @@ async function unlockDialog() {
         ]
       : []),
     paragraph("passphraseHelp", "helper"),
+    el("label", { class: "check-row" }, keep, t("keepUnlocked")),
+    paragraph("keepUnlockedHelp", "helper"),
     error,
     el(
       "div",
@@ -1468,9 +1509,17 @@ async function renderAccount(own) {
           button(t("connectionAddPhone"), serverConnectionDialog),
           button(t("connectionSessions"), () => act(connectedPhonesDialog, { rerender: false })),
           button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
+          ...(stayUnlocked
+            ? [button(t("forgetBrowser"), () => act(async () => {
+                await forgetBrowser();
+                resetIdle();
+                notice("browserForgotten");
+              }))]
+            : []),
           button(t("signOut"), () =>
             act(async () => {
               const csrf = account.csrfToken;
+              await forgetBrowser();
               lock();
               await api("/auth/logout", { method: "POST", csrf, status: 204 });
               account = null;
@@ -1744,9 +1793,6 @@ $("language").addEventListener("click", languageDialog);
 $("appearance").addEventListener("click", appearanceDialog);
 $("lock").addEventListener("click", lock);
 $("refresh").addEventListener("click", () => act(syncSelected));
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) lock();
-});
 window.addEventListener("pagehide", lock);
 for (const event of ["pointerdown", "keydown"])
   document.addEventListener(event, resetIdle, { passive: true });
@@ -2080,7 +2126,7 @@ function secretDialog(result) {
 }
 function welcomeActions(signed) {
   if (signed)
-    return [button(t("unlockVault"), () => unlockDialog().catch(failure), "primary")];
+    return [button(t("unlockVault"), () => unlockBrowser().catch(failure), "primary")];
   if (!config?.enabled) return [paragraph("ssoDisabled", "warning-box")];
   const actions = [];
   if (config.localEnabled) {

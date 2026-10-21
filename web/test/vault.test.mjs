@@ -33,12 +33,19 @@ function locks() {
   };
 }
 function memory() {
-  let record;
+  let record, remembered;
   return {
     read: async () =>
       record === undefined ? undefined : structuredClone(record),
     write: async (value) => {
       record = structuredClone(value);
+    },
+    recall: async () => remembered,
+    remember: async (key) => {
+      remembered = key;
+    },
+    forget: async () => {
+      remembered = undefined;
     },
     get record() {
       return record;
@@ -271,3 +278,77 @@ test("unreadable aggregate depth and node count are rejected before replacing a 
   vault.lock();
   await tick();
 });
+
+test("a remembered browser reopens its vault without the passphrase", async () => {
+  const storage = memory(),
+    l = locks(),
+    first = new Vault(storage, binding);
+  await first.unlock(pass, l);
+  await first.mutate((s) => {
+    s.joining = { fixture: "kept" };
+  });
+  await first.remember();
+  first.lock();
+  await tick();
+  const again = new Vault(storage, binding);
+  assert.equal(await again.remembered(), true);
+  await again.unlockRemembered(l);
+  assert.deepEqual(again.read().joining, { fixture: "kept" });
+  await again.mutate((s) => {
+    s.joining = null;
+  });
+  again.lock();
+  await tick();
+  const byPassphrase = new Vault(storage, binding);
+  await byPassphrase.unlock(pass, l);
+  assert.equal(byPassphrase.read().joining, null);
+  byPassphrase.lock();
+});
+
+test("the remembered key can be used but never exported", async () => {
+  const storage = memory(),
+    l = locks(),
+    v = new Vault(storage, binding);
+  await v.unlock(pass, l);
+  await v.remember();
+  const key = await storage.recall();
+  assert.equal(key.extractable, false);
+  await assert.rejects(crypto.subtle.exportKey("raw", key));
+  v.lock();
+});
+
+test("a forgotten browser asks for the passphrase again", async () => {
+  const storage = memory(),
+    l = locks(),
+    v = new Vault(storage, binding);
+  await v.unlock(pass, l);
+  await v.remember();
+  await v.forget();
+  v.lock();
+  await tick();
+  const again = new Vault(storage, binding);
+  assert.equal(await again.remembered(), false);
+  await assert.rejects(again.unlockRemembered(l), { code: "locked" });
+  assert.equal(l.held, false);
+});
+
+test("a remembered key from a replaced vault is refused and the vault stays locked", async () => {
+  const old = memory(),
+    l = locks(),
+    first = new Vault(old, binding);
+  await first.unlock(pass, l);
+  await first.remember();
+  first.lock();
+  await tick();
+  const replaced = memory(),
+    second = new Vault(replaced, binding);
+  await second.unlock("another synthetic strong passphrase", l);
+  second.lock();
+  await tick();
+  await replaced.remember(await old.recall());
+  const v = new Vault(replaced, binding);
+  await assert.rejects(v.unlockRemembered(l));
+  assert.equal(v.key, null);
+  assert.equal(l.held, false);
+});
+

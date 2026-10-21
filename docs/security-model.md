@@ -8,7 +8,15 @@ There are no retailer credentials or payment data.
 Browser account administration cannot grant household keys or decrypt a vault.
 The browser trusts JavaScript delivered by its serving origin; an active operator
 who changes that code can observe an unlocked browser. The independently
-installed Android app has the stronger operator boundary. See the
+installed Android app has the stronger operator boundary.
+
+A browser vault locks when its page closes or after 30 idle minutes. On a computer
+the person trusts, they can keep it unlocked: the browser stores the vault's
+non-extractable AES key in IndexedDB, and the vault opens without the passphrase
+while the account is signed in. Page script can use that key but never read its
+bytes. Anyone using that operating-system account with a live session can open the
+lists, the same exposure as the Android app. Signing out or **Forget this
+browser** deletes the key; a key that no longer opens the vault is deleted too. See the
 [browser protocol](../web/PROTOCOL.md) and [identity guide](sync/web-identity.md)
 for enrollment, session, password and restore details.
 

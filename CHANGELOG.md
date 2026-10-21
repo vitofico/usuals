@@ -1,5 +1,14 @@
 # Changelog
 
+## Fewer browser unlocks
+
+- The browser no longer locks when you switch tabs or apps. It locks when the
+  page closes or after 30 minutes without activity, instead of five.
+- On a computer you trust, tick **Keep this browser unlocked** when unlocking.
+  The browser then opens your lists without the passphrase while you are signed
+  in, like the Android app. **Forget this browser** in Account, or signing out,
+  turns it off.
+
 ## Browser invites survive sign-in
 
 - Joining from the server's invite page in a browser no longer needs the link
