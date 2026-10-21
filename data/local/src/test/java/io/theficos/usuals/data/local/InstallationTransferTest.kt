@@ -22,10 +22,7 @@ class InstallationTransferTest {
         try {
             val a = source.listDao().selected()
             val b = destination.listDao().selected()
-            val sourceHousehold = source.listDao().all().single().householdId
-            val targetHousehold = destination.listDao().all().single().householdId
             assertThat(java.util.UUID.fromString(a)).isNotEqualTo(java.util.UUID.fromString(b))
-            assertThat(sourceHousehold).isNotEqualTo(targetHousehold)
             val sourceItems = ItemRepository(source)
             sourceItems.add(ParsedItem("milk"))
             val archive = HistoryRepository(source, sourceItems).exportJson()
@@ -33,7 +30,6 @@ class InstallationTransferTest {
             history.importJson(archive)
             history.importJson(archive)
             assertThat(destination.listDao().all().map { it.id }).containsExactly(a, b)
-            assertThat(destination.listDao().find(a)?.householdId).isEqualTo(targetHousehold)
             assertThat(destination.listDao().find(a)?.archiveSource).isEqualTo(a)
             assertThat(destination.listDao().selected()).isEqualTo(a)
             assertThat(destination.itemDao().active(b)).isEmpty()
@@ -47,7 +43,7 @@ class InstallationTransferTest {
             assertThat(destination.listDao().selected()).isEqualTo(b)
             assertThat(destination.listDao().all()).hasSize(2)
             val camping = ListRepository(destination).create("Camping")
-            assertThat(destination.listDao().find(camping)?.householdId).isEqualTo(targetHousehold)
+            assertThat(destination.listDao().find(camping)?.synced).isFalse()
         } finally {
             source.close(); destination.close(); names.forEach { context.deleteDatabase(it) }
         }

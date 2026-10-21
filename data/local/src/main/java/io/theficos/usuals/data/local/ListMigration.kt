@@ -4,21 +4,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import java.util.UUID
 
-internal fun initializeLocalList(db: SupportSQLiteDatabase, householdId: String = UUID.randomUUID().toString(), listId: String = UUID.randomUUID().toString()) {
-    // Reopen must preserve a valid selection, including a shared list.
-    db.query("SELECT list_scope.id FROM list_selection JOIN list_scope ON list_scope.id = list_selection.listId WHERE singleton = 1 AND archived = 0").use {
+internal fun initializeLocalList(db: SupportSQLiteDatabase, listId: String = UUID.randomUUID().toString()) {
+    // Reopen must preserve a valid selection, including a synced list.
+    db.query("SELECT list_scope.id FROM list_selection JOIN list_scope ON list_scope.id = list_selection.listId WHERE singleton = 1").use {
         if (it.moveToFirst()) return
     }
-    val existing = db.query("SELECT id FROM list_scope WHERE archived = 0 ORDER BY rowid LIMIT 1").use {
+    val selected = db.query("SELECT id FROM list_scope ORDER BY rowid LIMIT 1").use {
         if (it.moveToFirst()) it.getString(0) else null
-    }
-    val selected = existing ?: listId.also {
-        val household = db.query("SELECT id FROM household WHERE shared = 0 ORDER BY rowid LIMIT 1").use { row ->
-            if (row.moveToFirst()) row.getString(0) else householdId
-        }
-        db.execSQL("INSERT OR IGNORE INTO household (id, shared, routing) VALUES (?, 0, NULL)", arrayOf(household))
-        db.execSQL("INSERT INTO list_scope (id, householdId, name, shared, archived, archiveSource) VALUES (?, ?, '', 0, 0, NULL)", arrayOf(listId, household))
-    }
+    } ?: listId.also { db.execSQL("INSERT INTO list_scope (id, name, synced, created, seq, stale) VALUES (?, '', 0, 0, 0, 0)", arrayOf(it)) }
     db.execSQL("INSERT OR REPLACE INTO list_selection (singleton, listId) VALUES (1, ?)", arrayOf(selected))
 }
 
@@ -75,6 +68,8 @@ val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         db.execSQL("""DROP TABLE `item_pref_v4`""")
         db.execSQL("""DROP TABLE `item_alias_v4`""")
         db.execSQL("CREATE TABLE IF NOT EXISTS conflict_dismissal (listId TEXT NOT NULL, intentId TEXT NOT NULL, PRIMARY KEY(listId, intentId))")
-        initializeLocalList(db, householdId, listId)
+        db.execSQL("INSERT INTO household (id, shared, routing) VALUES (?, 0, NULL)", arrayOf(householdId))
+        db.execSQL("INSERT INTO list_scope (id, householdId, name, shared, archived, archiveSource) VALUES (?, ?, '', 0, 0, NULL)", arrayOf(listId, householdId))
+        db.execSQL("INSERT OR REPLACE INTO list_selection (singleton, listId) VALUES (1, ?)", arrayOf(listId))
     }
 }

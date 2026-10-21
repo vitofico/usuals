@@ -96,9 +96,9 @@ class HistoryRepository(
     suspend fun saveAlias(value: ItemAlias, version: ListVersion? = null) = items.saveAlias(ItemAliasEntity(value.fromKey, value.toKey, listId()), version)
 
     suspend fun exportJson(): String = database.withTransaction {
-        val lists = database.listDao().all().ifEmpty { listOf(ListEntity(LOCAL_LIST_ID, LOCAL_HOUSEHOLD_ID, "")) }
+        val lists = database.listDao().all().ifEmpty { listOf(ListEntity(LOCAL_LIST_ID, "")) }
         json.encodeToString(ShoppingArchive(formatVersion = 2,
-            selectedListId = listId(), lists = lists.map { ArchiveList(it.id, it.name, it.shared) },
+            selectedListId = listId(), lists = lists.map { ArchiveList(it.id, it.name, it.synced) },
             items = lists.flatMap { dao.allItems(it.id) }, trips = lists.flatMap { dao.trips(it.id) },
             purchases = lists.flatMap { dao.purchases(it.id) }, preferences = lists.flatMap { dao.preferences(it.id) },
             aliases = lists.flatMap { dao.aliases(it.id) }))
@@ -111,7 +111,6 @@ class HistoryRepository(
         require(decoded.formatVersion in 1..2)
         database.withTransaction {
             if (decoded.formatVersion == 1) {
-                require(database.listDao().find(listId())?.shared != true)
                 importArchive(decoded.rebind(listId()))
             } else {
                 require(decoded.lists.isNotEmpty() && decoded.lists.size <= 100)
@@ -120,18 +119,17 @@ class HistoryRepository(
                 require(decoded.items.all { it.listId in ids } && decoded.trips.all { it.listId in ids } &&
                     decoded.purchases.all { it.listId in ids } && decoded.preferences.all { it.listId in ids } && decoded.aliases.all { it.listId in ids })
                 require(decoded.selectedListId == null || decoded.selectedListId in ids)
-                val selected = database.listDao().find(listId())
-                val emptyDestination = selected?.shared != true && dao.allItems(listId()).isEmpty() &&
+                val emptyDestination = dao.allItems(listId()).isEmpty() &&
                     dao.trips(listId()).isEmpty() && dao.purchases(listId()).isEmpty() &&
                     dao.preferences(listId()).isEmpty() && dao.aliases(listId()).isEmpty()
-                val household = database.listDao().localHousehold() ?: HouseholdEntity(UUID.randomUUID().toString())
                 val copies = decoded.lists.map { manifest ->
                     require(manifest.id.isNotBlank() && manifest.name.length <= 100)
                     val existing = database.listDao().find(manifest.id)
-                    val copied = if (manifest.shared || existing?.shared == true) {
+                    // A server list's id belongs to its account, so its archive returns as a copy.
+                    val copied = if (manifest.shared || existing?.synced == true) {
                         database.listDao().all().firstOrNull { it.archiveSource == manifest.id } ?:
-                            ListEntity(UUID.randomUUID().toString(), household.id, manifest.name, archiveSource = manifest.id)
-                    } else existing ?: ListEntity(manifest.id, household.id, manifest.name, archiveSource = manifest.id)
+                            ListEntity(UUID.randomUUID().toString(), manifest.name, archiveSource = manifest.id)
+                    } else existing ?: ListEntity(manifest.id, manifest.name, archiveSource = manifest.id)
                     val part = decoded.copy(formatVersion = 1, lists = emptyList(),
                         items = decoded.items.filter { it.listId == manifest.id }, trips = decoded.trips.filter { it.listId == manifest.id },
                         purchases = decoded.purchases.filter { it.listId == manifest.id }, preferences = decoded.preferences.filter { it.listId == manifest.id },
@@ -140,7 +138,6 @@ class HistoryRepository(
                     copied to part
                 }
                 // Validate every manifest before inserting any scope or shopping fact.
-                database.listDao().household(household)
                 for ((list, part) in copies) {
                     if (database.listDao().find(list.id) == null) database.listDao().insert(list)
                     importArchive(part)
@@ -248,6 +245,7 @@ private data class ShoppingArchive(
 )
 
 @Serializable
+/** [shared] is the archive's name for a list the server holds. */
 private data class ArchiveList(val id: String, val name: String, val shared: Boolean = false)
 
 private fun ShoppingArchive.rebind(scope: String) = copy(formatVersion = 1, lists = emptyList(), selectedListId = null,

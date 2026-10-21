@@ -35,11 +35,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SharedPreferenceEntity::class,
         LocalPreferenceEntity::class,
         ItemAliasEntity::class,
-        HouseholdEntity::class, ListEntity::class, ListSelectionEntity::class,
-        ProjectionEntity::class, OutboxEntity::class, ReceivedEntity::class, CursorEntity::class,
-        MemberEntity::class, DeviceEntity::class, ConflictDismissalEntity::class,
+        ListEntity::class, ListSelectionEntity::class,
+        ProjectionEntity::class, OutboxEntity::class, FeedEntity::class, ConflictDismissalEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class UsualsDatabase : RoomDatabase() {
@@ -60,7 +59,7 @@ abstract class UsualsDatabase : RoomDatabase() {
 
         fun build(context: Context, name: String = NAME): UsualsDatabase =
             Room.databaseBuilder(context.applicationContext, UsualsDatabase::class.java, name)
-                .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigrationFrom(*RETIRED_VERSIONS)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) { initializeLocalList(db) }
