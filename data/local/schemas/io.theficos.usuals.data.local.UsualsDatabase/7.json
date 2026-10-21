@@ -1,0 +1,790 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 7,
+    "identityHash": "84e6e833c3c5fde5a8abfe1a3826c305",
+    "entities": [
+      {
+        "tableName": "items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rawText` TEXT NOT NULL, `name` TEXT NOT NULL, `normalizedName` TEXT NOT NULL, `quantityAmount` REAL, `quantityUnit` TEXT, `note` TEXT, `gtin` TEXT, `checked` INTEGER NOT NULL, `checkedAt` INTEGER, `fromSuggestion` INTEGER NOT NULL, `store` TEXT, `position` REAL NOT NULL, `addedBy` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deletedAt` INTEGER, `listId` TEXT NOT NULL, PRIMARY KEY(`listId`, `id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rawText",
+            "columnName": "rawText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalizedName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantityAmount",
+            "columnName": "quantityAmount",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "quantityUnit",
+            "columnName": "quantityUnit",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "gtin",
+            "columnName": "gtin",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "checked",
+            "columnName": "checked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "checkedAt",
+            "columnName": "checkedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "fromSuggestion",
+            "columnName": "fromSuggestion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "store",
+            "columnName": "store",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedBy",
+            "columnName": "addedBy",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deletedAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_items_listId_normalizedName",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "normalizedName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_items_listId_normalizedName` ON `${TABLE_NAME}` (`listId`, `normalizedName`)"
+          },
+          {
+            "name": "index_items_listId_deletedAt",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "deletedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_items_listId_deletedAt` ON `${TABLE_NAME}` (`listId`, `deletedAt`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "product_quality",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`gtin` TEXT NOT NULL, `nutriScore` TEXT, `novaGroup` TEXT, `ecoScore` TEXT, `allergens` TEXT, `additives` TEXT, `confirmedMissing` INTEGER NOT NULL, `fetchedAt` INTEGER NOT NULL, `productName` TEXT, `categories` TEXT, `brands` TEXT, `packageSize` TEXT, `ingredients` TEXT, `traces` TEXT, `sourceModifiedAtEpochSeconds` INTEGER, PRIMARY KEY(`gtin`))",
+        "fields": [
+          {
+            "fieldPath": "gtin",
+            "columnName": "gtin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nutriScore",
+            "columnName": "nutriScore",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "novaGroup",
+            "columnName": "novaGroup",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ecoScore",
+            "columnName": "ecoScore",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "allergens",
+            "columnName": "allergens",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "additives",
+            "columnName": "additives",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "confirmedMissing",
+            "columnName": "confirmedMissing",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fetchedAt",
+            "columnName": "fetchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "productName",
+            "columnName": "productName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "categories",
+            "columnName": "categories",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "brands",
+            "columnName": "brands",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "packageSize",
+            "columnName": "packageSize",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ingredients",
+            "columnName": "ingredients",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "traces",
+            "columnName": "traces",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sourceModifiedAtEpochSeconds",
+            "columnName": "sourceModifiedAtEpochSeconds",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "gtin"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "trip",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `closedAt` INTEGER NOT NULL, `listId` TEXT NOT NULL, PRIMARY KEY(`listId`, `id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "closedAt",
+            "columnName": "closedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_trip_listId_closedAt",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "closedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_trip_listId_closedAt` ON `${TABLE_NAME}` (`listId`, `closedAt`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "purchase",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `tripId` TEXT NOT NULL, `key` TEXT NOT NULL, `name` TEXT NOT NULL, `amount` REAL, `unit` TEXT, `gtin` TEXT, `boughtAt` INTEGER NOT NULL, `fromSuggestion` INTEGER NOT NULL, `normalizerVersion` INTEGER NOT NULL, `listId` TEXT NOT NULL, PRIMARY KEY(`listId`, `id`), FOREIGN KEY(`listId`, `tripId`) REFERENCES `trip`(`listId`, `id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tripId",
+            "columnName": "tripId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "gtin",
+            "columnName": "gtin",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "boughtAt",
+            "columnName": "boughtAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromSuggestion",
+            "columnName": "fromSuggestion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizerVersion",
+            "columnName": "normalizerVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_purchase_listId_tripId",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "tripId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_purchase_listId_tripId` ON `${TABLE_NAME}` (`listId`, `tripId`)"
+          },
+          {
+            "name": "index_purchase_listId_key",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "key"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_purchase_listId_key` ON `${TABLE_NAME}` (`listId`, `key`)"
+          },
+          {
+            "name": "index_purchase_listId_boughtAt",
+            "unique": false,
+            "columnNames": [
+              "listId",
+              "boughtAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_purchase_listId_boughtAt` ON `${TABLE_NAME}` (`listId`, `boughtAt`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "trip",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "listId",
+              "tripId"
+            ],
+            "referencedColumns": [
+              "listId",
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "item_pref",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listId` TEXT NOT NULL, `key` TEXT NOT NULL, `category` TEXT, `repeatEveryDays` INTEGER, PRIMARY KEY(`listId`, `key`))",
+        "fields": [
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "repeatEveryDays",
+            "columnName": "repeatEveryDays",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "key"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "local_item_pref",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listId` TEXT NOT NULL, `key` TEXT NOT NULL, `muted` INTEGER NOT NULL, `snoozedUntil` INTEGER, PRIMARY KEY(`listId`, `key`))",
+        "fields": [
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muted",
+            "columnName": "muted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "snoozedUntil",
+            "columnName": "snoozedUntil",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "key"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "item_alias",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`fromKey` TEXT NOT NULL, `toKey` TEXT NOT NULL, `listId` TEXT NOT NULL, PRIMARY KEY(`listId`, `fromKey`))",
+        "fields": [
+          {
+            "fieldPath": "fromKey",
+            "columnName": "fromKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toKey",
+            "columnName": "toKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "fromKey"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "list_scope",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `archiveSource` TEXT, `synced` INTEGER NOT NULL, `created` INTEGER NOT NULL, `seq` INTEGER NOT NULL, `role` TEXT, `owner` TEXT, `members` TEXT, `stale` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archiveSource",
+            "columnName": "archiveSource",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "synced",
+            "columnName": "synced",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "created",
+            "columnName": "created",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seq",
+            "columnName": "seq",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "owner",
+            "columnName": "owner",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "members",
+            "columnName": "members",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "stale",
+            "columnName": "stale",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "list_selection",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singleton` INTEGER NOT NULL, `listId` TEXT NOT NULL, PRIMARY KEY(`singleton`))",
+        "fields": [
+          {
+            "fieldPath": "singleton",
+            "columnName": "singleton",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "singleton"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sync_projection",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listId` TEXT NOT NULL, `confirmed` TEXT NOT NULL, `optimistic` TEXT NOT NULL, PRIMARY KEY(`listId`))",
+        "fields": [
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmed",
+            "columnName": "confirmed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "optimistic",
+            "columnName": "optimistic",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sync_outbox",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listId` TEXT NOT NULL, `intentId` TEXT NOT NULL, `ordinal` INTEGER NOT NULL, `command` TEXT NOT NULL, `acknowledged` INTEGER NOT NULL, PRIMARY KEY(`listId`, `intentId`))",
+        "fields": [
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentId",
+            "columnName": "intentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordinal",
+            "columnName": "ordinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "command",
+            "columnName": "command",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acknowledged",
+            "columnName": "acknowledged",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "intentId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sync_outbox_listId_ordinal",
+            "unique": true,
+            "columnNames": [
+              "listId",
+              "ordinal"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_sync_outbox_listId_ordinal` ON `${TABLE_NAME}` (`listId`, `ordinal`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sync_feed",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singleton` INTEGER NOT NULL, `cursor` TEXT, `resetting` INTEGER NOT NULL, PRIMARY KEY(`singleton`))",
+        "fields": [
+          {
+            "fieldPath": "singleton",
+            "columnName": "singleton",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cursor",
+            "columnName": "cursor",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "resetting",
+            "columnName": "resetting",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "singleton"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "conflict_dismissal",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`listId` TEXT NOT NULL, `intentId` TEXT NOT NULL, PRIMARY KEY(`listId`, `intentId`))",
+        "fields": [
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentId",
+            "columnName": "intentId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "listId",
+            "intentId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '84e6e833c3c5fde5a8abfe1a3826c305')"
+    ]
+  }
+}

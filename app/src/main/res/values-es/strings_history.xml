@@ -45,7 +45,7 @@
     <string name="history_carry_over">Estos artículos llevan varias compras pendientes: %1$s</string>
     <string name="history_keep">Conservar</string>
     <string name="history_remove">Eliminar</string>
-    <string name="share_list">Compartir lista</string>
+    <string name="share_list">Enviar como texto</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
 </resources>

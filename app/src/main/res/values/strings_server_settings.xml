@@ -1,22 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_server">Server and sharing</string>
-    <string name="settings_server_help">Connect once for shared lists and AI. Your server handles the model setup.</string>
     <string name="settings_help">Help and about</string>
     <string name="settings_advanced">Advanced: direct AI</string>
-    <string name="settings_direct_help">Direct AI sends recipes and photos to this provider. Disconnect your server to use these settings.</string>
+    <string name="settings_direct_help">Direct AI sends recipes and photos to this provider. Sign out of your account to use these settings.</string>
     <string name="settings_offline">Your local lists work without a server or an account.</string>
-    <string name="settings_connected">Connected</string>
     <string name="settings_ai">AI assistance</string>
     <string name="settings_ai_help">Use the AI configured by your server. Inputs are sent only when you choose an AI action.</string>
     <string name="settings_server_account">Manage account on server</string>
-    <string name="settings_manage_server">Manage sharing</string>
     <string name="settings_ai_changed">AI settings changed. Review the provider before using AI again.</string>
     <string name="settings_ai_details">Model and processing details</string>
     <string name="settings_ai_update">Use updated AI</string>
-    <string name="settings_sharing_none">Not set up</string>
-    <plurals name="settings_sharing_phones">
-        <item quantity="one">%1$s · %2$d phone</item>
-        <item quantity="other">%1$s · %2$d phones</item>
-    </plurals>
 </resources>

@@ -40,7 +40,7 @@ object Routes {
     const val ADVANCED = "advanced-settings"
     const val SCAN = "scan"
     const val HISTORY = "history"
-    const val SHARING = "sharing"
+    const val ACCOUNT = "account"
 
     /**
      * Every destination the graph is supposed to contain.
@@ -51,7 +51,7 @@ object Routes {
      * nothing, so their buttons navigated to a destination that popped itself
      * before drawing a frame, while every unit test stayed green.
      */
-    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, SHARING, ADVANCED)
+    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, ACCOUNT, ADVANCED)
 }
 
 /**
@@ -82,7 +82,8 @@ fun UsualsApp(
     settingsViewModelFactory: () -> ViewModelProvider.Factory = UsualsViewModelFactories::settings,
     barcodeCamera: BarcodeCamera = rememberBarcodeCamera(),
     historyViewModelFactory: () -> ViewModelProvider.Factory = UsualsViewModelFactories::history,
-    sharingViewModelFactory: () -> ViewModelProvider.Factory = UsualsViewModelFactories::sharing,
+    accountViewModelFactory: () -> ViewModelProvider.Factory = UsualsViewModelFactories::account,
+    shareViewModelFactory: (String) -> ViewModelProvider.Factory = UsualsViewModelFactories::share,
     sharedText: String? = null,
     openListRequest: Int = 0,
     onSharedTextConsumed: () -> Unit = {},
@@ -92,7 +93,7 @@ fun UsualsApp(
     onTutorialFinished: () -> Unit = {},
 ) {
     var tutorialRequested by rememberSaveable { mutableStateOf(false) }
-    var sharingSource by rememberSaveable { mutableStateOf<String?>(null) }
+    var sharing by rememberSaveable { mutableStateOf<String?>(null) }
     // A camera refusal, remembered above the scan destination. Design section
     // 12 says to fall back to typed entry and not to re-prompt, and the scan
     // screen cannot keep that promise on its own: pressing back pops its entry
@@ -102,17 +103,16 @@ fun UsualsApp(
     // which is the same span the microphone refusal already gets.
     var cameraRefused by rememberSaveable { mutableStateOf(false) }
 
-    // Server, invite and sign-in-return links all open the one sharing screen; any other shared text is for the list.
-    val invitation = sharedText?.takeIf { it.startsWith("usuals:") || runCatching { io.theficos.usuals.sync.PairingLink.parse(it.trim()) is io.theficos.usuals.sync.PairingLink.Invite }.getOrDefault(false) }
-    // A sharing link must not pop back to the list: that would drop an open sharing screen and the household it is drafting.
+    // Connect and sign-in-return links open the account screen; any other shared text is for the list.
+    val accountLink = sharedText?.takeIf { it.startsWith("usuals:") || io.theficos.usuals.ui.account.ConnectScan.read(it) is io.theficos.usuals.ui.account.ConnectScan.Offer }
     LaunchedEffect(openListRequest) {
-        if (openListRequest > 0 && invitation == null) navController.navigate(Routes.LIST) {
+        if (openListRequest > 0 && accountLink == null) navController.navigate(Routes.LIST) {
             popUpTo(Routes.LIST) { inclusive = false }
             launchSingleTop = true
         }
     }
-    LaunchedEffect(invitation) {
-        if (invitation != null) navController.navigate(Routes.SHARING) { launchSingleTop = true }
+    LaunchedEffect(accountLink) {
+        if (accountLink != null) navController.navigate(Routes.ACCOUNT) { launchSingleTop = true }
     }
     NavHost(navController = navController, startDestination = Routes.LIST) {
 
@@ -122,8 +122,9 @@ fun UsualsApp(
                 onOpenScan = { navController.navigate(Routes.SCAN) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
-                onOpenSharing = { sharingSource = listViewModel.state.value.directory.selected; navController.navigate(Routes.SHARING) },
-                sharedText = sharedText?.takeIf { invitation == null },
+                onOpenSharing = { sharing = listViewModel.state.value.directory.selected },
+                onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
+                sharedText = sharedText?.takeIf { accountLink == null },
                 onSharedTextConsumed = onSharedTextConsumed,
             )
         }
@@ -133,7 +134,7 @@ fun UsualsApp(
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() },
                 onOpenTutorial = { tutorialRequested = true },
-                onOpenSharing = { navController.navigate(Routes.SHARING) },
+                onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
                 palette = palette, onPaletteChange = onPaletteChange)
         }
@@ -143,11 +144,10 @@ fun UsualsApp(
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() }, advanced = true)
         }
-        composable(Routes.SHARING) {
-            val factory = remember(sharingViewModelFactory) { sharingViewModelFactory() }
-            val vm: io.theficos.usuals.ui.sharing.SharingViewModel = viewModel(factory = factory)
-            io.theficos.usuals.ui.sharing.SharingScreen(vm, { navController.popBackStack() }, invitation = invitation, onInvitationConsumed = onSharedTextConsumed,
-                sourceList = sharingSource, onSourceConsumed = { sharingSource = null })
+        composable(Routes.ACCOUNT) {
+            val factory = remember(accountViewModelFactory) { accountViewModelFactory() }
+            val vm: io.theficos.usuals.ui.account.AccountViewModel = viewModel(factory = factory)
+            io.theficos.usuals.ui.account.AccountScreen(vm, { navController.popBackStack() }, link = accountLink, onLinkConsumed = onSharedTextConsumed)
         }
         composable(Routes.HISTORY) {
             val factory = remember(historyViewModelFactory) { historyViewModelFactory() }
@@ -193,13 +193,17 @@ fun UsualsApp(
             }
         }
     }
+    sharing?.let { list ->
+        val vm: io.theficos.usuals.ui.share.ShareViewModel = viewModel(key = "share-$list", factory = remember(list) { shareViewModelFactory(list) })
+        io.theficos.usuals.ui.share.ShareSheet(vm, onDismiss = { sharing = null }, onOpenAccount = { navController.navigate(Routes.ACCOUNT) { launchSingleTop = true } })
+    }
     if (showTutorial || tutorialRequested) {
         io.theficos.usuals.ui.tutorial.TutorialScreen(
-            onFinish = { sharing ->
+            onFinish = { account ->
                 tutorialRequested = false
                 onTutorialFinished()
-                navController.navigate(if (sharing) Routes.SHARING else Routes.LIST) {
-                    if (!sharing) popUpTo(Routes.LIST) { inclusive = false }
+                navController.navigate(if (account) Routes.ACCOUNT else Routes.LIST) {
+                    if (!account) popUpTo(Routes.LIST) { inclusive = false }
                     launchSingleTop = true
                 }
             },

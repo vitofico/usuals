@@ -40,11 +40,11 @@ data class SettingsUiState(
     val callsToday: Int = 0,
     val modelProbe: ProbeState<ModelCapabilities> = ProbeState.Idle,
     val loaded: Boolean = false,
-    val sharing: SharingSummary? = null,
+    val account: AccountSummary? = null,
 )
 
-/** What the Settings row says about the server: its host and how many phones share through it. */
-data class SharingSummary(val host: String, val phones: Int)
+/** What the Settings row says about the account: the host of the server it is on. */
+data class AccountSummary(val host: String)
 
 /**
  * Settings, and the screen where invariant 8 is discharged.
@@ -67,7 +67,7 @@ class SettingsViewModel(
     private val info: AppInfo = AppInfo(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val worker: CoroutineDispatcher = Dispatchers.Default,
-    private val sharingSummary: () -> SharingSummary? = { null },
+    private val accountSummary: () -> AccountSummary? = { null },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -81,8 +81,8 @@ class SettingsViewModel(
 
     fun loadIfNeeded() {
         scope.launch {
-            val sharing = withContext(worker) { runCatching { sharingSummary() }.getOrNull() }
-            _state.update { it.copy(sharing = sharing) }
+            val account = withContext(worker) { runCatching { accountSummary() }.getOrNull() }
+            _state.update { it.copy(account = account) }
         }
         if (_state.value.loaded) return
         scope.launch {

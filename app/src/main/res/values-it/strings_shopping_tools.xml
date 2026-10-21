@@ -6,7 +6,7 @@
     <string name="shopping_mode">Modalità spesa</string>
     <string name="shopping_keep_awake">Tieni acceso lo schermo durante la spesa</string>
     <string name="shopping_haptics">Vibra quando spunti un articolo</string>
-    <string name="shopping_personal_help">Queste scelte restano sul dispositivo. Preferiti e ordine dei negozi sono inclusi nelle esportazioni dei dati, ma non sono condivisi con il gruppo.</string>
+    <string name="shopping_personal_help">Queste scelte restano sul dispositivo. Preferiti e ordine dei negozi sono inclusi nelle esportazioni dei dati, ma non sono condivisi con nessuno.</string>
     <string name="shopping_favorites">Preferiti</string>
     <string name="shopping_pin">Aggiungi ai preferiti</string>
     <string name="shopping_unpin">Rimuovi preferito</string>

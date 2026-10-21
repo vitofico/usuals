@@ -29,4 +29,6 @@
     <string name="edit_store">Etiqueta de tienda (opcional)</string>
     <string name="store_all">Todas las tiendas</string>
     <string name="store_empty">No hay artículos para esta tienda. Elige Todas las tiendas para ver el resto.</string>
+    <string name="scan_merge_question">¿Combinar el envase escaneado (%1$s) con %2$s? Se conservará la cantidad actual (%3$s). No se sumará la cantidad escaneada. Los próximos escaneos usarán este nombre.</string>
+    <string name="scan_merge_no_quantity">sin cantidad indicada</string>
 </resources>

@@ -80,7 +80,6 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="usuals" android:host="join" />
                 <data android:scheme="usuals" android:host="connect" />
                 <data android:scheme="usuals" android:host="connected" />
             </intent-filter>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Konto</string>
+    <string name="account_intro">Melde dich an, um deine Listen in deinem Konto auf einem Usuals-Server zu speichern, sie in der Web-App zu öffnen und dort mit anderen zu teilen.</string>
+    <string name="account_scan_title">Mit der Web-App verbinden</string>
+    <string name="account_scan_help">Wähle auf einem Computer, der in der Web-App angemeldet ist, „Telefon verbinden“ und scanne den angezeigten Code.</string>
+    <string name="account_scan">QR-Code der Web-App scannen</string>
+    <string name="account_camera_help">Erlaube die Kamera, um den Code zu scannen, oder melde dich unten im Browser an.</string>
+    <string name="account_allow_camera">Kamera erlauben</string>
+    <string name="account_browser_title">Kein Computer zur Hand?</string>
+    <string name="account_browser_help">Gib die Adresse deines Servers ein und melde dich im Browser dieses Telefons an.</string>
+    <string name="account_server">Serveradresse</string>
+    <string name="account_offer_title">Mit %1$s verbinden?</string>
+    <string name="account_offer_help">Alle Listen auf diesem Telefon werden in deinem Konto auf diesem Server gespeichert und bleiben damit synchron.</string>
+    <string name="account_connect">Verbinden</string>
+    <string name="account_not_now">Nicht jetzt</string>
+    <string name="account_connecting">Verbinden …</string>
+    <string name="account_connected">Verbunden. Deine Listen werden synchronisiert.</string>
+    <string name="account_signed_in">Angemeldet</string>
+    <string name="account_signed_in_as">Angemeldet als %1$s</string>
+    <string name="account_expired_title">Erneut anmelden</string>
+    <string name="account_expired_help">Der Server akzeptiert dieses Telefon nicht mehr. Deine Listen sind noch da: Melde dich erneut an, damit sie synchron bleiben, oder melde dich ab, um sie von diesem Telefon zu entfernen.</string>
+    <string name="account_sign_out">Abmelden</string>
+    <string name="account_sign_out_title">Abmelden?</string>
+    <string name="account_sign_out_help">Deine Listen bleiben in deinem Konto und werden von diesem Telefon entfernt. Du kannst die App mit einer neuen Liste weiter nutzen, die nur auf diesem Telefon bleibt.</string>
+    <plurals name="account_unsent">
+        <item quantity="one">%d Änderung hat den Server noch nicht erreicht. Wenn du dich jetzt abmeldest, geht sie verloren.</item>
+        <item quantity="other">%d Änderungen haben den Server noch nicht erreicht. Wenn du dich jetzt abmeldest, gehen sie verloren.</item>
+    </plurals>
+    <string name="account_sign_out_anyway">Trotzdem abmelden</string>
+    <string name="account_privacy">Wenn du dich anmeldest, werden deine Listen, ihr Verlauf und die Personen, mit denen du sie teilst, auf deinem Server gespeichert, und wer ihn betreibt, kann sie lesen. Rezepte und Produktabfragen kommen weiterhin direkt von deinem Telefon.</string>
+    <string name="account_problem_not_usuals">Das ist kein Usuals-Code.</string>
+    <string name="account_problem_outdated">Dieser Code stammt aus einer älteren Version. Wähle in der Web-App erneut „Telefon verbinden“ und scanne den neuen Code.</string>
+    <string name="account_problem_already">Dieses Telefon ist bereits angemeldet. Melde dich zuerst ab, um ein anderes Konto zu nutzen.</string>
+    <string name="account_problem_offline">Der Server ist nicht erreichbar. Prüfe die Verbindung und versuche es erneut.</string>
+    <string name="account_problem_expired_code">Dieser Code ist abgelaufen oder wurde schon verwendet. Lass dir in der Web-App einen neuen anzeigen.</string>
+    <string name="account_problem_upgrade">Dieser Server braucht eine neuere Version von Usuals.</string>
+    <string name="account_problem_refused">Der Server hat die Anmeldung nicht angenommen. Versuche es erneut.</string>
+
+    <string name="share_title">%1$s teilen</string>
+    <string name="share_people">Personen mit Zugriff</string>
+    <string name="share_owner">Eigentümer</string>
+    <string name="share_editor">Darf bearbeiten</string>
+    <string name="share_you">Du</string>
+    <string name="share_remove">Entfernen</string>
+    <string name="share_leave">Liste verlassen</string>
+    <string name="share_leave_title">%1$s verlassen?</string>
+    <string name="share_leave_help">Die Liste verschwindet von deinem Telefon und aus deinem Konto. Die Eigentümerin oder der Eigentümer kann dich wieder hinzufügen.</string>
+    <string name="share_add">Personen hinzufügen</string>
+    <string name="share_search">Nach Name oder E-Mail suchen</string>
+    <string name="share_no_people">Niemand sonst auf diesem Server passt.</string>
+    <string name="share_signed_out">Teilen funktioniert über ein Konto auf einem Usuals-Server. Melde dich unter „Konto“ an: Deine Listen werden mit deinem Konto synchronisiert, und du kannst jede davon mit Personen auf diesem Server teilen.</string>
+    <string name="share_problem_offline">Der Server ist nicht erreichbar. Versuche es erneut.</string>
+    <string name="share_problem_sign_in">Melde dich erneut an, um den Zugriff zu ändern.</string>
+    <string name="share_problem_full">Diese Liste hat bereits so viele Personen, wie sie aufnehmen kann.</string>
+    <string name="share_problem_refused">Der Server hat diese Änderung nicht angenommen.</string>
+
+    <string name="list_share">Teilen</string>
+    <string name="list_more">Weitere Optionen</string>
+    <string name="list_rename">Umbenennen</string>
+    <string name="list_delete">Liste löschen</string>
+    <string name="list_delete_title">%1$s löschen?</string>
+    <string name="list_delete_help">Die Liste und ihr Verlauf werden für alle entfernt, die sie haben.</string>
+
+    <string name="sync_sign_in">Vom Server abgemeldet. Melde dich erneut an, um zu synchronisieren.</string>
+    <string name="sync_offline">Noch nicht synchronisiert. Änderungen werden gesendet, sobald der Server erreichbar ist.</string>
+    <string name="sync_upgrade">Aktualisiere Usuals, damit diese Liste synchron bleibt.</string>
+    <string name="sync_capacity">Der Server hat eine Änderung abgelehnt: Die Liste oder das Konto ist voll.</string>
+
+    <string name="settings_account_on">Angemeldet auf %1$s</string>
+    <string name="settings_account_open">Konto öffnen</string>
+</resources>

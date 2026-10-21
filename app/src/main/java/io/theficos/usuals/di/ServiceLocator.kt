@@ -100,7 +100,7 @@ object ServiceLocator {
     fun reset() {
         // Through the delegate rather than through [database], because reading
         // the property would open a connection in order to close it.
-        sharingCoordinatorField.peek()?.close()
+        listSyncSchedulerField.peek()?.close()
         widgetUpdaterField.peek()?.close()
         databaseField.peek()?.close()
         resettables.forEach { it.clear() }
@@ -114,23 +114,20 @@ object ServiceLocator {
     val database: UsualsDatabase by databaseField
 
     val listRepository by resettable { io.theficos.usuals.data.local.ListRepository(database) }
-    val listDirectory by resettable { RepositoryListDirectory(listRepository, replica, promptMemory::migrateScope, sharingCoordinator.status) }
+    val listDirectory by resettable { RepositoryListDirectory(listRepository, replica, promptMemory::migrateScope, listSync) }
 
     val reducer by resettable { io.theficos.usuals.sync.Reducer(io.theficos.usuals.model.NORMALIZER_VERSION) }
     val replica by resettable { io.theficos.usuals.data.local.LocalReplica(database, reducer) }
     val syncVault by resettable { io.theficos.usuals.auth.SyncVault(context) }
-    val syncState by resettable { VaultSyncStateStore(context, syncVault) }
+    val syncState by resettable { VaultSyncStateStore(context, syncVault).also { it.prune() } }
     val relayTransport by resettable { OkHttpRelayTransport(context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) }
-    val checkpointSource by resettable { io.theficos.usuals.sync.CheckpointSource { household, list ->
-        val entry = requireNotNull(database.listDao().find(list))
-        require(entry.householdId == household && entry.shared)
-        io.theficos.usuals.sync.ListCheckpoint(0, io.theficos.usuals.sync.Wire.zero,
-            io.theficos.usuals.sync.SnapshotCodec.encode(replica.projection(list)))
-    } }
     val connectionClient by resettable { io.theficos.usuals.sync.ConnectionClient(syncState, relayTransport) }
-    val householdClient by resettable { io.theficos.usuals.sync.HouseholdClient(syncState, relayTransport, checkpointSource) }
-    private val sharingCoordinatorField = resettable { SharingCoordinator(context, householdClient, listRepository, replica, database.syncDao(), relayTransport) }
-    val sharingCoordinator by sharingCoordinatorField
+
+    /** The account's lists on the server; see [ListSync]. */
+    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState) }
+    private val listSyncSchedulerField = resettable { ListSyncScheduler(context, listSync, database.syncDao().observeOutgoing()) }
+    val listSyncScheduler by listSyncSchedulerField
+    val shareStore by resettable { AccountShareStore(listRepository, listSync) }
     val itemRepository: ItemRepository by resettable { ItemRepository(database, replica = replica) }
 
     val historyRepository: HistoryRepository by resettable { HistoryRepository(database, itemRepository, replica = replica) }

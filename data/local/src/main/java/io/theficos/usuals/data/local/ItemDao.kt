@@ -20,6 +20,6 @@ interface ItemDao {
     suspend fun removeProjectionRow(id: String, listId: String)
     @Query("SELECT MAX(position) FROM items WHERE listId = :listId")
     suspend fun maxPosition(listId: String = LOCAL_LIST_ID): Double?
-    @Query("DELETE FROM items WHERE listId = :listId AND listId NOT IN (SELECT id FROM list_scope WHERE shared = 1) AND deletedAt IS NOT NULL AND deletedAt < :cutoff")
+    @Query("DELETE FROM items WHERE listId = :listId AND listId NOT IN (SELECT id FROM list_scope WHERE synced = 1) AND deletedAt IS NOT NULL AND deletedAt < :cutoff")
     suspend fun reapTombstones(cutoff: Long, listId: String = LOCAL_LIST_ID): Int
 }

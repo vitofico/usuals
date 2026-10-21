@@ -37,7 +37,7 @@ class ProductDetailsMigrationTest {
         assertThat(row.ingredients).isNull()
         assertThat(row.brands).isNull()
         assertThat(row.fetchedAt).isEqualTo(123)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(6)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(7)
         db.close()
         db = UsualsDatabase.build(context, name)
         assertThat(db.qualityDao().find(row.gtin)).isEqualTo(row)

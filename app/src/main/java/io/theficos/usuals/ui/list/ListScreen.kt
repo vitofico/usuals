@@ -11,6 +11,9 @@ import io.theficos.usuals.smart.SuggestionChoice
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -177,6 +180,7 @@ data class ListActions(
     val onConfirmRemove: (ItemId) -> Unit = {},
     val onOpenScan: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
+    val onOpenAccount: () -> Unit = {},
     val onDismissConflict: (String) -> Unit = {},
     val onReviewConflict: (ListConflict) -> Unit = {},
     val onSelectList: (String) -> Unit = {},
@@ -184,6 +188,8 @@ data class ListActions(
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
+    val onRenameList: (String) -> Unit = {},
+    val onRemoveList: () -> Unit = {},
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
     val onFinishRows: ((List<ListRow>, Set<ItemId>?) -> Unit)? = null,
     val onUndoFinish: () -> Unit = {},
@@ -214,6 +220,7 @@ fun ListScreen(
     onSharedTextConsumed: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenSharing: () -> Unit = {},
+    onOpenAccount: () -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -321,12 +328,15 @@ fun ListScreen(
             onConfirmRemove = vm::onConfirmRemove,
             onOpenScan = onOpenScan,
             onOpenSettings = onOpenSettings,
+            onOpenAccount = onOpenAccount,
             onOpenHistory = onOpenHistory,
             onSelectList = vm::onSelectList,
             onDismissConflict = vm::onDismissConflict,
             onReviewConflict = vm::onReviewConflict,
             onCreateList = vm::onCreateList,
             onShareList = onOpenSharing,
+            onRenameList = vm::onRenameList,
+            onRemoveList = vm::onRemoveList,
             onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
                     context.getString(
@@ -465,15 +475,48 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
-                TextButton(onClick = actions.onShareText, enabled = header.itemCount > 0) { Text(stringResource(R.string.share_list)) }
-                IconButton(onClick = actions.onShareList, enabled = true,
+                IconButton(onClick = actions.onShareList, enabled = !busy,
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.Outlined.Share, stringResource(R.string.sharing_share_list), Modifier.size(22.dp))
+                    Icon(Icons.Outlined.Share, stringResource(R.string.list_share), Modifier.size(22.dp))
                 }
+                ListMenu(header, directory, busy, actions)
             }
         }
         HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }
+}
+
+/** The list's few actions: share, send as text, rename, and delete it or, for someone else's list, leave it. */
+@Composable
+private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
+    var open by remember { mutableStateOf(false) }
+    var renaming by rememberSaveable { mutableStateOf<String?>(null) }
+    var removing by rememberSaveable { mutableStateOf(false) }
+    val selected = directory.lists.firstOrNull { it.id == directory.selected }
+    val name = selected?.name?.ifBlank { null } ?: header.householdName ?: stringResource(R.string.household_fallback_name)
+    val leaves = selected?.editor == true
+    Box {
+        IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
+            Icon(Icons.Outlined.MoreVert, stringResource(R.string.list_more), Modifier.size(22.dp))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.name.orEmpty() })
+            DropdownMenuItem(text = { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = true })
+        }
+    }
+    renaming?.let { draft ->
+        AlertDialog(onDismissRequest = { renaming = null }, title = { Text(stringResource(R.string.list_rename)) },
+            text = { OutlinedTextField(draft, { if (it.length <= 100) renaming = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true) },
+            confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { renaming = null; actions.onRenameList(draft.trim()) }) { Text(stringResource(R.string.list_rename)) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
+    if (removing) AlertDialog(onDismissRequest = { removing = false },
+        title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, name)) },
+        text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
+        confirmButton = { TextButton(onClick = { removing = false; actions.onRemoveList() }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
+        dismissButton = { TextButton(onClick = { removing = false }) { Text(stringResource(R.string.edit_cancel)) } })
 }
 
 /** "14 artículos · Marta, tú", or just the count when nobody is named. */

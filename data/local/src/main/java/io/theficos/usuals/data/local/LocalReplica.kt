@@ -11,8 +11,12 @@ import kotlinx.serialization.json.*
 import java.util.UUID
 import kotlinx.coroutines.flow.*
 
-/** The projection, source intent and outbox are committed by the same Room transaction. */
-class LocalReplica(private val database: UsualsDatabase, private val reducer: Reducer = Reducer(NORMALIZER_VERSION), private val newId: () -> String = { UUID.randomUUID().toString() }) : SharedReplica {
+/**
+ * The projection, source intent and outbox are committed by the same Room transaction. A synced list
+ * shows the server's confirmed projection with its pending intents applied on top; a local list's
+ * intents are confirmed as they are made.
+ */
+class LocalReplica(private val database: UsualsDatabase, private val reducer: Reducer = Reducer(NORMALIZER_VERSION), private val newId: () -> String = { UUID.randomUUID().toString() }) {
     private val json = Json { encodeDefaults = true }
     fun observeStatus(scope: String): Flow<ReplicaStatus> = combine(database.syncDao().observePending(scope), database.syncDao().observeProjection(scope), database.syncDao().observeDismissals(scope)) { pending, saved, dismissed ->
         val state = saved?.optimistic?.let { json.decodeFromString<Projection>(it) }
@@ -52,82 +56,137 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val result = reducer.apply(before, intent)
         check(result.outcome != Outcome.UPGRADE_REQUIRED)
         materialize(scope, before, result.projection)
-        val shared = database.listDao().find(scope)?.shared == true
+        val synced = database.listDao().find(scope)?.synced == true
         val encoded = json.encodeToString(result.projection)
-        val confirmed = if (shared) database.syncDao().projection(scope)?.confirmed ?: json.encodeToString(before) else encoded
+        val confirmed = if (synced) database.syncDao().projection(scope)?.confirmed ?: json.encodeToString(before) else encoded
         database.syncDao().saveProjection(ProjectionEntity(scope, confirmed, encoded))
-        database.syncDao().enqueue(OutboxEntity(scope, intent.id, database.syncDao().nextOrdinal(scope), json.encodeToString(intent), acknowledged = !shared))
+        database.syncDao().enqueue(OutboxEntity(scope, intent.id, database.syncDao().nextOrdinal(scope), json.encodeToString(intent), acknowledged = !synced))
         result
     }
-    /** Transport verifies signatures, membership and the hash chain before handing over these records. */
-    suspend fun receive(scope: String, entries: List<ConfirmedOperation>, epoch: Long, manifestHash: String): ReceiveResult = database.withTransaction {
-        require(entries.size <= 100)
-        val dao = database.syncDao()
-        val saved = dao.projection(scope)
-        val before = saved?.optimistic?.let { json.decodeFromString<Projection>(it) } ?: seed(scope)
-        var confirmed = saved?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: before
-        var cursor = dao.cursor(scope) ?: CursorEntity(scope, 0, Wire.zero, epoch, manifestHash)
-        require(epoch >= cursor.epoch && (epoch != cursor.epoch || manifestHash == cursor.manifestHash))
-        var applied = 0
-        var upgrade = false
-        for (entry in entries) {
-            require(entry.intent.listId == scope)
-            if (entry.seq <= cursor.seq) {
-                val old = dao.received(scope, entry.seq)
-                require(old != null && old.intentId == entry.intent.id && old.envelopeId == entry.envelopeId && old.digest == entry.digest && old.head == entry.head)
-                continue
-            }
-            require(entry.seq == cursor.seq + 1 && entry.previousHead == cursor.head)
-            val result = reducer.apply(confirmed, entry.intent)
-            if (result.outcome == Outcome.UPGRADE_REQUIRED) { upgrade = true; break }
-            confirmed = result.projection
-            dao.received(ReceivedEntity(scope, entry.seq, entry.intent.id, entry.envelopeId, entry.digest, entry.head))
-            cursor = CursorEntity(scope, entry.seq, entry.head, epoch, manifestHash)
-            applied++
-        }
-        val optimistic = rebase(scope, confirmed)
-        materialize(scope, before, optimistic)
-        dao.saveProjection(ProjectionEntity(scope, json.encodeToString(confirmed), json.encodeToString(optimistic)))
-        dao.cursor(cursor)
-        ReceiveResult(applied, upgrade)
+    suspend fun rename(scope: String, name: String): Reduction = database.withTransaction {
+        require(name.isNotBlank() && name.length <= 100)
+        submitTo(scope, "list_name", buildJsonObject {
+            put("expected", projection(scope).nameRevision?.let(::JsonPrimitive) ?: JsonNull); put("name", name)
+        })
     }
 
-    override suspend fun confirmed(list: String): ReplicaCheckpoint? = database.withTransaction {
-        val dao = database.syncDao()
-        val cursor = dao.cursor(list) ?: return@withTransaction null
-        val saved = dao.projection(list) ?: return@withTransaction null
-        ReplicaCheckpoint(ListCheckpoint(cursor.seq, cursor.head, SnapshotCodec.encode(json.decodeFromString<Projection>(saved.confirmed))), cursor.epoch, cursor.manifestHash)
+    /** Signed in, every list belongs to the account: a local list's current state becomes its creation snapshot. */
+    suspend fun adoptLocalLists() = database.withTransaction {
+        for (list in database.listDao().all().filter { !it.synced }) {
+            val encoded = json.encodeToString(projection(list.id))
+            database.syncDao().saveProjection(ProjectionEntity(list.id, encoded, encoded))
+            database.listDao().update(ListEntity(list.id, list.name, list.archiveSource, synced = true))
+        }
     }
-    override suspend fun pending(list: String): List<PendingIntent> = database.withTransaction {
+    /** Signing in again, perhaps to another account: every list is offered to the server again and the feed restarts. */
+    suspend fun prepareSignIn() = database.withTransaction {
+        for (list in database.listDao().all().filter { it.synced && it.created }) database.listDao().update(list.copy(created = false, stale = false))
+        database.syncDao().saveFeed(FeedEntity())
+    }
+    /** Signing out removes the account's lists; work continues in a fresh local list. */
+    suspend fun forgetAccount() = database.withTransaction {
+        for (list in database.listDao().all()) if (list.synced) drop(list.id)
+        database.syncDao().saveFeed(FeedEntity())
+    }
+    /** Synced lists the server has yet to create or that have pending intents, in creation order. */
+    suspend fun outgoing(): List<ListEntity> = database.withTransaction {
+        val pending = database.syncDao().pendingLists().toSet()
+        database.listDao().all().filter { it.synced && (!it.created || it.id in pending) }
+    }
+    /** How many changes and uncreated lists have not reached the server. */
+    suspend fun unsent(): Int = database.withTransaction { outgoing().sumOf { list -> pendingIntents(list.id, Int.MAX_VALUE).size + if (list.created) 0 else 1 } }
+    /** What creating [list] on the server sends: the state it was last confirmed with. */
+    suspend fun creation(list: String): Projection = database.withTransaction {
+        database.syncDao().projection(list)?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: seed(list)
+    }
+    /** Pending intents in submission order. One whose id was accepted with other contents waits for review instead. */
+    suspend fun pendingIntents(list: String, limit: Int): List<Intent> = database.withTransaction {
         val dao = database.syncDao()
         val dismissed = dao.dismissals(list).toSet()
         val accepted = dao.projection(list)?.confirmed?.let { json.decodeFromString<Projection>(it).seen }.orEmpty()
-        dao.pending(list).filter { !it.acknowledged && it.intentId !in dismissed &&
-            (accepted[it.intentId] == null || accepted[it.intentId] == json.decodeFromString<Intent>(it.command)) }.map { PendingIntent(json.decodeFromString(it.command), it.envelope) }
+        dao.pending(list).asSequence().filter { !it.acknowledged && it.intentId !in dismissed }
+            .map { json.decodeFromString<Intent>(it.command) }
+            .filter { accepted[it.id] == null || accepted[it.id] == it }.take(limit).toList()
     }
-    override suspend fun saveEnvelope(list: String, intent: Intent, bytes: ByteArray) = database.withTransaction {
-        require(intent.listId == list)
-        val dao = database.syncDao()
-        val command = requireNotNull(dao.pending(list).firstOrNull { it.intentId == intent.id })
-        require(!command.acknowledged && json.decodeFromString<Intent>(command.command) == intent)
-        dao.update(command.copy(envelope = bytes))
+    /** A server answer: [acknowledged] intents stop being pending, and the list becomes confirmed unless a newer one is stored. */
+    suspend fun accept(server: SharedList, acknowledged: Collection<String> = emptyList()) = database.withTransaction {
+        if (acknowledged.isNotEmpty()) database.syncDao().acknowledge(server.id, acknowledged)
+        store(server, force = false)
     }
-    /** Only a fully authenticated checkpoint enters this transaction. Optimistic work is never its source. */
-    override suspend fun confirm(list: String, checkpoint: ListCheckpoint, epoch: Long, manifestHash: String) = database.withTransaction {
-        val dao = database.syncDao()
-        require(database.listDao().find(list)?.shared == true)
-        dao.cursor(list)?.let { prior ->
-            require(epoch >= prior.epoch && checkpoint.seq >= prior.seq)
-            require(epoch != prior.epoch || manifestHash == prior.manifestHash)
-            require(checkpoint.seq != prior.seq || checkpoint.head == prior.head)
+    /** Drops pending intents the server can never take, so later ones can still be sent. */
+    suspend fun discard(list: String, intents: Collection<String>) = database.withTransaction {
+        database.syncDao().acknowledge(list, intents)
+        val saved = database.syncDao().projection(list) ?: return@withTransaction
+        val before = json.decodeFromString<Projection>(saved.optimistic)
+        val confirmed = json.decodeFromString<Projection>(saved.confirmed)
+        val after = rebase(list, confirmed)
+        materialize(list, before, after)
+        database.syncDao().saveProjection(saved.copy(optimistic = json.encodeToString(after)))
+    }
+    /** One feed page and its cursor commit together; the last page of a reset drops the lists it did not return. */
+    suspend fun applyPage(page: ListChanges) = database.withTransaction {
+        val lists = database.listDao()
+        var resetting = database.syncDao().feed()?.resetting ?: false
+        if (page.reset) {
+            resetting = true
+            for (list in lists.all()) if (list.synced && list.created) lists.update(list.copy(stale = true))
         }
-        val confirmed = SnapshotCodec.decode(checkpoint.payload)
-        require(confirmed.seen.values.all { it.listId == list })
-        val before = projection(list)
-        val optimistic = rebase(list, confirmed)
-        materialize(list, before, optimistic)
-        dao.saveProjection(ProjectionEntity(list, json.encodeToString(confirmed), json.encodeToString(optimistic)))
-        dao.cursor(CursorEntity(list, checkpoint.seq, checkpoint.head, epoch, manifestHash))
+        val entries: List<Pair<Long, Any>> = page.lists.map { it.seq to it } + page.removed.map { it.seq to it }
+        for ((seq, entry) in entries.sortedBy { it.first }) when (entry) {
+            is SharedList -> store(entry, force = resetting)
+            is RemovedList -> lists.find(entry.id)?.takeIf { it.synced && seq >= it.seq }?.let { drop(it.id) }
+        }
+        if (!page.hasMore && resetting) {
+            for (list in lists.all()) if (list.stale) drop(list.id)
+            resetting = false
+        }
+        database.syncDao().saveFeed(FeedEntity(cursor = page.cursor, resetting = resetting))
+    }
+    suspend fun cursor(): String? = database.syncDao().feed()?.cursor
+    /** The server gave this id to someone else: the same contents continue under a new id, as a list to create. */
+    suspend fun copyAsNew(source: String): String = database.withTransaction {
+        val original = requireNotNull(database.listDao().find(source))
+        val id = newId()
+        database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced))
+        copyTo(source, id, includeHistory = true)
+        database.historyDao().saveLocalPreferences(database.historyDao().preferences(source).map { LocalPreferenceEntity(id, it.key, it.muted, it.snoozedUntil) })
+        val selected = database.listDao().selected() == source
+        drop(source)
+        if (selected) database.listDao().select(ListSelectionEntity(listId = id))
+        id
+    }
+    /** Removes a list and everything scoped to it, keeping a valid selection. */
+    suspend fun drop(list: String) = database.withTransaction {
+        val sql = database.openHelper.writableDatabase
+        for (table in listOf("items", "purchase", "trip", "item_pref", "local_item_pref", "item_alias", "sync_projection", "sync_outbox", "conflict_dismissal"))
+            sql.execSQL("DELETE FROM `$table` WHERE listId = ?", arrayOf(list))
+        sql.execSQL("DELETE FROM list_scope WHERE id = ?", arrayOf(list))
+        val lists = database.listDao()
+        val remaining = lists.all()
+        if (remaining.none { it.id == lists.selected() }) {
+            val target = remaining.firstOrNull()?.id ?: newId().also { lists.insert(ListEntity(it, "")) }
+            lists.select(ListSelectionEntity(listId = target))
+        }
+    }
+    private suspend fun store(server: SharedList, force: Boolean) {
+        val lists = database.listDao(); val dao = database.syncDao()
+        val owner = json.encodeToString(server.owner); val members = json.encodeToString(server.members)
+        val existing = lists.find(server.id)
+        if (existing == null) {
+            lists.insert(ListEntity(server.id, server.projection.name, synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members))
+            materialize(server.id, Projection(name = server.projection.name), server.projection)
+            val encoded = json.encodeToString(server.projection)
+            dao.saveProjection(ProjectionEntity(server.id, encoded, encoded))
+            return
+        }
+        val saved = dao.projection(server.id)
+        val before = saved?.optimistic?.let { json.decodeFromString<Projection>(it) } ?: seed(server.id)
+        val newer = force || !existing.created || server.seq >= existing.seq
+        val confirmed = if (newer) server.projection else saved?.confirmed?.let { json.decodeFromString<Projection>(it) } ?: before
+        if (newer) lists.update(existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false))
+        val optimistic = rebase(server.id, confirmed)
+        materialize(server.id, before, optimistic)
+        dao.saveProjection(ProjectionEntity(server.id, json.encodeToString(confirmed), json.encodeToString(optimistic)))
     }
     private suspend fun rebase(scope: String, confirmed: Projection): Projection {
         val dao = database.syncDao()
@@ -152,32 +211,6 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         }
         return optimistic
     }
-    suspend fun exportPending(): String = database.withTransaction {
-        val dao = database.syncDao()
-        val lists = database.listDao().all().filter { it.shared }.mapNotNull { list ->
-            val state = projection(list.id); val dismissed = dao.dismissals(list.id).toSet()
-            val commands = dao.pending(list.id).filter { it.intentId !in dismissed &&
-                (!it.acknowledged || it.intentId in state.conflicts || it.intentId in state.rejected) }
-            if (commands.isEmpty()) null else buildJsonObject {
-                put("name", list.name)
-                put("commands", JsonArray(commands.map { command -> buildJsonObject {
-                    put("source", json.encodeToJsonElement(json.decodeFromString<Intent>(command.command)))
-                    put("status", if (command.intentId in state.rejected) "rejected" else if (command.intentId in state.conflicts) "conflict" else "pending")
-                    state.conflicts[command.intentId]?.let { put("conflict", json.encodeToJsonElement(it)) }
-                    state.rejected[command.intentId]?.let { put("rejection", it) }
-                } }))
-            }
-        }
-        buildJsonObject { put("formatVersion", 1); put("lists", JsonArray(lists)) }.toString()
-    }
-    suspend fun installLocalFacts(scope: String, copy: FrozenCopy) = database.withTransaction {
-        require(database.listDao().find(scope)?.shared == false && database.historyDao().allItems(scope).isEmpty() && database.syncDao().projection(scope) == null)
-        val restored = SnapshotCodec.decode(copy.payload()).copy(name = requireNotNull(database.listDao().find(scope)).name)
-        materialize(scope, Projection(), restored)
-        val initial = seed(scope)
-        val encoded = json.encodeToString(initial)
-        database.syncDao().saveProjection(ProjectionEntity(scope, encoded, encoded))
-    }
     suspend fun copyTo(source: String, destination: String, includeHistory: Boolean) = database.withTransaction {
         // Rebuild genesis from materialized facts, excluding device choices and prior command lineage.
         val seeded = seed(source)
@@ -191,7 +224,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     }
     suspend fun reap(cutoff: Long): Int = database.withTransaction {
         val scope = database.listDao().selected()
-        if (database.listDao().find(scope)?.shared == true) return@withTransaction 0
+        if (database.listDao().find(scope)?.synced == true) return@withTransaction 0
         val gone = database.historyDao().allItems(scope).filter { it.deletedAt?.let { at -> at < cutoff } == true }.map { it.id }.toSet()
         val count = database.itemDao().reapTombstones(cutoff, scope)
         database.syncDao().projection(scope)?.let {
@@ -272,6 +305,3 @@ private fun JsonObject.scalarValues(): Map<String, String?> = filterValues { it 
     if (value == JsonNull) null else value.jsonPrimitive.content
 }
 data class ReplicaStatus(val pending: Int, val conflicts: List<ReplicaConflict>)
-
-data class ConfirmedOperation(val seq: Long, val previousHead: String, val head: String, val envelopeId: String, val digest: String, val intent: Intent)
-data class ReceiveResult(val applied: Int, val upgradeRequired: Boolean)

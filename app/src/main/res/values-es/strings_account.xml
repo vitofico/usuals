@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Cuenta</string>
+    <string name="account_intro">Inicia sesión para guardar tus listas en tu cuenta de un servidor de Usuals, abrirlas en la aplicación web y compartirlas allí con otras personas.</string>
+    <string name="account_scan_title">Conectar con la aplicación web</string>
+    <string name="account_scan_help">En un ordenador con la sesión iniciada en la aplicación web, elige Conectar un teléfono y escanea el código que aparece.</string>
+    <string name="account_scan">Escanear el QR de la aplicación web</string>
+    <string name="account_camera_help">Permite la cámara para escanear el código, o inicia sesión en el navegador más abajo.</string>
+    <string name="account_allow_camera">Permitir cámara</string>
+    <string name="account_browser_title">¿No tienes un ordenador a mano?</string>
+    <string name="account_browser_help">Escribe la dirección de tu servidor e inicia sesión en el navegador de este teléfono.</string>
+    <string name="account_server">Dirección del servidor</string>
+    <string name="account_offer_title">¿Conectar con %1$s?</string>
+    <string name="account_offer_help">Todas las listas de este teléfono se guardan en tu cuenta de este servidor y se mantienen sincronizadas con ella.</string>
+    <string name="account_connect">Conectar</string>
+    <string name="account_not_now">Ahora no</string>
+    <string name="account_connecting">Conectando…</string>
+    <string name="account_connected">Conectado. Tus listas se están sincronizando.</string>
+    <string name="account_signed_in">Sesión iniciada</string>
+    <string name="account_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="account_expired_title">Vuelve a iniciar sesión</string>
+    <string name="account_expired_help">El servidor ya no acepta este teléfono. Tus listas siguen aquí: vuelve a iniciar sesión para mantenerlas sincronizadas, o cierra la sesión para quitarlas de este teléfono.</string>
+    <string name="account_sign_out">Cerrar sesión</string>
+    <string name="account_sign_out_title">¿Cerrar sesión?</string>
+    <string name="account_sign_out_help">Tus listas se quedan en tu cuenta y se quitan de este teléfono. Puedes seguir usando la aplicación con una lista nueva que se queda solo en este teléfono.</string>
+    <plurals name="account_unsent">
+        <item quantity="one">%d cambio aún no ha llegado al servidor. Si cierras la sesión ahora, se pierde.</item>
+        <item quantity="many">%d cambios aún no han llegado al servidor. Si cierras la sesión ahora, se pierden.</item>
+        <item quantity="other">%d cambios aún no han llegado al servidor. Si cierras la sesión ahora, se pierden.</item>
+    </plurals>
+    <string name="account_sign_out_anyway">Cerrar sesión de todos modos</string>
+    <string name="account_privacy">Al iniciar sesión, tus listas, su historial y las personas con las que las compartes se guardan en tu servidor, y quien lo administra puede leerlos. Las recetas y las consultas de productos siguen saliendo directamente de tu teléfono.</string>
+    <string name="account_problem_not_usuals">Eso no es un código de Usuals.</string>
+    <string name="account_problem_outdated">Este código es de una versión anterior. En la aplicación web, elige de nuevo Conectar un teléfono y escanea el código nuevo.</string>
+    <string name="account_problem_already">Este teléfono ya tiene una sesión iniciada. Cierra la sesión primero para usar otra cuenta.</string>
+    <string name="account_problem_offline">No se pudo contactar con el servidor. Revisa la conexión y vuelve a intentarlo.</string>
+    <string name="account_problem_expired_code">Este código ha caducado o ya se usó. Muestra uno nuevo en la aplicación web.</string>
+    <string name="account_problem_upgrade">Este servidor necesita una versión más reciente de Usuals.</string>
+    <string name="account_problem_refused">El servidor no aceptó el inicio de sesión. Vuelve a intentarlo.</string>
+
+    <string name="share_title">Compartir %1$s</string>
+    <string name="share_people">Personas con acceso</string>
+    <string name="share_owner">Propietario</string>
+    <string name="share_editor">Puede editar</string>
+    <string name="share_you">Tú</string>
+    <string name="share_remove">Quitar</string>
+    <string name="share_leave">Salir de la lista</string>
+    <string name="share_leave_title">¿Salir de %1$s?</string>
+    <string name="share_leave_help">La lista desaparece de tu teléfono y de tu cuenta. Su propietario puede volver a añadirte.</string>
+    <string name="share_add">Añadir personas</string>
+    <string name="share_search">Buscar por nombre o correo</string>
+    <string name="share_no_people">Nadie más en este servidor coincide.</string>
+    <string name="share_signed_out">Para compartir hace falta una cuenta en un servidor de Usuals. Inicia sesión en Cuenta: tus listas se sincronizan con tu cuenta y puedes compartir cualquiera con personas de ese servidor.</string>
+    <string name="share_problem_offline">No se pudo contactar con el servidor. Vuelve a intentarlo.</string>
+    <string name="share_problem_sign_in">Vuelve a iniciar sesión para cambiar quién tiene acceso.</string>
+    <string name="share_problem_full">Esta lista ya tiene todas las personas que admite.</string>
+    <string name="share_problem_refused">El servidor no aceptó ese cambio.</string>
+
+    <string name="list_share">Compartir</string>
+    <string name="list_more">Más opciones</string>
+    <string name="list_rename">Cambiar nombre</string>
+    <string name="list_delete">Eliminar lista</string>
+    <string name="list_delete_title">¿Eliminar %1$s?</string>
+    <string name="list_delete_help">La lista y su historial se eliminan para todas las personas que la tienen.</string>
+
+    <string name="sync_sign_in">El servidor cerró tu sesión. Vuelve a iniciarla para sincronizar.</string>
+    <string name="sync_offline">Aún sin sincronizar. Los cambios se envían cuando el servidor esté disponible.</string>
+    <string name="sync_upgrade">Actualiza Usuals para mantener esta lista sincronizada.</string>
+    <string name="sync_capacity">El servidor rechazó un cambio: la lista o la cuenta está llena.</string>
+
+    <string name="settings_account_on">Sesión iniciada en %1$s</string>
+    <string name="settings_account_open">Abrir cuenta</string>
+</resources>

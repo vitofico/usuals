@@ -6,7 +6,7 @@
     <string name="shopping_mode">Modo compra</string>
     <string name="shopping_keep_awake">Mantener pantalla encendida al comprar</string>
     <string name="shopping_haptics">Vibrar al marcar un artículo</string>
-    <string name="shopping_personal_help">Estas opciones se quedan en este dispositivo. Los favoritos y el orden de las tiendas se incluyen en tus exportaciones; no se comparten con el hogar.</string>
+    <string name="shopping_personal_help">Estas opciones se quedan en este dispositivo. Los favoritos y el orden de las tiendas se incluyen en tus exportaciones; no se comparten con nadie.</string>
     <string name="shopping_favorites">Favoritos</string>
     <string name="shopping_pin">Guardar en favoritos</string>
     <string name="shopping_unpin">Quitar favorito</string>

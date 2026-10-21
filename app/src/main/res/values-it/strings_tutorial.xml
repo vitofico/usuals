@@ -5,7 +5,7 @@
     <string name="tutorial_back">Indietro</string>
     <string name="tutorial_next">Avanti</string>
     <string name="tutorial_finish">Inizia la mia lista</string>
-    <string name="tutorial_setup_sharing">Configura la condivisione</string>
+    <string name="tutorial_setup_sharing">Configura l’account</string>
     <string name="tutorial_step">%1$d di %2$d</string>
     <string name="tutorial_welcome_title">Benvenuto in %1$s.</string>
     <string name="tutorial_welcome_body">La tua lista della spesa funziona offline, senza account né server. Inizia dalle cose che ti servono e rendila tua.</string>
@@ -20,6 +20,6 @@
     <string name="tutorial_shop_body">Scegli Inizia la spesa e spunta i prodotti mentre li acquisti. Concludi la spesa salva quelli spuntati nella cronologia; gli altri rimangono nella lista.</string>
     <string name="tutorial_shop_hint">La cronologia ti aiuta a ricomprare l’essenziale. Le ripetizioni aggiungono prodotti solo con la frequenza che scegli.</string>
     <string name="tutorial_share_title">Il quotidiano, insieme.</string>
-    <string name="tutorial_share_body">Per fare la spesa insieme, tocca l’icona di condivisione della lista. Scansiona il QR del server o incolla il link, accedi e approva la connessione. Crea una famiglia o apri un invito.</string>
-    <string name="tutorial_share_hint">Quando crei un gruppo, salva e verifica il kit di recupero. Per unirti a un gruppo, apri il suo invito e confronta l’impronta completa del dispositivo con il proprietario.</string>
+    <string name="tutorial_share_body">Per fare la spesa insieme, accedi al tuo account su un server Usuals: scansiona il QR dell’app web oppure accedi dal browser. Poi tocca l’icona di condivisione di una lista e aggiungi persone.</string>
+    <string name="tutorial_share_hint">Le tue liste funzionano anche offline. Con l’accesso effettuato, si sincronizzano con il tuo account e con tutte le persone con cui le condividi.</string>
 </resources>

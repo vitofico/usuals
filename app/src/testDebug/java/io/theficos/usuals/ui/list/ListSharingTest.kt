@@ -17,6 +17,12 @@ import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.parse.LocalUtteranceParser
 import io.theficos.usuals.ui.theme.UsualsTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import io.theficos.usuals.model.ShoppingSnapshot
+import io.theficos.usuals.ui.history.HistoryStore
+import io.theficos.usuals.ui.history.NoHistoryStore
+import io.theficos.usuals.ui.history.ScopedHistoryStore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,12 +36,13 @@ class ListSharingTest {
     @get:Rule val compose = createComposeRule()
 
     @Suppress("DEPRECATION")
-    @Test fun `sharing opens the system chooser with a readable list snapshot`() {
+    @Test fun `sending as text opens the system chooser with a readable list snapshot`() {
         val vm = ListViewModel(FakeItemStore(listOf(
             item("milk", "milk", Quantity.pieces(2)), item("bread", "bread", checked = true),
         )), LocalUtteranceParser(), FakeSpeechSource())
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
-        compose.onNodeWithText("Share list").performClick()
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Send as text").performClick()
         val chooser = shadowOf(ApplicationProvider.getApplicationContext<Application>()).nextStartedActivity
         assertThat(chooser.action).isEqualTo(Intent.ACTION_CHOOSER)
         val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
@@ -44,12 +51,42 @@ class ListSharingTest {
         assertThat(send.getStringExtra(Intent.EXTRA_TEXT)).isEqualTo("☐ Milk ×2\n☑ Bread")
     }
 
-    @Test fun `sharing icon opens household setup while text sharing stays available`() {
-        var opened = false
+    @Test fun `the share icon and the menu both open the share sheet`() {
+        var opened = 0
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource())
-        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}, onOpenSharing = { opened = true }) } }
-        compose.onNodeWithContentDescription("Share a local list").performClick()
-        assertThat(opened).isTrue()
+        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}, onOpenSharing = { opened++ }) } }
+        compose.onNodeWithContentDescription("Share").performClick()
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Share").performClick()
+        assertThat(opened).isEqualTo(2)
+    }
+
+    @Test fun `the menu deletes an owned list and leaves one someone else owns`() {
+        val lists = MutableStateFlow(ListDirectory("own", listOf(NamedList("own", "Home", shared = false), NamedList("theirs", "Camping", shared = true, editor = true))))
+        val removed = mutableListOf<String>()
+        val directory = object : ListDirectoryStore {
+            override fun observe() = lists
+            override suspend fun select(id: String) { lists.value = lists.value.copy(selected = id) }
+            override suspend fun create(name: String) = Unit
+            override suspend fun remove(id: String) { removed += id }
+        }
+        // The screen waits until the items shown belong to the selected list.
+        val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
+            override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Leave list").assertDoesNotExist()
+        compose.onNodeWithText("Delete list").performClick()
+        compose.onNodeWithText("Delete list").performClick()
+        compose.waitForIdle()
+        assertThat(removed).containsExactly("own")
+        lists.value = lists.value.copy(selected = "theirs")
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Delete list").assertDoesNotExist()
+        compose.onNodeWithText("Leave list").assertExists()
     }
 
     @Test fun `swiping a row invokes removal once`() {

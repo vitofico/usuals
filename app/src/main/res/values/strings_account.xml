@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Account</string>
+    <string name="account_intro">Sign in to keep your lists in your account on a Usuals server, open them in the web app and share them with other people there.</string>
+    <string name="account_scan_title">Connect with the web app</string>
+    <string name="account_scan_help">On a computer signed in to the web app, choose Connect a phone and scan the code it shows.</string>
+    <string name="account_scan">Scan the QR from the web app</string>
+    <string name="account_camera_help">Allow the camera to scan the code, or sign in in the browser below instead.</string>
+    <string name="account_allow_camera">Allow camera</string>
+    <string name="account_browser_title">No computer at hand?</string>
+    <string name="account_browser_help">Enter your server’s address and sign in in the browser on this phone.</string>
+    <string name="account_server">Server address</string>
+    <string name="account_offer_title">Connect to %1$s?</string>
+    <string name="account_offer_help">Every list on this phone is saved to your account on this server and stays in sync with it.</string>
+    <string name="account_connect">Connect</string>
+    <string name="account_not_now">Not now</string>
+    <string name="account_connecting">Connecting…</string>
+    <string name="account_connected">Connected. Your lists are syncing.</string>
+    <string name="account_signed_in">Signed in</string>
+    <string name="account_signed_in_as">Signed in as %1$s</string>
+    <string name="account_expired_title">Sign in again</string>
+    <string name="account_expired_help">The server no longer accepts this phone. Your lists are still here: sign in again to keep them in sync, or sign out to remove them from this phone.</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_sign_out_title">Sign out?</string>
+    <string name="account_sign_out_help">Your lists stay in your account and are removed from this phone. You can keep using the app with a new list that stays on this phone.</string>
+    <plurals name="account_unsent">
+        <item quantity="one">%d change has not reached the server yet. Signing out now loses it.</item>
+        <item quantity="other">%d changes have not reached the server yet. Signing out now loses them.</item>
+    </plurals>
+    <string name="account_sign_out_anyway">Sign out anyway</string>
+    <string name="account_privacy">When you sign in, your lists, their history and the people you share them with are stored on your server, and whoever runs it can read them. Recipes and product lookups still come directly from your phone.</string>
+    <string name="account_problem_not_usuals">That is not a Usuals code.</string>
+    <string name="account_problem_outdated">This code comes from an older version. In the web app, choose Connect a phone again and scan the new code.</string>
+    <string name="account_problem_already">This phone is already signed in. Sign out first to use another account.</string>
+    <string name="account_problem_offline">Could not reach the server. Check the connection and try again.</string>
+    <string name="account_problem_expired_code">This code has expired or was already used. Show a new one in the web app.</string>
+    <string name="account_problem_upgrade">This server needs a newer version of Usuals.</string>
+    <string name="account_problem_refused">The server did not accept the sign-in. Try again.</string>
+
+    <string name="share_title">Share %1$s</string>
+    <string name="share_people">People with access</string>
+    <string name="share_owner">Owner</string>
+    <string name="share_editor">Can edit</string>
+    <string name="share_you">You</string>
+    <string name="share_remove">Remove</string>
+    <string name="share_leave">Leave list</string>
+    <string name="share_leave_title">Leave %1$s?</string>
+    <string name="share_leave_help">The list disappears from your phone and your account. Its owner can add you again.</string>
+    <string name="share_add">Add people</string>
+    <string name="share_search">Search by name or email</string>
+    <string name="share_no_people">No one else on this server matches.</string>
+    <string name="share_signed_out">Sharing works through an account on a Usuals server. Sign in under Account: your lists sync to your account, and you can share any of them with people on that server.</string>
+    <string name="share_problem_offline">Could not reach the server. Try again.</string>
+    <string name="share_problem_sign_in">Sign in again to change who has access.</string>
+    <string name="share_problem_full">This list already has as many people as it can hold.</string>
+    <string name="share_problem_refused">The server did not accept that change.</string>
+
+    <string name="list_share">Share</string>
+    <string name="list_more">More options</string>
+    <string name="list_rename">Rename</string>
+    <string name="list_delete">Delete list</string>
+    <string name="list_delete_title">Delete %1$s?</string>
+    <string name="list_delete_help">The list and its history are removed for everyone who has it.</string>
+
+    <string name="sync_sign_in">Signed out by the server. Sign in again to sync.</string>
+    <string name="sync_offline">Not synced yet. Changes are sent when the server can be reached.</string>
+    <string name="sync_upgrade">Update Usuals to keep this list in sync.</string>
+    <string name="sync_capacity">The server refused a change: the list or the account is full.</string>
+
+    <string name="settings_account_on">Signed in on %1$s</string>
+    <string name="settings_account_open">Open account</string>
+</resources>
