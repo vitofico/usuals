@@ -332,6 +332,18 @@ class ListSyncTest {
         assertThat(db.listDao().find(home)!!.archived).isFalse()
     }
 
+    @Test fun aListArchivedBeforeItsFirstUploadStaysArchivedWhenTheFeedOvertakesTheUpload() = runTest {
+        lists.create("Home")
+        val camping = lists.create("Camping"); add(camping, "Tent")
+        sync.archive(camping, true)
+        signIn()
+        server.onCreate = { if (it == camping) sync.pull() }
+        assertThat(sync.push()).isEqualTo(SyncStatus.SYNCED)
+        assertThat(server.calls).containsAtLeast("PUT $camping", "changes", "PUT $camping/archived true").inOrder()
+        assertThat(server.lists.getValue(camping).archivedBy).containsExactly("me")
+        assertThat(db.listDao().find(camping)!!.archived).isTrue()
+    }
+
     @Test fun addingSomeoneUploadsANewListFirstAndStoresTheNewMembers() = runTest {
         val home = lists.create("Home")
         signIn()
@@ -369,6 +381,8 @@ private class FakeServer : ListsService {
     var unauthenticated = false
     var refuse: String? = null
     var invalid: String? = null
+    /** Runs after the server stored a new list and before it answers, as a concurrent pull would. */
+    var onCreate: (suspend (String) -> Unit)? = null
 
     fun seed(name: String, owner: String = me, members: List<String> = emptyList()): String {
         val id = "server-${lists.size}"
@@ -416,6 +430,7 @@ private class FakeServer : ListsService {
         lists[list]?.let { if (me in it.members) return shared(list) }
         if (list in taken || list in lists) throw RelayProblem("list_exists", 409)
         lists[list] = Stored(++seq, projection, me, mutableMapOf(me to "owner"))
+        onCreate?.invoke(list)
         return shared(list)
     }
     override suspend fun intents(list: String, intents: List<Intent>): IntentBatchResult {

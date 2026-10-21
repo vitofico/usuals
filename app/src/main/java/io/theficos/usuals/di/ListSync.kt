@@ -173,9 +173,11 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
         var id = list
         while (true) {
             try {
+                // A list archived on the phone before any server confirmed it stays archived in the account. Read
+                // first: a feed page that lands while the list is being created overwrites the local flag.
+                val archived = lists.find(id)?.let { it.archived && it.seq == 0L } == true
                 var created = service.create(id, replica.creation(id).let { if (it.name.isBlank()) it.copy(name = unnamed) else it })
-                // A list archived on the phone before any server confirmed it stays archived in the account.
-                if (lists.find(id)?.let { it.archived && it.seq == 0L } == true && !created.archived) created = service.archive(id, true)
+                if (archived && !created.archived) created = service.archive(id, true)
                 commit(token) { replica.accept(created) }
                 return id
             } catch (problem: RelayProblem) {
