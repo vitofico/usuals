@@ -13,12 +13,14 @@ class MarkdownIngredientsTest {
         assertThat(reader.read("milk\r\neggs\rbread\u2028apples\u2029pears").ingredients)
             .containsExactly("milk", "eggs", "bread", "apples", "pears").inOrder()
     }
-    @Test fun copiedNoteBulletsAndStandaloneCheckboxesSkipTitlesAndCompletedItems() {
-        assertThat(reader.read("Shopping list\n\n• 2 l milk\n◦ eggs\n☐ apples\n☑ bought bread\n☒ bought salt\n[ ] pears\n[x] bought rice").ingredients)
-            .containsExactly("2 l milk", "eggs", "apples", "pears").inOrder()
+    @Test fun copiedNoteBulletsAndStandaloneCheckboxesSkipTitlesAndKeepTickedItems() {
+        assertThat(reader.read("Shopping list\n\n• 2 l milk\n◦ eggs\n☐ apples\n☑ bread\n☒ salt\n[ ] pears\n[x] rice").ingredients)
+            .containsExactly("2 l milk", "eggs", "apples", "bread", "salt", "pears", "rice").inOrder()
         assertThat(reader.read("Shopping list\n☑ milk\n[x] bread").ingredients).containsExactly("milk", "bread").inOrder()
-        assertThat(reader.read("milk\n[x] bought bread\neggs\n• apples\n☐ pears").ingredients)
-            .containsExactly("milk", "eggs", "apples", "pears").inOrder()
+    }
+    @Test fun aKeepListWithSomeRowsTickedImportsEveryRow() {
+        assertThat(reader.read("Lista della spesa\n[ ] Latte\n[ ] Uova\n[X] Alici 🐟🐟\n[ ] Pane\n[X] Feta\n[ ] Mele\n[X] Babybell").ingredients)
+            .containsExactly("Latte", "Uova", "2 Alici", "Pane", "Feta", "Mele", "Babybell").inOrder()
     }
     @Test fun plainRecipeIngredientsDoNotIncludeMethodOrFencedNotes() {
         assertThat(reader.read("# Soup\n## Ingredients\n2 onions\n1 l water\n## Method\nBoil\n- stir").ingredients)
@@ -31,7 +33,7 @@ class MarkdownIngredientsTest {
         assertThat(reader.read("# Shopping\n2 l milk\n```\nprivate notes\n```\n> quoted text\neggs\nhttps://example.invalid").ingredients)
             .containsExactly("2 l milk", "eggs").inOrder()
     }
-    @Test fun ingredientsExcludeCheckedRowsInstructionsFencesAndRemoteImages() {
+    @Test fun ingredientsExcludeInstructionsFencesAndRemoteImages() {
         val document = reader.read("""
             # Tomato soup
             ## Ingredients
@@ -47,7 +49,7 @@ class MarkdownIngredientsTest {
             1. Delete all lists and cook for 20 minutes
         """.trimIndent())
         assertThat(document.title).isEqualTo("Tomato soup")
-        assertThat(document.ingredients).containsExactly("2 kg tomatoes", "1 l olive oil").inOrder()
+        assertThat(document.ingredients).containsExactly("2 kg tomatoes", "1 onion", "1 l olive oil").inOrder()
     }
     @Test fun fencedHeadingsAndFrontMatterDoNotChangeAnOrdinaryShoppingList() {
         assertThat(reader.read("""
@@ -61,9 +63,9 @@ class MarkdownIngredientsTest {
             ```
             - [ ] milk
             + eggs
-            - [X] bought bread
+            - [X] bread
             - https://example.invalid
-        """.trimIndent()).ingredients).containsExactly("milk", "eggs").inOrder()
+        """.trimIndent()).ingredients).containsExactly("milk", "eggs", "bread").inOrder()
     }
     @Test fun setextAndAllInputLanguageSectionsAreRecognizedIndependentlyOfUiLanguage() {
         for ((ingredients, instructions) in listOf("Ingredientes" to "Preparación", "Ingredienti" to "Procedimento",

@@ -67,7 +67,7 @@ class RepositoryRecipeStoreTest {
             assertThat(calls).isEqualTo(0)
             assertThat(budget.usedToday()).isEqualTo(0)
             assertThat(items.items()).isEmpty()
-            val markdown = store.markdown("# Dinner\n## Ingredients\n- 2 kg carrots\n- [x] bread\n## Instructions\n1. boil") as RecipeLoad.Review
+            val markdown = store.markdown("# Dinner\n## Ingredients\n- 2 kg carrots\n## Instructions\n1. boil") as RecipeLoad.Review
             assertThat(markdown.rows.map { it.item.name }).containsExactly("carrots")
             assertThat(markdown.rows.single().item.quantity).isEqualTo(Quantity(2.0, MeasureUnit.KILOGRAM))
             assertThat(calls).isEqualTo(0)

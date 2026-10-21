@@ -1,1 +1,1 @@
-Mentre scrivi un articolo, tocca un punto qualsiasi fuori dal campo per chiuderlo insieme alla tastiera. Svuota una lista in un colpo solo con Rimuovi tutti gli articoli nel suo menu. Una nota di Google Keep ora si importa anche se tutti gli articoli sono spuntati, e le emoji ripetute come 🍺🍺🍺 diventano la quantità.
+Importando una nota di Google Keep ora entrano tutti gli articoli, spuntati o no. Le emoji ripetute dopo un articolo ne indicano la quantità, quindi Birra 🍺🍺🍺 aggiunge 3 birre; la schermata di importazione ora lo spiega.

@@ -33,7 +33,7 @@
     <string name="recipe_source_url">Link</string>
     <string name="recipe_source_markdown">Text oder Markdown</string>
     <string name="recipe_source_photo">Foto</string>
-    <string name="recipe_markdown_help">Füge eine Notiz aus Google Keep oder einer anderen App ein oder öffne eine UTF-8-Text- oder Markdown-Datei. Verwende einen Artikel pro Zeile, Aufzählungen oder Kontrollkästchen. Der Import bleibt auf diesem Gerät; abgehakte Artikel werden übersprungen, außer wenn alle abgehakt sind.</string>
+    <string name="recipe_markdown_help">Füge eine Notiz aus Google Keep oder einer anderen App ein oder öffne eine UTF-8-Text- oder Markdown-Datei. Verwende einen Artikel pro Zeile, Aufzählungen oder Kontrollkästchen. Der Import bleibt auf diesem Gerät. Abgehakte Artikel kommen ebenfalls mit. Wiederholte Emoji geben die Menge an: Bier 🍺🍺🍺 fügt 3 Bier hinzu.</string>
     <string name="recipe_markdown_text">Liste einfügen</string>
     <string name="recipe_markdown_file">Text- oder Markdown-Datei öffnen</string>
     <string name="recipe_read_markdown">Artikel prüfen</string>

@@ -34,7 +34,7 @@
     <string name="recipe_source_url">Lien</string>
     <string name="recipe_source_markdown">Texte ou Markdown</string>
     <string name="recipe_source_photo">Photo</string>
-    <string name="recipe_markdown_help">Collez une note de Google Keep ou d’une autre application, ou ouvrez un fichier texte ou Markdown UTF-8. Utilisez un article par ligne, des puces ou des cases. L’importation reste sur cet appareil ; les articles cochés sont ignorés, sauf s’ils le sont tous.</string>
+    <string name="recipe_markdown_help">Collez une note de Google Keep ou d’une autre application, ou ouvrez un fichier texte ou Markdown UTF-8. Utilisez un article par ligne, des puces ou des cases. L’importation reste sur cet appareil. Les articles cochés sont aussi importés. Les emoji répétés donnent la quantité : Bière 🍺🍺🍺 ajoute 3 bières.</string>
     <string name="recipe_markdown_text">Collez votre liste</string>
     <string name="recipe_markdown_file">Ouvrir un fichier texte ou Markdown</string>
     <string name="recipe_read_markdown">Vérifier les articles</string>

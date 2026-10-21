@@ -75,8 +75,12 @@ and allergens. Product data is credited to Open Food Facts under the ODbL.
 
 Tap **Import** to paste a note from Google Keep or another app, or open a plain
 text or Markdown file. Plain lists use one item per line. Bullets, numbered lists
-and checkboxes are supported; completed checkbox entries are skipped. Text is read
-locally, without a model. Review the proposed items and quantities before adding.
+and checkboxes are supported. Ticked entries are imported too, so a Keep list
+reused from the last trip comes in whole; untick what you do not need in the
+review. A run of the same emoji
+after an item sets its quantity: `Cerveza 🍺🍺🍺` imports as 3 Cerveza, while a
+single or mixed emoji is dropped from the name. Text is read locally, without a
+model. Review the proposed items and quantities before adding.
 Use a Markdown heading such as `# Weekend shopping` for a custom note title.
 On Android, you can also share the note directly to Usuals for the same review.
 

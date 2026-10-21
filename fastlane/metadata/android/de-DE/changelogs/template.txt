@@ -1,1 +1,1 @@
-Beim Eintippen eines Artikels schließt ein Tippen außerhalb des Felds das Feld und die Tastatur. Leere eine Liste auf einmal mit Alle Artikel entfernen in ihrem Menü. Eine Google-Keep-Notiz wird jetzt auch importiert, wenn alle Artikel abgehakt sind, und wiederholte Emoji wie 🍺🍺🍺 werden zur Menge.
+Beim Import einer Google-Keep-Notiz kommen jetzt alle Artikel mit, abgehakt oder nicht. Wiederholte Emoji nach einem Artikel geben die Menge an, Bier 🍺🍺🍺 fügt also 3 Bier hinzu; der Importbildschirm erklärt das jetzt.

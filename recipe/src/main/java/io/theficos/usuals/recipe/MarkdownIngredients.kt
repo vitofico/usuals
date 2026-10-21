@@ -17,7 +17,7 @@ class MarkdownIngredients {
         var ingredientDepth: Int? = null
         var ignoredDepth: Int? = null
         var accept = !recipe
-        val rows = mutableListOf<Pair<String, Boolean>>()
+        val lines = mutableListOf<String>()
         source.forEach { raw ->
             val line = raw.trim()
             val heading = heading(line)
@@ -37,12 +37,9 @@ class MarkdownIngredients {
             if (!accept || line.isBlank() || line.startsWith('>') || RULE.matches(line)) return@forEach
             val entry = entry(line) ?: line
             val content = counted(clean(CHECKBOX.replaceFirst(entry, "")))
-            if (content.isNotBlank() && !URL.matches(content)) rows += content to CHECKED.containsMatchIn(entry)
+            if (content.isNotBlank() && !URL.matches(content)) lines += content
+            require(lines.size <= MAX_ITEMS)
         }
-        // A reused note, such as a Keep list ticked off on the last trip, is still the list.
-        val open = rows.any { !it.second }
-        val lines = rows.filter { !open || !it.second }.map { it.first }
-        require(lines.size <= MAX_ITEMS)
         return RecipeDocument(title, lines, null, emptyList())
     }
 
@@ -95,8 +92,6 @@ class MarkdownIngredients {
         private val RULE = Regex("^(?:-{3,}|\\*{3,}|_{3,})$")
         private val BULLET = Regex("^(?:[-+*•◦]|[0-9]+[.)])\\s+(.+)$")
         private val CHECKBOX = Regex("^(?:\\[[ xX]]|[☐☑☒])\\s*")
-        private val CHECKED = Regex("^(?:\\[[xX]]|[☑☒])\\s*")
-        private val UNCHECKED = Regex("^(?:\\[ ]|☐)\\s*")
         private val IMAGE = Regex("!\\[[^]]*]\\([^)]*\\)")
         private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
         private const val PICTOGRAPH = "[\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{2B00}-\\x{2BFF}]"
