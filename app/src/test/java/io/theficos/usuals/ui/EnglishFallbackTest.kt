@@ -48,10 +48,9 @@ class EnglishFallbackTest {
                 assertThat(context.createConfigurationContext(regional).getString(R.string.settings_title))
                     .isEqualTo(localized.getString(R.string.settings_title))
             }
-            val removal = localized.getString(R.string.sharing_remove_help, "fingerprint")
-            assertThat(removal).contains("\n\n")
-            assertThat(removal).doesNotContain("\\n")
-            assertThat(removal).contains("fingerprint")
+            val title = localized.getString(R.string.share_title, "Weekly")
+            assertThat(title).contains("Weekly")
+            assertThat(title).doesNotContain("%")
             for (count in listOf(0, 1, 2, 1_000_000)) {
                 val number = String.format(Locale.forLanguageTag(tag), "%d", count)
                 val stale = localized.resources.getQuantityString(R.plurals.history_stale_question, count, count)

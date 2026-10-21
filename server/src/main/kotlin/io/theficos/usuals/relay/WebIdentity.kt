@@ -1,8 +1,5 @@
 package io.theficos.usuals.relay
 
-import io.theficos.usuals.sync.Proof
-import io.theficos.usuals.sync.CreateHousehold
-import io.theficos.usuals.sync.ManifestProof
 import kotlinx.serialization.Serializable
 import java.security.MessageDigest
 import java.sql.Connection
@@ -15,11 +12,14 @@ import java.util.UUID
 @Serializable data class WebSessions(val sessions: List<WebSessionView>)
 @Serializable data class WebUsers(val users: List<WebUser>, val next: String? = null)
 @Serializable data class WebUserUpdate(val disabled: Boolean)
-internal data class WebCaller(val session: String, val user: WebUser, val csrf: String, val expires: Long) { override fun toString() = "WebCaller([redacted])" }
+internal data class WebCaller(val session: String, val user: WebUser, val csrf: String, val expires: Long, val renewed: Boolean = false) {
+    fun me() = WebMe(user, csrf, expires)
+    override fun toString() = "WebCaller([redacted])"
+}
 internal data class WebLoginStart(val location: String, val browserToken: String) { override fun toString() = "WebLoginStart([redacted])" }
 internal data class WebLoginComplete(val token: String, val expires: Long) { override fun toString() = "WebLoginComplete([redacted])" }
 
-/** App identity is separate from household keys, manifests and recovery authority. */
+/** Browser accounts: sign-in, sessions and administration. Sessions slide to 30 days from use. */
 class WebIdentity internal constructor(
     val config: WebIdentityConfig,
     private val db: Database,
@@ -29,7 +29,12 @@ class WebIdentity internal constructor(
 ) {
     internal constructor(config: OidcConfig, db: Database, auth: Auth, oidc: OidcClient = OidcClient(config), clock: () -> Long = System::currentTimeMillis) :
         this(WebIdentityConfig(config.origin, config, false), db, auth, oidc, clock)
-    companion object { fun create(config: WebIdentityConfig, db: Database, auth: Auth) = WebIdentity(config, db, auth) }
+    companion object {
+        fun create(config: WebIdentityConfig, db: Database, auth: Auth) = WebIdentity(config, db, auth)
+        const val SESSION_SECONDS = 30 * 86400
+        private const val SESSION = SESSION_SECONDS * 1000L
+        private const val DAY = 86_400_000L
+    }
     private val local = LocalAccounts(config, db, auth, clock)
     internal fun localChallenge(ip: String) = local.challenge(ip)
     internal suspend fun localLogin(browser: String, origin: String?, csrf: String?, ip: String, request: suspend () -> LocalLoginRequest): WebLoginComplete {
@@ -95,9 +100,9 @@ class WebIdentity internal constructor(
             expect(active != null && config.accepts(active.first) && !active.second, "unauthenticated", 401)
             c.execute("DELETE FROM web_session WHERE expires<=?", clock())
             expect(c.query("SELECT count(*) FROM web_session") { it.getLong(1) }.single() < 20000, "unavailable", 503)
-            // Limit active sessions per account without quietly logging out another browser.
-            expect(c.query("SELECT count(*) FROM web_session WHERE user_id=? AND revoked=false AND expires>?", id(userId), clock()) { it.getLong(1) }.single() < 20, "rate_limited", 429)
-            val token = randomToken(); val expiry = clock() + 900000
+            // Keep at most 20 sessions per account. Refusing a sign-in instead could lock an account out for 30 days.
+            c.execute("UPDATE web_session SET revoked=true WHERE id IN (SELECT id FROM web_session WHERE user_id=? AND revoked=false AND expires>? ORDER BY expires DESC,id OFFSET 19)", id(userId), clock())
+            val token = randomToken(); val expiry = clock() + SESSION
             c.execute("INSERT INTO web_session VALUES (?,?,?,?,?,?,false)", UUID.randomUUID(), digest(token), id(userId), randomToken(), clock(), expiry)
             return WebLoginComplete(token, expiry)
     }
@@ -107,9 +112,13 @@ class WebIdentity internal constructor(
             WebCaller(it.getObject(1).toString(), user(it, 3), it.getString(2), it.getLong(3))
         }.singleOrNull() ?: reject("unauthenticated", 401)
         expect(config.accepts(row.user.issuer) && !row.user.disabled, "forbidden", 403)
-        return row
+        // Extended at most once a day; the HTTP layer then reissues the cookie.
+        if (row.expires >= clock() + SESSION - DAY) return row
+        c.execute("UPDATE web_session SET expires=? WHERE id=?", clock() + SESSION, id(row.session))
+        return row.copy(expires = clock() + SESSION, renewed = true)
     }
-    internal fun me(token: String): WebMe = db.transaction { c -> caller(c, token).let { WebMe(it.user, it.csrf, it.expires) } }
+    internal fun reader(token: String): WebCaller = db.transaction { c -> caller(c, token) }
+    internal fun me(token: String): WebMe = reader(token).me()
     internal fun csrf(token: String, origin: String?, csrf: String?): WebCaller = db.transaction { c ->
         val caller = caller(c, token)
         expect(origin == config.origin && csrf != null && MessageDigest.isEqual(digest(csrf), digest(caller.csrf)), "forbidden", 403)
@@ -150,44 +159,6 @@ class WebIdentity internal constructor(
         c.execute("UPDATE web_session SET revoked=true WHERE user_id=?", id(target))
         c.execute("UPDATE native_session SET revoked=true WHERE user_id=?", id(target))
         c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(target))
-    }
-    internal fun link(caller: WebCaller, proof: Proof) = db.transaction { c ->
-        current(c, caller)
-        // The principal lock also serializes session minting, closing the bind/mint race.
-        expect(c.query("SELECT id FROM principal WHERE id=? FOR UPDATE", id(proof.deviceId)) { true }.singleOrNull() == true, "unauthenticated", 401)
-        auth.consume(c, proof, setOf("session"))
-        expect(c.query("SELECT role FROM membership WHERE device=? AND active=true", id(proof.deviceId)) { it.getString(1) }.let { it.isNotEmpty() && it.none { role -> role == "recovery" } }, "forbidden", 403)
-        expect(c.query("SELECT 1 FROM web_device WHERE device=?", id(proof.deviceId)) { true }.isEmpty(), "conflict", 409)
-        c.execute("INSERT INTO web_device VALUES (?,?)", id(proof.deviceId), id(caller.user.id))
-        c.execute("UPDATE auth_session SET revoked=true WHERE device=?", id(proof.deviceId))
-    }
-    internal fun createHousehold(caller: WebCaller, request: CreateHousehold, relay: Relay): ManifestProof =
-        createHouseholdFor(caller.user.id, request, relay, true) { current(it, caller); Unit }
-    internal fun createHouseholdFor(userId: String, request: CreateHousehold, relay: Relay, browser: Boolean, authorize: (Connection) -> Unit): ManifestProof {
-        auth.limit("web-household:${userId}", 5)
-        return db.transaction { c ->
-            // Serialize quota checks with account disabling and bind before any device session can exist.
-            c.query("SELECT id FROM web_user WHERE id=? FOR UPDATE", id(userId)) { Unit }
-            authorize(c)
-            val manifest = ManifestRules.genesis(request.manifest, relay.identity.serverId)
-            val existing = c.query("SELECT w.user_id,h.genesis FROM web_created_household w JOIN household h ON h.id=w.household WHERE w.household=?", id(manifest.householdId)) {
-                it.getObject(1).toString() to io.theficos.usuals.sync.Wire.encode(it.getBytes(2))
-            }.singleOrNull()
-            if (existing != null) {
-                expect(existing.first == userId && existing.second == request.manifest.hash(), "conflict", 409)
-                val signing = auth.consume(c, request.bootstrapProof, setOf("bootstrap")).second
-                expect(request.bootstrapProof.deviceId == manifest.signer && manifest.members.single().devices.single().signingPublicKey == signing)
-                request.manifest.proof()
-            } else {
-                expect(c.query("SELECT count(*) FROM web_created_household WHERE user_id=?", id(userId)) { it.getLong(1) }.single() < 10, "quota_exceeded", 429)
-                val keys = listOf(manifest.members.single().devices.single(), manifest.recovery)
-                expect(keys.all { key -> c.query("SELECT 1 FROM principal WHERE id=? OR signing=? OR recipient=?", id(key.id), raw(key.signingPublicKey), raw(key.recipientPublicKey)) { true }.isEmpty() }, "conflict", 409)
-                val proof = relay.create(c, request)
-                if (browser) c.execute("INSERT INTO web_device VALUES (?,?)", id(manifest.signer), id(userId))
-                c.execute("INSERT INTO web_created_household VALUES (?,?)", id(manifest.householdId), id(userId))
-                proof
-            }
-        }
     }
     internal fun current(c: Connection, caller: WebCaller): WebCaller {
         val active = c.query("SELECT s.revoked,s.expires,u.disabled,u.issuer FROM web_session s JOIN web_user u ON u.id=s.user_id WHERE s.id=? AND s.user_id=?", id(caller.session), id(caller.user.id)) { !it.getBoolean(1) && it.getLong(2) > clock() && !it.getBoolean(3) && config.accepts(it.getString(4)) }.singleOrNull()

@@ -1,6 +1,10 @@
 # ADR 0014 Server connection and optional AI gateway
 
 Status: accepted and verified locally, 2026-10-20. See the [verification record](../verification/2026-10-20-server-connection-ai.md).
+Its household parts (native household creation, membership kept separate from the
+account, unchanged shopping ciphertext) and the 30-day connection lifetime are
+superseded by [ADR 0017](ADR-0017-server-held-lists.md). The account connection
+and the AI gateway stand.
 
 Usuals asks once for an instance link or QR. An instance supplies optional account
 services and its default model. Users can select an operator-approved provider

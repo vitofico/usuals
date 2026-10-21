@@ -65,7 +65,7 @@ fun SettingsScreen(
     vm: SettingsViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenSharing: () -> Unit = {},
+    onOpenAccount: () -> Unit = {},
     palette: AppPalette = AppPalette.PLUM,
     onPaletteChange: (AppPalette) -> Unit = {},
     onOpenTutorial: () -> Unit = {},
@@ -109,14 +109,10 @@ fun SettingsScreen(
                 BudgetSection(state, vm)
             } else {
                 SectionCard {
-                    Text(stringResource(R.string.settings_server), style = MaterialTheme.typography.titleLarge)
-                    val sharing = state.sharing
-                    Text(when {
-                        sharing == null -> stringResource(R.string.settings_sharing_none)
-                        sharing.phones == 0 -> sharing.host
-                        else -> pluralStringResource(R.plurals.settings_sharing_phones, sharing.phones, sharing.host, sharing.phones)
-                    }, style = MaterialTheme.typography.bodyMedium)
-                    Button(onClick = onOpenSharing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (sharing == null) R.string.sharing_start_title else R.string.settings_manage_server)) }
+                    Text(stringResource(R.string.account_title), style = MaterialTheme.typography.titleLarge)
+                    Text(state.account?.let { stringResource(R.string.settings_account_on, it.host) } ?: stringResource(R.string.settings_offline),
+                        style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_account_open)) }
                 }
                 SectionCard {
                     TextButton(onClick = { panel = "appearance" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.appearance_title)) }
@@ -341,7 +337,7 @@ private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Un
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.error,
             )
-            Bullet(stringResource(R.string.sharing_privacy))
+            Bullet(stringResource(R.string.account_privacy))
             Bullet(stringResource(R.string.scan_lookup_privacy))
             Bullet(stringResource(R.string.settings_privacy_edge_voice))
             Bullet(stringResource(R.string.settings_privacy_edge_recipe))

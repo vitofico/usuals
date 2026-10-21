@@ -39,7 +39,6 @@ class ListMigrationTest {
         }
         var db = UsualsDatabase.build(context)
         val scope = db.listDao().selected()
-        val household = db.listDao().all().single().householdId
         assertThat(scope).isNotEqualTo(LOCAL_LIST_ID)
         val items = db.historyDao().allItems(scope)
         assertThat(items).hasSize(2)
@@ -49,13 +48,13 @@ class ListMigrationTest {
         assertThat(db.historyDao().purchases(scope).single().amount).isEqualTo(.5)
         assertThat(db.historyDao().aliases(scope)).containsExactly(ItemAliasEntity("gtin:4006381333931", "milk", scope))
         assertThat(db.listDao().selected()).isEqualTo(scope)
-        assertThat(db.listDao().all().single().shared).isFalse()
+        assertThat(db.listDao().all().single().synced).isFalse()
         db.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { assertThat(it.count).isEqualTo(0) }
         db.close()
         db = UsualsDatabase.build(context)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(6)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(7)
         assertThat(db.historyDao().allItems(scope)).containsExactlyElementsIn(items)
-        db.listDao().insert(ListEntity("camping", household, "Camping"))
+        db.listDao().insert(ListEntity("camping", "Camping"))
         db.itemDao().insert(items.first().copy(listId = "camping"))
         assertThat(db.itemDao().active(listId = "camping")).hasSize(1)
         assertThat(db.itemDao().active(scope)).hasSize(1)
@@ -110,7 +109,7 @@ class ListMigrationTest {
                     MIGRATION_4_5.migrate(db)
                     error("simulated interruption before migration commit")
                 }
-            }, MIGRATION_5_6).build()
+            }, MIGRATION_5_6, MIGRATION_6_7).build()
         assertThat(runCatching { db.openHelper.writableDatabase }.isFailure).isTrue()
         db.close()
         SQLiteDatabase.openDatabase(context.getDatabasePath(UsualsDatabase.NAME).path, null, SQLiteDatabase.OPEN_READONLY).use { old ->

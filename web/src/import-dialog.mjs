@@ -1,12 +1,13 @@
 import { Problem, requireThat } from "./wire.mjs";
-import { canonical, decimal } from "./reducer.mjs";
+import { canonical, decimal, rows as listRows } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
 import { markdownDocument, ingredient } from "./import.mjs";
 import { ServerModel } from "./server-model.mjs";
 import { ImageModel } from "./image-model.mjs";
 import { preparePhoto, photoBlob, visionChallenge, PhotoCamera } from "./photo.mjs";
 
-export function importDialog({ el, button, t, openDialog, closeDialog, dialog, packs, origins, server = null, client, destination, valid, finished }) {
+/** `projection` reads the destination list as the server last sent it; `capture` sends the confirmed items to it. */
+export function importDialog({ el, button, t, openDialog, closeDialog, dialog, packs, origins, server = null, projection, capture: send, valid, finished }) {
   let closed = false, busy = false, committing = false, mode = "markdown", rows = [], selected = new Set(), image = null, blobUrl = null, camera = null, cameraReady = false;
   const model = server ? new ServerModel({ csrf: server.csrf, valid }) : new ImageModel({ origins, challenge: visionChallenge });
   const error = el("p", { class: "dialog-error", role: "alert" }), status = el("p", { class: "helper", role: "status" });
@@ -62,20 +63,21 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     if (server || !model.status.configured) status.textContent = "";
     else status.textContent = t(model.status.verified ? "importModelReady" : "importModelNotReady", { used: model.status.used, limit: model.status.limit });
   }
+  const present = (p) => new Set(listRows(p).map(r => canonical(r.facts.key, p.aliases)));
   async function showReview(proposals) {
-    const projection = await client.view(destination.household, destination.list);
-    if (!current()) return;
-    const present = new Set(Object.values(projection.rows).filter(r => !r.archived && !projection.tombstones[r.id]).map(r => canonical(r.facts.key, projection.aliases)));
+    const p = projection();
+    if (!current() || !p) return;
+    const existing = present(p);
     const grouped = new Map();
     for (const row of proposals) {
-      const itemKey = canonical(normalize(row.name), projection.aliases);
+      const itemKey = canonical(normalize(row.name), p.aliases);
       if (!itemKey) continue;
       const previous = grouped.get(itemKey);
       if (previous) {
         if (previous.quantity !== null && row.quantity !== null && previous.unit === row.unit) previous.quantity += row.quantity;
         else { previous.quantity = null; previous.unit = null; }
         previous.original += "; " + row.original;
-      } else grouped.set(itemKey, { ...row, key: itemKey, existing: present.has(itemKey) });
+      } else grouped.set(itemKey, { ...row, key: itemKey, existing: existing.has(itemKey) });
     }
     rows = [...grouped.values()]; selected = new Set(rows.map((r, i) => !r.existing ? i : null).filter(i => i !== null));
     reviewList.replaceChildren(...rows.map((row, index) => {
@@ -136,15 +138,14 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const add = button(t("importAdd", { count: 0 }), () => run(async () => {
     committing = true; update();
     try {
-      const projection = await client.view(destination.household, destination.list);
-      if (!current()) return;
-      const now = Date.now(), position = Object.keys(projection.rows).length;
-      const payloads = rows.filter((_, index) => selected.has(index)).map((row, index) => ({
-        proposedId: crypto.randomUUID(), key: row.key, name: row.name, rawText: row.original.slice(0, 1000),
-        note: row.note, quantity: row.quantity === null ? null : decimal(row.quantity), unit: row.unit,
-        normalizerVersion: 1, createdAt: now, updatedAt: now, position: position + index
+      const p = projection();
+      if (!current() || !p) return;
+      // An item someone added meanwhile is left alone rather than having its quantity raised.
+      const added = present(p), items = rows.filter((row, index) => selected.has(index) && !added.has(row.key)).map(row => ({
+        key: row.key, name: row.name, rawText: row.original.slice(0, 1000), note: row.note,
+        quantity: row.quantity === null ? null : decimal(row.quantity), unit: row.unit,
       }));
-      await client.enqueueCaptures(destination.household, destination.list, payloads);
+      if (items.length) await send(items);
       if (current()) { closeDialog(); await finished(); }
     } finally { committing = false; }
   }), "primary");

@@ -6,7 +6,7 @@
     <string name="shopping_mode">Einkaufsmodus</string>
     <string name="shopping_keep_awake">Bildschirm beim Einkaufen eingeschaltet lassen</string>
     <string name="shopping_haptics">Beim Abhaken vibrieren</string>
-    <string name="shopping_personal_help">Diese Einstellungen bleiben auf diesem Gerät. Favoriten und Geschäftsreihenfolgen sind in Datenexporten enthalten und werden nicht mit dem Haushalt geteilt.</string>
+    <string name="shopping_personal_help">Diese Einstellungen bleiben auf diesem Gerät. Favoriten und Geschäftsreihenfolgen sind in Datenexporten enthalten und werden mit niemandem geteilt.</string>
     <string name="shopping_favorites">Favoriten</string>
     <string name="shopping_pin">Zu Favoriten hinzufügen</string>
     <string name="shopping_unpin">Favorit entfernen</string>

@@ -31,7 +31,7 @@ class RetiredSchemaUpgradeTest {
             val database = UsualsDatabase.build(context)
             try {
                 val upgraded = database.openHelper.writableDatabase
-                assertThat(upgraded.version).isEqualTo(6)
+                assertThat(upgraded.version).isEqualTo(7)
                 val tables = upgraded.query("SELECT name FROM sqlite_master WHERE type = 'table'").use {
                     buildList { while (it.moveToNext()) add(it.getString(0)) }
                 }

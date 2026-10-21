@@ -29,7 +29,9 @@
     <string name="lists_check">État de la coche</string>
     <string name="lists_imported_home">Maison importée</string>
     <string name="lists_shared_label">Liste partagée</string>
-    <string name="lists_local_label">Liste locale</string>
+    <string name="lists_archived">Archivées</string>
+    <string name="lists_restore">Restaurer</string>
+    <string name="lists_archived_by_owner">Archivée par son propriétaire. Seul le propriétaire peut la restaurer.</string>
     <string name="lists_alias_requested">Demandé : utiliser %2$s pour %1$s</string>
     <string name="lists_alias_current">Actuel : utiliser %2$s pour %1$s</string>
 </resources>

@@ -3,7 +3,7 @@
   "info": {
     "title": "Usuals account connection and optional AI services",
     "version": "1.0.0",
-    "description": "Additive services alongside the unchanged encrypted shopping protocol. See ADR-0014 for trust boundaries and the native household creation extension."
+    "description": "Account connection and optional AI services. Server-held lists, sharing and connection offers are specified in sync/lists-v2.md (ADR-0017). See ADR-0014 for the AI trust boundary."
   },
   "paths": {
     "/v1/instance": {
@@ -36,7 +36,7 @@
     },
     "/v1/connect": {
       "post": {
-        "description": "Begin a five-minute external-browser approval. Rate limited by trusted client address.",
+        "description": "Begin a five-minute connection for a phone. Rate limited by trusted client address. Without `offer`, a signed-in browser approves the ticket through /api/connect/{id}/approve. With `offer`, the secret from a signed-in browser's Connect a phone QR approves it at once for that browser's account: the offer must be unexpired and unclaimed and the browser session that created it still signed in, otherwise 404 not_found. Claiming binds the offer to this ticket, so a second claim fails, and the offer then expires with the ticket.",
         "security": [],
         "responses": {
           "200": {
@@ -72,9 +72,94 @@
         }
       }
     },
+    "/api/connect/offers": {
+      "post": {
+        "description": "Create a connection offer for this account's Connect a phone QR. The browser draws 32 random bytes and sends only their SHA-256 as `secretHash`. The offer lasts 10 minutes and is tied to the browser session that created it; an account holds at most five unclaimed offers (429 rate_limited). Cookie-authenticated mutations require exact Origin and X-CSRF-Token.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectOffer"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectOfferRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connect/offers/{id}": {
+      "get": {
+        "description": "Poll an offer created by this account. `ticket` appears once a phone has claimed the offer; that connection is already approved. Unknown or expired offers answer 404 not_found.",
+        "security": [
+          {
+            "webAccount": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectOfferView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error; no provider body or credential is returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/api/connect/{id}": {
       "get": {
-        "description": "Display the complete device fingerprint for human comparison.",
+        "description": "Show a pending phone connection to a signed-in browser. `fingerprint` is the connection fingerprint in hex. Both screens show a six-digit code: its first four bytes as an unsigned big-endian integer modulo 1000000, zero-padded.",
         "security": [
           {
             "webAccount": []
@@ -117,7 +202,7 @@
     },
     "/api/connect/{id}/approve": {
       "post": {
-        "description": "Approve only after comparing every fingerprint group with the phone. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "description": "Approve a pending phone connection for the signed-in account. The browser offers this only after the person confirms that the phone shows the same six-digit code. The server checks the session, that the ticket is unexpired and that it is not bound to another account (404 not_found otherwise); a ticket already bound to this account through an offer answers success. Cookie-authenticated mutations require exact Origin and X-CSRF-Token.",
         "security": [
           {
             "webAccount": []
@@ -209,7 +294,7 @@
     },
     "/v1/connection/logout": {
       "post": {
-        "description": "Revoke this native account token. Household membership is independent. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
+        "description": "Revoke this native account token. Cookie-authenticated mutations require exact Origin and X-CSRF-Token; native account requests use a bearer token instead.",
         "security": [
           {
             "nativeAccount": []
@@ -571,49 +656,6 @@
           }
         }
       }
-    },
-    "/v1/account/households": {
-      "post": {
-        "operationId": "createNativeAccountHousehold",
-        "description": "Create a household for an admitted native account after recovery-kit verification. Uses the existing signed empty-genesis request and receipt contract. Account quota and admission are checked transactionally; no operator bootstrap code or browser device binding is created.",
-        "security": [
-          {
-            "nativeAccount": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "sync/openapi.json#/components/schemas/Membership"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Structured protocol error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "sync/openapi.json#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "sync/openapi.json#/components/schemas/CreateHousehold"
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -700,11 +742,84 @@
           },
           "verifierHash": {
             "type": "string"
+          },
+          "offer": {
+            "$ref": "#/components/schemas/OfferClaim"
           }
         },
         "required": [
           "device",
           "verifierHash"
+        ]
+      },
+      "OfferClaim": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "The offer id and secret read from a Connect a phone QR. The secret is base64url without padding of 32 bytes.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "secret"
+        ]
+      },
+      "ConnectOfferRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "SHA-256 of the 32-byte offer secret, base64url without padding.",
+        "properties": {
+          "secretHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secretHash"
+        ]
+      },
+      "ConnectOffer": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "expiresAt"
+        ]
+      },
+      "ConnectOfferView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/ConnectView"
+          }
+        },
+        "required": [
+          "id",
+          "expiresAt"
         ]
       },
       "ConnectTicket": {

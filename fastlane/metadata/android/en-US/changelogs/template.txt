@@ -1,1 +1,1 @@
-Sharing is now one guided flow: connect your server, save the recovery file, then invite with one QR code. The other phone joins with one scan, both screens show the same six digits and one tap approves. Invites last 24 hours and work once.
+Your lists now live in your account on your Usuals server, so the phone and the web app show the same lists and stay in sync. Share a list by picking people who have an account on the same server. Connect a phone by scanning the QR code in the web app. Archive a list to put it away without deleting it.

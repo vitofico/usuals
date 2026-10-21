@@ -1,48 +1,55 @@
 # Local list foundation
 
-The S1 implementation adds the pure JVM `:sync` reducer and Room schema 5.
-`LocalReplica` owns projection reduction, transactional source intents and the
-outbox. `ServiceLocator` constructs the reducer, replica, named-list repository
-and UI adapters. Capture, recipe confirmation, edits, checks, deletion, rules,
-aliases, Finish, Undo and imports use those same local transactions.
+The pure JVM `:sync` module holds the shared reducer: the phone and the server apply
+the same intents through it, so they agree on every list. `LocalReplica` in
+`:data:local` owns the phone's copy. `ServiceLocator` constructs the reducer,
+replica, named-list repository, list sync and UI adapters. Capture, recipe
+confirmation, edits, checks, deletion, rules, aliases, Finish, Undo and imports all
+go through those same local transactions, signed in or not.
 
-Each list has its own item/trip/purchase ids, preferences and aliases. A purchase
-cannot refer to a different list's trip. The 4-to-5 migration copies every old
-shopping fact into one stable, generated per-installation local scope and splits mute/snooze settings into
-local preferences. Catalog cache rows remain global and local. Unreleased
-schemas 1 to 3 retain their explicitly destructive upgrade policy.
+Each list has its own item, trip and purchase ids, preferences and aliases. A
+purchase cannot refer to a different list's trip. A transactional shopping snapshot
+groups items and history, so switching lists never mixes one list's rows with
+another list's memory. Catalog cache rows stay global and local.
 
-The list picker creates local lists and remembers selection. A transactional
-shopping snapshot groups items and history, so a selection change cannot combine
-one list's rows with another list's memory. Legacy prompt dismissals bind once to that generated scope before the directory
-is exposed. New prompt dismissals are scoped locally.
-Conflict review preserves the current value; a person can keep it or open the
-item editor. Dismissals are local records outside shared snapshots and archives.
-No relay or account is needed for these paths.
+## Room schemas
 
-Confirmed catch-up accepts records only after transport verification, requires
-contiguous sequence/head metadata, and commits projection, ledger and cursor
-together. It then rebases still-pending local intents. Unknown versions stop the
-cursor. An HTTP receipt alone never advances it. Transport verification and
-membership authority are later S2/S3/S4 work, not implied by this local API.
+Schema 4 is the finalized single-list schema. Schema 5 adds named lists: the 4-to-5
+migration copies every shopping fact into one generated local list and splits
+mute and snooze settings into local preferences. Schema 6 adds product details to
+the catalog cache. Schema 7 replaces household
+records with the account model: each list records whether it belongs to the signed-in
+account, whether the server has created it, its last feed sequence, role and members.
+The 6-to-7 migration keeps every list, a former household list included, as an
+ordinary local list with what its screen showed, so signing in uploads it whole.
+Unreleased schemas 1 to 3 keep their destructive upgrade policy. Every later schema
+change needs a migration and a migration test.
+
+## Pending changes
+
+A list that belongs to the account keeps the server's last projection (the list
+state the server confirmed) and an outbox of intents not yet acknowledged. The
+screen shows the confirmed projection with the pending intents applied on top.
+When the server answers, acknowledged intents leave the outbox and what is still
+pending is applied again on the new confirmed state. Conflict review keeps the
+current value; a person can keep it or open the item editor. Dismissals are local
+records outside archives. [Lists v2](lists-v2.md) describes the push, pull and
+feed rules.
 
 Repeat occurrences keep permanent redirects. Explicit deletion defers a repeat
-until a new deterministic cycle is enabled by the next effective Finish. The
-[protocol](protocol-v1.md) defines the lineage and cancellation checks. Undo
-provenance is durable across process restarts. Shared tombstones never expire;
-local physical row reaping retains occurrence provenance needed by the reducer.
+until the next effective Finish enables a new cycle. Undo provenance survives
+process restarts.
 
-Shopping archive version 2 contains named list manifests and scoped shopping
-facts and the selected list id. Independent phones retain separate Home scopes;
-an empty destination opens the imported list, while a populated destination
-keeps its selection. Version 1 still imports into the chosen local list. A shared export
-imports as an independent local copy with a fresh scope; repeating the import
-uses that copy. Keys, endpoints, membership, outbox, received ledger, cursors,
-conflict diagnostics and catalog cache are excluded. Archives remain plaintext
-and use the system file picker.
+## Archives
 
-The executable fixtures run through the actual reducer with duplicated delivery
-and serialized restart between operations. Room tests cover original facts,
-nullable fields, units, indexes, scoped foreign keys, rollback, process restart,
-archive transfer and catch-up/rebase. They complement the required full Docker
-and emulator acceptance checks.
+Shopping archive version 2 contains named list manifests, scoped shopping facts and
+the selected list id. Version 1 still imports into the chosen local list. A list
+that belongs to an account imports as an independent local copy with a fresh id;
+importing it again reuses that copy. Account credentials, outbox, feed cursor,
+conflict diagnostics and the catalog cache are excluded. Archives are plaintext
+files saved through the system file picker.
+
+The reducer fixtures run through the actual reducer with duplicated delivery and
+restarts between operations. Room tests cover original facts, nullable fields,
+units, indexes, scoped foreign keys, rollback, process restart, archive transfer,
+the schema migrations and the confirmed-plus-pending rebase.

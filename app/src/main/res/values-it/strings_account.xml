@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_title">Account</string>
+    <string name="account_intro">Accedi per tenere le tue liste nel tuo account su un server Usuals, aprirle nell’app web e condividerle lì con altre persone.</string>
+    <string name="account_scan_title">Collega con l’app web</string>
+    <string name="account_scan_help">Su un computer con l’app web aperta e l’accesso effettuato, scegli Collega un telefono e scansiona il codice che appare.</string>
+    <string name="account_scan">Scansiona il QR dell’app web</string>
+    <string name="account_camera_help">Consenti la fotocamera per scansionare il codice, oppure accedi dal browser qui sotto.</string>
+    <string name="account_allow_camera">Consenti fotocamera</string>
+    <string name="account_browser_title">Nessun computer a portata di mano?</string>
+    <string name="account_browser_help">Inserisci l’indirizzo del tuo server e accedi dal browser di questo telefono.</string>
+    <string name="account_server">Indirizzo del server</string>
+    <string name="account_offer_title">Collegarsi a %1$s?</string>
+    <string name="account_offer_help">Tutte le liste di questo telefono vengono salvate nel tuo account su questo server e restano sincronizzate.</string>
+    <string name="account_connect">Collega</string>
+    <string name="account_not_now">Non ora</string>
+    <string name="account_connecting">Collegamento…</string>
+    <string name="account_connected">Collegato. Le tue liste si stanno sincronizzando.</string>
+    <string name="account_signed_in">Accesso effettuato</string>
+    <string name="account_signed_in_as">Accesso effettuato come %1$s</string>
+    <string name="account_expired_title">Accedi di nuovo</string>
+    <string name="account_expired_help">Il server non accetta più questo telefono. Le tue liste sono ancora qui: accedi di nuovo per tenerle sincronizzate, oppure esci per rimuoverle da questo telefono.</string>
+    <string name="account_sign_out">Esci</string>
+    <string name="account_sign_out_title">Uscire?</string>
+    <string name="account_sign_out_help">Le tue liste restano nel tuo account e vengono rimosse da questo telefono. Puoi continuare a usare l’app con una nuova lista che resta su questo telefono.</string>
+    <plurals name="account_unsent">
+        <item quantity="one">%d modifica non ha ancora raggiunto il server. Se esci ora, va persa.</item>
+        <item quantity="many">%d modifiche non hanno ancora raggiunto il server. Se esci ora, vanno perse.</item>
+        <item quantity="other">%d modifiche non hanno ancora raggiunto il server. Se esci ora, vanno perse.</item>
+    </plurals>
+    <string name="account_sign_out_anyway">Esci comunque</string>
+    <string name="account_privacy">Quando accedi, le tue liste, la loro cronologia e le persone con cui le condividi vengono salvate sul tuo server, e chi lo gestisce può leggerle. Ricette e ricerche dei prodotti partono sempre direttamente dal tuo telefono.</string>
+    <string name="account_problem_not_usuals">Questo non è un codice Usuals.</string>
+    <string name="account_problem_outdated">Questo codice viene da una versione precedente. Nell’app web scegli di nuovo Collega un telefono e scansiona il nuovo codice.</string>
+    <string name="account_problem_already">Questo telefono ha già effettuato l’accesso. Esci prima di usare un altro account.</string>
+    <string name="account_problem_offline">Impossibile raggiungere il server. Controlla la connessione e riprova.</string>
+    <string name="account_problem_expired_code">Questo codice è scaduto o è già stato usato. Mostrane uno nuovo nell’app web.</string>
+    <string name="account_problem_upgrade">Questo server richiede una versione più recente di Usuals.</string>
+    <string name="account_problem_refused">Il server non ha accettato l’accesso. Riprova.</string>
+
+    <string name="share_title">Condividi %1$s</string>
+    <string name="share_people">Persone con accesso</string>
+    <string name="share_owner">Proprietario</string>
+    <string name="share_editor">Può modificare</string>
+    <string name="share_you">Tu</string>
+    <string name="share_remove">Rimuovi</string>
+    <string name="share_leave">Lascia la lista</string>
+    <string name="share_leave_title">Lasciare %1$s?</string>
+    <string name="share_leave_help">La lista scompare dal tuo telefono e dal tuo account. Il proprietario può aggiungerti di nuovo.</string>
+    <string name="share_add">Aggiungi persone</string>
+    <string name="share_search">Cerca per nome o email</string>
+    <string name="share_no_people">Nessun altro su questo server corrisponde.</string>
+    <string name="share_signed_out">La condivisione passa da un account su un server Usuals. Accedi in Account: le tue liste si sincronizzano con il tuo account e puoi condividerne una qualsiasi con le persone di quel server.</string>
+    <string name="share_problem_offline">Impossibile raggiungere il server. Riprova.</string>
+    <string name="share_problem_sign_in">Accedi di nuovo per cambiare chi ha accesso.</string>
+    <string name="share_problem_full">Questa lista ha già tutte le persone che può contenere.</string>
+    <string name="share_problem_refused">Il server non ha accettato la modifica.</string>
+
+    <string name="list_share">Condividi</string>
+    <string name="list_more">Altre opzioni</string>
+    <string name="list_rename">Rinomina</string>
+    <string name="list_delete">Elimina lista</string>
+    <string name="list_delete_title">Eliminare %1$s?</string>
+    <string name="list_delete_help">La lista e la sua cronologia vengono eliminate per tutte le persone che la hanno.</string>
+    <string name="list_archive">Archivia</string>
+    <string name="list_archive_title">Archiviare %1$s?</string>
+    <string name="list_archive_help">La lista viene archiviata per tutte le persone che vi hanno accesso. Puoi ripristinarla da Archiviate nelle tue liste.</string>
+    <string name="list_archive_help_editor">La lista viene archiviata solo per te. Le altre persone la mantengono, e puoi ripristinarla da Archiviate nelle tue liste.</string>
+
+    <string name="sync_sign_in">Il server ti ha disconnesso. Accedi di nuovo per sincronizzare.</string>
+    <string name="sync_offline">Non ancora sincronizzata. Le modifiche partono appena il server è raggiungibile.</string>
+    <string name="sync_upgrade">Aggiorna Usuals per tenere sincronizzata questa lista.</string>
+    <string name="sync_capacity">Il server ha rifiutato una modifica: la lista o l’account è pieno.</string>
+
+    <string name="settings_account_on">Accesso effettuato su %1$s</string>
+    <string name="settings_account_open">Apri account</string>
+</resources>

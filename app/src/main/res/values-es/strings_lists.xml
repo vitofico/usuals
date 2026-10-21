@@ -29,7 +29,9 @@
     <string name="lists_check">Estado de marcado</string>
     <string name="lists_imported_home">Casa importada</string>
     <string name="lists_shared_label">Lista compartida</string>
-    <string name="lists_local_label">Lista local</string>
+    <string name="lists_archived">Archivadas</string>
+    <string name="lists_restore">Restaurar</string>
+    <string name="lists_archived_by_owner">Archivada por su propietario. Solo el propietario puede restaurarla.</string>
     <string name="lists_alias_requested">Solicitado: usar %2$s para %1$s</string>
     <string name="lists_alias_current">Actual: usar %2$s para %1$s</string>
 </resources>

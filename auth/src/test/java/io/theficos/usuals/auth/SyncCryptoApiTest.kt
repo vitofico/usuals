@@ -10,12 +10,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 33])
 class SyncCryptoApiTest {
-    @Test fun profilePrimitivesRoundTripAtSupportedApiBoundaries() {
-        val a = SyncCrypto.device(); val b = SyncCrypto.device(); val key = SyncCrypto.randomKey()
-        val server = Wire.hash(byteArrayOf(1)); val household = java.util.UUID.randomUUID().toString()
-        val p = SyncCrypto.wrap(server, household, java.util.UUID.randomUUID().toString(), 1, Wire.zero, b.publicKeys, key, a)
-        assertThat(SyncCrypto.unwrap(server, household, p, b, a.publicKeys.signingPublicKey)).isEqualTo(key)
-        val prepared = RecoveryKits.prepare("https://usuals.invalid", ServerInfo(Wire.hash(Wire.decode(a.publicKeys.signingPublicKey, 32)), a.publicKeys.signingPublicKey))
-        prepared.verifySaved(prepared.file, prepared.secret)
+    /** Connecting a phone generates device keys; the browser sign-in compares a code derived from them. */
+    @Test fun connectKeysWorkAtSupportedApiBoundaries() {
+        val device = SyncCrypto.device()
+        val code = Pairing.connectionCode(connectionFingerprint(Wire.hash(byteArrayOf(1)), java.util.UUID.randomUUID().toString(), device.publicKeys))
+        assertThat(code).matches("[0-9]{6}")
     }
 }

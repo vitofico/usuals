@@ -6,7 +6,7 @@ Partagez une recette, vérifiez ses ingrédients et choisissez quoi ajouter. Les
 
 La recherche facultative Open Food Facts identifie les emballages et affiche marque, format, ingrédients, évaluations nutritionnelles, allergènes et traces déclarés. Vous confirmez les noms. Les données peuvent être incomplètes : vérifiez l'emballage. Sans recherche, nommez le produit vous-même.
 
-Partagez des listes chiffrées via votre serveur Usuals et son application web. Créez le foyer sur Android ou sur le web, conservez le kit de récupération et approuvez les appareils après comparaison de leur empreinte complète. Le web accepte des comptes locaux ou un SSO configuré. Les listes locales Android ne demandent aucune connexion.
+Si vous le souhaitez, connectez-vous à votre propre serveur Usuals : vos listes restent alors synchronisées entre le téléphone et l'application web, et vous pouvez partager n'importe quelle liste avec les personnes qui ont un compte sur ce serveur. Connectez le téléphone en scannant un code QR de l'application web. Le serveur peut lire les listes qu'il conserve, choisissez donc un serveur de confiance. Le web accepte des comptes locaux ou un SSO configuré. Les listes d'un téléphone non connecté ne le quittent jamais.
 
 Trois thèmes avec mode sombre, visite guidée, widget, export et import de l'historique. Interface en français, anglais, espagnol, italien et allemand.
 

@@ -6,7 +6,7 @@
     <string name="shopping_mode">Mode courses</string>
     <string name="shopping_keep_awake">Garder l’écran allumé pendant les courses</string>
     <string name="shopping_haptics">Vibrer en cochant un article</string>
-    <string name="shopping_personal_help">Ces choix restent sur cet appareil. Les favoris et l’ordre des magasins sont inclus dans vos exports, sans être partagés avec le foyer.</string>
+    <string name="shopping_personal_help">Ces choix restent sur cet appareil. Les favoris et l’ordre des magasins sont inclus dans vos exports, sans être partagés avec personne.</string>
     <string name="shopping_favorites">Favoris</string>
     <string name="shopping_pin">Ajouter aux favoris</string>
     <string name="shopping_unpin">Retirer le favori</string>

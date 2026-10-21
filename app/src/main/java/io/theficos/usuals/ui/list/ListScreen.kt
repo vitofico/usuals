@@ -11,6 +11,9 @@ import io.theficos.usuals.smart.SuggestionChoice
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -177,6 +180,7 @@ data class ListActions(
     val onConfirmRemove: (ItemId) -> Unit = {},
     val onOpenScan: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
+    val onOpenAccount: () -> Unit = {},
     val onDismissConflict: (String) -> Unit = {},
     val onReviewConflict: (ListConflict) -> Unit = {},
     val onSelectList: (String) -> Unit = {},
@@ -184,6 +188,9 @@ data class ListActions(
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
+    val onRenameList: (String, String) -> Unit = { _, _ -> },
+    val onRemoveList: (String) -> Unit = {},
+    val onArchiveList: (String, Boolean) -> Unit = { _, _ -> },
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
     val onFinishRows: ((List<ListRow>, Set<ItemId>?) -> Unit)? = null,
     val onUndoFinish: () -> Unit = {},
@@ -214,6 +221,7 @@ fun ListScreen(
     onSharedTextConsumed: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenSharing: () -> Unit = {},
+    onOpenAccount: () -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -321,12 +329,16 @@ fun ListScreen(
             onConfirmRemove = vm::onConfirmRemove,
             onOpenScan = onOpenScan,
             onOpenSettings = onOpenSettings,
+            onOpenAccount = onOpenAccount,
             onOpenHistory = onOpenHistory,
             onSelectList = vm::onSelectList,
             onDismissConflict = vm::onDismissConflict,
             onReviewConflict = vm::onReviewConflict,
             onCreateList = vm::onCreateList,
             onShareList = onOpenSharing,
+            onRenameList = vm::onRenameList,
+            onRemoveList = vm::onRemoveList,
+            onArchiveList = vm::onArchiveList,
             onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
                     context.getString(
@@ -455,9 +467,9 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                 Icon(Icons.Outlined.Settings, stringResource(R.string.open_settings), modifier = Modifier.size(20.dp))
             }
         }
-        NamedListPicker(header.householdName, directory, busy, actions)
+        NamedListPicker(header.name, directory, busy, actions)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(subtitle(header), style = MaterialTheme.typography.bodySmall,
+            Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant, modifier = Modifier.weight(1f).padding(end = 8.dp))
             if (!actions.shoppingMode) {
                 TextButton(onClick = actions.onOpenRecipe) { Text(stringResource(R.string.recipe_import)) }
@@ -465,30 +477,64 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
-                TextButton(onClick = actions.onShareText, enabled = header.itemCount > 0) { Text(stringResource(R.string.share_list)) }
-                IconButton(onClick = actions.onShareList, enabled = true,
+                IconButton(onClick = actions.onShareList, enabled = !busy,
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.Outlined.Share, stringResource(R.string.sharing_share_list), Modifier.size(22.dp))
+                    Icon(Icons.Outlined.Share, stringResource(R.string.list_share), Modifier.size(22.dp))
                 }
+                ListMenu(header, directory, busy, actions)
             }
         }
         HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
-/** "14 artículos · Marta, tú", or just the count when nobody is named. */
+/** The list's few actions: share, send as text, rename, archive, and delete it or, for someone else's list, leave it. */
 @Composable
-private fun subtitle(header: ListHeader): String {
-    val count = pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount)
-    val separator = stringResource(R.string.contributor_separator)
-    val you = stringResource(R.string.contributor_you)
-    // The person holding the phone reads last, the way they would say it.
-    val names = if (header.includesYou) header.contributors + you else header.contributors
-    return if (names.isEmpty()) {
-        count
-    } else {
-        stringResource(R.string.list_subtitle, count, names.joinToString(separator))
+private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
+    var open by remember { mutableStateOf(false) }
+    // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
+    var renaming by rememberSaveable { mutableStateOf<String?>(null) }
+    var draft by rememberSaveable { mutableStateOf("") }
+    var archiving by rememberSaveable { mutableStateOf<String?>(null) }
+    var removing by rememberSaveable { mutableStateOf<String?>(null) }
+    val selected = directory.lists.firstOrNull { it.id == directory.selected }
+    Box {
+        IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
+            Icon(Icons.Outlined.MoreVert, stringResource(R.string.list_more), Modifier.size(22.dp))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
+            if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
+            DropdownMenuItem(text = { Text(stringResource(if (selected?.editor == true) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = selected?.id })
+        }
     }
+    directory.lists.firstOrNull { it.id == renaming }?.let { list ->
+        AlertDialog(onDismissRequest = { renaming = null }, title = { Text(stringResource(R.string.list_rename)) },
+            text = { OutlinedTextField(draft, { if (it.length <= 100) draft = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true) },
+            confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { renaming = null; actions.onRenameList(list.id, draft.trim()) }) { Text(stringResource(R.string.list_rename)) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
+    directory.lists.firstOrNull { it.id == archiving }?.let { list ->
+        AlertDialog(onDismissRequest = { archiving = null },
+            title = { Text(stringResource(R.string.list_archive_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
+            text = { Text(stringResource(if (list.editor) R.string.list_archive_help_editor else R.string.list_archive_help)) },
+            confirmButton = { TextButton(onClick = { archiving = null; actions.onArchiveList(list.id, true) }) { Text(stringResource(R.string.list_archive)) } },
+            dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
+    directory.lists.firstOrNull { it.id == removing }?.let { list -> RemoveListDialog(list, { removing = null }, actions) }
+}
+
+/** Confirms deleting a list, or leaving it when someone else owns it. */
+@Composable
+internal fun RemoveListDialog(list: NamedList, onDismiss: () -> Unit, actions: ListActions) {
+    val leaves = list.editor
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
+        text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
+        confirmButton = { TextButton(onClick = { onDismiss(); actions.onRemoveList(list.id) }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.edit_cancel)) } })
 }
 
 @Composable

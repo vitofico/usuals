@@ -64,33 +64,34 @@ fallback for unsupported languages.
 - Use sentence case, familiar verbs and concise buttons. Avoid exclamation
   marks and em dashes. Leave Usuals, Open Food Facts, ODbL and provider/model
   names unchanged. Translate the surrounding explanation.
-- Keep privacy and recovery instructions precise. Distinguish a local copy
-  from a shared list, the recovery file from its separately stored key, and
-  deleting this device’s copy from revoking another device. Never strengthen
-  a tentative suggestion into a promise or an allergen warning into a guarantee.
+- Keep privacy and account instructions precise. Distinguish a list that stays
+  on this phone from one saved to an account, signing out from deleting a list,
+  and leaving a list from removing someone else. Never strengthen a tentative
+  suggestion into a promise or an allergen warning into a guarantee.
 
 ## Shared vocabulary
 
 The browser follows the same resource-only approach: copy `web/locales/en.json`
 to `web/locales/xx.json`, translate all values and retain each `{placeholder}`.
 Set `nativeName` to the language's own name. Packaging discovers catalogs and the
-picker automatically. `scripts/dgradle -p server verifyWebInterop` checks catalog
-parity. Android translations still require only their `values-xx/` files; browser
+picker automatically. `node --test web/test/*.test.mjs` checks catalog parity
+with the other browser tests, and `server/scripts/test-local` runs them too.
+Android translations still require only their `values-xx/` files; browser
 translations require only their locale JSON file. See [web development](../web/README.md).
 
-Use the existing translations as the starting glossary, especially in sharing
-and recovery screens. Italian uses “gruppo” for the people sharing lists.
+Use the existing translations as the starting glossary, especially in the
+account and sharing screens.
 
 | English | Spanish | Italian | French | German |
 |---|---|---|---|---|
 | Shopping list | Lista de la compra | Lista della spesa | Liste de courses | Einkaufsliste |
 | Finish shop | Terminar compra | Concludi la spesa | Terminer les courses | Einkauf abschließen |
 | History | Historial | Cronologia | Historique | Verlauf |
-| Household | Hogar | Gruppo | Foyer | Haushalt |
-| Recovery kit | Kit de recuperación | Kit di recupero | Kit de récupération | Wiederherstellungskit |
-| Recovery key | Clave de recuperación | Chiave di recupero | Clé de récupération | Wiederherstellungsschlüssel |
-| Local copy | Copia local | Copia locale | Copie locale | Lokale Kopie |
-| Device fingerprint | Huella del dispositivo | Impronta del dispositivo | Empreinte de l’appareil | Gerätefingerabdruck |
+| Account | Cuenta | Account | Compte | Konto |
+| Share | Compartir | Condividi | Partager | Teilen |
+| People with access | Personas con acceso | Persone con accesso | Personnes ayant accès | Personen mit Zugriff |
+| Leave list | Salir de la lista | Lascia la lista | Quitter la liste | Liste verlassen |
+| Connect a phone | Conectar un teléfono | Collega un telefono | Connecter un téléphone | Telefon verbinden |
 
 ## Check your changes
 
@@ -114,11 +115,10 @@ scripts/dgradle :app:assembleDebug test lint --no-watch-fs
 
 On Android 13 or later, select the language in Android Settings, Apps, Usuals,
 Language. Older Android versions use the device’s preferred supported language.
-Check the list, item editor, Settings, recipe review, scanner, sharing/recovery
-warnings and widget, including singular/plural counts and larger font sizes.
-Return the app to its previous language afterwards if testing someone else’s
-emulator or device. Sharing and recovery screens block screenshots to protect
-keys; describe wording or layout issues there without disabling that protection.
+Check the list, item editor, Settings, recipe review, scanner, account and share
+screens, sign-out warnings and widget, including singular/plural counts and larger
+font sizes. Return the app to its previous language afterwards if testing someone
+else’s emulator or device.
 
 UI language and input recognition are separate. A UI translation does not add
 recipe/parser vocabulary or change saved item names, purchase history or shared

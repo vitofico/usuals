@@ -145,11 +145,11 @@ class AppWiringTest {
     private fun currentRoute(): String? = nav.currentBackStackEntry?.destination?.route
 
     @Test
-    fun invitations_open_verification_instead_of_becoming_items() {
-        launchApp("usuals://join#synthetic-invitation")
-        compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.SHARING }
-        compose.onNodeWithText("Server and sharing").assertIsDisplayed()
-        compose.onNodeWithText("Join with an invite").assertExists()
+    fun a_web_app_connect_code_opens_the_account_screen_for_confirmation() {
+        val offer = "https://usuals.example.org/connect#1." + io.theficos.usuals.sync.Wire.encode(ByteArray(48) { it.toByte() })
+        launchApp("usuals://connect#" + io.theficos.usuals.sync.Wire.encode(offer.toByteArray()))
+        compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.ACCOUNT }
+        compose.waitUntil(5000) { compose.onAllNodesWithText("Connect to https://usuals.example.org?").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
         assertThat(currentRoute()).isEqualTo(Routes.LIST)
@@ -183,11 +183,10 @@ class AppWiringTest {
         launchApp()
         goTo(Routes.SETTINGS)
         compose.onNodeWithText("Test connection").assertDoesNotExist()
-        compose.onNodeWithText("Not set up").assertExists()
-        compose.onNodeWithText("Start sharing").performClick()
-        assertThat(currentRoute()).isEqualTo(Routes.SHARING)
-        compose.onNodeWithText("Scan the server’s QR code").assertExists()
-        compose.onNodeWithText("Join with an invite").assertExists()
+        compose.onNodeWithText("Your local lists work without a server or an account.").assertExists()
+        compose.onNodeWithText("Open account").performClick()
+        assertThat(currentRoute()).isEqualTo(Routes.ACCOUNT)
+        compose.onNodeWithText("Scan the QR from the web app").assertExists()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("Privacy").performClick()
         compose.onNodeWithText("Privacy details").performClick()
@@ -200,13 +199,8 @@ class AppWiringTest {
         compose.onNodeWithText("Test connection").assertExists()
     }
 
-    @Test fun shared_https_invite_links_open_sharing_instead_of_becoming_items() {
-        launchApp("https://usuals.example/join#2.synthetic")
-        compose.waitUntil(timeoutMillis = 5_000) { currentRoute() == Routes.SHARING }
-    }
-
     /** The browser's Return to Usuals link arrives through onNewIntent, which also bumps the list request. */
-    @Test fun returning_from_browser_sign_in_keeps_the_open_sharing_screen() {
+    @Test fun returning_from_browser_sign_in_keeps_the_open_account_screen() {
         var shared by mutableStateOf<String?>(null)
         var openList by mutableIntStateOf(0)
         compose.setContent {
@@ -216,17 +210,17 @@ class AppWiringTest {
                     listViewModel = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(available = false)))
             }
         }
-        goTo(Routes.SHARING)
+        goTo(Routes.ACCOUNT)
         val screen = requireNotNull(nav.currentBackStackEntry).id
         compose.runOnIdle { shared = "usuals://connected"; openList++ }
         compose.waitForIdle()
-        assertThat(currentRoute()).isEqualTo(Routes.SHARING)
+        assertThat(currentRoute()).isEqualTo(Routes.ACCOUNT)
         assertThat(requireNotNull(nav.currentBackStackEntry).id).isEqualTo(screen)
     }
 
-    @Test fun server_links_open_the_sharing_route() {
+    @Test fun server_links_open_the_account_route() {
         launchApp("usuals://connect#" + io.theficos.usuals.sync.Wire.encode("https://usuals.example".toByteArray()))
-        compose.waitUntil(5000) { currentRoute() == Routes.SHARING }
+        compose.waitUntil(5000) { currentRoute() == Routes.ACCOUNT }
         compose.waitUntil(5000) { compose.onAllNodesWithText("https://usuals.example").fetchSemanticsNodes().isNotEmpty() }
     }
 
@@ -296,6 +290,10 @@ class AppWiringTest {
         compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("4006381333931")
         compose.onNodeWithText("Add").performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        // The offer shows once the list re-emits the scanned item, which happens off the main thread.
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Enable product names").fetchSemanticsNodes().isNotEmpty()
+        }
         // Exercise the accessible action; popup hit targets are checked on the emulator.
         compose.onNodeWithText("Enable product names").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }

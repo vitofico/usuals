@@ -6,7 +6,7 @@
     <string name="shopping_mode">Shopping mode</string>
     <string name="shopping_keep_awake">Keep screen awake while shopping</string>
     <string name="shopping_haptics">Vibrate when checking an item</string>
-    <string name="shopping_personal_help">These choices stay on this device. Favourites and store layouts are included in your data exports; they are not shared with your household.</string>
+    <string name="shopping_personal_help">These choices stay on this device. Favourites and store layouts are included in your data exports; they are not shared with anyone.</string>
     <string name="shopping_favorites">Pinned essentials</string>
     <string name="shopping_pin">Pin as an essential</string>
     <string name="shopping_unpin">Unpin</string>

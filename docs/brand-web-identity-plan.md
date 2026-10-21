@@ -1,8 +1,10 @@
 # Usuals, web access and identity
 
+> Superseded premise: the browser vault, household and device-key decisions below were replaced by server-held account lists in [ADR 0017](decisions/ADR-0017-server-held-lists.md). The name, design and identity decisions stand.
+
 2026-10-18. Vito authorized parallel implementation of a more glamorous name,
 icon and Android design, browser access to the shared-list server, user management
-and SSO with the existing Authentik installation. Work remains local on
+and SSO through an existing Authentik installation. Work remains local on
 `feat/smart-list`. No publication, cluster changes or deployment is authorized.
 
 ## Decisions

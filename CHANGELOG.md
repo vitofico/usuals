@@ -1,5 +1,41 @@
 # Changelog
 
+## Lists that follow you, and sharing by name
+
+- Signed in to a Usuals server, your lists now live in your account there. The
+  phone and the web app show the same lists, and a change on one appears on the
+  other within a second or two. The phone keeps working offline and sends its
+  changes when it is back online.
+- Share a list by choosing **Share** and adding people who have an account on the
+  same server. Everyone added can edit the list and add others; the owner can
+  remove people or delete the list, and anyone else can **Leave list**. Sharing
+  needs no household, invitation, code or recovery file any more.
+- **Archive** a list from its menu to move it out of your lists without deleting
+  it. The owner archives it for everyone who has access, and only the owner can
+  restore it; anyone else archives it just for themself. Archived lists wait in
+  an **Archived** section, on the phone's list picker and below the list on the
+  web, with **Restore**, and they keep syncing.
+- Connect a phone by scanning the QR from **Account > Connect a phone** in the web
+  app. The phone asks once to confirm the server and connects, with no code to
+  compare. **Connected phones** in the web app lists them, each with
+  **Disconnect**. On Android, everything lives under **Settings > Account**.
+- Updating keeps every list on the phone, old shared lists included, as ordinary
+  lists. A phone that was already connected uploads all its lists on its next
+  sync. If two phones held the same old shared list, the second becomes a
+  separate copy that can be shared again.
+- The web app no longer has a vault or passphrase. It deletes the old browser
+  storage when it loads, so lists that existed only in a browser are gone.
+- Privacy changes: the server can now read the lists it holds, and so can
+  whoever runs it. Stored lists are encrypted with a server key, which protects a
+  copied database or backup but not the running server. Lists on a phone that is
+  not signed in still never leave it. When sharing, accounts on the same server
+  see each other's names and email addresses.
+- The web app stays signed in for 30 days after you last use it, and a phone for
+  180 days.
+- Older app versions are asked to update when they reach an updated server.
+  Server migration 008 replaces the household tables and needs a new list key
+  file; see the [runbook](docs/sync/runbook.md).
+
 ## Connect your phone from the computer
 
 - A signed-in computer's **Connect a phone** shows one QR. The phone scans it,

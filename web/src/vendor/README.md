@@ -1,7 +1,7 @@
 # Vendored QR libraries
 
 These browser modules run locally without a CDN, build step or network service.
-Spunto informed the pairing experience; none of its AGPL implementation is copied.
+Spunto informed the phone connection experience; none of its AGPL implementation is copied.
 
 | Module | Upstream | License | SHA-256 of the original download |
 | --- | --- | --- | --- |
@@ -11,5 +11,5 @@ Spunto informed the pairing experience; none of its AGPL implementation is copie
 The encoder only adds an ES-module export. The decoder adds a private CommonJS
 module object and exports its result; the web app no longer scans codes, so only
 the QR tests use it, as an independent check that generated codes decode. Upstream implementation bytes are otherwise
-unchanged. To update, review upstream changes, retain licenses and rerun the QR and
-native/browser interoperability checks through scripts/dgradle.
+unchanged. To update, review upstream changes, retain licenses and rerun the QR
+tests with `node --test web/test/qr.test.mjs`.

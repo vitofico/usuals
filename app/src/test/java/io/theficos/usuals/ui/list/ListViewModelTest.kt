@@ -2,14 +2,11 @@ package io.theficos.usuals.ui.list
 
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.Gtin
-import io.theficos.usuals.model.Household
-import io.theficos.usuals.model.HouseholdId
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.MeasureUnit
-import io.theficos.usuals.model.Member
-import io.theficos.usuals.model.MemberId
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.parse.LocalUtteranceParser
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -24,15 +21,6 @@ class ListViewModelTest {
     @get:Rule
     val main = MainDispatcherRule()
 
-    private val marta = MemberId("marta")
-    private val me = MemberId("vito")
-
-    private val casa = Household(
-        id = HouseholdId("casa"),
-        name = "Casa",
-        members = listOf(Member(marta, "Marta"), Member(me, "Vito")),
-    )
-
     private var minted = 0
 
     /** Every barcode the screen handed to product enrichment, in order. */
@@ -44,7 +32,6 @@ class ListViewModelTest {
         store = store,
         parser = LocalUtteranceParser(),
         speech = speech,
-        member = me,
         newItemId = { ItemId("item-${++minted}") },
         clock = { FIXED_CLOCK },
     )
@@ -66,6 +53,29 @@ class ListViewModelTest {
     }
 
     // The list -----------------------------------------------------------
+
+    @Test
+    fun the_list_menu_acts_on_the_list_it_was_opened_for_even_after_the_selection_moved() = runTest(main.dispatcher) {
+        val renamed = mutableListOf<Pair<String, String>>()
+        val removed = mutableListOf<String>()
+        val archivedLists = mutableListOf<Pair<String, Boolean>>()
+        val directory = object : ListDirectoryStore {
+            override fun observe() = flowOf(ListDirectory(selected = "other", lists = listOf(NamedList("mine", "Mine", shared = true), NamedList("other", "Other", shared = false))))
+            override suspend fun select(id: String) = Unit
+            override suspend fun create(name: String) = Unit
+            override suspend fun rename(id: String, name: String) { renamed += id to name }
+            override suspend fun remove(id: String) { removed += id }
+            override suspend fun archive(id: String, archived: Boolean) { archivedLists += id to archived }
+        }
+        val vm = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(),
+            newItemId = { ItemId("item-${++minted}") }, clock = { FIXED_CLOCK }, directoryStore = directory)
+        vm.onRenameList("mine", "Groceries")
+        vm.onRemoveList("mine")
+        vm.onArchiveList("mine", true)
+        assertThat(renamed).containsExactly("mine" to "Groceries")
+        assertThat(removed).containsExactly("mine")
+        assertThat(archivedLists).containsExactly("mine" to true)
+    }
 
     @Test
     fun pending_and_checked_are_split_and_ordered_by_position() = runTest(main.dispatcher) {
@@ -112,33 +122,20 @@ class ListViewModelTest {
         }
 
     @Test
-    fun the_header_counts_the_whole_list_and_names_who_added_to_it() = runTest(main.dispatcher) {
+    fun the_header_counts_the_whole_list() = runTest(main.dispatcher) {
         val store = FakeItemStore(
             listOf(
-                item("a", "leche", position = 1.0, addedBy = marta),
-                item("b", "pan", position = 2.0, addedBy = me),
-                item("c", "huevos", position = 3.0, checked = true, addedBy = marta),
+                item("a", "leche", position = 1.0),
+                item("b", "pan", position = 2.0),
+                item("c", "huevos", position = 3.0, checked = true),
             ),
-            household = casa,
         )
 
         val header = viewModel(store).state.value.header
 
-        assertThat(header.householdName).isEqualTo("Casa")
+        assertThat(header.name).isNull()
         // Everything on the list, bought or not: it is the size of the shop.
         assertThat(header.itemCount).isEqualTo(3)
-        assertThat(header.contributors).containsExactly("Marta")
-        assertThat(header.includesYou).isTrue()
-    }
-
-    @Test
-    fun the_header_is_empty_before_a_household_exists() = runTest(main.dispatcher) {
-        val store = FakeItemStore(listOf(item("a", "leche", addedBy = marta)))
-
-        val header = viewModel(store).state.value.header
-
-        assertThat(header.householdName).isNull()
-        assertThat(header.contributors).isEmpty()
     }
 
     // Capture ------------------------------------------------------------
@@ -164,7 +161,6 @@ class ListViewModelTest {
         assertThat(added.name).isEqualTo("leche")
         assertThat(added.rawText).isEqualTo("dos litros de leche")
         assertThat(added.quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(added.addedBy).isEqualTo(me)
         assertThat(added.createdAt).isEqualTo(FIXED_CLOCK)
         // New items land at the end of the list, where they were said.
         assertThat(added.position).isEqualTo(5.0)

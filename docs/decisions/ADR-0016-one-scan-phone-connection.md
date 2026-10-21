@@ -1,14 +1,17 @@
 # ADR 0016 One-scan phone connection from a signed-in browser
 
-Status: accepted, 2026-10-21. Extends [ADR 0015](ADR-0015-pairing-v2.md).
+Status: superseded by [ADR 0017](ADR-0017-server-held-lists.md), 2026-10-21. It keeps
+the connection offer QR, but the phone now connects as soon as it is scanned,
+with no code to compare and no household invite. Accepted earlier on 2026-10-21;
+it extended [ADR 0015](ADR-0015-pairing-v2.md).
 
 ## Context
 
 A phone connected to an account only by signing in again in its own browser,
 in the exact tab the app opened. A person with the server already open on a
-computer found that nothing there could approve the phone: on 2026-10-21 a
-request made at 10:14 expired unapproved at 10:24, although a sign-in finished
-at 10:18. The web also had two actions both called "Connect a phone". The one on
+computer found that nothing there could approve the phone, so the phone's
+request could expire unapproved even though the person had signed in on the
+computer. The web also had two actions both called "Connect a phone". The one on
 the account page only filled in the server address. The one on Shared lists
 was a household invite. Connecting your own phone was therefore two pairings.
 

@@ -19,12 +19,9 @@ import kotlinx.serialization.json.decodeFromJsonElement
 }
 @Serializable data class ConnectResult(val approved: Boolean, val userId: String? = null, val expiresAt: Long? = null)
 @Serializable data class ConnectView(val id: String, val fingerprint: String, val expiresAt: Long)
-/**
- * [offered] attempts wait for the browser whose QR was scanned instead of a sign-in on this phone;
- * [invite] is that browser's household link, used once the account connection is approved.
- */
+/** [offered] attempts wait for the browser whose QR was scanned instead of a sign-in on this phone. */
 @Serializable data class PendingConnection(val origin: String, val info: InstanceInfo, val ticket: ConnectTicket, val verifier: String, val device: DeviceSecrets,
-    val offered: Boolean = false, val invite: String? = null) {
+    val offered: Boolean = false) {
     val browserUrl get() = "$origin/?connect=${ticket.id}"
     val fingerprint get() = connectionFingerprint(info.server.serverId, ticket.id, device.publicKeys)
     override fun toString() = "PendingConnection([redacted])"
@@ -78,7 +75,7 @@ class ConnectionClient(private val store: SyncStateStore, private val transport:
         val device = SyncCrypto.device()
         val ticket = call<ConnectTicket>(origin, "POST", "/v1/connect", ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32)), code?.claim()))
         Wire.uuid(ticket.id); Wire.decode(ticket.pollToken, 32); require(ticket.expiresAt > clock())
-        return PendingConnection(origin, info, ticket, verifier, device, code != null, code?.invite?.link()).also { value -> store.update { it.copy(connecting = value) } }
+        return PendingConnection(origin, info, ticket, verifier, device, code != null).also { value -> store.update { it.copy(connecting = value) } }
     }
     suspend fun finish(): ServerConnection? {
         val pending = requireNotNull(pending())
@@ -119,7 +116,6 @@ class ConnectionClient(private val store: SyncStateStore, private val transport:
     suspend fun requestBytes(method: String, path: String, body: Any? = null, expected: ServerConnection? = null): ByteArray {
         val saved = current() ?: throw RelayProblem("unauthenticated", 401)
         require(expected == null || saved == expected)
-        require(saved.expiresAt > clock())
         return bytes(saved.origin, method, path, encode(body), saved.token)
     }
     private suspend inline fun <reified T> call(origin: String, method: String, path: String, body: Any? = null): T = decode(bytes(origin, method, path, encode(body)))

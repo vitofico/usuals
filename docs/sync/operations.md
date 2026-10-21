@@ -1,28 +1,17 @@
-# Local S0 operations inventory
+# Operations
 
-Observed 2026-10-16 from local files only, at Vito's direction. These are
-repository conventions, not a claim about live cluster health. Other repos
-contain local work; no file in them was edited. No kubeconfig, secret contents,
-SSH connection or Kubernetes API was used.
+Conventions for running the Usuals server and the pins it was built against.
+The [deployment package](../../deploy/README.md) implements them.
 
-## Existing services
-
-| Evidence | Observation | Usuals decision |
-|---|---|---|
-| The maintainer's cluster repository README | Single-node MicroK8s; Kustomize; Traefik; cert-manager; SOPS/age | Follow this stack in a later reviewed deployment. |
-| Spunto `deploy/k8s/README.md` and `ingress.yaml` | amd64 node, `microk8s-hostpath`, Traefik `websecure`, ClusterIssuer `letsencrypt-prod`, service hostname under `example.org` | Propose `usuals.example.org`, namespace `usuals`; DNS and certificate availability require live validation after deployment approval. |
-| Spunto `deploy/k8s/deployment.yaml` | One replica, immutable locally imported image, imagePullPolicy Never, UID/GID 10001, no service token, read-only filesystem, dropped capabilities, startup/readiness/liveness probes | Use local image import rather than registry publication; render content-addressed references only. No image import now. |
-| Quire server PostgreSQL manifests in the maintainer's cluster repository | Dedicated PostgreSQL 16 instance and RWO 5 GiB PVC | Use a separate Usuals database/role and dedicated RWO disk; do not reuse Quire credentials or alter its database. A new PostgreSQL 16 instance is the default until approved DBA reuse. |
-| `quire/server/README.md` | Separate server, `/health` and `/readyz`, migration step and explicit server configuration | Keep probes generic, migrations explicit, configuration environment-based with secret-file inputs. No retailer/model proxy or inherited auth. |
-| Spunto `deploy/k8s` storage example | Separate backup directory on a shared filesystem, NFS for backup artifacts, Borg integration | Backups may use the same off-database storage convention. Never put live PostgreSQL data on that NFS share. |
-| Cluster backup configuration, capability-only inspection | Borgmatic, PostgreSQL dump hooks, daily retention/scheduling | Existing daily dumps do not establish 15-minute RPO or WAL recovery. Add a reviewed Usuals dump/archive job and restore drill; no current backup guarantee. No secret values were read into this record. |
+## Deployment checks
 
 Future deployment review must verify DNS A/AAAA, public 80/443, issuer readiness,
-Traefik WebSocket and forwarded-header handling, namespace network-policy
-selectors, node disk/memory capacity, non-root volume permissions, database TLS
-if outside the dedicated namespace and off-cluster Borg restore capability.
+Traefik forwarded-header handling, change-feed requests held open for up to 25
+seconds, namespace network-policy selectors, node disk/memory capacity, non-root
+volume permissions, database TLS if outside the dedicated namespace and
+off-cluster Borg restore capability.
 Trust forwarded IPs only from known ingress peers; rate limits must not trust
-arbitrary X-Forwarded-For. Do not copy Spunto's Ollama mounts/configuration.
+arbitrary X-Forwarded-For.
 
 ## Version pins
 
@@ -64,30 +53,28 @@ or newer schemas. No migration framework dependency is selected implicitly.
 
 ## Resource and recovery targets
 
-Start relay at 100m CPU/256 MiB request, 1 CPU/512 MiB limit; database at
+Start relay at 100m CPU/256 MiB request, 1 CPU/768 MiB limit; database at
 500m/512 MiB request, 1 GiB memory limit and 10 GiB RWO hostpath storage.
 Measure heap, native memory, connections and load before approving those limits.
-One relay replica and one database instance, with bounded worker/connection
-queues. Restarted sockets resume by cursor; no Redis or task broker.
+One server replica and one database instance, with bounded worker/connection
+queues. Clients resume the change feed by cursor; no Redis or task broker. The
+waiting feed requests live in that one process, so a second replica would need a
+shared notifier.
 
 Proposed recovery targets remain 15-minute RPO and 2-hour RTO. They require WAL
 archive/base-backup design plus off-cluster retention and measured restore.
 Until that is implemented and drilled, describe backups as unverified for
-Usuals. V1 restore fences old households before authentication, not merely their
-sessions. Recovery uses a verified local operator export grant and a reviewed
-copy into a fresh household with new keys/invites. Old household ids never
-resume. Keep the restore fence outside restored database state, persist the
-receipt signing key separately, and fail startup if that identity key is lost.
-S5 must test old sessions and fresh challenges from a removed device after a
-roster-only rollback, not merely restore PostgreSQL rows. Clients preserve
-membership epoch/hash pins separately from list-head pins.
+Usuals. A restore rotates the external fence before anyone authenticates: every
+session and phone connection is revoked and every client's list feed starts over
+([ADR 0017](../decisions/ADR-0017-server-held-lists.md)). Keep the restore fence
+outside restored database state, keep the server identity and the list key in
+separate escrow, and fail startup if either is lost.
 
-Local S0 can proceed from this inventory. Applying manifests, provisioning DNS,
+Applying manifests, provisioning DNS,
 creating database users, decrypting/applying SOPS files, importing images and
-changing backup jobs all require Vito's deployment approval first.
+changing backup jobs all require the operator's deployment approval first.
 
-S5 now provides the [local deployment package](../../deploy/README.md),
-[restore runbook](runbook.md) and [offline recovery-copy contract](recovery-copy.md).
-Base/WAL recovery and bounded container smoke checks passed locally; live
+S5 now provides the [local deployment package](../../deploy/README.md) and
+[restore runbook](runbook.md). Base/WAL recovery and bounded container smoke checks passed locally; live
 inventory, encrypted off-cluster coverage/retention, RPO/RTO and the week pilot
 remain approval and measurement gates. See the S5 release evidence.

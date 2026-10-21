@@ -27,7 +27,7 @@ server/scripts/prepare-deployment --verify /private/tmp/usuals-deploy-candidate
 Preparation builds the server distribution through `scripts/dgradle`, validates
 the base manifests locally, builds the amd64 relay and obtains the pinned amd64
 PostgreSQL image. It saves both image archives, rendered `manifests.json`, separate
-`operator-jobs/` files, the runbook and recovery guide. `bundle.json` records the
+`operator-jobs/` files, the runbook. `bundle.json` records the
 clean source commit/branch, Docker image IDs and platform manifest digests,
 distribution hashes and every bundle file hash. It rejects source changes during preparation, an existing output
 folder, dirty source and optimized Python that would disable validation. It never
@@ -68,18 +68,33 @@ verified base backups, under a private UID70 directory provisioned separately.
 A claimed NFS size does not enforce a quota. Never reuse another PG archive path.
 
 The [runbook](../docs/sync/runbook.md) gives the ordered deployment, restore,
-rollback, deletion and pilot gates. The [recovery-copy format](../docs/sync/recovery-copy.md)
-describes the operator grant and offline phone reconciliation boundary.
+rollback and deletion steps.
+
+## List key
+
+Lists are stored encrypted with AES-256-GCM under a 32-byte key file named by
+`USUALS_LIST_KEY_FILE` (`/identity/list.key` in `k8s/relay.yaml`). The relay
+refuses to start without it, or when it cannot open the stored lists. Create it
+once on the identity volume before the first start of a release with migration
+008: 32 random bytes (`head -c 32 /dev/urandom`), a regular file owned by UID
+10001 with mode 0600. Escrow an encrypted copy separately from the database
+backups, for as long as any backup needs it: a backup stored next to its key
+reveals every list, a backup without it is unreadable, and losing the key loses
+every list. To rotate it, stop traffic and run `list-rewrap <old key file> <new key file>`.
+
+Migration 008 replaces the household tables with server-held lists and drops
+them. Take and verify a database backup first: rolling back past 008 means
+restoring that backup.
 
 The final local image/profile evidence is recorded in the release checklist.
 `profile-local` builds through the wrapper and runs the relay under 512 MiB and
 one CPU with a read-only identity mount. It checks non-root/least-privilege roles,
-private metrics, anonymous admission and authenticated near-limit opaque snapshot
-writes/reads, followed by successful catch-up. Bootstrap credentials are protected
-and removed with disposable state. Results record accepted/shed requests, response
-time and sampled memory. This remains a local, single-household stress check;
-many-household/long-duration capacity, live network policy and encrypted off-site
-recovery remain separate gates.
+private metrics, anonymous admission and authenticated near-limit list uploads,
+followed by successful catch-up reads. Results record accepted/shed requests,
+response time and sampled memory. Its peak sits close to 512 MiB, so
+`k8s/relay.yaml` allows 768 MiB. This remains a local, single-server stress check;
+long-duration capacity, live network policy and encrypted off-site recovery
+remain separate gates.
 
 
 ## Browser identity preparation
@@ -93,8 +108,7 @@ To prepare a configured local-account candidate, add `--local-accounts` to the
 existing `--inventory` command. Its first administrator is created later through
 the explicit protected `local-admin` operator command, after migration and only
 in an approved environment. The bundle never contains an initial password or
-activation secret. Account creation/reset does not restore a browser vault or
-change encrypted household membership.
+activation secret.
 
 For Authentik, copy `identity-inventory.example.json` to a private local path and
 replace every marker with verified nonsecret values. Use the exact per-provider

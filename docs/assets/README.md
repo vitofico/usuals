@@ -20,7 +20,8 @@ The PNGs are unmodified screenshots from the local verification runs:
   earlier explicit lookup, displayed from the local demo fixture. Refreshing
   this screenshot requires no network request. The screen includes its source,
   saved date, ODbL credit and packaging reminder.
-- `web-editor.png`: the local relay/browser test household with sample groceries.
+- `web-editor.png`: the local browser preview's synthetic account with a sample
+  list shared with the preview's second account.
 
 No customer account, invitation, server address or credential appears in these
 screenshots. Keep documentation screenshots free of private household data.

@@ -14,9 +14,9 @@ function pixels(matrix, scale = 4) {
   }));
   return { data, size };
 }
-test("invite links and their app wrapper round-trip through the independent decoder", () => {
-  const link = "https://usuals.example/join#2." + b64(new Uint8Array(64).fill(9));
-  for (const value of [link, "usuals://join#" + b64(new TextEncoder().encode(link))]) {
+test("connect links and their app wrapper round-trip through the independent decoder", () => {
+  const link = "https://usuals.example/connect#1." + b64(new Uint8Array(48).fill(9));
+  for (const value of [link, "usuals://connect#" + b64(new TextEncoder().encode(link))]) {
     const { data, size } = pixels(qrMatrix(value));
     assert.equal(jsQR(data, size, size).data, value);
   }

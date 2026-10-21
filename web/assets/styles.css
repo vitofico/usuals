@@ -232,18 +232,6 @@ main {
   font-size: 11px;
   font-weight: 650;
 }
-.round-button {
-  width: 35px;
-  height: 35px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: none;
-  font-size: 23px;
-  font-family: system-ui;
-}
-.round-button:hover {
-  background: var(--paper);
-}
 .sync-status {
   font-size: 10px;
   color: var(--muted);
@@ -307,9 +295,23 @@ main {
   justify-content: space-between;
   gap: 12px;
 }
-.paper-title {
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.archived {
+  margin-top: 20px;
+}
+.archived summary {
+  padding: 18px 26px;
   font-size: 12px;
-  font-weight: 700;
+}
+.menu-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
 }
 .list-select {
   max-width: 75%;
@@ -465,28 +467,6 @@ main {
   line-height: 1.9;
   color: var(--gold);
 }
-.fine-print {
-  display: flex;
-  gap: 9px;
-  padding-top: 24px;
-  margin-top: 25px;
-  border-top: 1px solid var(--line);
-  font-size: 10px;
-  line-height: 1.7;
-  color: var(--gold);
-}
-.progress {
-  height: 3px;
-  background: var(--line);
-  margin: 0 26px 25px;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  width: 0;
-  background: var(--primary);
-}
 .page-footer {
   display: flex;
   justify-content: space-between;
@@ -513,6 +493,10 @@ main {
 }
 .notice.error {
   color: var(--danger);
+}
+.notice .text-button {
+  padding: 0 4px;
+  text-decoration: underline;
 }
 .welcome {
   padding: 15px 0 10px;
@@ -701,19 +685,6 @@ textarea.field {
   margin-top: 24px;
   flex-wrap: wrap;
 }
-.fingerprint {
-  font:
-    11px/1.9 ui-monospace,
-    SFMono-Regular,
-    monospace;
-  overflow-wrap: anywhere;
-  background: var(--ground);
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  letter-spacing: 0.7px;
-  user-select: all;
-}
 .account-row {
   display: flex;
   gap: 16px;
@@ -812,12 +783,6 @@ dialog .lede {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-.file-button input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
 }
 .locale-options {
   display: grid;
@@ -964,11 +929,6 @@ dialog .lede {
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .round-button {
-    width: 29px;
-    height: 29px;
-    font-size: 20px;
-  }
   .text-button {
     font-size: 10px;
   }
@@ -1066,9 +1026,6 @@ dialog .lede {
     font-size: 11px;
     margin-top: 8px;
   }
-  .fingerprint {
-    font-size: 10px;
-  }
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -1148,9 +1105,6 @@ summary { cursor: pointer; font-weight: 600; }
   letter-spacing: 0.08em;
   margin-block: 0.5rem 1rem;
 }
-.pair-requests { display: grid; gap: 12px; margin-top: 1rem; }
-.pair-device details { margin-block: 1rem; }
-.pair-device summary { cursor: pointer; margin-bottom: 0.75rem; }
 dialog.pairing { max-width: 760px; }
 .pair-layout {
   display: grid;

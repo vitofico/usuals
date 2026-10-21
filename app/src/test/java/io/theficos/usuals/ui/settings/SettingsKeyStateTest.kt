@@ -139,18 +139,18 @@ class SettingsKeyStateTest {
         assertThat(subject.state.value.apiKey).isEqualTo(KeyState.PRESENT)
         assertThat(subject.state.value.apiKeyDraft).isEmpty()
     }
-    @Test fun `returning to settings refreshes the sharing summary without discarding preferences`() = runTest(dispatcher) {
-        var summary: SharingSummary? = null
-        val subject = SettingsViewModel(scope = this, worker = dispatcher, sharingSummary = { summary })
+    @Test fun `returning to settings refreshes the account summary without discarding preferences`() = runTest(dispatcher) {
+        var summary: AccountSummary? = null
+        val subject = SettingsViewModel(scope = this, worker = dispatcher, accountSummary = { summary })
         subject.loadIfNeeded(); advanceUntilIdle()
         subject.setScanLookup(true); advanceUntilIdle()
-        summary = SharingSummary("server.example", 2)
+        summary = AccountSummary("usuals.example.org")
         subject.loadIfNeeded(); advanceUntilIdle()
-        assertThat(subject.state.value.sharing).isEqualTo(summary)
+        assertThat(subject.state.value.account).isEqualTo(summary)
         assertThat(subject.state.value.settings.scanLookupEnabled).isTrue()
         summary = null
         subject.loadIfNeeded(); advanceUntilIdle()
-        assertThat(subject.state.value.sharing).isNull()
+        assertThat(subject.state.value.account).isNull()
     }
 
 }

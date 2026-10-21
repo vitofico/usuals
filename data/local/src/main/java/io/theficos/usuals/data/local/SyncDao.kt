@@ -5,8 +5,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SyncDao {
-    @Query("SELECT o.listId || ':' || o.intentId FROM sync_outbox o JOIN list_scope l ON l.id=o.listId WHERE l.shared=1 AND o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId) ORDER BY o.listId,o.ordinal")
-    fun observeQueueIds(): Flow<List<String>>
+    /** Everything the server has yet to receive: lists to create, with how much a local list holds, and pending intents. */
+    @Query("SELECT l.id || ':' || (SELECT COUNT(*) FROM sync_outbox o WHERE o.listId = l.id) FROM list_scope l WHERE l.synced = 0 OR l.created = 0 UNION ALL SELECT o.listId || ':' || o.intentId FROM sync_outbox o JOIN list_scope l ON l.id=o.listId WHERE l.synced=1 AND o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId)")
+    fun observeOutgoing(): Flow<List<String>>
+    @Query("SELECT DISTINCT o.listId FROM sync_outbox o WHERE o.acknowledged=0 AND NOT EXISTS (SELECT 1 FROM conflict_dismissal d WHERE d.listId=o.listId AND d.intentId=o.intentId)")
+    suspend fun pendingLists(): List<String>
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun dismiss(conflict: ConflictDismissalEntity)
     @Query("SELECT intentId FROM conflict_dismissal WHERE listId = :listId")
@@ -28,14 +31,13 @@ interface SyncDao {
     suspend fun enqueue(intent: OutboxEntity)
     @Update
     suspend fun update(intent: OutboxEntity)
+    @Query("UPDATE sync_outbox SET acknowledged = 1 WHERE listId = :listId AND intentId IN (:ids)")
+    suspend fun acknowledge(listId: String, ids: Collection<String>)
     @Query("SELECT COALESCE(MAX(ordinal), 0) + 1 FROM sync_outbox WHERE listId = :listId")
     suspend fun nextOrdinal(listId: String): Long
-    @Query("SELECT * FROM sync_received WHERE listId = :listId AND seq = :seq")
-    suspend fun received(listId: String, seq: Long): ReceivedEntity?
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun received(envelope: ReceivedEntity)
+
+    @Query("SELECT * FROM sync_feed WHERE singleton = 1")
+    suspend fun feed(): FeedEntity?
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun cursor(cursor: CursorEntity)
-    @Query("SELECT * FROM sync_cursor WHERE listId = :listId")
-    suspend fun cursor(listId: String): CursorEntity?
+    suspend fun saveFeed(feed: FeedEntity)
 }

@@ -28,4 +28,6 @@
     <string name="edit_store">Geschäftskennzeichnung (optional)</string>
     <string name="store_all">Alle Geschäfte</string>
     <string name="store_empty">Keine Artikel für dieses Geschäft. Wähle Alle Geschäfte, um die übrigen zu sehen.</string>
+    <string name="scan_merge_question">Die gescannte Verpackung (%1$s) mit %2$s zusammenführen? Die vorhandene Menge (%3$s) bleibt erhalten. Die gescannte Menge wird nicht addiert. Künftige Scans verwenden diesen Artikelnamen.</string>
+    <string name="scan_merge_no_quantity">keine Menge festgelegt</string>
 </resources>
