@@ -62,6 +62,12 @@ class ListsTest {
         assertThat(response.status).isEqualTo(HttpStatusCode.OK)
         return Wire.json.decodeFromString(ListChanges.serializer(), response.bodyAsText())
     }
+    private suspend fun HttpClient.archive(who: Account, list: String, archived: Boolean): SharedList {
+        val response = send(HttpMethod.Put, "/api/lists/$list/archived", who, Wire.json.encodeToString(ArchiveList.serializer(), ArchiveList(archived)))
+        assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+        return Wire.json.decodeFromString(SharedList.serializer(), response.bodyAsText())
+    }
+    private fun flags(list: SharedList) = list.archived to list.archivedByOwner
     private fun created(name: String) = """{"projection":{"name":"$name"}}"""
     private fun capture(list: String, name: String = "Milk", intent: String = uuid()) = Intent(intent, list, "capture", buildJsonObject {
         put("proposedId", uuid()); put("key", Normalizer.normalize(name)); put("name", name); put("position", 1.0)
@@ -82,9 +88,9 @@ class ListsTest {
         val list = uuid()
         val first = client.send(HttpMethod.Put, "/api/lists/$list", alice, created("Groceries"))
         assertThat(first.status).isEqualTo(HttpStatusCode.Created)
-        assertThat(Wire.json.parseToJsonElement(first.bodyAsText()).jsonObject.keys).containsExactly("id", "seq", "role", "owner", "members", "projection")
+        assertThat(Wire.json.parseToJsonElement(first.bodyAsText()).jsonObject.keys).containsExactly("id", "seq", "role", "owner", "members", "projection", "archived", "archivedByOwner")
         val shared = Wire.json.decodeFromString(SharedList.serializer(), first.bodyAsText())
-        assertThat(shared.role).isEqualTo("owner")
+        assertThat(shared.role).isEqualTo("owner"); assertThat(flags(shared)).isEqualTo(false to false)
         assertThat(shared.owner).isEqualTo(Person(alice.id, "Alice", "alice@example.org"))
         assertThat(shared.members).containsExactly(Member(alice.id, "Alice", "owner"))
         assertThat(shared.projection.name).isEqualTo("Groceries")
@@ -184,6 +190,7 @@ class ListsTest {
         assertThat(client.changes(alice, aliceCursor).removed.map { it.id }).containsExactly(list)
         assertThat(client.changes(alice).lists).isEmpty()
         assertThat(client.apply(bob, list, capture(list)).status).isEqualTo(HttpStatusCode.NotFound)
+        assertThat(client.send(HttpMethod.Put, "/api/lists/$list/archived", alice, """{"archived":true}""").status).isEqualTo(HttpStatusCode.NotFound)
     }
 
     @Test fun addingAnAccountWhoseRequestHoldsItsRowAndWaitsForTheCounterDoesNotDeadlock() = http {
@@ -252,6 +259,8 @@ class ListsTest {
             assertThat(client.share(carol, target, bob).status).isEqualTo(HttpStatusCode.NotFound)
             assertThat(client.send(HttpMethod.Delete, "/api/lists/$target/members/${alice.id}", carol).status).isEqualTo(HttpStatusCode.NotFound)
             assertThat(client.send(HttpMethod.Delete, "/api/lists/$target/members/${carol.id}", carol).status).isEqualTo(HttpStatusCode.NotFound)
+            val archive = client.send(HttpMethod.Put, "/api/lists/$target/archived", carol, """{"archived":true}""")
+            assertThat(archive.status).isEqualTo(HttpStatusCode.NotFound); assertThat(code(archive.bodyAsText())).isEqualTo("not_found")
         }
         assertThat(client.changes(carol).lists).isEmpty()
     }
@@ -281,6 +290,80 @@ class ListsTest {
         assertThat(full.status).isEqualTo(HttpStatusCode.Conflict); assertThat(code(full.bodyAsText())).isEqualTo("limit_reached")
     }
 
+    @Test fun theOwnerArchivesAndRestoresAListForEveryMember() {
+        val operations = RelayMetrics(db)
+        http(operations = operations) {
+            val list = client.create(alice).id
+            client.share(alice, list, bob)
+            val cursor = client.changes(bob).cursor
+            coroutineScope {
+                val waiting = async { client.changes(bob, cursor, wait = 25) }
+                withTimeout(10000) { while (operations.waiting.get() < 1) delay(10) }
+                val archived = client.archive(alice, list, true)
+                assertThat(flags(archived)).isEqualTo(true to true); assertThat(archived.seq).isEqualTo(seq(list))
+                val woken = withTimeout(10000) { waiting.await() }.lists.single()
+                assertThat(flags(woken)).isEqualTo(true to true); assertThat(woken.seq).isEqualTo(archived.seq)
+            }
+            // An archived list stays editable, and every response that carries it says it is archived.
+            val edited = client.apply(bob, list, capture(list))
+            assertThat(edited.status).isEqualTo(HttpStatusCode.OK)
+            assertThat(flags(Wire.json.decodeFromString(IntentBatchResult.serializer(), edited.bodyAsText()).list)).isEqualTo(true to true)
+            assertThat(flags(Wire.json.decodeFromString(SharedList.serializer(), client.share(bob, list, carol).bodyAsText()))).isEqualTo(true to true)
+            assertThat(flags(Wire.json.decodeFromString(SharedList.serializer(), client.send(HttpMethod.Put, "/api/lists/$list", alice, created("Retry")).bodyAsText()))).isEqualTo(true to true)
+            for (who in listOf(alice, bob, carol)) assertThat(flags(client.changes(who).lists.single())).isEqualTo(true to true)
+            val restored = client.archive(alice, list, false)
+            assertThat(flags(restored)).isEqualTo(false to false); assertThat(restored.seq).isEqualTo(seq(list))
+            for (who in listOf(alice, bob, carol)) assertThat(flags(client.changes(who).lists.single())).isEqualTo(false to false)
+        }
+    }
+
+    @Test fun anEditorArchivesOnlyForThemselfAndCannotUndoTheOwnersArchive() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob); client.share(alice, list, carol)
+        val before = seq(list)
+        val mine = client.archive(bob, list, true)
+        assertThat(flags(mine)).isEqualTo(true to false); assertThat(mine.seq).isGreaterThan(before); assertThat(mine.seq).isEqualTo(seq(list))
+        assertThat(flags(client.changes(bob).lists.single())).isEqualTo(true to false)
+        // Every member's feed carries the new seq, but the list is archived for nobody else.
+        for (who in listOf(alice, carol)) client.changes(who).lists.single().let { assertThat(flags(it)).isEqualTo(false to false); assertThat(it.seq).isEqualTo(mine.seq) }
+        client.archive(alice, list, true)
+        val undone = client.archive(bob, list, false)
+        assertThat(flags(undone)).isEqualTo(true to true); assertThat(undone.seq).isEqualTo(seq(list))
+        client.archive(carol, list, true)
+        assertThat(flags(client.archive(alice, list, false))).isEqualTo(false to false)
+        assertThat(flags(client.changes(bob).lists.single())).isEqualTo(false to false)
+        assertThat(flags(client.changes(carol).lists.single())).isEqualTo(true to false)
+    }
+
+    @Test fun anArchiveRequestThatChangesNothingKeepsTheSeq() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        val start = seq(list)
+        for (who in listOf(alice, bob)) assertThat(client.archive(who, list, false).seq).isEqualTo(start)
+        val archived = client.archive(alice, list, true).seq
+        assertThat(archived).isGreaterThan(start)
+        assertThat(client.archive(alice, list, true).seq).isEqualTo(archived)
+        // The editor's own flag is already clear, so restoring the owner's archive changes nothing.
+        client.archive(bob, list, false).let { assertThat(flags(it)).isEqualTo(true to true); assertThat(it.seq).isEqualTo(archived) }
+        val own = client.archive(bob, list, true).seq
+        assertThat(own).isGreaterThan(archived)
+        assertThat(client.archive(bob, list, true).seq).isEqualTo(own)
+        assertThat(seq(list)).isEqualTo(own)
+        for (bad in listOf("{}", """{"archived":"yes"}""")) assertThat(client.send(HttpMethod.Put, "/api/lists/$list/archived", alice, bad).status).isEqualTo(HttpStatusCode.BadRequest)
+    }
+
+    @Test fun beingAddedAgainClearsAnEditorsOwnArchive() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        client.archive(bob, list, true)
+        // Adding a current member changes nothing, so the flag stays.
+        client.share(alice, list, bob)
+        assertThat(flags(client.changes(bob).lists.single())).isEqualTo(true to false)
+        assertThat(client.send(HttpMethod.Delete, "/api/lists/$list/members/${bob.id}", bob).status).isEqualTo(HttpStatusCode.NoContent)
+        client.share(alice, list, bob)
+        assertThat(flags(client.changes(bob).lists.single())).isEqualTo(false to false)
+    }
+
     @Test fun peopleSearchMatchesNameOrEmailAndSkipsSelfAndDisabledAccounts() = http {
         val dave = f.account("dave", "DAVE@Example.org")
         val disabled = f.account("Bobby Disabled", "bobby@example.org")
@@ -303,6 +386,8 @@ class ListsTest {
         val read = client.send(HttpMethod.Get, "/api/lists/changes", alice, cookie = true, csrf = false)
         assertThat(read.status).isEqualTo(HttpStatusCode.OK)
         assertThat(client.apply(alice, list, capture(list)).status).isEqualTo(HttpStatusCode.OK)
+        assertThat(client.send(HttpMethod.Put, "/api/lists/$list/archived", alice, """{"archived":true}""", cookie = true, csrf = false).status).isEqualTo(HttpStatusCode.Forbidden)
+        assertThat(client.send(HttpMethod.Put, "/api/lists/$list/archived", alice, """{"archived":true}""", cookie = true).status).isEqualTo(HttpStatusCode.OK)
         assertThat(client.send(HttpMethod.Delete, "/api/lists/$list", alice, cookie = true, csrf = false).status).isEqualTo(HttpStatusCode.Forbidden)
         assertThat(client.send(HttpMethod.Get, "/api/lists/changes", null).status).isEqualTo(HttpStatusCode.Unauthorized)
         db.transaction { it.execute("UPDATE native_session SET revoked=true WHERE hash=?", digest(alice.bearer)) }

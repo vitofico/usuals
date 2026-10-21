@@ -11,7 +11,8 @@ import java.sql.Connection
 
 // The wire shapes of SharedList, ListChanges and IntentBatchResult. The projection is the stored JSON passed
 // through as is, so a response never decodes a list (up to 7 MB) into objects a second time.
-@Serializable internal data class ListView(val id: String, val seq: Long, val role: String, val owner: Person, val members: List<Member>, val projection: JsonElement)
+@Serializable internal data class ListView(val id: String, val seq: Long, val role: String, val owner: Person, val members: List<Member>, val projection: JsonElement,
+    val archived: Boolean, val archivedByOwner: Boolean)
 @Serializable internal data class ListPage(val cursor: String, val reset: Boolean, val hasMore: Boolean, val lists: List<ListView>, val removed: List<RemovedList>)
 @Serializable internal data class BatchView(val results: List<IntentResult>, val list: ListView)
 
@@ -103,7 +104,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             if (role(c, request.userId, list) != null) return@transaction view(c, access.user, list, locked.seq, cipher.open(list, locked.sealed))
             expect(current(c, list).size < 50, "limit_reached", 409)
             // Before the counter: the insert's foreign key check waits on the added account's row.
-            c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL", id(list), id(request.userId))
+            c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL,archived=false", id(list), id(request.userId))
             val seq = next(c)
             c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
             members = current(c, list)
@@ -127,6 +128,27 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             members
         }
         waiters.changed(members)
+    }
+
+    /** The owner archives or restores the list for every member, an editor only for themself. */
+    fun archive(access: AccountAccess, list: String, request: ArchiveList): ListView {
+        id(list)
+        var woken = emptyList<String>()
+        val view = db.transaction { c ->
+            access.verify(c)
+            val locked = lock(c, access.user, list, read = true)
+            val owner = locked.role == "owner"
+            val changed = if (owner) c.execute("UPDATE list SET archived=? WHERE id=? AND archived<>?", request.archived, id(list), request.archived)
+                else c.execute("UPDATE list_member SET archived=? WHERE list_id=? AND user_id=? AND archived<>?", request.archived, id(list), id(access.user), request.archived)
+            if (changed == 0) return@transaction view(c, access.user, list, locked.seq, cipher.open(list, locked.sealed))
+            // An editor's flag changes only their own view; the new seq still reaches every member's feed.
+            woken = if (owner) current(c, list) else listOf(access.user)
+            val seq = next(c)
+            c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
+            view(c, access.user, list, seq, cipher.open(list, locked.sealed))
+        }
+        waiters.changed(woken)
+        return view
     }
 
     fun people(access: AccountAccess, q: String): People = db.transaction { c ->
@@ -192,17 +214,19 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
     @OptIn(ExperimentalSerializationApi::class)
     private fun views(c: Connection, user: String, lists: Map<String, Pair<Long, ByteArray>>): Map<String, ListView> {
         if (lists.isEmpty()) return emptyMap()
-        val members = c.query("SELECT m.list_id,m.user_id,m.role,$NAME,u.email FROM list_member m JOIN web_user u ON u.id=m.user_id " +
+        val members = c.query("SELECT m.list_id,m.user_id,m.role,$NAME,u.email,m.archived,l.archived FROM list_member m JOIN web_user u ON u.id=m.user_id JOIN list l ON l.id=m.list_id " +
             "WHERE m.list_id=ANY(?) AND m.removed IS NULL ORDER BY m.role<>'owner',lower($NAME),m.user_id", c.createArrayOf("uuid", lists.keys.map(::id).toTypedArray())) {
-            listOf(it.getObject(1).toString(), it.getObject(2).toString(), it.getString(3), it.getString(4), it.getString(5))
-        }.groupBy { it[0] }
+            MemberRow(it.getObject(1).toString(), it.getObject(2).toString(), it.getString(3), it.getString(4), it.getString(5), it.getBoolean(6), it.getBoolean(7))
+        }.groupBy { it.list }
         return lists.mapValues { (list, value) ->
             val rows = members.getValue(list)
-            val owner = rows.first { it[2] == "owner" }
-            ListView(list, value.first, rows.first { it[1] == user }[2], Person(owner[1], owner[3], owner[4]), rows.map { Member(it[1], it[3], it[2]) },
-                JsonUnquotedLiteral(value.second.decodeToString()))
+            val owner = rows.first { it.role == "owner" }
+            val caller = rows.first { it.user == user }
+            ListView(list, value.first, caller.role, Person(owner.user, owner.name, owner.email), rows.map { Member(it.user, it.name, it.role) },
+                JsonUnquotedLiteral(value.second.decodeToString()), caller.archived || caller.archivedByOwner, caller.archivedByOwner)
         }
     }
+    private class MemberRow(val list: String, val user: String, val role: String, val name: String, val email: String?, val archived: Boolean, val archivedByOwner: Boolean)
     private companion object {
         const val NAME = "coalesce(nullif(u.display_name,''),u.local_username,'')"
         const val PAGE_BYTES = 4L * 1024 * 1024
