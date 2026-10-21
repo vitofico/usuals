@@ -92,6 +92,65 @@ class SharingFeedbackTest {
         assertThat(vm.state.value.problem).isEqualTo(SharingProblem.VERIFICATION)
         compose.onNodeWithText("Join").assertDoesNotExist()
     }
+    @Test fun computerCodeAsksBeforeContactingTheServer() {
+        val vm = viewModel()
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }
+        compose.waitUntil(5000) { !vm.state.value.busy }
+        val code = ConnectCode("https://usuals.example", "00000000-0000-4000-8000-000000000002", ByteArray(32) { 3 }, null)
+        vm.scanned("usuals://connect#" + Wire.encode(code.link().toByteArray()))
+        assertThat(vm.state.value.problem).isNull()
+        compose.onNodeWithText("Connect this phone to your account on https://usuals.example?").assertIsDisplayed()
+        compose.onNodeWithText("Not now").performClick()
+        assertThat(vm.state.value.offer).isNull()
+        compose.onNodeWithText("Scan the server’s QR code").assertIsDisplayed()
+    }
+    @Test fun approvalOnTheComputerJoinsItsHouseholdInsteadOfDraftingANewOne() {
+        val receipt = SyncCrypto.device(); val origin = "https://usuals.example"
+        val server = ServerInfo(Wire.hash(Wire.decode(receipt.publicKeys.signingPublicKey, 32)), receipt.publicKeys.signingPublicKey)
+        val descriptor = Wire.json.encodeToString(InviteDescriptor.serializer(), InviteDescriptor(origin = origin, serverId = server.serverId,
+            householdId = "00000000-0000-4000-8000-000000000005", genesisHash = Wire.encode(ByteArray(32)), ownerDeviceId = "00000000-0000-4000-8000-000000000004",
+            ownerFingerprint = Wire.encode(ByteArray(32)), memberId = "00000000-0000-4000-8000-000000000006", role = "editor")).toByteArray()
+        val invite = InviteCode(origin, "00000000-0000-4000-8000-000000000003", InviteKey.random(), Pairing.descriptorAnchor(descriptor))
+        val code = ConnectCode(origin, "00000000-0000-4000-8000-000000000002", ByteArray(32) { 3 }, invite)
+        var approved = false; var claimed: OfferClaim? = null; var joinRequests = 0; var connected: DeviceKeys? = null; var joined: DeviceKeys? = null
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                val reply = when {
+                    path == "/v1/instance" -> Wire.json.encodeToString(InstanceInfo.serializer(), InstanceInfo(name = "Private", server = server, accounts = true, ai = false))
+                    path == "/v1/server-info" -> Wire.json.encodeToString(ServerInfo.serializer(), server)
+                    path == "/v1/connect" -> { val start = Wire.json.decodeFromString(ConnectStart.serializer(), requireNotNull(body).decodeToString()); claimed = start.offer; connected = start.device
+                        Wire.json.encodeToString(ConnectTicket.serializer(), ConnectTicket("00000000-0000-4000-8000-000000000001", Wire.encode(ByteArray(32) { 1 }), Long.MAX_VALUE)) }
+                    path.endsWith("/complete") -> Wire.json.encodeToString(ConnectResult.serializer(), ConnectResult(approved, "account".takeIf { approved }, Long.MAX_VALUE.takeIf { approved }))
+                    path == "/v1/invites/${invite.inviteId}/open" -> Wire.json.encodeToString(OpenedInvite.serializer(), OpenedInvite(Wire.encode(descriptor), System.currentTimeMillis() + 3_600_000))
+                    path == "/v1/devices/challenge" -> Wire.json.encodeToString(Challenge.serializer(), Challenge("00000000-0000-4000-8000-000000000007", Wire.encode(ByteArray(32)), server.serverId, Long.MAX_VALUE, "join"))
+                    path == "/v1/join-requests" -> { joinRequests++
+                        val assertion = JoinAssertion.parse(Wire.decode(Wire.json.decodeFromString(JoinRequest.serializer(), requireNotNull(body).decodeToString()).assertion))
+                        joined = assertion.device
+                        Wire.json.encodeToString(JoinPending.serializer(), JoinPending(assertion.requestId, assertion.expiresAt)) }
+                    else -> error("unexpected $path")
+                }
+                return WireResponse(if (path == "/v1/join-requests") 202 else 200, reply.toByteArray())
+            }
+        }
+        val store = memoryStore()
+        val vm = SharingViewModel(HouseholdClient(store, transport, CheckpointSource { _, _ -> error("unused") }), ConnectionClient(store, transport))
+        compose.setContent { UsualsTheme { SharingScreen(vm, {}) } }
+        compose.waitUntil(5000) { !vm.state.value.busy }
+        vm.scanned(code.link())
+        compose.onNodeWithText("Continue").performClick()
+        compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.connecting != null }
+        assertThat(claimed).isEqualTo(code.claim())
+        compose.onNodeWithText("Approve this phone on your computer when it shows the same code.").assertIsDisplayed()
+        compose.onNodeWithText("Sign in in your browser").assertDoesNotExist()
+        approved = true
+        vm.checkConnection()
+        compose.waitUntil(5000) { !vm.state.value.busy && vm.state.value.joining != null }
+        assertThat(vm.state.value.connection).isNotNull()
+        assertThat(vm.state.value.kit).isNull()
+        assertThat(joinRequests).isEqualTo(1)
+        // The computer approves this join without a second code only because these keys made the code it compared.
+        assertThat(joined).isEqualTo(connected)
+    }
     @Test fun scannedCodesAreRoutedByKind() {
         val vm = viewModel()
         compose.setContent { UsualsTheme { SharingScreen(vm, {}, Modifier.height(500.dp)) } }

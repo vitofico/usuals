@@ -33,9 +33,10 @@ one it shows. Keep the kit for Android recovery if this browser is lost.
 
 ## Server connection and AI
 
-**Account > Connect a phone** shows a public server link and QR for Android.
-After signing in, approve the phone when it shows the same 6-digit code, then use
-**Return to Usuals**. No shopping vault needs to be unlocked.
+**Account > Connect a phone** shows a one-time QR for your own phone. The phone
+scans it and taps **Continue**; approve it here when it shows the same 6-digit code.
+The phone needs no sign-in of its own. When this browser is unlocked and owns a
+household, the same approval also adds the phone to it.
 **Account > AI assistance** shows the server-selected provider. Its optional
 **Advanced** section contains model details and personal provider/key controls. Photo import and recipe-text extraction use this same-origin gateway when
 available; ordinary users need no provider CORS or separate endpoint setup. Inputs
@@ -44,16 +45,17 @@ are submitted only on explicit action and remain drafts until reviewed. See the
 
 ## Connect a phone with QR
 
-1. Sign in, unlock the web vault and open **Shared lists > Connect a phone**.
-   Create a household first if you do not have one yet.
-2. On the phone, scan the code with the camera (the server's `/join` page offers
-   **Open in Usuals**) or in Usuals under **Sharing > Join with an invite**. Check
-   the server address and tap **Join**.
-3. The request appears in the open web dialog with a 6-digit code. Approve it when
-   the phone shows the same code. The phone finishes joining automatically.
+1. Sign in, unlock the web vault and choose **Connect a phone** on the household
+   card. Create a household first if you do not have one yet.
+2. On the phone, scan the code with the camera (the server's `/connect` page offers
+   **Open in Usuals**) or in Usuals, and tap **Continue**.
+3. The phone appears in the open dialog with a 6-digit code. Approve it when the
+   phone shows the same code. The phone is then signed in and joins the household
+   without another approval.
 
-The invite works once and expires after 24 hours. An expired code is hidden;
-choose **Create a new code** to replace it. QR generation runs on your device
+The code works for one phone and expires after 10 minutes; **Create a new code**
+replaces it. For another person's phone or a browser, use **Invite someone**: that
+invite works once and expires after 24 hours. QR generation runs on your device
 without uploads or an external QR service.
 
 Without a camera, expand **Share the link instead** and send the link privately.

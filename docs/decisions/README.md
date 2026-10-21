@@ -2,6 +2,9 @@
 
 [ADR-0014](ADR-0014-server-connection-and-ai.md) describes simpler server account
 connection, full device-code comparison and the optional server AI gateway.
+[ADR-0015](ADR-0015-pairing-v2.md) replaces that comparison with one-scan invites, and
+[ADR-0016](ADR-0016-one-scan-phone-connection.md) lets a signed-in browser connect your
+own phone to the account and household with one scan.
 
 [ADR-0012](ADR-0012-smart-shopping-list.md) records the implemented smart-list pivot.
 [ADR-0013](ADR-0013-shared-list-protocol.md) accepts the reviewed S0 contract for

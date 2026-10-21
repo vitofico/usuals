@@ -89,6 +89,48 @@ class ConnectionAiTest {
         assertThat(assertThrows(RelayError::class.java) { connections.approve(caller, ticket.id) }.code).isEqualTo("unauthenticated")
         assertThat(db.transaction { it.query("SELECT user_id FROM connection_ticket WHERE id=?", id(ticket.id)) { r -> r.getObject(1) }.single() }).isNull()
     }
+    private fun scan(offer: ConnectOffer, secret: ByteArray): Triple<ConnectStart, String, DeviceSecrets> {
+        val device = SyncCrypto.device(); val verifier = randomToken()
+        return Triple(ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32)), OfferClaim(offer.id, Wire.encode(secret))), verifier, device)
+    }
+    @Test fun offerLetsOnlyThePhoneHoldingItsSecretWaitForThisAccountsApproval() {
+        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        assertThat(connections.offerView(caller, offer.id)).isEqualTo(ConnectOfferView(offer.id, offer.expiresAt, null))
+        val (start, verifier, device) = scan(offer, secret)
+        assertThat(assertThrows(RelayError::class.java) { connections.start(start.copy(offer = OfferClaim(offer.id, randomToken())), "test") }.code).isEqualTo("not_found")
+        val ticket = connections.start(start, "test")
+        val view = connections.offerView(caller, offer.id)
+        assertThat(view.ticket).isEqualTo(ConnectView(ticket.id, connectionFingerprint(f.identity.serverId, ticket.id, device.publicKeys), ticket.expiresAt))
+        // One phone per code: scanning the same QR again cannot replace the phone waiting for approval.
+        assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
+        connections.approve(caller, ticket.id)
+        assertThat(connections.complete(ticket.id, ConnectFinish(ticket.pollToken, verifier), "test").userId).isEqualTo(user)
+        assertThat(db.transaction { it.query("SELECT count(*) FROM connection_ticket") { r -> r.getInt(1) }.single() }).isEqualTo(1)
+    }
+    @Test fun offerIsPrivateToItsAccountExpiresAndIsBounded() {
+        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        val stranger = uuid(); val token = randomToken(); val csrf = randomToken()
+        db.transaction { c ->
+            c.execute("INSERT INTO web_user(id,issuer,subject,display_name,created_at,last_login_at) VALUES (?,?,?,?,?,?)", id(stranger), WebIdentityConfig.LOCAL_ISSUER, stranger, "Other", now, now)
+            c.execute("INSERT INTO web_session VALUES (?,?,?,?,?,?,false)", id(uuid()), digest(token), id(stranger), csrf, now, now + 900000)
+        }
+        assertThat(assertThrows(RelayError::class.java) { connections.offerView(web.csrf(token, f.origin, csrf), offer.id) }.code).isEqualTo("not_found")
+        repeat(4) { connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey()))) }
+        assertThat(assertThrows(RelayError::class.java) { connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey()))) }.code).isEqualTo("rate_limited")
+        now = offer.expiresAt
+        assertThat(assertThrows(RelayError::class.java) { connections.start(scan(offer, secret).first, "test") }.code).isEqualTo("not_found")
+        assertThat(assertThrows(RelayError::class.java) { connections.offerView(caller, offer.id) }.code).isEqualTo("not_found")
+        connections.offer(caller, ConnectOfferRequest(Wire.hash(SyncCrypto.randomKey())))
+    }
+    @Test fun claimedOfferLivesExactlyAsLongAsItsTicket() {
+        val secret = SyncCrypto.randomKey(); val offer = connections.offer(caller, ConnectOfferRequest(Wire.hash(secret)))
+        now = offer.expiresAt - 1000
+        val ticket = connections.start(scan(offer, secret).first, "test")
+        now = offer.expiresAt + 1000
+        assertThat(connections.offerView(caller, offer.id).ticket?.id).isEqualTo(ticket.id)
+        now = ticket.expiresAt
+        assertThat(assertThrows(RelayError::class.java) { connections.offerView(caller, offer.id) }.code).isEqualTo("not_found")
+    }
     @Test fun nativeAuthorizationRechecksRevocationAfterWaitingForTheAccountLock(): Unit = runBlocking {
         val (ticket, verifier) = ticket(); connections.approve(caller, ticket.id)
         connections.complete(ticket.id, ConnectFinish(ticket.pollToken, verifier), "test")
@@ -192,7 +234,7 @@ class ConnectionAiTest {
     @Test fun versionFourDatabaseUpgradesWithoutChangingExistingHouseholdsOrAccounts() {
         val previous = db.transaction { it.query("SELECT id FROM household") { r -> r.getObject(1).toString() } }
         db.transaction { c ->
-            c.execute("DROP TABLE ai_vision_check,ai_usage,ai_preference,native_session,connection_ticket")
+            c.execute("DROP TABLE connection_offer,ai_vision_check,ai_usage,ai_preference,native_session,connection_ticket")
             c.execute("ALTER TABLE invitation DROP COLUMN descriptor"); c.execute("ALTER TABLE join_request DROP COLUMN mac")
             c.execute("DELETE FROM schema_migration WHERE version>=5")
         }

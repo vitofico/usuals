@@ -104,11 +104,28 @@ class SharingViewModel(private val client: HouseholdClient,
         requireNotNull(connection).begin(state.value.origin.trim())
         reloadConnection()
     }
-    fun checkConnection() = work {
-        val saved = requireNotNull(connection).finish()
+    /** A computer's QR was scanned: connect only after the person confirms, then that computer approves. */
+    fun connectOffer() = work {
+        requireNotNull(connection).begin(requireNotNull(state.value.offer))
+        mutable.update { it.copy(offer = null) }
         reloadConnection()
+    }
+    fun dismissOffer() { mutable.update { it.copy(offer = null) } }
+    fun checkConnection() = work {
+        val attempt = requireNotNull(connection).pending()
+        val saved = connection.finish()
+        reloadConnection()
+        if (saved == null) return@work
+        // The computer that approved this phone also invited it, so its household is joined instead of a new one drafted.
+        val invite = attempt?.invite
+        if (invite != null) {
+            try {
+                val joining = client.requestJoin(invite, requireNotNull(attempt).device)
+                mutable.update { it.copy(joining = joining, message = SharingMessage.WAITING) }
+            } catch (problem: RelayProblem) { if (problem.code != "already_joined") throw problem }
+        }
         // Only the poll that saw the approval drafts a household, so a recreated screen never drafts a second one.
-        if (saved != null && client.households().none { !it.removed } && state.value.kit == null) newKit(client.prepare(saved.origin))
+        else if (attempt?.offered != true && client.households().none { !it.removed } && state.value.kit == null) newKit(client.prepare(saved.origin))
     }
     fun cancelConnection() { connection?.cancel(); reloadConnection() }
     fun disconnectServer() = work { requireNotNull(connection).disconnect(); reloadConnection() }
@@ -141,6 +158,16 @@ class SharingViewModel(private val client: HouseholdClient,
                 val current = state.value.connection?.origin ?: state.value.households.firstOrNull { !it.removed }?.origin
                 if (current != null && current != link.origin) mutable.update { it.copy(problem = SharingProblem.WRONG_SERVER) }
                 else mutable.update { it.copy(origin = link.origin, problem = null) }
+            }
+            is PairingLink.Connect -> {
+                val code = try { ConnectCode.parse(link.text) } catch (_: Exception) { mutable.update { it.copy(problem = SharingProblem.VERIFICATION) }; return true }
+                val current = state.value.connection?.origin ?: state.value.households.firstOrNull { !it.removed }?.origin
+                mutable.update { when {
+                    current != null && current != code.origin -> it.copy(problem = SharingProblem.WRONG_SERVER)
+                    // Already connected: only the computer's household invite is left to use.
+                    state.value.connection != null -> it.copy(invitation = code.invite?.link() ?: "", problem = null)
+                    else -> it.copy(offer = link.text, origin = code.origin, problem = null)
+                } }
             }
             is PairingLink.Invite -> {
                 val problem = try { InviteCode.parse(link.text); null }
@@ -259,7 +286,7 @@ class SharingViewModel(private val client: HouseholdClient,
         }
     }
 }
-data class SharingState(val origin: String = "", val setupCode: String = "", val invitation: String = "", val recoveryKey: String = "",
+data class SharingState(val origin: String = "", val setupCode: String = "", val invitation: String = "", val recoveryKey: String = "", val offer: String? = null,
     val sharingSource: String? = null,
     val shareAttempts: List<PendingShare> = emptyList(),
     val connection: ServerConnection? = null, val connecting: PendingConnection? = null, val ai: AiSettings? = null,

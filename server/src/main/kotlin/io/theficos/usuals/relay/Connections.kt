@@ -7,6 +7,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class NativeConnectionView(val id: String, val expiresAt: Long)
 @Serializable data class NativeConnections(val connections: List<NativeConnectionView>)
+@Serializable data class ConnectOfferRequest(val secretHash: String)
+@Serializable data class ConnectOffer(val id: String, val expiresAt: Long)
+@Serializable data class ConnectOfferView(val id: String, val expiresAt: Long, val ticket: ConnectView? = null)
 
 /** Browser approval grants account services only; household keys stay on devices. */
 class Connections(private val db: Database, private val relay: Relay, private val identity: WebIdentity,
@@ -22,14 +25,40 @@ class Connections(private val db: Database, private val relay: Relay, private va
             val ticket = ConnectTicket(UUID.randomUUID().toString(), randomToken(), clock() + 300000)
             c.execute("INSERT INTO connection_ticket VALUES (?,?,?,?,?,?,?,NULL)", id(ticket.id), Wire.decode(request.device.signingPublicKey, 32),
                 Wire.decode(request.device.recipientPublicKey, 32), id(request.device.id), Wire.decode(request.verifierHash, 32), digest(ticket.pollToken), ticket.expiresAt)
+            // A claimed offer lives exactly as long as its ticket, and a second phone with the same QR finds it taken.
+            request.offer?.let { claim ->
+                c.execute("DELETE FROM connection_offer WHERE expires<=?", clock())
+                expect(c.execute("UPDATE connection_offer SET ticket=?, expires=? WHERE id=? AND secret_hash=? AND expires>? AND ticket IS NULL", id(ticket.id), ticket.expiresAt,
+                    id(claim.id), Wire.decode(Wire.hash(Wire.decode(claim.secret, 32)), 32), clock()) == 1, "not_found", 404)
+            }
             ticket
         }
     }
     internal fun view(caller: WebCaller, ticket: String): ConnectView = db.transaction { c ->
         allowed(c, caller.user.id)
+        ticketView(c, ticket) ?: reject("not_found", 404)
+    }
+    private fun ticketView(c: Connection, ticket: String) =
         c.query("SELECT device,signing,recipient,expires FROM connection_ticket WHERE id=? AND expires>?", id(ticket), clock()) {
             ConnectView(ticket, connectionFingerprint(relay.identity.serverId, ticket, DeviceKeys(it.getObject(1).toString(), Wire.encode(it.getBytes(2)), Wire.encode(it.getBytes(3)))), it.getLong(4))
+        }.singleOrNull()
+    /** A signed-in browser's QR for its own phone: the phone that holds the secret asks, and this account approves without a second sign-in. */
+    internal fun offer(caller: WebCaller, request: ConnectOfferRequest): ConnectOffer = db.transaction { c ->
+        allowed(c, caller.user.id)
+        identity.current(c, caller)
+        val hash = Wire.decode(request.secretHash, 32)
+        c.execute("DELETE FROM connection_offer WHERE expires<=?", clock())
+        expect(c.query("SELECT count(*) FROM connection_offer WHERE user_id=? AND ticket IS NULL", id(caller.user.id)) { it.getLong(1) }.single() < 5, "rate_limited", 429)
+        ConnectOffer(UUID.randomUUID().toString(), clock() + 600000).also {
+            c.execute("INSERT INTO connection_offer(id,user_id,secret_hash,expires) VALUES (?,?,?,?)", id(it.id), id(caller.user.id), hash, it.expiresAt)
+        }
+    }
+    internal fun offerView(caller: WebCaller, offer: String): ConnectOfferView = db.transaction { c ->
+        allowed(c, caller.user.id)
+        val (expires, ticket) = c.query("SELECT expires,ticket FROM connection_offer WHERE id=? AND user_id=? AND expires>?", id(offer), id(caller.user.id), clock()) {
+            it.getLong(1) to it.getObject(2)?.toString()
         }.singleOrNull() ?: reject("not_found", 404)
+        ConnectOfferView(offer, expires, ticket?.let { ticketView(c, it) })
     }
     internal fun approve(caller: WebCaller, ticket: String) = db.transaction { c ->
         allowed(c, caller.user.id)

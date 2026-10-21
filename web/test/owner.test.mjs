@@ -167,7 +167,9 @@ test("web owner approves only a request whose MAC proves it holds this device's 
   assert.throws(() => parseJoin(new Uint8Array([...bytes, 0])));
   f.remote.requests = [pending];
   const [request] = await c.applicants(selected.household);
-  assert.deepEqual({ requestId: request.requestId, code: request.code, verified: request.verified }, { requestId: pending.requestId, code, verified: true });
+  assert.deepEqual({ requestId: request.requestId, code: request.code, verified: request.verified, inviteId: request.inviteId, device: request.device },
+    { requestId: pending.requestId, code, verified: true, inviteId: assertion.inviteId, device: device.publicKeys },
+    "a verified request names the invite and the device the computer's dialog is waiting for");
   const relay = await newDevice(), swapped = joinBytes({ ...assertion, device: relay.publicKeys });
   const forgeries = [{ ...pending, mac: b64(random(32)) }, { ...pending, mac: undefined },
     { ...pending, assertion: b64(swapped), signature: await sign(relay, swapped) }];
@@ -178,7 +180,7 @@ test("web owner approves only a request whose MAC proves it holds this device's 
   for (const forged of forgeries) {
     f.remote.requests = [forged];
     const [shown] = await c.applicants(selected.household);
-    assert.deepEqual({ code: shown.code, verified: shown.verified }, { code: null, verified: false });
+    assert.deepEqual({ code: shown.code, verified: shown.verified, inviteId: shown.inviteId }, { code: null, verified: false, inviteId: null });
     await assert.rejects(c.approve(selected.household, forged), e => e.code === "unverified");
     assert.equal(c.read(selected.household).pendingMembership, null);
   }

@@ -57,6 +57,33 @@ class ConnectionTest {
         restored.enableAi(true, "accepted-revision")
         assertThat(restored.current()?.aiRevision).isEqualTo("accepted-revision")
     }
+    @Test fun aScannedConnectCodeClaimsItsOfferAndKeepsTheInviteForAfterApproval() = runBlocking {
+        val store = Store(); var claim: OfferClaim? = null
+        val signing = SyncCrypto.device().publicKeys.signingPublicKey
+        val info = InstanceInfo(name = "Private", server = ServerInfo(Wire.hash(Wire.decode(signing, 32)), signing), accounts = true, ai = true)
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                assertThat(origin).isEqualTo("https://usuals.example")
+                val result = when (path) {
+                    "/v1/instance" -> Wire.json.encodeToString(InstanceInfo.serializer(), info)
+                    else -> { claim = Wire.json.decodeFromJsonElement<ConnectStart>(Wire.strictJson(requireNotNull(body), 4096)).offer
+                        Wire.json.encodeToString(ConnectTicket.serializer(), ConnectTicket("00000000-0000-4000-8000-000000000001", Wire.encode(ByteArray(32) { 1 }), 10000)) }
+                }
+                return WireResponse(200, result.toByteArray())
+            }
+        }
+        val invite = InviteCode("https://usuals.example", "00000000-0000-4000-8000-000000000003", InviteKey(ByteArray(32) { 4 }), ByteArray(16) { 5 })
+        val code = ConnectCode("https://usuals.example", "00000000-0000-4000-8000-000000000002", ByteArray(32) { 3 }, invite)
+        val pending = ConnectionClient(store, transport) { 1000 }.begin(code.link())
+        assertThat(claim).isEqualTo(code.claim())
+        assertThat(pending.offered).isTrue()
+        assertThat(pending.invite).isEqualTo(invite.link())
+        assertThat(store.read().connecting?.invite).isEqualTo(invite.link())
+        assertThat(pending.toString()).doesNotContain(invite.link().substringAfter('#'))
+        val plain = ConnectionClient(Store(), transport) { 1000 }.begin("https://usuals.example/connect")
+        assertThat(claim).isNull()
+        assertThat(plain.offered).isFalse()
+    }
     private fun pending(): PendingConnection {
         val signing = SyncCrypto.device().publicKeys.signingPublicKey
         val info = InstanceInfo(name = "Private", server = ServerInfo(Wire.hash(Wire.decode(signing, 32)), signing), accounts = true, ai = true)

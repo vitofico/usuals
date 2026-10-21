@@ -20,8 +20,11 @@ browser** deletes the key; a key that no longer opens the vault is deleted too. 
 [browser protocol](../web/PROTOCOL.md) and [identity guide](sync/web-identity.md)
 for enrollment, session, password and restore details.
 
-The web **Connect a phone** action renders a private one-use invitation QR
-locally. Android asks for confirmation of the server before contacting it.
+The web **Connect a phone** action renders a private one-use QR locally. Its offer
+secret lets only the phone holding it ask this account for approval, and an owner
+browser's embedded invite keeps the pairing v2 guarantees
+([ADR-0016](decisions/ADR-0016-one-scan-phone-connection.md)).
+Android asks for confirmation of the server before contacting it.
 The owner compares every group of the full device code shown on both devices
 and explicitly approves. The signed verification QR remains an alternative; its
 approval checks the complete original invitation and signed membership protocol.

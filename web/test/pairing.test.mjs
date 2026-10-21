@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { b64, unb64, hash } from "../src/wire.mjs";
+import { b64, unb64, hash, hex, fingerprint } from "../src/wire.mjs";
 import { admitKey, macKey, joinMac, verifyJoinMac, joinCode, descriptorAnchor, inviteLink, appLink, parseInviteLink,
-  connectionCode, resumableInvite, forgetInvite, INVITE_RESUME_WINDOW } from "../src/pairing.mjs";
+  connectionCode, resumableInvite, forgetInvite, INVITE_RESUME_WINDOW, connectLink, connectAppLink, parseConnectLink, joinsConnection } from "../src/pairing.mjs";
 
 const v = JSON.parse(await readFile(new URL("../../testing/src/test/resources/pairing-v2/vectors.json", import.meta.url), "utf8"));
 const key = unb64(v.key, 32), assertion = unb64(v.assertion);
@@ -43,8 +43,33 @@ test("legacy JSON invitations ask for an update and malformed links are rejected
     assert.throws(() => parseInviteLink(bad));
 });
 
+test("connect links match the golden and carry the optional invite", () => {
+  const secret = unb64(v.offerSecret, 32), invite = { inviteId: v.inviteId, key, anchor: unb64(v.anchor, 16) };
+  assert.equal(connectLink(v.origin, v.offerId, secret), v.connectLink);
+  assert.equal(connectLink(v.origin, v.offerId, secret, invite), v.connectInviteLink);
+  assert.equal(connectAppLink(v.connectLink), v.connectAppLink);
+  assert.equal(connectAppLink(v.connectInviteLink), v.connectInviteAppLink);
+  const plain = parseConnectLink(v.connectLink);
+  assert.deepEqual([plain.origin, plain.offerId, b64(plain.secret), plain.invite], [v.origin, v.offerId, v.offerSecret, null]);
+  const full = parseConnectLink(v.connectInviteLink);
+  assert.equal(inviteLink(full.origin, full.invite.inviteId, full.invite.key, full.invite.anchor), v.link);
+  const payload = v.connectLink.slice(v.connectLink.indexOf("#1.") + 3);
+  for (const bad of ["https://usuals.example/connect#2." + payload, "https://usuals.example/connect", "https://usuals.example/join#1." + payload,
+    v.connectLink.slice(0, -2), "https://user@usuals.example/connect#1." + payload, "http://usuals.example/connect#1." + payload])
+    assert.throws(() => parseConnectLink(bad));
+});
+
 test("connection codes are six digits from the fingerprint prefix", () => {
   for (const [fingerprint, expected] of v.connectionCodes) assert.equal(connectionCode(fingerprint), expected);
+});
+
+test("only the device whose connection code was compared joins without a second comparison", async () => {
+  const key = () => b64(crypto.getRandomValues(new Uint8Array(32)));
+  const server = key(), phone = { signingPublicKey: key(), recipientPublicKey: key() }, ticket = { id: crypto.randomUUID() };
+  ticket.fingerprint = hex(unb64(await fingerprint(server, ticket.id, phone), 32));
+  assert.equal(await joinsConnection(ticket, server, phone), true);
+  assert.equal(await joinsConnection(ticket, server, { ...phone, recipientPublicKey: key() }), false, "a photographed QR's invite with other keys");
+  assert.equal(await joinsConnection({ ...ticket, id: crypto.randomUUID() }, server, phone), false);
 });
 
 const tab = () => {

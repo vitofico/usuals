@@ -135,7 +135,8 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         InviteCode(saved.origin, invite.inviteId, key, Pairing.descriptorAnchor(descriptor))
     }
     /** Opens any form of invite link; the same link again resumes the attempt already waiting for approval. */
-    suspend fun requestJoin(text: String): PendingJoinState = mutex.withLock {
+    /** [device] is the connection's keys after a computer approved that connection, so it knows this request without a second code. */
+    suspend fun requestJoin(text: String, device: DeviceSecrets = SyncCrypto.device()): PendingJoinState = mutex.withLock {
         val code = InviteCode.parse(text)
         store.read().joining?.takeIf { it.invitation.inviteId == code.inviteId }?.let { sendJoin(it); return@withLock it }
         val admit = Wire.encode(code.key.admit())
@@ -148,7 +149,6 @@ class HouseholdClient(private val store: SyncStateStore, private val transport: 
         require(server.serverId == d.serverId && opened.expiresAt > clock() && opened.expiresAt <= clock() + Pairing.MAX_INVITE_LIFETIME)
         val invitation = InvitationLink(2, code.origin, d.serverId, d.householdId, d.genesisHash, d.ownerDeviceId, d.ownerFingerprint, code.inviteId,
             d.memberId, d.role, admit, opened.expiresAt, code.key.encoded())
-        val device = SyncCrypto.device()
         val challenge = call<Challenge>(invitation.origin, "POST", "/v1/devices/challenge", ChallengeRequest(device.publicKeys.id, "join", device.publicKeys.signingPublicKey))
         require(challenge.serverId == server.serverId && challenge.purpose == "join")
         val assertion = JoinAssertion(invitation.origin, server.serverId, invitation.householdId, invitation.genesisHash, invitation.inviteId,
