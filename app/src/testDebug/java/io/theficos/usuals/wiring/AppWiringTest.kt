@@ -290,6 +290,10 @@ class AppWiringTest {
         compose.onNode(hasSetTextAction()).performScrollTo().performTextInput("4006381333931")
         compose.onNodeWithText("Add").performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        // The offer shows once the list re-emits the scanned item, which happens off the main thread.
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Enable product names").fetchSemanticsNodes().isNotEmpty()
+        }
         // Exercise the accessible action; popup hit targets are checked on the emulator.
         compose.onNodeWithText("Enable product names").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
