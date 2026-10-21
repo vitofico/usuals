@@ -190,6 +190,7 @@ data class ListActions(
     val onShareText: () -> Unit = {},
     val onRenameList: (String, String) -> Unit = { _, _ -> },
     val onRemoveList: (String) -> Unit = {},
+    val onArchiveList: (String, Boolean) -> Unit = { _, _ -> },
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
     val onFinishRows: ((List<ListRow>, Set<ItemId>?) -> Unit)? = null,
     val onUndoFinish: () -> Unit = {},
@@ -337,6 +338,7 @@ fun ListScreen(
             onShareList = onOpenSharing,
             onRenameList = vm::onRenameList,
             onRemoveList = vm::onRemoveList,
+            onArchiveList = vm::onArchiveList,
             onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
                     context.getString(
@@ -486,13 +488,14 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
     }
 }
 
-/** The list's few actions: share, send as text, rename, and delete it or, for someone else's list, leave it. */
+/** The list's few actions: share, send as text, rename, archive, and delete it or, for someone else's list, leave it. */
 @Composable
 private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
     var open by remember { mutableStateOf(false) }
     // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var draft by rememberSaveable { mutableStateOf("") }
+    var archiving by rememberSaveable { mutableStateOf<String?>(null) }
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     Box {
@@ -503,6 +506,7 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
             DropdownMenuItem(text = { Text(stringResource(if (selected?.editor == true) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = selected?.id })
         }
     }
@@ -512,14 +516,25 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { renaming = null; actions.onRenameList(list.id, draft.trim()) }) { Text(stringResource(R.string.list_rename)) } },
             dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
-    directory.lists.firstOrNull { it.id == removing }?.let { list ->
-        val leaves = list.editor
-        AlertDialog(onDismissRequest = { removing = null },
-            title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
-            text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
-            confirmButton = { TextButton(onClick = { removing = null; actions.onRemoveList(list.id) }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
-            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    directory.lists.firstOrNull { it.id == archiving }?.let { list ->
+        AlertDialog(onDismissRequest = { archiving = null },
+            title = { Text(stringResource(R.string.list_archive_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
+            text = { Text(stringResource(if (list.editor) R.string.list_archive_help_editor else R.string.list_archive_help)) },
+            confirmButton = { TextButton(onClick = { archiving = null; actions.onArchiveList(list.id, true) }) { Text(stringResource(R.string.list_archive)) } },
+            dismissButton = { TextButton(onClick = { archiving = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
+    directory.lists.firstOrNull { it.id == removing }?.let { list -> RemoveListDialog(list, { removing = null }, actions) }
+}
+
+/** Confirms deleting a list, or leaving it when someone else owns it. */
+@Composable
+internal fun RemoveListDialog(list: NamedList, onDismiss: () -> Unit, actions: ListActions) {
+    val leaves = list.editor
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (leaves) R.string.share_leave_title else R.string.list_delete_title, list.name.ifBlank { stringResource(R.string.household_fallback_name) })) },
+        text = { Text(stringResource(if (leaves) R.string.share_leave_help else R.string.list_delete_help)) },
+        confirmButton = { TextButton(onClick = { onDismiss(); actions.onRemoveList(list.id) }) { Text(stringResource(if (leaves) R.string.share_leave else R.string.list_delete)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.edit_cancel)) } })
 }
 
 @Composable

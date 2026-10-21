@@ -5,7 +5,9 @@ import android.content.Intent
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -87,6 +89,46 @@ class ListSharingTest {
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Delete list").assertDoesNotExist()
         compose.onNodeWithText("Leave list").assertExists()
+    }
+
+    @Test fun `the menu archives the list and the picker restores one, while an editor can only leave a list its owner archived`() {
+        val lists = MutableStateFlow(ListDirectory("own", listOf(NamedList("own", "Home", shared = false),
+            NamedList("old", "Camping", shared = false, archived = true, archivedByOwner = true),
+            NamedList("theirs", "Market", shared = true, editor = true, archived = true, archivedByOwner = true))))
+        val changes = mutableListOf<Pair<String, Boolean>>()
+        val removed = mutableListOf<String>()
+        val directory = object : ListDirectoryStore {
+            override fun observe() = lists
+            override suspend fun select(id: String) { lists.value = lists.value.copy(selected = id) }
+            override suspend fun create(name: String) = Unit
+            override suspend fun archive(id: String, archived: Boolean) { changes += id to archived }
+            override suspend fun remove(id: String) { removed += id }
+        }
+        val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
+            override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Archive").performClick()
+        compose.onNodeWithText("Archive Home?").assertExists()
+        compose.onNodeWithText("Archive").performClick()
+        compose.waitForIdle()
+        assertThat(changes).containsExactly("own" to true)
+        compose.onNodeWithText("Home").performClick()
+        compose.onNodeWithText("Archived").assertExists()
+        compose.onNodeWithText("Archived by the owner. Only the owner can restore it.").assertExists()
+        compose.onAllNodesWithText("Restore").assertCountEquals(1)
+        compose.onAllNodesWithText("Leave list").assertCountEquals(1)
+        compose.onNodeWithText("Restore").performClick()
+        compose.waitForIdle()
+        assertThat(changes).containsExactly("own" to true, "old" to false).inOrder()
+        compose.onNodeWithText("Leave list").performClick()
+        compose.onNodeWithText("Leave Market?").assertExists()
+        compose.onNodeWithText("Leave list").performClick()
+        compose.waitForIdle()
+        assertThat(removed).containsExactly("theirs")
+        assertThat(changes).hasSize(2)
     }
 
     @Test fun `swiping a row invokes removal once`() {

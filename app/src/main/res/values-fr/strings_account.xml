@@ -62,6 +62,10 @@
     <string name="list_delete">Supprimer la liste</string>
     <string name="list_delete_title">Supprimer %1$s ?</string>
     <string name="list_delete_help">La liste et son historique sont supprimés pour toutes les personnes qui l’ont.</string>
+    <string name="list_archive">Archiver</string>
+    <string name="list_archive_title">Archiver %1$s ?</string>
+    <string name="list_archive_help">La liste est archivée pour toutes les personnes qui y ont accès. Vous pouvez la restaurer depuis Archivées dans vos listes.</string>
+    <string name="list_archive_help_editor">La liste est archivée pour vous seulement. Les autres personnes la gardent, et vous pouvez la restaurer depuis Archivées dans vos listes.</string>
 
     <string name="sync_sign_in">Déconnecté par le serveur. Reconnectez-vous pour synchroniser.</string>
     <string name="sync_offline">Pas encore synchronisée. Les modifications partiront dès que le serveur sera joignable.</string>

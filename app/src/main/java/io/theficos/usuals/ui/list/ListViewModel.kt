@@ -147,6 +147,8 @@ class ListViewModel(
     fun onRenameList(id: String, name: String) = changeList { directoryStore.rename(id, name) }
     /** Deletes a list, or leaves it when someone else owns it. */
     fun onRemoveList(id: String) = changeList { directoryStore.remove(id) }
+    /** Archives a list, or restores one from the picker's Archived section. */
+    fun onArchiveList(id: String, archived: Boolean) = changeList { directoryStore.archive(id, archived) }
     private fun changeList(change: suspend () -> Unit) {
         if (screen.value.busy || screen.value.capture != CaptureState.Idle) return
         viewModelScope.launch {
