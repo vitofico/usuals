@@ -209,17 +209,20 @@ The concrete signed membership body is specified in [manifest-v1.md](manifest-v1
 
 All `/v1` responses use structured codes; UI sentences belong to `:app`.
 Bodies and Authorization headers are excluded from access logs. No credentials
-or invite secrets in URL paths/query strings. Invitation links use a fragment
-consumed by the Android app; there is no server-rendered invite landing page.
+or invite secrets in URL paths/query strings. Invitation links carry
+their key in the URL fragment, which browsers never send. `GET /join` serves the
+static browser client, which reads the fragment locally and offers to open the
+app or join in the browser.
 
 | Route | Contract |
 |---|---|
 | `GET /v1/server-info` | Public relay identity, receipt public key and supported protocol versions. Bootstrap pins the key through verified HTTPS; invitation pins must match. |
 | `POST /v1/devices/challenge`, `/session` | Single-use nonce proof bound to origin/device/purpose, 60-second expiry; session TTL 15 minutes. |
 | `POST /v1/households` | Operator bootstrap token, atomic empty genesis owner/device/recovery roster; create lists afterward. Bootstrap token hashes only, one use, 24-hour expiry. |
-| `POST /v1/households/{h}/invites` | Owner only, random 256-bit secret, hash stored, expires in 10 minutes. |
-| `POST /v1/join-requests` | Invite secret plus signed full join assertion; pending, never automatic membership. |
-| `GET /v1/households/{h}/join-requests` | Owner-only bounded pending requests, public keys and proof for fingerprint verification. |
+| `POST /v1/households/{h}/invites` | Owner only. Pairing v2: the body carries `secretHash = SHA256(admit)` and the descriptor bytes (at most 2 KiB, checked against the household); no secret is returned and the invite expires in 24 hours. A legacy body without them gets a random 256-bit secret and a 10-minute expiry. |
+| `POST /v1/invites/{i}/open` | Public, 10/minute per client. `{secret: b64(admit)}` returns the stored descriptor and expiry for an unconsumed, unexpired v2 invite; anything else is `not_found`. |
+| `POST /v1/join-requests` | Invite secret plus signed full join assertion; a v2 invite also requires `mac`. Pending, never automatic membership. |
+| `GET /v1/households/{h}/join-requests` | Owner-only bounded pending requests with assertion, signature and `mac`, so the inviting device can verify them. |
 | `POST /v1/households/{h}/join-requests/{r}/deny` | Owner-only denial invalidates that request and its invitation. |
 | `POST /v1/households/{h}/membership` | Owner/restricted-recovery-signed CAS transition with complete key packages, checkpoint/snapshot cutoffs, one transaction. |
 | `GET /v1/households/{h}/membership` | Current verified chain; all members; removed devices denied. |
@@ -279,7 +282,7 @@ operator action with no membership authority.
 
 An exact signed join-request retry before expiry/consumption returns its original
 202 `JoinPending` even though its challenge was already consumed. A changed
-assertion/signature or a denied, expired or consumed invitation fails. This
+assertion, signature or MAC, or a denied, expired or consumed invitation fails. This
 permits process interruption without granting authority twice.
 
 Membership/list creation returns `candidate_expired` with 409 when a referenced

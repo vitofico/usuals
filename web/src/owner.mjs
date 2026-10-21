@@ -1,10 +1,10 @@
 import { b64, unb64, jsonBytes, zero, equal, requireThat, manifestBytes,
-  manifestHash, packageHash, envelopeHash, parseHeader, fingerprint, hash, hex, joinBytes, parseJoin, uuid } from "./wire.mjs";
+  manifestHash, packageHash, envelopeHash, parseHeader, fingerprint, hash, joinBytes, parseJoin, uuid } from "./wire.mjs";
 import { random, sign, verify, seal, hpkeSeal } from "./crypto.mjs";
 import { body, owners, devices, genesis, transition, verifyChain } from "./membership.mjs";
 import { emptyProjection, snapshotDecode } from "./reducer.mjs";
 import { packageContext, packageBytes } from "./wire.mjs";
-import { verificationQr } from "./qr.mjs";
+import { admitKey, macKey, verifyJoinMac, joinCode, descriptorAnchor, inviteLink, MAX_INVITE_LIFETIME } from "./pairing.mjs";
 
 function owner(h) {
   const m = body(h.proofs.at(-1));
@@ -161,16 +161,22 @@ export async function resumeMembership(c, id, retryExpired = true) {
     s.pendingMembership = null;
   });
 }
+/** Creates a one-use link; only this device keeps its key, so only it can verify who used the link. */
 export async function invite(c, id) {
   const h = await c.refresh(id); owner(h);
-  const memberId = crypto.randomUUID(), value = await c.authorized(id, `/v1/households/${id}/invites`, {
-    method: "POST", body: { memberId, role: "editor" } });
-  uuid(value.inviteId); unb64(value.secret, 32);
-  requireThat(Number.isSafeInteger(value.expiresAt) && value.expiresAt > c.clock());
-  return "usuals://join#" + b64(jsonBytes({ version: 1, origin: c.origin, serverId: h.server.serverId, householdId: id,
+  const key = random(32), memberId = crypto.randomUUID();
+  const descriptor = jsonBytes({ version: 2, origin: c.origin, serverId: h.server.serverId, householdId: id,
     genesisHash: await manifestHash(h.proofs[0]), ownerDeviceId: h.device.publicKeys.id,
-    ownerFingerprint: await fingerprint(h.server.serverId, id, h.device.publicKeys), memberId, role: "editor",
-    inviteId: value.inviteId, secret: value.secret, expiresAt: value.expiresAt }));
+    ownerFingerprint: await fingerprint(h.server.serverId, id, h.device.publicKeys), memberId, role: "editor" });
+  const value = await c.authorized(id, `/v1/households/${id}/invites`, { method: "POST",
+    body: { memberId, role: "editor", secretHash: await hash(await admitKey(key)), descriptor: b64(descriptor) } });
+  uuid(value.inviteId);
+  requireThat(value.secret == null && Number.isSafeInteger(value.expiresAt) && value.expiresAt > c.clock() && value.expiresAt <= c.clock() + MAX_INVITE_LIFETIME);
+  await c.save(id, s => {
+    s.invites = Object.fromEntries(Object.entries(s.invites ?? {}).filter(([, i]) => i.expiresAt > c.clock()));
+    s.invites[value.inviteId] = { key: b64(key), memberId, expiresAt: value.expiresAt };
+  });
+  return inviteLink(c.origin, value.inviteId, key, await descriptorAnchor(descriptor));
 }
 export async function discardInvalidPending(c, id) {
   return discardPending(c, id);
@@ -236,39 +242,43 @@ export async function validateApplicant(c, id, pending, checkExpiry = true) {
     a.genesisHash === await manifestHash(h.proofs[0]), "unverified");
   if (checkExpiry) requireThat(a.expiresAt > c.clock(), "invite_expired");
   await c.scope.wait(verify(a.device.signingPublicKey, pending.signature, joinBytes(a)));
-  return { assertion: a, fingerprint: hex(unb64(await fingerprint(h.server.serverId, id, a.device), 32)), pending };
+  return { assertion: a, pending };
+}
+/**
+ * The relay cannot forge this: the MAC needs the key that only this device's link carried. Every invite names a fresh
+ * member, so it is spent once that member is in the roster, even when the approval's response was lost.
+ */
+async function verifiedJoin(c, id, pending) {
+  const { assertion: a } = await validateApplicant(c, id, pending, false), h = c.read(id), invite = h.invites?.[a.inviteId];
+  requireThat(invite && a.memberId === invite.memberId && a.expiresAt === invite.expiresAt &&
+    !owner(h).members.some(member => member.id === a.memberId), "unverified");
+  const key = unb64(invite.key, 32), mac = await macKey(key);
+  requireThat(a.secretHash === await hash(await admitKey(key)) && await verifyJoinMac(mac, joinBytes(a), pending.mac), "unverified");
+  return { assertion: a, code: await joinCode(mac, joinBytes(a)) };
 }
 export async function applicants(c, id) {
   owner(await c.refresh(id));
   const result = await c.authorized(id, `/v1/households/${id}/join-requests`);
   requireThat(Array.isArray(result.requests) && result.requests.length <= 10);
-  return c.scope.wait(Promise.all(result.requests.map(p => validateApplicant(c, id, p))));
+  const shown = result.requests.filter(p => { try { uuid(p.requestId); return true; } catch { return false; } });
+  return c.scope.wait(Promise.all(shown.map(async pending => {
+    try {
+      requireThat(pending.assertion && parseJoin(unb64(pending.assertion)).expiresAt > c.clock(), "invite_expired");
+      return { requestId: pending.requestId, code: (await verifiedJoin(c, id, pending)).code, verified: true, pending };
+    } catch { return { requestId: pending.requestId, code: null, verified: false, pending }; }
+  })));
 }
-export async function approveQr(c, id, uri, invitation) {
-  const pending = verificationQr(uri);
-  const verified = await validateApplicant(c, id, pending, false), a = verified.assertion, h = c.read(id);
-  requireThat(invitation.version === 1 && invitation.role === "editor" &&
-    invitation.origin === c.origin && invitation.serverId === h.server.serverId && invitation.householdId === id &&
-    invitation.genesisHash === await manifestHash(h.proofs[0]) && invitation.ownerDeviceId === h.device.publicKeys.id &&
-    invitation.ownerFingerprint === await fingerprint(h.server.serverId, id, h.device.publicKeys) &&
-    a.inviteId === invitation.inviteId && a.memberId === invitation.memberId && a.expiresAt === invitation.expiresAt &&
-    a.secretHash === await hash(unb64(invitation.secret, 32)), "unverified");
-  // Authenticate the exact assertion scanned from the phone, not a relay-provided fingerprint.
-  return approve(c, id, pending, verified.fingerprint);
-}
-export async function approve(c, id, pending, trusted) {
-  const h = await c.refresh(id), m = owner(h), verified = await validateApplicant(c, id, pending, false), a = verified.assertion;
-  requireThat(trusted.replace(/\s/g, "").toLowerCase() === verified.fingerprint, "unverified");
+export async function approve(c, id, pending) {
+  const h = await c.refresh(id), m = owner(h), { assertion: a } = await validateApplicant(c, id, pending, false);
   const assertionHash = await hash(joinBytes(a));
   const approved = h.proofs.some(proof => body(proof).approvedJoins[a.requestId] === assertionHash);
-  if (approved && m.members.some(member => member.id === a.memberId && member.devices.some(d => equal(d, a.device)))) return;
+  const forget = () => c.save(id, s => { if (s.invites) delete s.invites[a.inviteId]; });
+  if (approved && m.members.some(member => member.id === a.memberId && member.devices.some(d => equal(d, a.device)))) return forget();
   requireThat(!approved && a.expiresAt > c.clock(), "invite_expired");
+  await verifiedJoin(c, id, pending);
   requireThat(!devices(m).some(d => d.id === a.device.id), "conflict");
-  const existing = m.members.find(x => x.id === a.memberId);
-  requireThat(!existing || existing.role === "editor", "forbidden");
-  const members = existing ? m.members.map(x => x.id === existing.id ? { ...x, devices: [...x.devices, a.device] } : x)
-    : [...m.members, { id: a.memberId, role: "editor", devices: [a.device] }];
-  return change(c, id, "approve_join", members, { [a.requestId]: assertionHash }, null, pending);
+  await change(c, id, "approve_join", [...m.members, { id: a.memberId, role: "editor", devices: [a.device] }], { [a.requestId]: assertionHash }, null, pending);
+  return forget();
 }
 export async function remove(c, id, device) {
   const h = await c.refresh(id), m = owner(h);

@@ -39,6 +39,10 @@ existing household. The original bootstrap and invitation contracts remain valid
 
 ## Full device verification
 
+Superseded by [ADR 0015](ADR-0015-pairing-v2.md): invites now carry a link key
+that the relay never sees, and approval verifies a MAC instead of a compared
+fingerprint or reverse QR.
+
 Household invitation approval displays the complete validated applicant
 fingerprint and requires the owner to compare every group with the applicant's
 screen. It does not truncate the code or trust the first request, an account name

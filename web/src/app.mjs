@@ -10,7 +10,7 @@ import {
   isLiteralNumber,
 } from "./wire.mjs";
 import { Vault, openStorage } from "./vault.mjs";
-import { HouseholdClient, RunScope, request, parseInvitation } from "./client.mjs";
+import { HouseholdClient, RunScope, request } from "./client.mjs";
 import { body } from "./membership.mjs";
 import { canonical, decimal } from "./reducer.mjs";
 import { normalize } from "./identity.mjs";
@@ -19,9 +19,13 @@ import { UnlockAttempt } from "./unlock.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
-import { qrMatrix, VerificationCamera } from "./qr.mjs";
+import { qrMatrix } from "./qr.mjs";
+import { appLink, connectionCode, parseInviteLink } from "./pairing.mjs";
 import { importDialog } from "./import-dialog.mjs";
-let pendingConnectionId = null;
+let pendingConnectionId = null, connectionDone = false;
+// The /join fragment carries the invite key: it stays in memory and leaves the address bar at startup.
+let pendingInvite = location.pathname === "/join" && location.hash.startsWith("#2.") ? location.href : null;
+const spaced = (code) => code.slice(0, 3) + " " + code.slice(3);
 try {
   const candidate = new URL(location.href).searchParams.get("connect");
   if (candidate && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(candidate)) sessionStorage.setItem("usuals-connect-request", candidate);
@@ -582,6 +586,16 @@ async function render() {
     $("navigation").append(adminButton);
   }
   if (!account?.user.admin) adminButton?.remove();
+  if (connectionDone) {
+    $("content").replaceChildren(title("connectionApproved", "connectionReturn"),
+      el("div", { class: "button-row" }, el("a", { class: "primary", href: "usuals://connected" }, t("returnToUsuals")),
+        button(t("close"), () => { connectionDone = false; render().catch(failure); })));
+    return;
+  }
+  if (pendingInvite) {
+    $("content").replaceChildren(joinLanding());
+    return;
+  }
   const connectingId = pendingConnectionId;
   if (account && connectingId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(connectingId)) {
     await renderConnectionApproval(own, connectingId); return;
@@ -1005,7 +1019,7 @@ function joinPanel() {
     el("h2", {}, t("creationPending")), paragraph("creationPendingHelp"),
     button(t("creationResume"), () => act(() => finishHouseholdSetup(c => c.completeCreation())), "primary"), vault.read().creating.rejected ? button(t("creationAbandon"), () =>
       messageDialog("creationAbandon", "creationAbandonHelp", () => client.abandonRejectedCreation())) : null);
-  if (vault.read().joining) return fingerprintPanel();
+  if (vault.read().joining) return joinCodePanel();
   const input = el("textarea", {
     id: "invite",
     class: "field",
@@ -1115,48 +1129,18 @@ async function createHouseholdDialog() {
   name.focus();
 }
 async function invitationDialog(id) {
-  const own = generation, active = client, uri = await active.invite(id);
+  const own = generation, active = client, link = await active.invite(id);
   if (own !== generation) return;
-  const invite = parseInvitation(uri, location.origin);
-  const input = el("textarea", { class: "field", rows: 5, readonly: true, value: uri, spellcheck: false,
+  const expiresAt = active.read(id).invites[parseInviteLink(link).inviteId].expiresAt;
+  const input = el("textarea", { class: "field", rows: 3, readonly: true, value: link, spellcheck: false,
     "aria-label": t("invitation") });
-  const qr = invitationQr(uri), status = el("p", { class: "helper", role: "status" });
-  const error = el("p", { class: "dialog-error", role: "alert" });
-  const video = el("video", { class: "verification-camera", playsinline: true, muted: true, hidden: true });
-  const canvas = el("canvas");
-  let camera = null, closed = false;
-  const stopCamera = () => { camera?.stop(); camera = null; video.hidden = true; };
-  const scan = button(t("pairScanVerification"), async () => {
-    if (Date.now() >= invite.expiresAt || closed || camera) return;
-    error.textContent = ""; video.hidden = false; scan.disabled = true;
-    camera = new VerificationCamera(video, canvas, code => {
-      video.hidden = true;
-      if (busy) { stopCamera(); scan.disabled = false; return; }
-      act(async () => {
-        try {
-          if (closed || own !== generation || Date.now() >= invite.expiresAt) return;
-          await active.approveQr(id, code, invite);
-          if (closed || own !== generation) return;
-          closeDialog(); notice("pairApproved");
-        } catch (problem) {
-          if (!closed && own === generation) {
-            error.textContent = t(problem.code === "unverified" ? "pairWrongQr" : dictionary[problem.code] ? problem.code : "serverUnavailable");
-            stopCamera(); scan.disabled = Date.now() >= invite.expiresAt;
-          }
-        }
-      });
-    }, () => {
-      if (!closed && own === generation) {
-        video.hidden = true; camera = null; scan.disabled = Date.now() >= invite.expiresAt;
-        error.textContent = t("pairCameraUnavailable");
-      }
-    });
-    await camera.start();
-  }, "primary");
+  const qr = invitationQr(link), status = el("p", { class: "helper", role: "status" });
+  const requests = el("div", { class: "pair-requests", "aria-live": "polite" }, paragraph("pairWaiting", "helper"));
+  let closed = false, polling = false, shown = "";
   const copy = button(t("pairCopy"), async () => {
-    if (closed || Date.now() >= invite.expiresAt) return;
+    if (closed || Date.now() >= expiresAt) return;
     try {
-      await navigator.clipboard.writeText(uri);
+      await navigator.clipboard.writeText(link);
       if (!closed) status.textContent = t("pairCopied");
     } catch { if (!closed) { input.parentElement.open = true; input.focus(); input.select(); status.textContent = t("pairCopyHelp"); } }
   });
@@ -1164,26 +1148,37 @@ async function invitationDialog(id) {
     closeDialog(); act(() => invitationDialog(id));
   });
   const updateExpiry = () => {
-    const expired = Date.now() >= invite.expiresAt;
+    const expired = Date.now() >= expiresAt;
     refresh.hidden = !expired;
     if (expired) {
-      qr.replaceChildren(); input.value = ""; copy.disabled = scan.disabled = true;
-      stopCamera(); status.textContent = t("pairExpired");
-    } else status.textContent = t("pairExpires", { time: new Date(invite.expiresAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) });
+      qr.replaceChildren(); input.value = ""; copy.disabled = true; status.textContent = t("pairExpired");
+    } else status.textContent = t("pairExpires", { time: date(expiresAt) });
   };
-  const timer = setInterval(updateExpiry, 1000);
+  // The sheet stays open while the phone scans; a request appears here with its code.
+  const poll = async () => {
+    if (closed || polling || busy || own !== generation) return;
+    polling = true;
+    try {
+      const found = await active.applicants(id), key = found.map(r => r.requestId + r.verified).join();
+      if (closed || own !== generation || key === shown) return;
+      shown = key;
+      requests.replaceChildren(...(found.length ? found.map(r => requestRow(id, r, approved => {
+        closeDialog(); if (approved) notice("pairApproved");
+      })) : [paragraph("pairWaiting", "helper")]));
+    } catch {} finally { polling = false; }
+  };
+  const timer = setInterval(updateExpiry, 1000), poller = setInterval(poll, 3000);
   const heading = el("h2", { tabindex: -1 }, t("pairTitle"));
   openDialog(el("div", { class: "pair-device" }, heading,
     paragraph("pairIntro"), el("p", { class: "server-address" }, location.origin),
     el("div", { class: "pair-layout" }, el("div", {}, qr, status),
       el("div", { class: "pair-instructions" },
         el("ol", { class: "setup-steps" }, el("li", {}, t("pairStepScan")), el("li", {}, t("pairStepConnect")), el("li", {}, t("pairStepVerify"))),
-        button(t("ownerRequests"), () => act(() => applicantsDialog(id)), "primary"),
-        scan, video, error, paragraph("pairCameraPrivacy", "helper"))),
+        requests)),
     el("details", {}, el("summary", {}, t("pairManual")), paragraph("ownerInviteHelp", "helper"), input, copy,
       paragraph("pairManualHelp", "helper")),
     el("div", { class: "button-row" }, refresh, button(t("close"), closeDialog))), () => {
-      closed = true; clearInterval(timer); stopCamera(); qr.replaceChildren(); input.value = "";
+      closed = true; clearInterval(timer); clearInterval(poller); qr.replaceChildren(); input.value = "";
     });
   updateExpiry(); heading.focus();
 }
@@ -1199,38 +1194,54 @@ function invitationQr(uri) {
   path.setAttribute("d", matrix.flatMap((row, y) => row.flatMap((dark, x) => dark ? [`M${x + 4},${y + 4}h1v1h-1z`] : [])).join(""));
   svg.append(background, path); return svg;
 }
+/** A join request: approvable only when this device's invite key verified it. */
+function requestRow(id, r, done) {
+  const own = generation, error = el("p", { class: "dialog-error", role: "alert" });
+  const deny = button(t("ownerDeny"), () => act(async () => { await client.denyApplicant(id, r.requestId); done(false); }));
+  if (!r.verified) return el("div", { class: "paper panel-body" }, paragraph("ownerUnverifiable", "helper"),
+    el("div", { class: "button-row" }, deny));
+  const input = el("input", { type: "checkbox", required: true });
+  return el("form", { class: "paper panel-body", onsubmit: event => {
+    event.preventDefault(); requireThat(input.checked);
+    act(async () => {
+      error.textContent = "";
+      try { await client.approve(id, r.pending); done(true); }
+      catch (e) { if (own === generation) error.textContent = t(e.code === "unverified" ? "ownerUnverifiable" : dictionary[e.code] ? e.code : "serverUnavailable"); }
+    });
+  } }, el("p", { class: "label" }, t("ownerCodeLabel")), el("p", { class: "pair-code" }, spaced(r.code)),
+    el("label", { class: "check-row" }, input, t("connectionCompared")), error,
+    el("div", { class: "button-row" }, deny, el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
+}
 async function applicantsDialog(id) {
   const own = generation, requests = await client.applicants(id);
   if (own !== generation) return;
   openDialog(el("div", {}, el("h2", {}, t("ownerRequests")), paragraph("ownerApproveHelp"),
-    ...requests.map(r => {
-      const error = el("p", { class: "dialog-error", role: "alert" });
-      const input = el("input", { type: "checkbox", required: true });
-      return el("form", { class: "paper panel-body", onsubmit: event => {
-        event.preventDefault(); requireThat(input.checked); const trusted = r.fingerprint;
-        act(async () => {
-          error.textContent = "";
-          try { await client.approve(id, r.pending, trusted); closeDialog(); }
-          catch (e) { if (own === generation) error.textContent = t(e.code === "unverified" ? "ownerFingerprintMismatch" : dictionary[e.code] ? e.code : "serverUnavailable"); }
-        });
-      } }, el("p", { class: "fingerprint" }, r.fingerprint.match(/.{1,4}/g).join(" ")),
-      el("label", { class: "label" }, input, t("connectionCompared")), error,
-      el("div", { class: "button-row" }, button(t("ownerDeny"), () => act(async () => {
-        await client.denyApplicant(id, r.pending.requestId); closeDialog();
-      })), el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
-    }), requests.length ? null : paragraph("ownerNoRequests"),
+    ...requests.map(r => requestRow(id, r, approved => { closeDialog(); if (approved) notice("pairApproved"); })),
+    requests.length ? null : paragraph("ownerNoRequests"),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
 }
-function fingerprintPanel() {
+/** The /join page: hand the link to the installed app, or join with this browser's vault. */
+function joinLanding() {
+  const link = pendingInvite;
+  return el("section", { class: "paper panel-body" }, el("h2", {}, t("joinLandingTitle")), paragraph("joinLandingText"),
+    el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "button-row" }, el("a", { class: "primary", href: appLink(link) }, t("openInUsuals")),
+      client ? button(t("joinInBrowser"), () => act(async () => {
+        await client.requestJoin(link);
+        pendingInvite = null; view = "sharing";
+      })) : null),
+    client ? null : el("div", { class: "welcome-actions" }, paragraph("joinUnlockFirst", "helper"), ...welcomeActions(Boolean(account))));
+}
+function joinCodePanel() {
   const value = el("p", {
-    class: "fingerprint",
-    "aria-label": t("fingerprint"),
+    class: "pair-code",
+    "aria-label": t("joinCode"),
   });
   const own = generation;
   client
-    .pendingFingerprint()
-    .then((f) => {
-      if (own === generation) value.textContent = f.match(/.{1,4}/g).join(" ");
+    .pendingCode()
+    .then((code) => {
+      if (own === generation && code) value.textContent = spaced(code);
     })
     .catch((error) => {
       if (own === generation) failure(error);
@@ -1241,8 +1252,8 @@ function fingerprintPanel() {
     el(
       "div",
       { class: "panel-body" },
-      el("h2", {}, t("fingerprintTitle")),
-      paragraph("fingerprintText"),
+      el("h2", {}, t("joinCodeTitle")),
+      paragraph("joinCodeText"),
       value,
       el(
         "div",
@@ -1369,9 +1380,9 @@ async function renderConnectionApproval(own, id) {
     el("form", { class: "paper panel-body", onsubmit: event => { event.preventDefault(); act(async () => {
       requireThat(compare.checked && Date.now() < ticket.expiresAt);
       await api("/api/connect/" + id + "/approve", { method: "POST", csrf: account.csrfToken });
-      clearConnectionRequest(); notice("connectionApproved");
+      clearConnectionRequest(); connectionDone = true;
     }); } }, el("p", { class: "server-address" }, location.origin),
-      el("p", { class: "fingerprint" }, ticket.fingerprint.match(/.{1,8}/g).join(" ")),
+      el("p", { class: "pair-code", "aria-label": t("connectionCodeLabel") }, spaced(connectionCode(ticket.fingerprint))),
       el("label", { class: "check-row" }, compare, t("connectionCompared")),
       el("button", { type: "submit", class: "primary" }, t("ownerApprove")),
       button(t("cancel"), () => { clearConnectionRequest(); render().catch(failure); })));

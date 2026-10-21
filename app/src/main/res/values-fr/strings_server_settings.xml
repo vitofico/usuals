@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_server">Serveur</string>
+    <string name="settings_server">Serveur et partage</string>
     <string name="settings_server_help">Connectez-vous une fois pour partager des listes et utiliser l’IA. Le serveur configure le modèle.</string>
     <string name="settings_help">Aide et à propos</string>
     <string name="settings_advanced">Avancé : IA directe</string>
@@ -10,10 +10,14 @@
     <string name="settings_ai">Assistance IA</string>
     <string name="settings_ai_help">Utilisez l’IA configurée par votre serveur. Les données sont envoyées uniquement lors d’une action IA choisie.</string>
     <string name="settings_server_account">Gérer le compte sur le serveur</string>
-    <string name="settings_manage_server">Gérer la connexion</string>
+    <string name="settings_manage_server">Gérer le partage</string>
     <string name="settings_ai_changed">Les paramètres IA ont changé. Vérifie le fournisseur avant de réutiliser l’IA.</string>
     <string name="settings_ai_details">Détails du modèle et du traitement</string>
-    <string name="settings_scan_server">Scanner le QR du serveur</string>
     <string name="settings_ai_update">Utiliser l’IA mise à jour</string>
-    <string name="settings_scan_server_help">Scanne le QR du serveur affiché sur la page de ton compte. Tu peux aussi coller le lien du serveur.</string>
+    <string name="settings_sharing_none">Non configuré</string>
+    <plurals name="settings_sharing_phones">
+        <item quantity="one">%1$s · %2$d téléphone</item>
+        <item quantity="other">%1$s · %2$d téléphones</item>
+        <item quantity="many">%1$s · %2$d téléphones</item>
+    </plurals>
 </resources>

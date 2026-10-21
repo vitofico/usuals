@@ -9,7 +9,7 @@ import java.util.UUID
 import javax.sql.DataSource
 
 class Database(val source: DataSource) {
-    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql", "005_connection_ai.sql").mapIndexed { index, name ->
+    private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql", "005_connection_ai.sql", "006_pairing_v2.sql").mapIndexed { index, name ->
         (index + 1) to checkNotNull(javaClass.getResourceAsStream("/db/$name")).use { it.readBytes() }
     }
     fun <T> transaction(block: (Connection) -> T): T = source.connection.use { c ->

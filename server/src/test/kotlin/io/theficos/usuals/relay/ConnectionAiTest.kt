@@ -193,7 +193,8 @@ class ConnectionAiTest {
         val previous = db.transaction { it.query("SELECT id FROM household") { r -> r.getObject(1).toString() } }
         db.transaction { c ->
             c.execute("DROP TABLE ai_vision_check,ai_usage,ai_preference,native_session,connection_ticket")
-            c.execute("DELETE FROM schema_migration WHERE version=5")
+            c.execute("ALTER TABLE invitation DROP COLUMN descriptor"); c.execute("ALTER TABLE join_request DROP COLUMN mac")
+            c.execute("DELETE FROM schema_migration WHERE version>=5")
         }
         db.migrate(); db.checkSchema()
         assertThat(db.transaction { it.query("SELECT id FROM household") { r -> r.getObject(1).toString() } }).containsExactlyElementsIn(previous)

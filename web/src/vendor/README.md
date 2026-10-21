@@ -9,6 +9,7 @@ Spunto informed the pairing experience; none of its AGPL implementation is copie
 | jsqr.mjs | [jsQR 1.4.0 source](https://github.com/cozmo/jsQR/tree/8e6a036beafa7053dd44b1b76ac578d22b1b3311), `dist/jsQR.js` | Apache-2.0, included at `web/assets/jsqr-LICENSE.txt` | `3325b0888fa4745c4e6940897d8c4f426fbaae76901fcbfe1871a04e90a51655` |
 
 The encoder only adds an ES-module export. The decoder adds a private CommonJS
-module object and exports its result. Upstream implementation bytes are otherwise
-unchanged. To update, review upstream changes, retain licenses and rerun the QR,
-camera lifecycle and native/browser interoperability checks through scripts/dgradle.
+module object and exports its result; the web app no longer scans codes, so only
+the QR tests use it, as an independent check that generated codes decode. Upstream implementation bytes are otherwise
+unchanged. To update, review upstream changes, retain licenses and rerun the QR and
+native/browser interoperability checks through scripts/dgradle.

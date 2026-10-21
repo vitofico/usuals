@@ -110,8 +110,13 @@ fun SettingsScreen(
             } else {
                 SectionCard {
                     Text(stringResource(R.string.settings_server), style = MaterialTheme.typography.titleLarge)
-                    Text(state.serverOrigin ?: stringResource(R.string.settings_server_help), style = MaterialTheme.typography.bodyMedium)
-                    Button(onClick = onOpenSharing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (state.serverOrigin == null) R.string.connection_title else R.string.settings_manage_server)) }
+                    val sharing = state.sharing
+                    Text(when {
+                        sharing == null -> stringResource(R.string.settings_sharing_none)
+                        sharing.phones == 0 -> sharing.host
+                        else -> pluralStringResource(R.plurals.settings_sharing_phones, sharing.phones, sharing.host, sharing.phones)
+                    }, style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = onOpenSharing, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (sharing == null) R.string.sharing_start_title else R.string.settings_manage_server)) }
                 }
                 SectionCard {
                     TextButton(onClick = { panel = "appearance" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.appearance_title)) }

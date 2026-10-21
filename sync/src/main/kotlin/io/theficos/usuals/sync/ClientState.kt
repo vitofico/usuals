@@ -19,7 +19,12 @@ interface SyncStateStore {
     val connecting: PendingConnection? = null,
     val sharingSource: String? = null,
     val pendingShares: Map<String, PendingShare> = emptyMap(),
+    val invites: Map<String, OutgoingInvite> = emptyMap(),
 ) { override fun toString() = "ClientState([redacted])" }
+/** An invite this device created; only its key can verify the applicant's join MAC. */
+@Serializable data class OutgoingInvite(val household: String, val key: String, val memberId: String, val role: String, val expiresAt: Long) {
+    override fun toString() = "OutgoingInvite([redacted])"
+}
 @Serializable data class PendingShare(val household: String, val source: String, val target: String, val includeHistory: Boolean)
 @Serializable data class SavedHousehold(
     val origin: String, val server: ServerInfo, val id: String, val genesis: ManifestProof, val current: ManifestProof,
@@ -41,21 +46,11 @@ interface SyncStateStore {
     val candidates: Map<String, String> = emptyMap()) {
     override fun toString() = "PendingMembership([redacted])"
 }
+/** The household facts an applicant took from a verified invite; [key] is null only for a legacy v1 join kept in storage. */
 @Serializable data class InvitationLink(val version: Int = 1, val origin: String, val serverId: String, val householdId: String,
     val genesisHash: String, val ownerDeviceId: String, val ownerFingerprint: String, val inviteId: String,
-    val memberId: String, val role: String, val secret: String, val expiresAt: Long) {
-    fun uri() = "usuals://join#" + Wire.encode(Wire.json.encodeToString(serializer(), this).toByteArray())
+    val memberId: String, val role: String, val secret: String, val expiresAt: Long, val key: String? = null) {
     override fun toString() = "InvitationLink([redacted])"
-    companion object {
-        fun parse(uri: String): InvitationLink {
-            require(uri.startsWith("usuals://join#") && uri.length <= 4096)
-            val value = Wire.json.decodeFromJsonElement(serializer(), Wire.strictJson(Wire.decode(uri.substringAfter('#')), 3072))
-            require(value.version == 1 && value.role in setOf("owner", "editor") && value.expiresAt > 0)
-            Wire.uuid(value.householdId); Wire.uuid(value.ownerDeviceId); Wire.uuid(value.inviteId); Wire.uuid(value.memberId)
-            Wire.decode(value.serverId, 32); Wire.decode(value.genesisHash, 32); Wire.decode(value.ownerFingerprint, 32); Wire.decode(value.secret, 32)
-            return value
-        }
-    }
 }
 interface RelayTransport {
     suspend fun request(origin: String, method: String, path: String, body: ByteArray? = null, token: String? = null, maxResponse: Int = 1024 * 1024): WireResponse

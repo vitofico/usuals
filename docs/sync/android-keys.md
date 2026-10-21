@@ -6,21 +6,21 @@ cluster deployment requires a separate approval.
 
 `ServiceLocator` constructs `SyncVault`, `VaultSyncStateStore`, the bounded
 OkHttp transport, the initial-list checkpoint source and `HouseholdClient`.
-Settings opens household enrollment. Invitation links and QR codes enter this
-screen without entering grocery capture. Verification QR decoding is separate
-from GTIN decoding and never inserts an item.
+**Settings > Server and sharing** opens household enrollment. Server, invite and
+sign-in-return links open this screen without entering grocery capture. The
+pairing QR scanner accepts only Usuals server and invite codes, separately from
+GTIN decoding, and never inserts an item.
 
-Android offers **Scan invitation QR** first. A web owner opens **Shared lists >
-Connect a phone** to show a private, one-use invitation QR. Android displays its
-server address and requires **Connect this phone** before making requests. The
-web owner then scans Android’s reverse verification QR with the computer camera;
-the browser binds its exact signed assertion to the household and original
-invitation before approval. Manual links and full-fingerprint approval remain
-available. Android checks for approval every five seconds while the sharing
-screen is resumed, stopping after invitation expiry or successful enrollment.
-Scanning or pasting another invitation preserves the pending device identity.
-Replacing that request requires confirmation, with **Check approval** still
-available in case the previous request was already approved.
+An invite QR carries a short pairing v2 link (see
+[ADR 0015](../decisions/ADR-0015-pairing-v2.md)). Android shows the invite's
+server and requires **Join** before making requests. The owner's device approves
+with one tap once the request's link MAC verifies; both screens show the same
+six-digit code for an optional spoken check. Android checks for approval every
+five seconds while the sharing screen is resumed, and once on opening, stopping
+after invitation expiry or successful enrollment. Scanning or pasting another
+invitation preserves the pending device identity. Replacing that request requires
+confirmation, with **Check approval** still available in case the previous
+request was already approved.
 
 ## Private state
 
@@ -45,13 +45,15 @@ to 1.23. Original preferences were backed up and restored.
 
 ## Enrollment and continuity
 
-Before creation, save the encrypted recovery file and its separate random
-256-bit secret, then reopen and verify both. Recovery signing and HPKE keys are
+Before creation, save the encrypted recovery file; the app reads the saved bytes
+back and verifies them with the in-memory 256-bit secret, which the person copies
+and stores separately. Recovery signing and HPKE keys are
 self-tested; only public recovery material remains in household state.
 
 The applicant signs both device public keys, the exact invitation, household,
-server/genesis pins, challenge and expiry. The owner must scan the applicant's
-reverse QR or enter the entire fingerprint obtained through a trusted channel.
+server/genesis pins, challenge and expiry, and MACs the assertion with the
+invite link's key. The owner device that created the invite verifies that MAC
+with the key it kept; any other owner device cannot approve the request.
 The applicant verifies the complete signed membership chain and its exact
 approved assertion before receiving its own recipient packages. Identity,
 keys and removal of the pending join are committed together. Failed key reads
@@ -103,7 +105,8 @@ saved atomically when clearing an outdated proposal.
 
 ## Verification
 
-Real local PostgreSQL/HTTP tests exercise two clients, QR/fingerprint approval,
+Real local PostgreSQL/HTTP tests exercise two clients, link-MAC approval,
+relay key substitution, tampered descriptors, approval from a second owner device,
 lost acknowledgements, key-fetch interruption, stale snapshot recovery,
 candidate expiry, head rollback/fork rejection, accepted ownership transfer,
 kit replacement, fresh-install recovery and old-device denial. API 26 and 33

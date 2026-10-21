@@ -86,11 +86,11 @@ internal class RelayFixture(val db: Database, val identity: Identity, val clock:
         val invite = membership.invite(token, household, InviteRequest(memberId, role))
         return requestJoin(invite, device, memberId)
     }
-    fun requestJoin(invite: Invite, device: TestDevice, memberId: String): Pair<String, String> {
+    fun requestJoin(invite: Invite, device: TestDevice, memberId: String, secret: String = requireNotNull(invite.secret), mac: String? = null): Pair<String, String> {
         val challenge = auth.challenge(ChallengeRequest(device.keys.id, "join", device.keys.signingPublicKey), "fixture-${ip++}")
         val body = JoinAssertion(origin, identity.serverId, household, if (current.body().epoch == 1L) current.hash() else current.body().genesisHash,
-            invite.inviteId, uuid(), memberId, device.keys, Wire.hash(raw(invite.secret)), challenge.challengeId, challenge.nonce, invite.expiresAt)
-        membership.join(JoinRequest(invite.secret, Wire.encode(body.bytes()), device.sign(body.bytes())), "fixture-${ip++}")
+            invite.inviteId, uuid(), memberId, device.keys, Wire.hash(raw(secret)), challenge.challengeId, challenge.nonce, invite.expiresAt)
+        membership.join(JoinRequest(secret, Wire.encode(body.bytes()), device.sign(body.bytes()), mac), "fixture-${ip++}")
         return body.requestId to Wire.hash(body.bytes())
     }
     fun addMember(device: TestDevice): String {

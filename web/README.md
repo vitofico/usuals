@@ -6,8 +6,9 @@ CDN, third-party script or browser provider token is involved.
 
 The browser signs in through a local account or the configured OIDC provider,
 then unlocks its separately encrypted local vault. Create a household here or
-join one through an invitation from an Android or browser owner. Joining devices
-need full fingerprint approval. Account administrators cannot grant list keys.
+join one through an invite link from an Android or browser owner. The owner
+approves each joining device after matching a 6-digit code. Account administrators
+cannot grant list keys.
 Browser owners can invite, approve and remove devices; recovery and advanced
 ownership actions remain available in Android.
 
@@ -27,13 +28,14 @@ For a new web household, unlock the browser vault and choose **Create household*
 Name the initial list, download the encrypted recovery file and save its key
 separately. Select the saved file and enter the saved key to verify both before
 creation. This uses your admitted account, without an operator setup code.
-From Shared lists, invite a device and compare its complete fingerprint before
-approval. Keep the kit for Android recovery if this browser is lost.
+From Shared lists, invite a device and approve the request whose code matches the
+one it shows. Keep the kit for Android recovery if this browser is lost.
 
 ## Server connection and AI
 
 **Account > Connect a phone** shows a public server link and QR for Android.
-Approve its full device code after signing in, without unlocking a shopping vault.
+After signing in, approve the phone when it shows the same 6-digit code, then use
+**Return to Usuals**. No shopping vault needs to be unlocked.
 **Account > AI assistance** shows the server-selected provider. Its optional
 **Advanced** section contains model details and personal provider/key controls. Photo import and recipe-text extraction use this same-origin gateway when
 available; ordinary users need no provider CORS or separate endpoint setup. Inputs
@@ -44,32 +46,29 @@ are submitted only on explicit action and remain drafts until reviewed. See the
 
 1. Sign in, unlock the web vault and open **Shared lists > Connect a phone**.
    Create a household first if you do not have one yet.
-2. On Android, open **Settings > Shared lists > Scan invitation QR**. Scan the
-   web code, check the displayed server address and tap **Connect this phone**.
-3. Back on the web, open **Review requests**, compare every group of the full
-   device code with Android, confirm the match and approve. Android detects approval
-   automatically. The signed verification QR remains a camera-based alternative.
+2. On the phone, scan the code with the camera (the server's `/join` page offers
+   **Open in Usuals**) or in Usuals under **Sharing > Join with an invite**. Check
+   the server address and tap **Join**.
+3. The request appears in the open web dialog with a 6-digit code. Approve it when
+   the phone shows the same code. The phone finishes joining automatically.
 
-The private invitation expires after ten minutes and works once. An expired
-code is hidden; choose **Create a new code** to replace it. QR generation and
-camera decoding run on your device without uploads or an external QR service.
-Closing the dialog, locking the vault or hiding the page stops the camera.
+The invite works once and expires after 24 hours. An expired code is hidden;
+choose **Create a new code** to replace it. QR generation runs on your device
+without uploads or an external QR service.
 
-Without a camera, expand **Use a link or manual verification** and copy the
-invitation into Android. On the web, use **Review join requests** and enter the full
-phone fingerprint obtained through a trusted channel. Account sign-in alone
-does not grant household membership or list keys.
+Without a camera, expand **Share the link instead** and send the link privately.
+Anyone who opens it can ask to join, so approve only the code you expect. A
+request that used an invite from another owner device must be approved on that
+device. Account sign-in alone does not grant household membership or list keys.
 
 To share a list already on your Android phone:
 
-1. Open **Settings > Shared lists > Create a household** in Android. Use the
-   same server origin as the web app.
-2. Obtain a one-time household setup code from the server administrator.
-   Prepare, save and verify the recovery kit, then choose **Create household**.
-3. Choose **Share a local list** to create a shared copy of your shopping list.
-4. Choose **Invite someone**. Paste that invitation into the signed-in browser,
-   then use **Review join requests** in Android to compare the full fingerprint and
-   approve the browser.
+1. In Android, open **Settings > Server and sharing** and choose **Start sharing**.
+   Connect to the same server origin as the web app and sign in.
+2. Save the recovery file, copy the recovery code and create the household.
+3. Share a local list, then choose **Invite**. Open the invite link in the
+   signed-in browser and choose **Join in this browser**.
+4. Approve the browser in Android when it shows the same 6-digit code.
 
 The signed-in empty state offers web creation, the Android guide with the current
 server address, and the invitation form. Joining an existing household always
@@ -123,8 +122,8 @@ For a disposable local browser pass, run `server/scripts/preview-local`. It
 publishes only a loopback port, starts isolated PostgreSQL and writes private
 setup/command files under a fresh `server/build/browser-preview.*` directory. Activate the
 synthetic administrator using `browser-setup.json`, then unlock a separate vault
-and paste its editor invitation. Compare the full fingerprint shown by the
-browser before writing `approve.json` with that fingerprint and request ID.
+and paste its editor invite link. Write `approve.json` with the request ID and the
+6-digit code the browser shows.
 This fixture uses the production Kotlin household client as the native peer.
 Create `stop` with `umask 077; touch <directory>/stop` to cleanly stop the preview;
 all fixture input files must have mode0600.
