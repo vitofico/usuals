@@ -1,36 +1,38 @@
 # Security model
 
-The phone owns the list and works offline without an account. There is no
-telemetry, analytics or crash reporting. Optional browser access uses standalone
-accounts or Authentik sessions, separate from encrypted household membership.
-There are no retailer credentials or payment data.
+The phone owns its lists and works offline without an account. There is no
+telemetry, analytics or crash reporting. There are no retailer credentials or
+payment data.
 
-Browser account administration cannot grant household keys or decrypt a vault.
-The browser trusts JavaScript delivered by its serving origin; an active operator
-who changes that code can observe an unlocked browser. The independently
-installed Android app has the stronger operator boundary.
+Signing in to a Usuals server is optional. Signed in, every list of the account
+lives on that server, which applies every change through the shared reducer and is
+the authority for it ([ADR 0017](decisions/ADR-0017-server-held-lists.md)). The
+running server, and so its operator, can read those lists. Stored lists are
+encrypted with AES-256-GCM under a key file kept outside the database and bound to
+their list id, so a copied database or backup without that key reveals no list
+contents; a compromised running server is not covered. Lists on a phone that is
+not signed in never leave it. Encryption with a key only the user holds was
+considered and rejected for now; the ADR explains why.
 
-A browser vault locks when its page closes or after 30 idle minutes. On a computer
-the person trusts, they can keep it unlocked: the browser stores the vault's
-non-extractable AES key in IndexedDB, and the vault opens without the passphrase
-while the account is signed in. Page script can use that key but never read its
-bytes. Anyone using that operating-system account with a live session can open the
-lists, the same exposure as the Android app. Signing out or **Forget this
-browser** deletes the key; a key that no longer opens the vault is deleted too. See the
-[browser protocol](../web/PROTOCOL.md) and [identity guide](sync/web-identity.md)
-for enrollment, session, password and restore details.
+An account reaches only the lists it owns or was added to; every other list
+answers as if it did not exist. Any member can add another enabled account on the
+same server, the owner can remove members or delete the list, and a member can
+leave. Choosing people shows the display names and email addresses of the other
+enabled accounts on that server. Account administration manages accounts and
+sessions and never shows or changes lists.
 
-The web **Connect a phone** action renders a private one-use QR locally. Its offer
-secret lets only the phone holding it ask this account for approval, and an owner
-browser's embedded invite keeps the pairing v2 guarantees
-([ADR-0016](decisions/ADR-0016-one-scan-phone-connection.md)).
-Android asks for confirmation of the server before contacting it.
-The owner compares every group of the full device code shown on both devices
-and explicitly approves. The signed verification QR remains an alternative; its
-approval checks the complete original invitation and signed membership protocol.
-Browser camera permission is requested only for that action. Frames stay on the
-device and the camera stops with the dialog, invitation or unlocked session.
-Manual full-fingerprint verification remains available.
+A browser session slides to 30 days from its last use and a phone connection to
+180 days; both can be revoked, and disabling an account revokes all of them. The
+browser keeps no list data: it shows what the server returns and trusts the
+JavaScript its origin serves. See the [browser boundary](../web/PROTOCOL.md) and
+[identity guide](sync/web-identity.md) for session, password and restore details.
+
+The web **Connect a phone** action renders a one-use QR locally. Its 32-byte
+secret lasts 10 minutes and connects the phone that scans it to this account at
+once, with no code to compare, so the QR must stay private while it is shown.
+Android asks the person to confirm the server address before contacting it. A
+phone that signs in through its own browser instead shows a six-digit code that
+the person compares with the browser before approving.
 
 ## Secrets and external data
 
@@ -93,38 +95,29 @@ configuration, are excluded.
 Explicit shopping-data export/import uses the system file picker. The JSON
 version-2 archive includes named lists, scoped rows, trips, purchases, item
 preferences and aliases. It excludes quality-cache data, provider settings,
-keys, membership, outbox, received ledger, remote cursors and conflict diagnostics.
-Version-1 imports remain supported. A shared archive restores an independent
-local copy with fresh list scope and no authority. An import cannot
+keys, the account connection, outbox, feed cursor and conflict diagnostics.
+Version-1 imports remain supported. An account list in an archive restores as an
+independent local copy with a fresh id and no members. An import cannot
 change an endpoint or disclose a stored model key. Imports validate before their
 transaction and cannot rewrite existing purchase facts. The resulting export is
 a readable file at the location the person chose.
 
-## Shared-list implementation
+## Server-held lists
 
-The isolated Ktor/PostgreSQL relay, Android Keystore keys, verified joining and
-shopping transport are implemented locally. The relay stores ciphertext plus
-public membership/routing metadata. It cannot read shopping names, quantities
-or history. Recipe and catalog reads still originate on the device or browser. Explicit
-server-AI submissions are readable by the gateway and selected model provider.
-Encrypted shopping transport does not automatically disclose list contents to AI.
-
-The [v1 contract](sync/security-v1.md) covers signed membership, per-list keys,
-receipts, pins, removal, recovery and its freshness limits. Restored household
-ids are permanently frozen before authentication. The offline operator can only
-export a recipient-scoped encrypted [recovery copy](sync/recovery-copy.md) after
-independent known-owner fingerprint verification. The phone verifies signatures,
-AEAD, exact overlapping pins, receipts and EOF before an immutable preview and
-atomic local-scope save. Existing work and private state are preserved. Missing
-ancestry is warned about; a provable fork fails closed. No backup restores old
-authority, resets encryption keys or silently merges newer work.
+The isolated Ktor/PostgreSQL server and the phone and browser clients are
+implemented locally ([lists v2](sync/lists-v2.md)). Recipe and catalog reads still
+originate on the device or browser. Explicit server-AI submissions are readable by
+the gateway and selected model provider; the gateway does not read lists on its
+own. Without the list key the server cannot open any stored list and refuses to
+start, so the key is escrowed separately from database backups. Restoring a backup rotates an external fence: every
+session and phone connection is revoked and every client reads its lists again.
 
 The [deployment package](../deploy/README.md) and [runbook](sync/runbook.md)
 are local review material. Private metrics have aggregate labels only; no
 analytics SDK or app telemetry is added. Trusted forwarded client addresses
 require explicit immediate-ingress configuration and CNI enforcement. Actual
-cluster deployment, off-cluster recovery and a household pilot need approval
-and verification. Physical-phone sharing has not been claimed from emulators.
+cluster deployment, off-cluster recovery and a pilot with real users need
+approval and verification.
 
 Weekly reminders are off by default. Enabling asks for Android notification
 permission on API33+. The generic notification contains no item names, list names,
@@ -147,9 +140,8 @@ output remains untrusted and requires the existing review/add confirmation.
 
 Legacy direct browser model connections use exact operator-approved CSP origins,
 empty by default. Those direct keys live only in the import dialog memory, without
-the gateway,
-ambient account credentials, redirect following or vault persistence. A failed
-replacement disconnects the old provider. Native requests and browser requests
-are cancellable and response-bounded. Camera streams stop on dismissal, lock,
+the gateway, ambient account credentials, redirect following or persistence. A
+failed replacement disconnects the old provider. Native requests and browser
+requests are cancellable and response-bounded. Camera streams stop on dismissal,
 late permission completion and capture errors. These controls do not guarantee
 that a model identifies ingredients or quantities correctly.

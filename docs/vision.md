@@ -9,7 +9,7 @@ English is the default UI; input languages and display languages are independent
 One living list spans shops. Finish files checked rows from their final state,
 using the time each row was checked. Unchecked rows carry forward. Undo,
 portable history and dated imports make that memory something a person keeps.
-A text share supports a partner while one phone owns the list.
+A text share supports a partner without any account.
 
 Memory should help without making the list untrustworthy. Only a person's
 explicit repeat rule adds automatically. Habits offer suggestions with Add,
@@ -25,11 +25,14 @@ A store filter and local home-screen widget support shopping with that list.
 
 Local reminders and carefully labelled product nutrition/allergen information
 are implemented. A voice tile and evidence-backed bought-together suggestions
-remain later work. Optional encrypted household sharing and a browser editor
-use a self-hosted relay. Cluster deployment needs the maintainer's approval.
+remain later work. Optionally, a self-hosted Usuals server keeps an account's
+lists in sync between phone and browser and shares them with other accounts on
+that server; the server can read those lists. Cluster deployment needs the
+maintainer's approval.
 
 Retailer integrations, price memory, pantry tracking, meal planning, recipe
 storage, AI chat, analytics and advertising are outside the product. Browser
-accounts and optional SSO control sign-in; they never grant household keys.
+accounts and optional SSO control sign-in; a list is shared only by one of its
+members.
 The Android app remains Apache-2.0 and contributions follow the existing CLA.
 See the [roadmap](roadmap.md) for implemented scope and release limits.

@@ -13,7 +13,7 @@ those review findings.
 |---|---|---|
 | MR template was not followed | [Draft](merge-request-draft.md) preserves the official App inclusion headings, checklist wording and section order. Unmet policy, future MR setup and future pipeline checks remain unchecked. | Re-fetch the then-current template and fill only verified answers when a new request is separately authorized. |
 | More than three months of maintenance | Use the first public source/APK release on 2026-10-19 as a conservative documented baseline. Reconsider no earlier than **2027-01-20**. | Show continued maintenance during that period. A date alone is insufficient. Do not backdate history or automatically submit on that date. |
-| Insufficient unique features | Draft explains the implemented purchase-memory, confirmed quantity/rebuy workflow and optional encrypted sharing, with released-source links and comparisons to ShoppingList, KitchenOwl and Grocy Android. | F-Droid decides whether that adds sufficient value. Refresh comparisons and demonstrate the actual future candidate. |
+| Insufficient unique features | Draft explains the implemented purchase-memory, confirmed quantity/rebuy workflow and optional self-hosted sharing, with released-source links and comparisons to ShoppingList, KitchenOwl and Grocy Android. | F-Droid decides whether that adds sufficient value. Refresh comparisons and demonstrate the actual future candidate. |
 
 ## Metadata correction
 
@@ -25,7 +25,10 @@ Maintainer notes explain that this is a reference for the existing release.
 
 At any future submission, replace this reference with the latest verified signed
 release and keep only that candidate. Unreleased QR and Markdown/photo features
-must not be advertised as part of the older APK. No published APK, source tag,
+must not be advertised as part of the older APK. The pinned release still has the
+encrypted household sharing that [ADR 0017](../../docs/decisions/ADR-0017-server-held-lists.md)
+replaced; the draft describes the server-held sharing, so it needs a candidate
+that contains it. No published APK, source tag,
 release asset or signing key is changed by this preparation.
 
 ## Reviewer evidence
@@ -34,7 +37,7 @@ The draft links feature code at the exact released source hash and includes two
 screenshots from that release. Its comparisons describe what the other projects
 publish, without claiming that familiar list, reminder, barcode or recipe features
 are exclusive to Usuals. The proposed extra value is the combined local purchase
-memory and optional encrypted-household workflow.
+memory and optional self-hosted list sync and sharing.
 
 For a short manual check of the pinned release:
 
@@ -45,9 +48,10 @@ For a short manual check of the pinned release:
    interval predictions remain disabled and are not an advertised working feature.
 3. Share a recipe URL containing Recipe JSON-LD. Inspect the ingredient review and
    existing-item exclusion before adding. Models and product lookup stay optional.
-4. With a separately prepared disposable relay and two devices, inspect signed
-   device approval and an encrypted shared list. Android local lists still work
-   without signing in. This is independent of the no-server check above.
+4. With a disposable Usuals server, connect a phone by scanning the web app's
+   QR, share a list with a second account and watch a change reach the other
+   side. This needs a candidate with server-held lists; the pinned release used
+   the earlier household flow. Android local lists still work without signing in.
 
 Before a future request, record current build/reproduction results, screenshots
 and a demonstration against the actual candidate. The closed request's nine green

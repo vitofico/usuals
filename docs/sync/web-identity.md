@@ -4,18 +4,19 @@ Browser identity is an optional control plane. Operators can enable standalone
 local accounts, Authentik OIDC, or both. Public signup stays closed. Authentik
 controls its users, password policy, MFA and application admission. Local users
 are provisioned through an explicit operator action or an existing administrator.
-The existing Android offline experience and signed household protocol remain
-available without accounts.
+Android works offline without an account. An account is what lets a phone or a
+browser keep lists on the server and share them with other accounts there.
 
 The backend implements confidential authorization code flow with S256 PKCE.
 Discovery, exchange and JWKS retrieval happen server-side. The browser receives
 an opaque HttpOnly session cookie, never an IdP access token, refresh token or
-client secret. Application sessions last 15 minutes without renewal. Logging
-out revokes the local session; it does not sign out other Authentik applications.
-Authentik deprovisioning, changed group admission or IdP logout takes effect at
-the next sign-in, within the fixed session lifetime. Immediate local revocation
-is available to application administrators. Back-channel IdP logout and SCIM are
-not implemented.
+client secret. A browser session slides to 30 days from its last use and a phone
+connection to 180 days, each renewed at most once a day. Logging out revokes the
+local session; it does not sign out other Authentik applications. Authentik
+deprovisioning, changed group admission or IdP logout takes effect at the next
+sign-in, which can be weeks away, so when removing someone also disable their
+Usuals account: that signs out every browser and phone at once. Back-channel IdP
+logout and SCIM are not implemented.
 
 ## Trust boundaries
 
@@ -31,31 +32,19 @@ ordinary invite or password reset. Optional OIDC allowed groups must be
 a signed array in the ID token, and at least one configured group must match.
 Without that optional filter, Authentik's application policy controls admission.
 
-Account sign-in alone never creates a household, obtains its keys, approves a join,
-resets encryption or bypasses verified recovery. The relay continues to store
-opaque ciphertext. A joining browser device follows the existing invitation,
-fingerprint verification, owner approval and signed manifest protocol. It then
-links its existing principal with a signed session challenge, an active account
-cookie and CSRF proof. Signing and encryption private keys remain in the browser.
+An account sees the lists it owns or was added to, and nothing else. A list is
+shared only when one of its members adds another account
+([lists v2](lists-v2.md)). Administrators manage accounts and sessions; those
+screens never show or change anyone's lists. Every list request is checked
+against an unrevoked, unexpired session or phone connection of an enabled account
+from a currently enabled identity provider. Missing, revoked or expired
+credentials fail closed.
 
-Linking is immutable through HTTP. The server locks the principal, verifies a
-fresh single-use proof, rejects recovery principals and any existing binding,
-records the account association and revokes all earlier device sessions in one
-transaction. Session issuance takes the same principal lock. New browser bearer
-tokens map to the exact application session that issued them. Every signed API
-and socket authorization checks both that mapped session and the matching
-request cookie, currently enabled identity provider, expiry and enabled account. Missing, different,
-revoked or expired cookies fail closed. A request-scoped coroutine context carries
-the cookie across JDBC dispatch without leaking it into another request.
-
-Disabling an account or revoking its sessions stops its bound browser sessions.
-It cannot erase previously downloaded contents or revoke an unrelated unbound
-Android principal. Household removal remains a separate owner-signed action
-that rotates keys. Unmanaged devices still require possession of their private
-keys and active household membership. Restoring the database revokes browser
-sessions, pending logins, local password hashes and unredeemed setup/reset secrets
-as part of the independent restore fence, while
-retaining immutable account associations and the existing frozen-household rule.
+Disabling an account or revoking its sessions signs out its browsers and phones.
+It cannot erase lists a phone already holds offline. Restoring the database
+revokes browser sessions, phone connections, pending logins, local password hashes
+and unredeemed setup/reset secrets as part of the independent restore fence, while
+keeping account ids and list memberships.
 
 ## HTTP contract
 
@@ -76,7 +65,6 @@ not provider diagnostics or user-facing sentences.
 | `GET /api/sessions` | `{sessions:[{id, createdAt, expiresAt, current}]}` |
 | `POST /auth/logout` | Revoke current session, clear cookie, 204 |
 | `POST /api/sessions/{id}/revoke` | Revoke an owned session, 204 |
-| `POST /api/devices/link` | Existing signed `Proof`, immutable device link, 204 |
 | `GET /api/admin/users?after={uuid}` | `{users, next?}`, pages of at most 100 |
 | `POST /api/admin/users/{id}` | `{disabled:boolean}`, return updated user |
 | `POST /api/admin/users/{id}/revoke-sessions` | Revoke all target sessions, 204 |
@@ -90,8 +78,8 @@ not provider diagnostics or user-facing sentences.
 The user object contains `id`, `issuer`, `subject`, `displayName`, optional
 `email`, optional local `username`, `admin`, `disabled`, `createdAt` and
 `lastLoginAt`. All dates are Unix
-milliseconds. The durable account ID and issuer/subject do not change. Browser
-vaults and pending enrollment must bind to origin plus issuer/subject, never email.
+milliseconds. The durable account ID and issuer/subject do not change. Lists and
+their members bind to the account ID, never to an email.
 
 All identity mutations require an exact `Origin` header and `X-CSRF-Token` from
 `/api/me`. Unauthenticated local login and activation instead require the token
@@ -99,11 +87,9 @@ from `/auth/local/challenge` plus its matching cookie. That challenge is one-use
 on submission, including a failed password, and must be requested again before
 retrying. Local login and activation consume the valid challenge before reading
 their bounded bodies, with a three-second body deadline. JSON bodies require
-`application/json` and strict bounded decoding.
-Browser `/v1/devices/session` also requires those headers when using its cookie.
-The device link body is the existing `{challengeId, deviceId, signature}` proof
-with purpose `session`. Linking consumes that proof, so minting the next bearer
-requires a new challenge. A cookie alone never authenticates `/v1` household data.
+`application/json` and strict bounded decoding. List mutations from a browser
+need the same `Origin` and `X-CSRF-Token`; a phone sends its bearer credential
+instead.
 
 ## Configuration and provider preparation
 
@@ -133,8 +119,8 @@ party, issue time, expiry, nonce and optional groups are verified.
 
 The HTTP transport bounds response bytes, timeouts and redirects. Login,
 password hashing and callback network calls have their own single-worker, fail-fast
-admission budget, so an unavailable IdP cannot consume the encrypted sync
-dispatcher or request slots. Pending
+admission budget, so an unavailable IdP cannot consume the list request slots.
+Pending
 transactions are capped, hashed state and cookie bindings expire after five
 minutes, and consumption commits before exchange. Session cookies rotate on
 every sign-in. Only session-token hashes persist. Per-account session and total
@@ -176,18 +162,15 @@ normalized-login buckets each admit at most ten password attempts per minute.
 The account row stays locked through password verification, replacement and
 session issuance. A concurrent reset cannot issue a new session from an old
 password after the replacement transaction. Password work never enters the
-encrypted sync worker budget. The account password and browser vault passphrase
-are separate: a password reset neither decrypts a browser vault nor grants
-household recovery authority. Losing the vault passphrase still requires the
-existing verified enrollment or recovery path.
+list request budget. Changing or resetting a password signs out the account's
+browsers and phones.
 
 A changed restore fence also invalidates every local password. A restored
 backup must not revive an earlier password or an earlier administrator's usable
 credential. Operators first issue a protected `local-reset` for the intended
 local administrator and verify delivery; that administrator can then reset other
-local users. Existing IDs, roles, disabled flags and device associations stay
-stable. OIDC sign-in still verifies the current external provider. Household
-freeze and cryptographic recovery remain independent of account reactivation.
+local users. Existing IDs, roles, disabled flags and list memberships stay
+stable. OIDC sign-in still verifies the current external provider.
 
 A typical Authentik install runs in namespace `authentik` with server pod label
 `app=authentik-server`; the examples use the issuer host `auth.example.org`.
@@ -201,18 +184,3 @@ Sources: [Authentik OAuth2 provider and endpoint documentation](https://docs.goa
 and [OpenID Connect Core validation rules](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
 Password parameters follow the [OWASP password storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 and the password-length baseline in [NIST SP 800-63B](https://pages.nist.gov/800-63-4/sp800-63b.html).
-
-## Web-first household setup
-
-An admitted local or SSO account may explicitly create its first household in the
-web app after unlocking its separate browser vault. It generates owner and recovery
-keys locally, requires saving and verifying a native-compatible encrypted recovery
-kit, and binds its fresh owner device atomically through `POST /api/households`.
-This same-origin endpoint requires the session CSRF token, limits attempts to five
-per minute and retains a permanent maximum of ten created households per account.
-Exact genesis retries are idempotent for their original creating account.
-
-Existing Android lists still use Android setup and an owner-approved invitation.
-Web owners can invite, approve and remove devices. Recovery and advanced owner
-operations use Android and the saved kit. Neither admission nor administrative
-account access grants membership in somebody else's household.

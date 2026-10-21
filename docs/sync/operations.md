@@ -18,9 +18,10 @@ SSH connection or Kubernetes API was used.
 | Cluster backup configuration, capability-only inspection | Borgmatic, PostgreSQL dump hooks, daily retention/scheduling | Existing daily dumps do not establish 15-minute RPO or WAL recovery. Add a reviewed Usuals dump/archive job and restore drill; no current backup guarantee. No secret values were read into this record. |
 
 Future deployment review must verify DNS A/AAAA, public 80/443, issuer readiness,
-Traefik WebSocket and forwarded-header handling, namespace network-policy
-selectors, node disk/memory capacity, non-root volume permissions, database TLS
-if outside the dedicated namespace and off-cluster Borg restore capability.
+Traefik forwarded-header handling, change-feed requests held open for up to 25
+seconds, namespace network-policy selectors, node disk/memory capacity, non-root
+volume permissions, database TLS if outside the dedicated namespace and
+off-cluster Borg restore capability.
 Trust forwarded IPs only from known ingress peers; rate limits must not trust
 arbitrary X-Forwarded-For. Do not copy Spunto's Ollama mounts/configuration.
 
@@ -67,27 +68,25 @@ or newer schemas. No migration framework dependency is selected implicitly.
 Start relay at 100m CPU/256 MiB request, 1 CPU/512 MiB limit; database at
 500m/512 MiB request, 1 GiB memory limit and 10 GiB RWO hostpath storage.
 Measure heap, native memory, connections and load before approving those limits.
-One relay replica and one database instance, with bounded worker/connection
-queues. Restarted sockets resume by cursor; no Redis or task broker.
+One server replica and one database instance, with bounded worker/connection
+queues. Clients resume the change feed by cursor; no Redis or task broker. The
+waiting feed requests live in that one process, so a second replica would need a
+shared notifier.
 
 Proposed recovery targets remain 15-minute RPO and 2-hour RTO. They require WAL
 archive/base-backup design plus off-cluster retention and measured restore.
 Until that is implemented and drilled, describe backups as unverified for
-Usuals. V1 restore fences old households before authentication, not merely their
-sessions. Recovery uses a verified local operator export grant and a reviewed
-copy into a fresh household with new keys/invites. Old household ids never
-resume. Keep the restore fence outside restored database state, persist the
-receipt signing key separately, and fail startup if that identity key is lost.
-S5 must test old sessions and fresh challenges from a removed device after a
-roster-only rollback, not merely restore PostgreSQL rows. Clients preserve
-membership epoch/hash pins separately from list-head pins.
+Usuals. A restore rotates the external fence before anyone authenticates: every
+session and phone connection is revoked and every client's list feed starts over
+([ADR 0017](../decisions/ADR-0017-server-held-lists.md)). Keep the restore fence
+outside restored database state, keep the server identity and the list key in
+separate escrow, and fail startup if either is lost.
 
 Local S0 can proceed from this inventory. Applying manifests, provisioning DNS,
 creating database users, decrypting/applying SOPS files, importing images and
 changing backup jobs all require Vito's deployment approval first.
 
-S5 now provides the [local deployment package](../../deploy/README.md),
-[restore runbook](runbook.md) and [offline recovery-copy contract](recovery-copy.md).
-Base/WAL recovery and bounded container smoke checks passed locally; live
+S5 now provides the [local deployment package](../../deploy/README.md) and
+[restore runbook](runbook.md). Base/WAL recovery and bounded container smoke checks passed locally; live
 inventory, encrypted off-cluster coverage/retention, RPO/RTO and the week pilot
 remain approval and measurement gates. See the S5 release evidence.

@@ -1,6 +1,6 @@
 # ADR-0013: encrypted shared lists through an ordered relay
 
-- **Status:** Accepted for local implementation, 2026-10-16
+- **Status:** Superseded (2026-10-21) by [ADR 0017](ADR-0017-server-held-lists.md); accepted for local implementation, 2026-10-16
 - **Relates to:** ADR-0009, ADR-0010, ADR-0012
 
 ## Context
@@ -43,7 +43,7 @@ S0 contains contracts, migration/archive design, reviewed security boundaries
 and test-only primitive probes. It does not add a running relay, schema 5,
 production sync wiring or a multi-phone claim to the current app. A separate
 read-only review found seven gaps; all were fixed and re-reviewed in the
-[review record](../sync/review.md).
+review record (`docs/sync/review.md`, removed with ADR 0017 and kept in Git history).
 
 S1 must implement and test the migration and reducer against the fixtures.
 S2 to S4 must verify real authorization, persistence, encrypted exchange and

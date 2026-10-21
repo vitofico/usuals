@@ -44,17 +44,21 @@ before shipping. Spanish, Italian, French and German UI translations are now
 complete resource folders. The [translation guide](translating.md) explains how
 to improve them or add another language. Input-language packs remain separate.
 
-The [shared lists plan](shared-lists-plan.md) records the local Kotlin/Ktor relay,
-PostgreSQL storage, encrypted Android sharing and recovery implementation. Its
-[deployment package](../deploy/README.md) is ready for review. Cluster deployment,
-live backup verification and the household pilot require separate approval and
-validation.
+Lists sync through a self-hosted Kotlin/Ktor server with PostgreSQL: signed in,
+the phone and the web app show the same account lists, and accounts on the same
+server share lists with each other
+([ADR 0017](decisions/ADR-0017-server-held-lists.md)). It replaced the earlier
+end-to-end encrypted households. The [deployment package](../deploy/README.md) is
+ready for review. Cluster deployment, live backup verification and a pilot with
+real users require separate approval and validation. A per-list private mode,
+encrypted with a key only its members hold, remains possible later.
 
 ## Paid managed hosting preparation
 
 The [Usuals Cloud plan](hosted-service-plan.md) describes a proposed household
-subscription and a separate private service layer. Offline and self-hosted use
+subscription and a separate private service layer. It predates server-held lists
+and needs revisiting before use. Offline and self-hosted use
 remain free. Paid onboarding, entitlement enforcement and billing are not yet
 implemented. Its ordered C1 to C6 gates cover owner-approved payer binding,
 client compatibility, provider sandbox tests, capacity/recovery and a separately
-approved pilot. Existing relay deployment material is not a paid-service launch.
+approved pilot. Existing server deployment material is not a paid-service launch.

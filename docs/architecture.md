@@ -1,6 +1,8 @@
 # Architecture
 
-The device owns list state. The UI reads Room without waiting for a network.
+The device keeps every list it shows in Room, and the UI reads Room without
+waiting for a network. Signed in, the account's lists are also held by the
+server, which is the authority for them.
 `ServiceLocator` is the composition root and constructs production components;
 UI ports keep storage and wire implementations out of screens.
 
@@ -8,14 +10,15 @@ UI ports keep storage and wire implementations out of screens.
 
 | Module | Responsibility |
 |---|---|
-| `:core:model` | Item, household and member ids, quantity, validated GTIN, version constants |
+| `:core:model` | Item ids, quantity, validated GTIN, version constants |
 | `:core:parse` | Local utterance parsing and normalization, automatically discovered input-language packs |
-| `:data:local` | Room items, trips, purchases, preferences, aliases and isolated product-quality cache |
+| `:data:local` | Room lists, items, trips, purchases, preferences, aliases, pending changes and isolated product-quality cache |
+| `:sync` | Shared list reducer and wire types, compiled into both the app and the server |
 | `:smart` | Categories, autocomplete, explicit repeats, staples, gated intervals and replay |
 | `:recipe` | On-device page reads, Recipe JSON-LD extraction and ingredient review planning |
 | `:llm` | Optional recipe parsing, provider probe and persistent daily call budget |
 | `:enrich` | Opt-in Open Food Facts scan naming, local cache and shared rate limiting |
-| `:auth` | Keystore model key and provider settings |
+| `:auth` | Keystore model key, provider settings and the account connection |
 | `:capture` | Speech and ZXing barcode adapters |
 | `:testing` | Shared test helpers |
 | `:app` | Compose screens, Android entry points and dependency wiring |
@@ -27,23 +30,24 @@ locale folders. AGP generates the system locale list from the resource files.
 
 ## Storage
 
-Room schema 5 adds named list scope to the finalized schema-4 shopping facts.
-The versioned 4-to-5 copy/swap migration preserves old records, splits local
-mute/snooze preferences and adds projection, outbox, received-ledger, cursor,
-conflict-review and routing records. Destructive fallback remains limited to
+Room schema 7 keeps named lists, their scoped shopping facts and, for lists that
+belong to the signed-in account, the server's last projection and an outbox of
+pending intents. Each schema since the finalized schema 4 has a versioned
+migration that preserves shopping facts. Destructive fallback remains limited to
 unreleased schemas 1, 2 and 3. Every later schema change needs its own migration,
 exported schema and migration tests.
 
 The pure JVM `:sync` reducer uses accepted intent revisions rather than phone
 clocks. `LocalReplica` commits its projection and durable source intent with
 Room writes. Finish records final checked facts once; Undo retracts only its
-close and unchanged automatic rows, including after process restart. Catch-up
-commits the received ledger and contiguous cursor before rebasing pending work.
-The UI reads items and history in one transactional snapshot per selected list.
+close and unchanged automatic rows, including after process restart. A server
+answer or feed page commits the confirmed projection and cursor together before
+pending work is applied on top again. The UI reads items and history in one
+transactional snapshot per selected list.
 
 Archive version 2 transfers named lists and scoped shopping facts; version 1
-still imports. Shared exports become independent local copies. Archives exclude
-keys, membership, sync routing/state and product cache. The
+still imports. Account lists become independent local copies. Archives exclude
+keys, the account connection, sync state and product cache. The
 [local foundation](sync/local-foundation.md) describes the implemented boundaries.
 
 ## Trust boundary
@@ -51,7 +55,7 @@ keys, membership, sync routing/state and product cache. The
 Recipe-page and Open Food Facts reads originate on the client. The optional
 model can use an explicitly configured direct native provider or the chosen
 server's authenticated AI gateway. The gateway receives only explicitly submitted
-recipe text or prepared photos; encrypted shopping transport remains separate.
+recipe text or prepared photos; list sync is separate.
 Its provider revisions, credential encryption, image checks and resource isolation
 are described in [ADR-0014](decisions/ADR-0014-server-connection-and-ai.md).
 Cluster deployment requires separate approval.
@@ -142,30 +146,28 @@ A Room flow updates installed widgets while the process is alive, and Android
 widget updates refresh from local storage. There is no polling or network job.
 Tapping the widget opens the living list even if Settings was last visible.
 
-## Local shared-list relay
+## Server-held lists
 
 The separate `server/` build uses Kotlin/Ktor, PostgreSQL and the same pure
 `:sync`/`:core:model` sources with its own compiler, outputs and dependency locks.
-`Main` composes persistent receipt identity, database, signed authentication,
-relay and HTTP/membership services. Android ServiceLocator constructs wrapped
-private state, the encrypted household client, Room replica and sharing coordinator.
-No Android/Room dependencies or third-party shopping reads enter the relay.
+It stores each list's projection encrypted at rest, applies intent batches through
+the shared reducer under a lock on the list, and orders every change with one
+server-wide counter that feeds each account's change feed. No Android/Room
+dependencies or third-party shopping reads enter the server. See the
+[server guide](../server/README.md) and the [wire contract](sync/lists-v2.md).
 
-The relay validates scope and signatures, stores ciphertext and assigns durable
-per-list order. Household-before-list row locks serialize append, snapshots and
-membership/key transitions. A committed receipt survives retries and restarts;
-an optimistic receipt from a rejected batch is never returned. Snapshot/package
-references and membership changes commit together. See the
-[relay guide](../server/README.md) and [serialized manifest](sync/manifest-v1.md).
-[Android keys](sync/android-keys.md) and [shopping transport](sync/android-sharing.md)
-add verified enrollment, durable ciphertext retries, authenticated confirmation,
-UI revision pins, foreground hints and connected WorkManager delivery.
+On the phone, `ServiceLocator` constructs `ListSync` and its scheduler. Signed in,
+a local change is sent about two seconds later; while the app is open the phone
+waits on the change feed, and WorkManager syncs every 15 minutes in the background.
+Failures back off and keep the outbox. The share sheet and account screen read the
+same Room records. The browser keeps no copy: it reads the feed and renders what
+the server returns.
 
 Personal shopping tools live in a bounded, versioned app preference store, wired
-by ServiceLocator. Mode, haptics and deferral never become relay facts. Deferred
+by ServiceLocator. Mode, haptics and deferral never become list facts on the server. Deferred
 rows stay unchecked; a new completed trip releases their local hiding. Favourites
 and per-store category ordering travel in app archive version 3. Room facts still
 use the existing transactional version-2 importer. Preference storage follows
 that transaction and is idempotent on retry; a preference disk-write failure may
-leave facts imported before the favourites/layouts are restored. No sharing
-authority is imported.
+leave facts imported before the favourites/layouts are restored. No account or
+sharing state is imported.

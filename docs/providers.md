@@ -5,7 +5,7 @@
 Android and web can use the chosen Usuals server's model gateway. Follow the
 [connection guide](server-connection.md). The default needs no model endpoint,
 provider key or browser CORS configuration on each device. In Android, open
-**Settings > Server connection**, connect once and enable **AI assistance**.
+**Settings > Account**, sign in and turn on **AI assistance**.
 The server supplies the selected model. Its details are read-only on the phone.
 Under the web account’s **AI assistance > Advanced**, you can optionally choose
 an approved provider profile with your personal key. Saving a personal key sends it to the chosen server,
@@ -13,8 +13,8 @@ which stores it encrypted. The server handles that credential during inference.
 
 The selected provider, model and operator-declared processing location are shown
 before use. Only recipe text or prepared photos you explicitly submit reach the
-server and provider. Shopping lists remain encrypted, and structured recipes and
-Markdown remain local. A changed provider requires renewed confirmation. No
+server and provider. The gateway does not read your lists, and structured recipes
+and Markdown remain local. A changed provider requires renewed confirmation. No
 private model silently falls back to an external provider. The server verifies
 image support with synthetic pixels before forwarding your photo.
 
@@ -36,14 +36,14 @@ An empty array disables the gateway. External profiles use HTTPS, with optional
 `keyEnv` naming a protected environment variable containing the operator key.
 Users can select profiles and their configured models; they cannot supply a new
 destination per request. Configure narrowly scoped network access for each
-destination. AI is optional and ordinary encrypted relay readiness does not
-depend on provider health.
+destination. AI is optional and server readiness does not depend on provider
+health.
 
 `USUALS_AI_DAILY_LIMIT` defaults to 20 attempts per account per UTC day. Zero
 disables inference. Probes and failed upstream attempts count; usage survives
 server restarts. Limits count requests and do not guarantee a monetary cap.
 Inference has separate concurrency and time limits so it cannot occupy the
-relay's synchronization allowance. Requests are never automatically retried.
+request slots that list sync uses. Requests are never automatically retried.
 
 ### Personal key storage and recovery
 
@@ -57,7 +57,8 @@ private file permissions. Create the file in a separate operator pod without
 `fsGroup` and verify its permissions through the final runtime mount before use.
 Standard projected Secret symlinks are not accepted directly. Do not put it in the image, source repository or PostgreSQL backup.
 Back it up separately using the operator's encrypted secret escrow. Loss of the
-wrapping key requires re-entering provider keys; shopping encryption is unrelated.
+wrapping key requires re-entering provider keys; the list key is a separate file
+(see the [runbook](sync/runbook.md)).
 Changing a preference to **Use server default** deletes its personal credential.
 
 For rotation, stop the server, retain encrypted recovery copies of both old and
@@ -148,8 +149,7 @@ OpenAI-compatible Chat Completions image content format. In **Import ingredients
 > Photo**, enter its base endpoint, model and optional key. A synthetic image
 check must succeed before choosing or capturing a photo. Changing any connection
 field disconnects the previous provider. Keys and photos are held only for the
-open dialog, cleared on close or vault lock, and never enter IndexedDB or the
-relay. The request cap counts attempts for that connection, including probes;
+open dialog, cleared on close, and never enter browser storage or the server. The request cap counts attempts for that connection, including probes;
 it is a client guard and not a billing limit. Use a restricted provider key
 suitable for browser access. Markdown import needs no provider connection.
 

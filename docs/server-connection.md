@@ -1,81 +1,89 @@
-# Connect a server and share a list
+# Connect to a server and share lists
 
-Android has one place for this: **Settings > Server and sharing**, also reached
-from the sharing icon on the list. It shows only the current step.
+Usuals works offline without an account. Signing in to a Usuals server keeps every
+list of your account on that server: the phone and the web app show the same
+lists, and a change on one appears on the other within a second or two. The phone
+keeps an offline copy and sends its changes when it can reach the server again.
 
 ## Connect your phone from a computer
 
-When you are signed in on the server's website, use **Connect a phone** (on the
-account page or a household card). Scan the code with the phone's camera or in
-Usuals and tap **Continue**. The computer shows the phone's six-digit code;
-approve it there. The phone needs no sign-in of its own. If this browser is
-unlocked and owns a household, the same approval also adds the phone to it.
-The code works for one phone and expires after 10 minutes. To let another
-person join, use **Invite someone** instead.
+1. Sign in to the web app and open **Account > Connect a phone**. It shows a QR.
+2. On the phone, open **Settings > Account** and choose **Scan the QR from the web
+   app**, or scan the code with the phone's camera: the server's `/connect` page
+   offers **Open in Usuals**.
+3. The phone asks once, showing the server address: **Connect** or **Not now**.
+4. The phone connects straight away, with no code to compare, and the web app
+   shows **Phone connected**.
 
-## Start sharing (the first phone)
+Because scanning is enough, keep the QR to yourself while it is shown. It works
+for one phone and expires after 10 minutes; **Create a new code** replaces it.
 
-1. Under **Start sharing**, scan the server's QR code or type its address, then
-   tap **Continue**. The QR is on the server's website under **Account >
-   Connect a phone**; scanning it only fills in the address.
-2. Tap **Sign in in your browser**. The phone and the browser show the same
-   six-digit code; approve in the browser when they match. The browser page ends
-   with **Return to Usuals**, and the app notices the approval on its own. An
-   attempt survives switching apps or restarting the phone, and an expired one
-   can be cancelled and started again.
-3. Usuals then drafts the household. Tap **Save recovery file**: the app writes
-   the file, reads it back and checks it, so there is nothing to paste. Copy the
-   recovery key, keep it somewhere other than the file, tick **I stored the
-   recovery key somewhere safe** and tap **Create household**.
-4. When started from a list's sharing icon, the list preview opens next. History
-   is off by default. An interrupted share reuses the prepared copy and its
-   history choice; the original local list is kept.
+## Connect without a computer
 
-## Invite and join
+Under **Settings > Account > No computer at hand?**, enter the server address and
+choose **Sign in in your browser**. Sign in on the server's page, check that the
+phone and the browser show the same six-digit code, and approve. The browser page
+ends with **Return to Usuals**, and the app notices the approval on its own.
 
-The owner taps **Invite someone**. A QR code and a share button appear; the
-sheet stays open and turns into "A phone wants to join, code 482 913" with
-**Approve** and **Deny** once the other person scans. A request that arrives
-after the sheet was closed shows on the household card.
+## What happens to the lists on the phone
 
-The other person scans the QR in Usuals (**Join with an invite**), or with the
-phone camera, which opens the server's `/join` page and its **Open in Usuals**
-button. A link sent by message works the same way when pasted. They check the
-server name and tap **Join**; their screen shows the same six digits while it
-waits. Reading the digits over a call is optional and useful when the link
-travelled through a channel you do not fully trust.
+When the phone connects, every list on it is saved to your account and stays in
+sync from then on. Lists already in your account appear on the phone. Signed out,
+the lists never leave the phone.
 
-An invite works once and expires after 24 hours. Only the phone or browser that
-created the invite can approve its request; another owner device shows the
-request and says where to approve it. Signing in to the server alone never
-grants household keys.
+**Sign out** on the Account screen first sends what is pending. If some changes
+could not reach the server yet, the app says how many and asks before signing out
+anyway. Signing out removes the account's lists from the phone; they stay in your
+account, and the app starts a new list that stays on the phone. If the server stops
+accepting the phone (for example after it was disconnected from the web app), the
+app asks you to **Sign in again** and keeps everything on the phone until you do
+or sign out.
 
-## Server AI and the account
+## Share a list
 
-A connected account can use the server's AI while lists stay local. The server
-card shows the provider, model and processing location, with one switch. Imports
-always need an explicit model action and a review before items are added. AI
-consent can be turned off while offline, and changed server AI settings need a
-fresh confirmation. On the web, optional personal provider and key controls live
-under **Account > AI assistance > Advanced**.
+Choose **Share** on a list, on the phone or in the web app. One sheet shows:
 
-Account connections expire after 30 days. **Advanced > Disconnect account
-services** keeps household shopping work; offline it removes only the local
-token, so use **Account > Connected phones** in the browser for immediate remote
-revocation. Existing direct native provider settings are kept and no saved
-Keystore key is uploaded to the server.
+- **People with access**: the owner and everyone added. The owner can **Remove**
+  a person; anyone else can **Leave list** from their own row.
+- **Add people**: search the other accounts on the same server by name or email
+  and add them. They see the list the next time their phone or browser checks in,
+  and can edit it and add others too.
 
-## Advanced
+Only the owner can remove people or delete the list. The list menu also holds
+**Send as text**, **Rename** and either **Delete list** (owner) or **Leave list**.
+There are no invitations, codes or links to send. Sharing works between accounts
+on the same server; signed out, the Share sheet explains that sharing needs an
+account and opens **Account**.
 
-Everything rare sits under a collapsed **Advanced** section: key rotation,
-recovery kit replacement, ownership transfer, recovery from a file, frozen copies,
-saving unsent work, resetting unreadable sharing keys, signing in for server AI
-as a member, joining a second household and disconnecting. The manual setup path
-with an administrator code remains there for servers without accounts.
+Everyone with access sees changes within seconds. When two people change the same
+thing at once, the server keeps one answer. The web app shows a short notice when
+its change lost; the phone lists such changes for review.
 
-**Settings** shows one **Server and sharing** row: "Not set up", or the server
-host and how many phones share through it.
+## Connected phones
 
-A server must support connection protocol 1 and migration 007 for this flow.
-Older app versions keep working for existing households but report "update
-needed" for new invites.
+**Account > Connected phones** in the web app lists every phone signed in to your
+account. **Disconnect** signs one out; its lists stay on the server. A phone stays
+connected for 180 days after its last use, and a browser session for 30 days.
+
+## Server AI
+
+A signed-in phone can use the server's AI. The Account screen shows the provider,
+model and processing location, with one **AI assistance** switch. Imports always
+need an explicit model action and a review before items are added. Changed server
+AI settings need a fresh confirmation. On the web, optional personal provider and
+key controls live under **Account > AI assistance > Advanced**. Direct providers
+configured on the phone stay available under **Settings > Advanced: direct AI**
+while signed out, and no saved Keystore key is uploaded to the server.
+
+## Updating from household sharing
+
+Earlier versions shared lists through end-to-end encrypted households. Updating
+the app keeps every list on the phone, old shared lists included, as ordinary
+lists. A phone that was already connected uploads all its lists on its next sync.
+When two phones held the same old shared list, the first upload becomes the
+account's list and the second phone's copy becomes a separate list its owner can
+share again. Lists that existed only in the browser are gone: the web app deletes
+the old browser storage on load.
+
+A server with server-held lists answers older app versions with an update
+request, so update Usuals on every phone.

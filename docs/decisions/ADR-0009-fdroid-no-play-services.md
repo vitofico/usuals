@@ -17,9 +17,9 @@ add Play Services, Firebase, FCM, ML Kit, analytics or crash-reporting services.
 Barcode decoding uses CameraX and ZXing. Builds use the pinned Docker toolchain
 under ADR-0010. Reproducibility must be checked before claiming an F-Droid release.
 
-Optional local reminders use WorkManager without Play Services. The approved
-encrypted relay supports household lists on a chosen server; offline lists need
-no server. Android sync catches up by cursor without Firebase or FCM.
+Optional local reminders use WorkManager without Play Services. A chosen Usuals
+server can hold an account's lists; offline lists need no server. Android sync
+waits on the server's change feed and catches up by cursor without Firebase or FCM.
 Play distribution remains a separate decision, rather than a current commitment.
 
 ## Consequences

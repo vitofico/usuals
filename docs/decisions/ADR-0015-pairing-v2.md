@@ -1,7 +1,8 @@
 # ADR 0015 Pairing v2: one-scan invites and one sharing flow
 
-Status: accepted, 2026-10-21. Supersedes the "Full device verification" section
-of [ADR 0014](ADR-0014-server-connection-and-ai.md).
+Status: superseded by [ADR 0017](ADR-0017-server-held-lists.md), 2026-10-21.
+Accepted earlier on 2026-10-21; it superseded the "Full device verification"
+section of [ADR 0014](ADR-0014-server-connection-and-ai.md).
 
 ## Context
 
@@ -22,7 +23,7 @@ stores `SHA256(admit)` and the owner's descriptor; `admit` and `macKey` are HKDF
 outputs of `k`. The applicant proves it holds the link with
 `HMAC(macKey, assertion)`, and checks the descriptor against a 16-byte anchor in
 the link. The full construction is in
-[security-v1.md](../sync/security-v1.md#pairing-v2). The link is about 125
+`docs/sync/security-v1.md` (removed with ADR 0017 and kept in Git history). The link is about 125
 characters (QR version 7), and CameraX analysis runs at 1280x720.
 
 The owner device that created the invite approves with one tap. Both phones show

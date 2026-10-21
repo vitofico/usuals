@@ -8,8 +8,12 @@ spec. ADR-0012 supersedes the former retailer invariants.
 Usuals is an offline Android shopping list that remembers purchases on the
 phone. Capture is local. The optional model is only for unstructured recipes and
 written-list photos, with explicit input submission and review.
-There are no retailer integrations. Sync needs explicit approval before work
-starts because it requires a server on the maintainer's cluster.
+There are no retailer integrations. Signed in to a Usuals server, the account's
+lists live on that server, the phone and the web app show the same lists, and
+accounts on the same server share a list by adding each other
+([ADR 0017](docs/decisions/ADR-0017-server-held-lists.md)). Signed out, lists
+never leave the phone. Work against a server on the maintainer's cluster,
+including any deployment, needs explicit approval before it starts.
 
 `:core:model`, `:core:parse`, `:llm` and `:enrich` are framework-free Kotlin.
 `:data:local` owns Room, `:auth` owns secrets, `:capture` owns capture adapters,

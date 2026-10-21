@@ -123,10 +123,11 @@ publication. They are decoded only after compilation and removed immediately
 after isolated signing, including on failure. Encrypted offline recovery of the
 key is an operator responsibility; private material never belongs in Git.
 
-Making a source/APK release does not deploy the server. Web household creation
-requires the matching server source and migration 004. Existing operators must
-follow the [upgrade runbook](../docs/sync/runbook.md), back up their identity and
-database, and explicitly approve their own deployment.
+Making a source/APK release does not deploy the server. Server-held lists need
+the matching server source, migration 008 and a provisioned list key; a server
+with them asks older app versions to update. Existing operators must follow the
+[upgrade runbook](../docs/sync/runbook.md), back up their identity and database,
+and explicitly approve their own deployment.
 
 Sources: [Obtainium app links](https://wiki.obtainium.imranr.dev/deep_links/),
 [F-Droid inclusion](https://f-droid.org/en/docs/Submitting_to_F-Droid_Quick_Start_Guide/),

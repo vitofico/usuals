@@ -1,5 +1,10 @@
 # Local smart-list release check
 
+These are dated records. Sections before 2026-10-21 that cover shared lists
+describe the end-to-end encrypted household design that
+[ADR 0017](decisions/ADR-0017-server-held-lists.md) replaced; the protocol
+documents they name were removed and remain in Git history.
+
 ## Private source publication
 
 The maintainer approved a private GitHub source preview on 2026-10-18, with all
@@ -288,8 +293,8 @@ handoff logs, `isolated-barcodes-final.log`, `isolated-naming-final.log`,
 
 ## Scanner flow correction (2026-10-16)
 
-The maintainer reported repeated camera codes and numeric rows with no product
-name. Camera capture now pauses after one accepted code until Scan next item is
+Camera scanning added repeated codes and numeric rows with no product name.
+Camera capture now pauses after one accepted code until Scan next item is
 chosen. Each canonical code is accepted once per session, including after
 rotation. Posted callbacks from an old preview are ignored. Typed entry still
 supports adding different products without waiting for queued network reads.
@@ -442,7 +447,7 @@ unused extra-bold font registration. See [design.md](design.md).
   The phone was left available to the maintainer.
 - No production collaborator, dependency, data schema or network behavior changed.
   ServiceLocator wiring remains intact. UI resources remain in `:app`.
-- The [shared lists plan](shared-lists-plan.md) recommends Ktor/PostgreSQL on
+- The shared lists plan (`docs/shared-lists-plan.md`) recommends Ktor/PostgreSQL on
   the existing cluster with encrypted payloads, offline conflict handling,
   invitations, revocation/recovery and S0 to S5 acceptance gates. This is planning
   only; relay implementation and deployment require approval before starting.
@@ -464,7 +469,7 @@ Cluster conventions were learned from the maintainer's local Quire, Spunto and
 cluster files. No cluster API, SSH, credential use, deployment or publication occurred.
 
 - Independent read-only review found seven contract gaps. All were fixed and
-  re-reviewed as closed; the [review record](sync/review.md) keeps dispositions.
+  re-reviewed as closed; the review record (`docs/sync/review.md`) keeps dispositions.
 - Eleven test-only probes verify binary framing, the public RFC Ed25519 vector,
   RAW Tink AEAD/JCA layout, tamper/AAD/recipient rejection, API auth/capability
   shape, fixture integrity and the real schema-4 identity. The semantic/security
@@ -570,7 +575,7 @@ S3 commit `17761e9` implements Keystore-wrapped private state, real Tink
 encryption, verified joining, accepted ownership transfer and recovery. Its
 Docker gates passed 766 Android tests and 49 isolated server-build tests;
 actual emulator Keystore, optimized-release crypto and old-provider-key
-upgrade checks passed. See [Android keys](sync/android-keys.md).
+upgrade checks passed. See Android keys (`docs/sync/android-keys.md`).
 
 S4 connects encrypted shopping transport, WorkManager and foreground sockets,
 authenticated Room confirmation, frozen UI revisions, explicit barcode merges,
@@ -647,7 +652,7 @@ phone was not used; Vito explicitly kept this pass on emulators.
   of newer/modified schema ledgers without implicit migration. Restore preflight
   rejects schema/receipt-identity mismatches before changing either boundary.
 - Independent bounded protocol/operations review: zero remaining blockers.
-  [Review closures](sync/review.md) are separate from executed verification.
+  Review closures (`docs/sync/review.md`) are separate from executed verification.
 - Both final APKs pass ELF/ZIP/SDK 16 KB checks for 12 libraries/four ABIs, bundled
   font/license checks and unchanged locale parity. Debug SHA256:
   afa1867277598872d21ed0d9911b31a2dfb1cf63c909d439ca1caa867d9a9aef.
@@ -977,9 +982,8 @@ elapsed household pilot remain separate acceptance gates.
   `1122e76723a36607c5bddb03020d735418080f76ce249f89a1cfd833f594fd42`.
   Release APK SHA256:
   `95d293fbc16da412686ec392e113d4b1d932e04c407a7ed055ef1b5e12c95e5b`.
-- Authentik's existing Usuals application now references the verified web SVG
-  in `meta_icon`. Only this metadata field changed; no deployment or access
-  configuration changed. No source push or store publication occurred.
+- The verified web SVG is suitable as an identity provider's application icon
+  (`meta_icon`). No deployment, source push or store publication occurred.
 - Motorola Edge 40 Neo received the final debug APK with `adb install -r`.
   Its installed SHA256 matches the debug artifact above, the original
   first-install time is unchanged and MainActivity launches successfully.
@@ -1010,8 +1014,7 @@ elapsed household pilot remain separate acceptance gates.
   errors. Temporary viewport/tab and owned preview/database were cleaned up.
 - Evidence: `/private/tmp/usuals-first-household-qa/`, with build/browser proofs,
   gate logs and screenshots. Phone/emulator data and production are untouched.
-  No deployment or push. Live Authentik sign-in was reported by the user; this
-  change does not claim a new live OIDC verification.
+  No deployment or push. This change does not claim a live OIDC verification.
 
 
 ## Guided first-run tour and web-owned households (2026-10-19)

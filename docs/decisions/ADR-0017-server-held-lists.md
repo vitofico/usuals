@@ -11,8 +11,8 @@ show the same lists. Only household lists synced, and the web app was a separate
 end-to-end encrypted device with its own vault, its own 15-minute session and its
 own household membership. Sharing a list meant creating a household, inviting a
 device, comparing a code and approving it, and the shared list was a copy of the
-original. The people using it read this as "the web app is treated like another
-device" and "it is still difficult to share a list".
+original. In use, the web app felt like just another device, and sharing a list
+was still difficult.
 
 What they want is the model of Spunto: the phone and the web app are two windows
 onto one account on one server, and several accounts on that server can share a
