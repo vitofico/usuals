@@ -29,7 +29,9 @@ leaving gives that member a `RemovedList` entry with a new `seq`.
 - `lists` holds, for each list the caller can access whose `seq` is after the
   cursor, the whole current `SharedList`. `removed` holds the lists the caller
   lost after the cursor. Entries of both are merged in `seq` order and the page
-  stops after `limit` entries; `hasMore` says another page follows. Apply them in
+  stops after `limit` entries, or earlier once the lists in it hold 4 MiB of
+  stored data (a page always carries at least one entry); `hasMore` says
+  another page follows. Apply them in
   `seq` order: a list removed and later re-added appears once in each, and the
   higher `seq` wins.
 - `cursor` is `<epoch>.<seq>` and opaque to clients. Store the returned cursor
@@ -82,7 +84,9 @@ per intent and the list after the batch.
 is never reused.
 
 A caller who is not a member gets 404 `not_found` from every list route, whether
-or not the list exists.
+or not the list exists. The one exception is creating a list: `PUT` with an id
+that already belongs to a list the caller cannot access answers 409
+`list_exists`.
 
 Stored projections are encrypted at rest with AES-256-GCM under a required
 32-byte server key file, with additional data `USUALS/LIST/1`, a zero byte and

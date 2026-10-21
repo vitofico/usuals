@@ -465,8 +465,7 @@ Release SHA-256: `4db9bfed86f11ea27cf66dd785648348db46c4080e28850097c24ac5c4c06f
 Local implementation was authorized starting with S0. The [contract](sync/README.md)
 adds an ordered encrypted protocol, OpenAPI, membership/recovery boundaries,
 Room-5/archive-2 design, 29 semantic reducer scenarios and 28 security scenarios.
-Cluster conventions were learned from the maintainer's local Quire, Spunto and
-cluster files. No cluster API, SSH, credential use, deployment or publication occurred.
+No cluster API, SSH, credential use, deployment or publication occurred.
 
 - Independent read-only review found seven contract gaps. All were fixed and
   re-reviewed as closed; the review record (`docs/sync/review.md`) keeps dispositions.

@@ -178,7 +178,7 @@ connections, 15-second HTTP deadlines, five-second statements and two-second
 lock/acquire limits bound work. Netty uses 1 connection, 2 worker and 4 call
 threads. Resource requests are starting budgets; local profile evidence does not
 replace amd64 node/load monitoring. Alert on sustained 5xx, two-second foreground
-latency breaches, JDBC waiters and memory >80% of 512 MiB. Phones sync every
+latency breaches, JDBC waiters and memory >80% of 768 MiB. Phones sync every
 15 minutes in the background and continuously while the app is open.
 
 Deleting a list in the app removes its contents from the live database at once;
