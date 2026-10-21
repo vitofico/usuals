@@ -18,8 +18,13 @@ appear. Pick a list from the menu at the top of the paper, or choose **New list*
   **Finish shopping** moves picked-up items into the list's history, with
   **Undo** while the notice is showing.
 - **···** next to an item edits or deletes it. **···** next to the list holds
-  **Share**, **Rename list**, **Import list or recipe** and either **Delete list**
-  (the owner) or **Leave list** (anyone else).
+  **Share**, **Rename list**, **Import list or recipe**, **Archive list** and
+  either **Delete list** (the owner) or **Leave list** (anyone else).
+- **Archive list** moves a list out of the menu at the top of the paper into
+  **Archived** below it, where **Restore** brings it back. The owner archives it
+  for everyone who has access; anyone else archives it only for themself, and
+  sees no **Restore** on a list the owner archived. Archived lists keep receiving
+  changes.
 - Changes from other people and from your phone appear within seconds while the
   tab is visible. A hidden tab stops asking and catches up when you come back.
 - Two people changing the same thing at once is fine: the server keeps one
