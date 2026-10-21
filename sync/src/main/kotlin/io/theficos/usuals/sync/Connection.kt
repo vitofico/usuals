@@ -6,7 +6,11 @@ import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable data class ServiceError(val code: String)
 @Serializable data class InstanceInfo(val version: Int = 1, val name: String, val server: ServerInfo, val accounts: Boolean, val ai: Boolean)
-@Serializable data class ConnectStart(val device: DeviceKeys, val verifierHash: String)
+@Serializable data class ConnectStart(val device: DeviceKeys, val verifierHash: String, val offer: OfferClaim? = null)
+/** The secret from a signed-in browser's QR; it lets that account, not this phone's browser, approve the connection. */
+@Serializable data class OfferClaim(val id: String, val secret: String) {
+    override fun toString() = "OfferClaim([redacted])"
+}
 @Serializable data class ConnectTicket(val id: String, val pollToken: String, val expiresAt: Long) {
     override fun toString() = "ConnectTicket([redacted])"
 }
@@ -15,7 +19,12 @@ import kotlinx.serialization.json.decodeFromJsonElement
 }
 @Serializable data class ConnectResult(val approved: Boolean, val userId: String? = null, val expiresAt: Long? = null)
 @Serializable data class ConnectView(val id: String, val fingerprint: String, val expiresAt: Long)
-@Serializable data class PendingConnection(val origin: String, val info: InstanceInfo, val ticket: ConnectTicket, val verifier: String, val device: DeviceSecrets) {
+/**
+ * [offered] attempts wait for the browser whose QR was scanned instead of a sign-in on this phone;
+ * [invite] is that browser's household link, used once the account connection is approved.
+ */
+@Serializable data class PendingConnection(val origin: String, val info: InstanceInfo, val ticket: ConnectTicket, val verifier: String, val device: DeviceSecrets,
+    val offered: Boolean = false, val invite: String? = null) {
     val browserUrl get() = "$origin/?connect=${ticket.id}"
     val fingerprint get() = connectionFingerprint(info.server.serverId, ticket.id, device.publicKeys)
     override fun toString() = "PendingConnection([redacted])"
@@ -63,12 +72,13 @@ class ConnectionClient(private val store: SyncStateStore, private val transport:
     }
     suspend fun begin(link: String): PendingConnection {
         require(pending() == null && current() == null)
-        val (origin, info) = discover(link); require(info.accounts)
+        val code = if (ConnectCode.matches(link)) ConnectCode.parse(link) else null
+        val (origin, info) = discover(code?.origin ?: link); require(info.accounts)
         val verifier = Wire.encode(ByteArray(32).also { java.security.SecureRandom().nextBytes(it) })
         val device = SyncCrypto.device()
-        val ticket = call<ConnectTicket>(origin, "POST", "/v1/connect", ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32))))
+        val ticket = call<ConnectTicket>(origin, "POST", "/v1/connect", ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32)), code?.claim()))
         Wire.uuid(ticket.id); Wire.decode(ticket.pollToken, 32); require(ticket.expiresAt > clock())
-        return PendingConnection(origin, info, ticket, verifier, device).also { value -> store.update { it.copy(connecting = value) } }
+        return PendingConnection(origin, info, ticket, verifier, device, code != null, code?.invite?.link()).also { value -> store.update { it.copy(connecting = value) } }
     }
     suspend fun finish(): ServerConnection? {
         val pending = requireNotNull(pending())

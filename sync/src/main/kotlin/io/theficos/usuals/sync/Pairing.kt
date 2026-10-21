@@ -53,6 +53,51 @@ object Pairing {
         Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key, "HmacSHA256")) }.doFinal(label.toByteArray() + message)
 }
 
+/**
+ * A signed-in browser's one-scan QR: its account approves this phone without a second sign-in, and an owner
+ * browser adds a household invite so the same approval also brings the phone into the household.
+ */
+class ConnectCode(val origin: String, val offerId: String, secret: ByteArray, val invite: InviteCode?) {
+    private val secret = secret.copyOf().also { require(it.size == 32) }
+    init { Wire.uuid(offerId); require(invite == null || invite.origin == origin) }
+    fun claim() = OfferClaim(offerId, Wire.encode(secret))
+    fun link(): String {
+        val buffer = ByteBuffer.allocate(if (invite == null) 48 else 112)
+        fun put(id: String) = Wire.uuid(id).let { buffer.putLong(it.mostSignificantBits).putLong(it.leastSignificantBits) }
+        put(offerId); buffer.put(secret)
+        invite?.let { put(it.inviteId); buffer.put(it.key.raw()).put(it.anchor) }
+        return "$origin/connect#1." + Wire.encode(buffer.array())
+    }
+    override fun toString() = "ConnectCode([redacted])"
+
+    companion object {
+        /** True for both the web link and the app link that wraps it; a bare server address is not a connect code. */
+        fun matches(text: String): Boolean {
+            val link = if (text.startsWith("usuals://connect#")) runCatching { Wire.decode(text.substringAfter('#')).toString(Charsets.UTF_8) }.getOrNull() else text
+            return link != null && (link.startsWith("https://") || link.startsWith("http://")) && link.substringBefore('#').endsWith("/connect") && link.contains('#')
+        }
+        fun parse(text: String): ConnectCode {
+            require(text.length <= 512)
+            if (text.startsWith("usuals://connect#")) {
+                val link = Wire.decode(text.substringAfter('#')).toString(Charsets.UTF_8)
+                require(!link.startsWith("usuals:"))
+                return parse(link)
+            }
+            val base = text.substringBefore('#')
+            val fragment = text.substringAfter('#', "")
+            require(base.endsWith("/connect") && fragment.startsWith("1."))
+            val origin = serverOrigin(base.removeSuffix("/connect"))
+            val raw = Wire.decode(fragment.removePrefix("1."))
+            require(raw.size == 48 || raw.size == 112)
+            val bytes = ByteBuffer.wrap(raw)
+            fun id() = UUID(bytes.long, bytes.long).toString()
+            val offer = id(); val secret = ByteArray(32).also { bytes.get(it) }
+            val invite = if (raw.size == 48) null else InviteCode(origin, id(), InviteKey(ByteArray(32).also { bytes.get(it) }), ByteArray(16).also { bytes.get(it) })
+            return ConnectCode(origin, offer, secret, invite)
+        }
+    }
+}
+
 /** What a pairing v2 QR or link carries: where to ask, which invite, its key, and the descriptor anchor. */
 class InviteCode(val origin: String, val inviteId: String, val key: InviteKey, anchor: ByteArray) {
     val anchor: ByteArray = anchor.copyOf().also { require(it.size == 16) }

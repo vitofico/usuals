@@ -22,4 +22,8 @@
     <string name="connection_migrate">Envoyer ma clé de fournisseur direct enregistrée à ce serveur pour %1$s</string>
     <string name="connection_share_source">Prêt à partager « %1$s ». Connectez-vous et créez un foyer, ou choisissez un foyer existant, pour continuer.</string>
     <string name="connection_retry_copy">La nouvelle tentative envoie la copie déjà préparée, avec le même choix pour l’historique. Les modifications ultérieures restent dans votre liste locale.</string>
+    <string name="connection_offer_title">Connecter ce téléphone à votre compte sur %1$s ?</string>
+    <string name="connection_offer_help">Votre ordinateur affiche un code. Approuvez ce téléphone là-bas ; aucune connexion n’est nécessaire sur le téléphone.</string>
+    <string name="connection_offer_later">Plus tard</string>
+    <string name="connection_approve_elsewhere">Approuvez ce téléphone sur votre ordinateur lorsqu’il affiche le même code.</string>
 </resources>

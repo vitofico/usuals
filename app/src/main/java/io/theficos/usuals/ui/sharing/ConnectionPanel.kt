@@ -28,11 +28,24 @@ internal fun SignInStep(state: SharingState, vm: SharingViewModel) {
     SectionCard {
         Text(stringResource(R.string.connection_title), style = MaterialTheme.typography.titleLarge)
         Text(pending.origin, style = MaterialTheme.typography.bodySmall)
-        Text(stringResource(R.string.connection_compare))
+        Text(stringResource(if (pending.offered) R.string.connection_approve_elsewhere else R.string.connection_compare))
         Text(spaced(Pairing.connectionCode(pending.fingerprint)), style = MaterialTheme.typography.headlineMedium)
-        Button(enabled = !state.busy, onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pending.browserUrl))) }) { Text(stringResource(R.string.connection_signin)) }
-        Text(stringResource(R.string.connection_waiting))
+        if (!pending.offered) {
+            Button(enabled = !state.busy, onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pending.browserUrl))) }) { Text(stringResource(R.string.connection_signin)) }
+            Text(stringResource(R.string.connection_waiting))
+        }
         TextButton(onClick = vm::cancelConnection) { Text(stringResource(R.string.connection_cancel)) }
+    }
+}
+
+/** A computer's QR: nothing reaches the server until the person continues. */
+@Composable
+internal fun OfferStep(state: SharingState, vm: SharingViewModel) {
+    SectionCard {
+        Text(stringResource(R.string.connection_offer_title, state.origin), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.connection_offer_help))
+        Button(enabled = !state.busy, onClick = vm::connectOffer, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sharing_continue)) }
+        TextButton(enabled = !state.busy, onClick = vm::dismissOffer) { Text(stringResource(R.string.connection_offer_later)) }
     }
 }
 

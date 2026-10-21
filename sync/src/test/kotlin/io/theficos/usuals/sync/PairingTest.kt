@@ -67,5 +67,34 @@ class PairingTest {
     @Test fun secretsAreRedacted() {
         assertThat(key.toString()).doesNotContain(s("key"))
         assertThat(InviteCode.parse(s("link")).toString()).doesNotContain(s("link").substringAfter("#2."))
+        assertThat(ConnectCode.parse(s("connectInviteLink")).toString()).doesNotContain(s("offerSecret"))
+        assertThat(ConnectCode.parse(s("connectLink")).claim().toString()).doesNotContain(s("offerSecret"))
+    }
+
+    @Test fun connectLinksMatchTheGoldenAndCarryTheOptionalInvite() {
+        val anchor = Wire.decode(s("anchor"), 16)
+        val plain = ConnectCode(s("origin"), s("offerId"), Wire.decode(s("offerSecret"), 32), null)
+        val full = ConnectCode(s("origin"), s("offerId"), Wire.decode(s("offerSecret"), 32), InviteCode(s("origin"), s("inviteId"), key, anchor))
+        assertThat(plain.link()).isEqualTo(s("connectLink"))
+        assertThat(full.link()).isEqualTo(s("connectInviteLink"))
+        for (text in listOf(s("connectLink"), s("connectAppLink"))) {
+            val parsed = ConnectCode.parse(text)
+            assertThat(parsed.origin).isEqualTo(s("origin"))
+            assertThat(parsed.claim()).isEqualTo(OfferClaim(s("offerId"), s("offerSecret")))
+            assertThat(parsed.invite).isNull()
+        }
+        for (text in listOf(s("connectInviteLink"), s("connectInviteAppLink"))) {
+            val parsed = ConnectCode.parse(text)
+            assertThat(parsed.claim()).isEqualTo(OfferClaim(s("offerId"), s("offerSecret")))
+            assertThat(requireNotNull(parsed.invite).link()).isEqualTo(s("link"))
+        }
+    }
+
+    @Test fun malformedConnectLinksAreRejected() {
+        val payload = s("connectLink").substringAfter("#1.")
+        for (bad in listOf("https://usuals.example/connect#2.$payload", "https://usuals.example/connect", "https://usuals.example/join#1.$payload",
+            s("connectLink").dropLast(2), "https://user@usuals.example/connect#1.$payload", "http://usuals.example/connect#1.$payload",
+            "usuals://connect#" + Wire.encode("https://usuals.example".toByteArray())))
+            assertThrows(IllegalArgumentException::class.java) { ConnectCode.parse(bad) }
     }
 }

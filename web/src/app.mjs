@@ -4,10 +4,10 @@ import {
   fingerprint,
   hex,
   unb64,
-  b64,
   primitive,
   number,
   isLiteralNumber,
+  hash,
 } from "./wire.mjs";
 import { Vault, openStorage } from "./vault.mjs";
 import { HouseholdClient, RunScope, request } from "./client.mjs";
@@ -20,12 +20,17 @@ import { palettes, readPalette, writePalette } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { prepareHousehold, verifySavedHousehold } from "./recovery.mjs";
 import { qrMatrix } from "./qr.mjs";
-import { appLink, connectionCode, parseInviteLink, resumableInvite, forgetInvite } from "./pairing.mjs";
+import { appLink, connectionCode, parseInviteLink, resumableInvite, forgetInvite, connectLink, connectAppLink, parseConnectLink, joinsConnection } from "./pairing.mjs";
 import { importDialog } from "./import-dialog.mjs";
 let pendingConnectionId = null, connectionDone = false;
 // The /join fragment carries the invite key: it leaves the address bar at startup and waits in this tab through sign-in.
 const inviteTab = (() => { try { return sessionStorage; } catch { return null; } })();
 let pendingInvite = resumableInvite(inviteTab, location.pathname === "/join" && location.hash.startsWith("#2.") ? location.href : null, Date.now());
+// A computer's connect QR opened by a phone camera: it only hands the code to the app, so it needs no sign-in here.
+let pendingConnect = (() => {
+  try { return location.pathname === "/connect" && location.hash.startsWith("#1.") ? (parseConnectLink(location.href), location.href) : null; }
+  catch { return null; }
+})();
 const spaced = (code) => code.slice(0, 3) + " " + code.slice(3);
 try {
   const candidate = new URL(location.href).searchParams.get("connect");
@@ -632,6 +637,10 @@ async function render() {
     $("content").replaceChildren(title("connectionApproved", "connectionReturn"),
       el("div", { class: "button-row" }, el("a", { class: "primary", href: "usuals://connected" }, t("returnToUsuals")),
         button(t("close"), () => { connectionDone = false; render().catch(failure); })));
+    return;
+  }
+  if (pendingConnect) {
+    $("content").replaceChildren(connectLanding());
     return;
   }
   if (pendingInvite) {
@@ -1327,7 +1336,7 @@ async function renderSharing(own) {
     panels = [];
   for (const h of Object.values(state.households)) {
     const m = body(h.proofs.at(-1)),
-      isOwner = !h.removed && m.members.some(member => member.role === "owner" && member.devices.some(d => d.id === h.device.publicKeys.id)),
+      isOwner = ownsHousehold(h),
       rows = [];
     for (const member of m.members)
       for (const device of member.devices) {
@@ -1374,7 +1383,8 @@ async function renderSharing(own) {
           ...rows,
           paragraph(isOwner ? "ownerHelp" : "householdHelp", "helper"),
           isOwner ? el("div", { class: "button-row" },
-            button(t("pairTitle"), () => act(() => invitationDialog(h.id)), "primary"),
+            button(t("connectionAddPhone"), () => act(() => connectPhoneDialog(h.id), { rerender: false }), "primary"),
+            button(t("pairTitle"), () => act(() => invitationDialog(h.id))),
             button(t("ownerRequests"), () => act(() => applicantsDialog(h.id))),
             h.pendingMembership ? button(t("ownerDiscardObsolete"), () =>
               messageDialog("ownerDiscardObsolete", "ownerDiscardHelp", () => client.discardInvalidMembership(h.id))) : null) : null,
@@ -1458,11 +1468,91 @@ async function serverSettingsDialog() {
     paragraph("serverAiPrivacy"), advanced,
     el("div", { class: "button-row" }, button(t("close"), closeDialog))), () => { key.value = ""; });
 }
-function serverConnectionDialog() {
-  openDialog(el("div", { class: "pair-device" }, el("h2", {}, t("connectionAddPhone")), paragraph("connectionLinkHelp"),
-    el("p", { class: "server-address" }, location.origin + "/connect"), invitationQr(location.origin + "/connect"),
-    el("a", { class: "primary", href: "usuals://connect#" + b64(new TextEncoder().encode(location.origin)) }, t("connectionTitle")),
-    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+const ownsHousehold = (h) => !h.removed &&
+  body(h.proofs.at(-1)).members.some(member => member.role === "owner" && member.devices.some(d => d.id === h.device.publicKeys.id));
+/**
+ * One QR for the person's own phone. This account approves it, so the phone needs no sign-in of its own, and when this
+ * browser owns a household the QR also carries an invite that the same approval spends.
+ */
+async function connectPhoneDialog(household = client ? Object.values(vault.read().households).find(ownsHousehold)?.id : null) {
+  const own = generation, active = client, secret = crypto.getRandomValues(new Uint8Array(32));
+  const offer = await api("/api/connect/offers", { method: "POST", csrf: account.csrfToken, body: { secretHash: await hash(secret) } });
+  const invite = household ? parseInviteLink(await active.invite(household)) : null;
+  if (own !== generation) return;
+  const link = connectLink(location.origin, offer.id, secret, invite), qr = invitationQr(link);
+  const input = el("textarea", { class: "field", rows: 3, readonly: true, value: link, spellcheck: false, "aria-label": t("invitation") });
+  const status = el("p", { class: "helper", role: "status" });
+  const copy = button(t("pairCopy"), async () => {
+    if (closed) return;
+    try { await navigator.clipboard.writeText(input.value); if (!closed) status.textContent = t("pairCopied"); }
+    catch { if (!closed) { input.parentElement.open = true; input.focus(); input.select(); status.textContent = t("pairCopyHelp"); } }
+  });
+  const request = el("div", { class: "pair-requests", "aria-live": "polite" }, paragraph("connectPhoneWaiting", "helper"));
+  const refresh = button(t("pairNewCode"), () => { closeDialog(); act(() => connectPhoneDialog(household), { rerender: false }); });
+  refresh.hidden = true;
+  let closed = false, polling = false, ticket = null, approved = false, shown = "";
+  const manual = el("details", {}, el("summary", {}, t("pairManual")), input, copy, paragraph("pairManualHelp", "helper"));
+  // A used or expired code leaves nothing to scan or copy.
+  const retire = () => { qr.remove(); manual.remove(); input.value = ""; copy.disabled = true; };
+  const stop = () => { closed = true; clearInterval(poller); retire(); secret.fill(0); };
+  const finish = (key) => { stop(); request.replaceChildren(paragraph(key, "helper")); };
+  const approval = () => {
+    const compare = el("input", { type: "checkbox", required: true });
+    return el("form", { class: "paper panel-body", onsubmit: event => { event.preventDefault(); act(async () => {
+      requireThat(compare.checked && Date.now() < ticket.expiresAt);
+      await api("/api/connect/" + ticket.id + "/approve", { method: "POST", csrf: account.csrfToken });
+      approved = true; retire();
+      if (invite) request.replaceChildren(paragraph("connectPhoneJoining", "helper")); else finish("connectionApproved");
+    }, { rerender: false }); } }, el("p", { class: "label" }, t("ownerCodeLabel")), el("p", { class: "pair-code" }, spaced(connectionCode(ticket.fingerprint))),
+      el("label", { class: "check-row" }, compare, t("connectionCompared")),
+      el("div", { class: "button-row" }, el("button", { type: "submit", class: "primary" }, t("ownerApprove"))));
+  };
+  // The phone claims the code, then, once approved, asks to join with the invite and the keys behind that code.
+  const poll = async () => {
+    if (closed || polling || busy || own !== generation) return;
+    polling = true;
+    try {
+      if (!approved) {
+        const view = await api("/api/connect/offers/" + offer.id).catch(e => { if (e.code === "not_found") return null; throw e; });
+        if (closed) return;
+        if (!view) { finish("pairExpired"); refresh.hidden = false; return; }
+        if (view.ticket && view.ticket.id !== ticket?.id) { ticket = view.ticket; request.replaceChildren(approval()); }
+      }
+      if (!invite || (ticket && !approved)) return;
+      const found = (await active.applicants(household)).filter(r => r.verified && r.inviteId === invite.inviteId);
+      if (closed || own !== generation) return;
+      if (!ticket) {
+        // A phone already connected to this account joins with the invite alone, so its code is compared as for any invite.
+        const key = found.map(r => r.requestId).join();
+        if (key && key !== shown) { shown = key; request.replaceChildren(...found.map(r => requestRow(household, r, ok => { closeDialog(); if (ok) notice("pairApproved"); }))); }
+        return;
+      }
+      const server = vault.read().households[household].server.serverId;
+      for (const r of found) if (await joinsConnection(ticket, server, r.device)) {
+        await active.approve(household, r.pending);
+        return finish("connectPhoneDone");
+      }
+    } catch {} finally { polling = false; }
+  };
+  const poller = setInterval(poll, 2000);
+  const heading = el("h2", { tabindex: -1 }, t("connectionAddPhone"));
+  openDialog(el("div", { class: "pair-device" }, heading, paragraph(invite ? "connectPhoneHousehold" : "connectPhoneIntro"),
+    el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "pair-layout" }, el("div", {}, qr, status),
+      el("div", { class: "pair-instructions" },
+        el("ol", { class: "setup-steps" }, el("li", {}, t("connectPhoneStepScan")), el("li", {}, t("connectPhoneStepApprove"))),
+        request)),
+    client ? null : paragraph("connectPhoneLocked", "helper"),
+    manual,
+    el("div", { class: "button-row" }, refresh, button(t("close"), closeDialog))), stop);
+  heading.focus();
+}
+/** The /connect page a phone camera opens: it hands the code to the installed app, which the computer then approves. */
+function connectLanding() {
+  return el("section", { class: "paper panel-body" }, el("h2", {}, t("connectLandingTitle")), paragraph("connectLandingText"),
+    el("p", { class: "server-address" }, location.origin),
+    el("div", { class: "button-row" }, el("a", { class: "primary", href: connectAppLink(pendingConnect) }, t("openInUsuals")),
+      button(t("close"), () => { pendingConnect = null; render().catch(failure); })));
 }
 async function renderAccount(own) {
   if (!account) {
@@ -1506,7 +1596,7 @@ async function renderAccount(own) {
           ...(user.issuer === "urn:usuals:local"
             ? [button(t("changePassword"), passwordDialog)]
             : []),
-          button(t("connectionAddPhone"), serverConnectionDialog),
+          button(t("connectionAddPhone"), () => act(() => connectPhoneDialog(), { rerender: false })),
           button(t("connectionSessions"), () => act(connectedPhonesDialog, { rerender: false })),
           button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
           ...(stayUnlocked

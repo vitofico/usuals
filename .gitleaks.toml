@@ -52,6 +52,8 @@ regexes = [
     '''^AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8$''',
     '''^v1NpX-vwBsCvyUF1QJb2uhdFFIO2ewqbdh854k2UHh8$''',
     '''^QvbYHLAGr2joN14McPC9aDHbmcA8teDEYx1JyOafQWQ$''',
+    # One-scan connect test vector: an offer secret of bytes 32..63.
+    '''^ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8$''',
 ]
 # Matched against the secret the rule extracted, not against the whole line, so
 # the anchors mean what they look like they mean: this exact string and no

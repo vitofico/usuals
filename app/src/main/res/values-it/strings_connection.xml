@@ -22,4 +22,8 @@
     <string name="connection_migrate">Invia la chiave salvata del fornitore diretto a questo server per %1$s</string>
     <string name="connection_share_source">Pronto a condividere “%1$s”. Collegati e crea una famiglia, oppure scegline una esistente, per continuare.</string>
     <string name="connection_retry_copy">Il nuovo tentativo invia la copia già preparata, con la stessa scelta della cronologia. Le modifiche successive restano nella lista locale.</string>
+    <string name="connection_offer_title">Collegare questo telefono al tuo account su %1$s?</string>
+    <string name="connection_offer_help">Il computer mostra un codice. Approva questo telefono lì; sul telefono non serve accedere.</string>
+    <string name="connection_offer_later">Non ora</string>
+    <string name="connection_approve_elsewhere">Approva questo telefono sul computer quando mostra lo stesso codice.</string>
 </resources>

@@ -1,5 +1,5 @@
 // Pairing v2: the invite key lives only in the link, so the relay cannot vouch for keys it substituted.
-import { b64, unb64, bytes, digest, uuid, uuidText, requireThat, Problem, text, utf8 } from "./wire.mjs";
+import { b64, unb64, bytes, digest, uuid, uuidText, requireThat, Problem, text, utf8, hex, fingerprint } from "./wire.mjs";
 
 async function derive(key, info) {
   const base = await crypto.subtle.importKey("raw", key, "HKDF", false, ["deriveBits"]);
@@ -25,6 +25,10 @@ export async function verifyJoinMac(key, assertion, mac) {
 }
 export async function joinCode(key, assertion) { return sixDigits(await hmac(key, "USUALS/JOIN-CODE/2\0", assertion)); }
 export async function descriptorAnchor(descriptor) { return (await digest(bytes("USUALS/INVITE/2\0", descriptor))).slice(0, 16); }
+/** Only the keys behind the connection code the person compared may join on that approval, not a photographed QR's invite. */
+export async function joinsConnection(ticket, server, device) {
+  return hex(unb64(await fingerprint(server, ticket.id, device), 32)) === ticket.fingerprint;
+}
 export function connectionCode(fingerprintHex) {
   requireThat(/^[0-9a-f]{64}$/.test(fingerprintHex));
   return sixDigits(Uint8Array.from(fingerprintHex.slice(0, 8).match(/../g), (v) => parseInt(v, 16)));
@@ -56,6 +60,28 @@ export function parseInviteLink(value) {
   requireThat(base.endsWith("/join") && fragment.startsWith("2."));
   const raw = unb64(fragment.slice(2), 64);
   return { origin: origin(base.slice(0, -"/join".length)), inviteId: uuidText(raw.slice(0, 16)), key: raw.slice(16, 48), anchor: raw.slice(48) };
+}
+/**
+ * A signed-in browser's one-scan QR: the offer lets this account approve the phone, and an owner adds its household invite
+ * so the same approval also brings the phone into the household.
+ */
+export function connectLink(at, offerId, secret, invite = null) {
+  requireThat(secret.length === 32);
+  const extra = invite ? [uuid(invite.inviteId), invite.key, invite.anchor] : [];
+  if (invite) requireThat(invite.key.length === 32 && invite.anchor.length === 16);
+  return origin(at) + "/connect#1." + b64(bytes(uuid(offerId), secret, ...extra));
+}
+export function connectAppLink(link) { return "usuals://connect#" + b64(utf8.encode(link)); }
+export function parseConnectLink(value) {
+  requireThat(typeof value === "string" && value.length <= 512);
+  const at = value.indexOf("#");
+  requireThat(at > 0);
+  const base = value.slice(0, at), fragment = value.slice(at + 1);
+  requireThat(base.endsWith("/connect") && fragment.startsWith("1."));
+  const raw = unb64(fragment.slice(2));
+  requireThat(raw.length === 48 || raw.length === 112);
+  return { origin: origin(base.slice(0, -"/connect".length)), offerId: uuidText(raw.slice(0, 16)), secret: raw.slice(16, 48),
+    invite: raw.length === 48 ? null : { inviteId: uuidText(raw.slice(48, 64)), key: raw.slice(64, 96), anchor: raw.slice(96) } };
 }
 /** How long a /join link waits in its tab for a sign-in round trip. */
 export const INVITE_RESUME_WINDOW = 30 * 60_000;

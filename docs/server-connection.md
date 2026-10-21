@@ -3,6 +3,16 @@
 Android has one place for this: **Settings > Server and sharing**, also reached
 from the sharing icon on the list. It shows only the current step.
 
+## Connect your phone from a computer
+
+When you are signed in on the server's website, use **Connect a phone** (on the
+account page or a household card). Scan the code with the phone's camera or in
+Usuals and tap **Continue**. The computer shows the phone's six-digit code;
+approve it there. The phone needs no sign-in of its own. If this browser is
+unlocked and owns a household, the same approval also adds the phone to it.
+The code works for one phone and expires after 10 minutes. To let another
+person join, use **Invite someone** instead.
+
 ## Start sharing (the first phone)
 
 1. Under **Start sharing**, scan the server's QR code or type its address, then
@@ -66,6 +76,6 @@ with an administrator code remains there for servers without accounts.
 **Settings** shows one **Server and sharing** row: "Not set up", or the server
 host and how many phones share through it.
 
-A server must support connection protocol 1 and migration 006 for this flow.
+A server must support connection protocol 1 and migration 007 for this flow.
 Older app versions keep working for existing households but report "update
 needed" for new invites.

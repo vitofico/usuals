@@ -22,4 +22,8 @@
     <string name="connection_migrate">Enviar mi clave guardada del proveedor directo a este servidor para %1$s</string>
     <string name="connection_share_source">Listo para compartir «%1$s». Conecta y crea un hogar, o elige uno existente, para continuar.</string>
     <string name="connection_retry_copy">El reintento envía la copia ya preparada, con la misma opción de historial. Los cambios posteriores permanecen en tu lista local.</string>
+    <string name="connection_offer_title">¿Conectar este teléfono a tu cuenta en %1$s?</string>
+    <string name="connection_offer_help">Tu ordenador muestra un código. Aprueba este teléfono allí; no hace falta iniciar sesión en el teléfono.</string>
+    <string name="connection_offer_later">Ahora no</string>
+    <string name="connection_approve_elsewhere">Aprueba este teléfono en tu ordenador cuando muestre el mismo código.</string>
 </resources>

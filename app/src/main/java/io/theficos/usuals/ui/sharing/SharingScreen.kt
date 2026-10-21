@@ -124,7 +124,7 @@ fun SharingScreen(vm: SharingViewModel, onBack: () -> Unit, modifier: Modifier =
                 TextButton(enabled = !state.busy, onClick = { vm.rememberShareSource(null) }) { Text(stringResource(R.string.sharing_cancel)) }
             }
             if (state.bootstrapPending) OutlinedButton(enabled = !state.busy, onClick = vm::resumeBootstrap) { Text(stringResource(R.string.sharing_retry_creation)) }
-            when (stage) {
+            if (state.offer != null && stage != SharingStage.SIGN_IN) OfferStep(state, vm) else when (stage) {
                 SharingStage.START -> {
                     Text(stringResource(R.string.sharing_intro), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     SectionCard {

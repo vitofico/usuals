@@ -114,6 +114,26 @@ invalidate the invitation. A concurrent second approval loses the CAS and must
 not enrol a second member. Owners approve each extra device separately. A
 member's new device must not inherit owner status through a display name.
 
+### One-scan connection offer
+
+A signed-in browser draws a random 32-byte offer secret and registers
+`SHA256(secret)` for its account; the offer lasts 10 minutes and an account holds
+at most five unclaimed offers. An unlocked owner browser also creates a pairing v2
+invite. The QR is `https://<origin>/connect#1.<b64url(offerId16 || secret32
+[|| inviteId16 || k32 || anchor16])>`, and the app form is `usuals://connect#` plus
+the base64url link. The phone sends `{offer: {id, secret}}` with its connection
+start; the relay binds the new ticket to an unexpired, unclaimed offer whose hash
+matches, once, and the offer then expires with the ticket. Only the offer's
+account can read it, and so learn which ticket to approve. After approval the
+phone joins with the embedded invite under the unchanged v2 rules, signing with
+the same device keys it sent in its connection start. The browser approves
+without a second code only a request whose MAC verifies under that invite's key
+and whose device keys reproduce the ticket's connection fingerprint, so a request
+made from a photographed QR still needs its join code compared. The offer secret
+grants account access, which the relay controls anyway; the invite key never
+reaches it. Reusing the keys lets the relay link that household device to the
+account, which it could already infer from timing.
+
 ## Manifest and rotation transaction
 
 A signed full membership manifest contains version, household/genesis/server,
