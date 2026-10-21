@@ -16,6 +16,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
+import java.sql.Connection
 import java.nio.file.attribute.PosixFilePermissions
 
 class ListsTest {
@@ -67,6 +68,15 @@ class ListsTest {
     }, normalizer = NORMALIZER_VERSION)
     private fun code(response: String) = Wire.json.parseToJsonElement(response).jsonObject.getValue("code").jsonPrimitive.content
     private fun seq(list: String) = db.transaction { c -> c.query("SELECT seq FROM list WHERE id=?", id(list)) { it.getLong(1) }.single() }
+    /** Returns once another transaction queues behind a lock that [holder] holds. */
+    private fun awaitBlockedBy(holder: Connection) {
+        val pid = holder.query("SELECT pg_backend_pid()") { it.getInt(1) }.single()
+        val deadline = System.nanoTime() + 10_000_000_000
+        while (!db.transaction { c -> c.query("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE NOT granted AND ?=ANY(pg_blocking_pids(pid)))", pid) { it.getBoolean(1) }.single() }) {
+            check(System.nanoTime() < deadline) { "nothing queued behind the held lock" }
+            Thread.sleep(10)
+        }
+    }
 
     @Test fun createAnswersCreatedThenRetriesWithoutOverwritingAndRefusesTakenIds() = http {
         val list = uuid()
@@ -174,6 +184,28 @@ class ListsTest {
         assertThat(client.changes(alice, aliceCursor).removed.map { it.id }).containsExactly(list)
         assertThat(client.changes(alice).lists).isEmpty()
         assertThat(client.apply(bob, list, capture(list)).status).isEqualTo(HttpStatusCode.NotFound)
+    }
+
+    @Test fun addingAnAccountWhoseRequestHoldsItsRowAndWaitsForTheCounterDoesNotDeadlock() = http {
+        val list = client.create(alice).id
+        database.pool.connection.use { phone ->
+            // Bob's phone creating a list: his account row FOR UPDATE first, the change counter last.
+            withContext(Dispatchers.IO) {
+                phone.execute("SET LOCAL lock_timeout = '3s'")
+                phone.query("SELECT 1 FROM web_user WHERE id=? FOR UPDATE", id(bob.id)) { Unit }
+            }
+            coroutineScope {
+                val share = async { client.share(alice, list, bob) }
+                withContext(Dispatchers.IO) {
+                    awaitBlockedBy(phone)
+                    phone.query("UPDATE list_counter SET seq=seq+1 RETURNING seq") { it.getLong(1) }
+                    phone.commit()
+                }
+                val shared = share.await()
+                assertThat(shared.status).isEqualTo(HttpStatusCode.OK)
+                assertThat(Wire.json.decodeFromString(SharedList.serializer(), shared.bodyAsText()).members.map { it.id }).containsExactly(alice.id, bob.id)
+            }
+        }
     }
 
     @Test fun aChangeByOneAccountWakesAnotherAccountsWaitingRequestWithoutHoldingASlot() {
