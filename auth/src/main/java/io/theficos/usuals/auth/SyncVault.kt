@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-/** Wrapped private state and reservations never enter Room, backups or shopping archives. */
+/** Wrapped private state never enters Room, backups or shopping archives. */
 class SyncVault(context: Context, namespace: String = "sync") {
     init { require(namespace.matches(Regex("[a-z0-9-]{1,64}"))) }
     private val alias = if (namespace == "sync") ALIAS else "${ALIAS}_$namespace"
@@ -26,20 +26,14 @@ class SyncVault(context: Context, namespace: String = "sync") {
     private val aad = "USUALS/KEYSTORE/1\u0000${context.packageName}".toByteArray()
     private val lock = locks.computeIfAbsent(directory.absolutePath) { Any() }
     private val json = Json { encodeDefaults = true }
-    fun get(name: String): String? = transaction { entries, _ -> entries[name] }
-    fun put(name: String, value: String?) = transaction { entries, _ ->
+    fun get(name: String): String? = transaction { entries -> entries[name] }
+    fun put(name: String, value: String?) = transaction { entries ->
         require(name.length <= 200)
         if (value == null) entries.remove(name) else entries[name] = value
         Unit
     }
-    fun reserve(scope: String): Int = transaction { _, counts ->
-        require(scope.length <= 200)
-        val count = counts[scope] ?: 0
-        if (count >= 4096) throw VaultException(VaultProblem.USAGE_EXHAUSTED)
-        (count + 1).also { counts[scope] = it }
-    }
-    /** One wrapped-file transaction also supports crash-safe multi-key membership updates. */
-    fun <T> transaction(block: (MutableMap<String, String>, MutableMap<String, Int>) -> T): T = synchronized(lock) {
+    /** One wrapped-file transaction, so a read-modify-write of several entries is crash-safe. */
+    fun <T> transaction(block: (MutableMap<String, String>) -> T): T = synchronized(lock) {
         try {
             if (!directory.isDirectory && !directory.mkdirs()) throw VaultException(VaultProblem.WRITE_FAILED)
             Os.chmod(directory.absolutePath, 448) // 0700
@@ -57,10 +51,10 @@ class SyncVault(context: Context, namespace: String = "sync") {
                     cipher.updateAAD(aad)
                     json.decodeFromString<VaultState>(cipher.doFinal(encoded.copyOfRange(17, encoded.size)).toString(Charsets.UTF_8))
                 } else VaultState()
-                val entries = state.entries.toMutableMap(); val counts = state.counts.toMutableMap()
-                val result = block(entries, counts)
-                if (!existing || entries != state.entries || counts != state.counts) {
-                    val plaintext = json.encodeToString(VaultState(entries, counts)).toByteArray()
+                val entries = state.entries.toMutableMap()
+                val result = block(entries)
+                if (!existing || entries != state.entries) {
+                    val plaintext = json.encodeToString(VaultState(entries)).toByteArray()
                     if (plaintext.size > MAX_BYTES) throw VaultException(VaultProblem.WRITE_FAILED)
                     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
                     cipher.init(Cipher.ENCRYPT_MODE, key); cipher.updateAAD(aad)
@@ -80,7 +74,7 @@ class SyncVault(context: Context, namespace: String = "sync") {
         catch (_: android.system.ErrnoException) { throw VaultException(VaultProblem.WRITE_FAILED) }
         catch (_: IllegalArgumentException) { throw VaultException(VaultProblem.CORRUPT) }
     }
-    /** Explicit recovery from an unreadable vault always generates fresh identities on enrolment. */
+    /** Starts over from a vault that can no longer be read; true when it had to. */
     fun resetUnavailable(): Boolean = synchronized(lock) {
         try { get("client"); return@synchronized false }
         catch (problem: VaultException) {
@@ -110,6 +104,7 @@ class SyncVault(context: Context, namespace: String = "sync") {
         val MAGIC = byteArrayOf(67, 77, 68, 75, 1)
     }
 }
+/** Vaults written while households existed also hold their usage counters; they are dropped on the next write. */
 @Serializable private data class VaultState(val entries: Map<String, String> = emptyMap(), val counts: Map<String, Int> = emptyMap())
-enum class VaultProblem { KEY_UNAVAILABLE, CORRUPT, WRITE_FAILED, USAGE_EXHAUSTED }
+enum class VaultProblem { KEY_UNAVAILABLE, CORRUPT, WRITE_FAILED }
 class VaultException(val problem: VaultProblem) : RuntimeException(problem.name)
