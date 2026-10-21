@@ -1,0 +1,1 @@
+Teilen ist jetzt ein geführter Ablauf: Server verbinden, Wiederherstellungsdatei sichern, dann mit einem QR-Code einladen. Das andere Telefon tritt mit einem Scan bei, beide zeigen dieselben sechs Ziffern und ein Tippen genehmigt. Einladungen gelten 24 Stunden und nur einmal.
