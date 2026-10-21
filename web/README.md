@@ -82,7 +82,7 @@ With server AI, **Read photo** performs a synthetic compatibility check and then
 submits the prepared photo. Legacy direct browser models still require an
 explicit memory-only connection; the operator must allow exact provider origins
 and the provider must support browser CORS. No photo is sent by selection,
-preview or capture alone. Camera permission is requested only on **Take photo**;
+preview or capture alone. Camera permission is requested only on **Use camera**;
 cancellation and failures stop the stream.
 
 ## Appearance and languages
