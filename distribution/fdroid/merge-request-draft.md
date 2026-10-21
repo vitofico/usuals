@@ -19,8 +19,8 @@ lookup is optional and suggested product names need confirmation. Keyboard input
 works offline; voice depends on the selected Android speech service. English,
 Spanish, Italian, French and German interfaces are included.
 
-![Shopping list](https://raw.githubusercontent.com/vitofico/usuals/2968d12f300ecf6c075c789e51b7984ae9d900a6/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png)
-![Product details](https://raw.githubusercontent.com/vitofico/usuals/2968d12f300ecf6c075c789e51b7984ae9d900a6/fastlane/metadata/android/en-US/images/phoneScreenshots/2.png)
+![Shopping list](https://raw.githubusercontent.com/vitofico/usuals/e2d097b71f14f4cc34d08ea08070d608225427ef/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png)
+![Product details](https://raw.githubusercontent.com/vitofico/usuals/e2d097b71f14f4cc34d08ea08070d608225427ef/fastlane/metadata/android/en-US/images/phoneScreenshots/2.png)
 
 
 ### Please elaborate why you wrote this app. Please highlight the unique functions it provides over other similar apps in F-Droid.
@@ -41,12 +41,12 @@ additional value proposed for review is this combined workflow:
   list remains usable without either account type.
 
 These claims can be inspected in the released source:
-[trip history](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/data/local/src/main/java/io/theficos/usuals/data/local/HistoryRepository.kt),
-[repeat rules](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/smart/src/main/java/io/theficos/usuals/smart/RepeatPlanner.kt),
-[suggestion ranking](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/smart/src/main/java/io/theficos/usuals/smart/SuggestionEngine.kt),
-[quantity hints](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/smart/src/main/java/io/theficos/usuals/smart/QuantityHints.kt),
-[recipe extraction](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/recipe/src/main/java/io/theficos/usuals/recipe/RecipeFetcher.kt),
-and [device membership](https://github.com/vitofico/usuals/blob/2968d12f300ecf6c075c789e51b7984ae9d900a6/sync/src/main/kotlin/io/theficos/usuals/sync/HouseholdClient.kt).
+[trip history](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/data/local/src/main/java/io/theficos/usuals/data/local/HistoryRepository.kt),
+[repeat rules](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/RepeatPlanner.kt),
+[suggestion ranking](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/SuggestionEngine.kt),
+[quantity hints](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/smart/src/main/java/io/theficos/usuals/smart/QuantityHints.kt),
+[recipe extraction](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/recipe/src/main/java/io/theficos/usuals/recipe/RecipeFetcher.kt),
+and [device membership](https://github.com/vitofico/usuals/blob/e2d097b71f14f4cc34d08ea08070d608225427ef/sync/src/main/kotlin/io/theficos/usuals/sync/HouseholdClient.kt).
 
 Comparison checked on 2026-10-20 against the projects' published descriptions:
 

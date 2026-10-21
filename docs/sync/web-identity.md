@@ -189,9 +189,9 @@ local users. Existing IDs, roles, disabled flags and device associations stay
 stable. OIDC sign-in still verifies the current external provider. Household
 freeze and cryptographic recovery remain independent of account reactivation.
 
-The existing local cluster manifests describe Authentik in namespace
-`authentik`, server pod label `app=authentik-server` and public issuer host
-`auth.example.org`. These are static inventory facts, not live validation.
+A typical Authentik install runs in namespace `authentik` with server pod label
+`app=authentik-server`; the examples use the issuer host `auth.example.org`.
+Confirm both against your own cluster.
 The provider, allowed subjects/groups, app hostname, public TLS path and egress
 remain operator configuration. Mount the secret as a regular file, for example
 with `subPath`; projected symlink mounts are deliberately rejected. Restart to

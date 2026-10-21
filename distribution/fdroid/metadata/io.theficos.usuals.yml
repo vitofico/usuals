@@ -20,7 +20,7 @@ Binaries: https://github.com/vitofico/usuals/releases/download/v%v/app-release.a
 Builds:
   - versionName: 2026.10.19.1
     versionCode: 26101901
-    commit: 2968d12f300ecf6c075c789e51b7984ae9d900a6
+    commit: e2d097b71f14f4cc34d08ea08070d608225427ef
     subdir: app
     sudo:
       - apt-get update

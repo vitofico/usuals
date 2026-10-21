@@ -460,8 +460,8 @@ Release SHA-256: `4db9bfed86f11ea27cf66dd785648348db46c4080e28850097c24ac5c4c06f
 Local implementation was authorized starting with S0. The [contract](sync/README.md)
 adds an ordered encrypted protocol, OpenAPI, membership/recovery boundaries,
 Room-5/archive-2 design, 29 semantic reducer scenarios and 28 security scenarios.
-Cluster conventions were learned from local Quire, Spunto and theficos-cluster
-files. No cluster API, SSH, credential use, deployment or publication occurred.
+Cluster conventions were learned from the maintainer's local Quire, Spunto and
+cluster files. No cluster API, SSH, credential use, deployment or publication occurred.
 
 - Independent read-only review found seven contract gaps. All were fixed and
   re-reviewed as closed; the [review record](sync/review.md) keeps dispositions.
@@ -1096,7 +1096,7 @@ elapsed household pilot remain separate acceptance gates.
   debug installation remains. No phone access or cluster deployment.
 - Evidence: /private/tmp/usuals-public-release/. No cluster deployment.
 
-- Source 2968d12 and tag v2026.10.19.1 are public in vitofico/usuals. All three
+- Source e2d097b and tag v2026.10.19.1 are public in vitofico/usuals. All three
   release assets passed anonymous HTTPS byte comparisons. The production pin and
   encrypted recovery backup are retained; temporary plaintext signing material
   was removed after configuring the four GitHub secrets.
@@ -1185,33 +1185,6 @@ elapsed household pilot remain separate acceptance gates.
 - Evidence: /private/tmp/usuals-qr-android-final.log,
   /private/tmp/usuals-qr-server-final.log and /private/tmp/usuals-qr-qa/.
 
-## Approved server publication and rollout (2026-10-20)
-
-- Vito explicitly requested pushing and deploying the new version. Published
-  through `9729d7c` to `main` and `feat/smart-list` with normal fast-forwards.
-  No release tag, Android asset or F-Droid request was changed.
-- Runtime source `a16ca3c` reuses its successful full Docker Android/server/web
-  gates and independent source review. The source-bound bundle, uploaded archive,
-  imported platform manifest and running container configuration digests matched.
-- A fresh pre-upgrade base backup passed `pg_verifybackup`, then base/WAL were
-  streamed directly into encryption. Checksum-verified encrypted recovery files
-  are retained at the previously approved operator-backup destination.
-- With relay traffic stopped, the explicit migration Job applied 004, then the
-  guarded image patch rolled out successfully. Identity/fence hashes and existing
-  Authentik/local-account settings are unchanged. PostgreSQL configuration is
-  unchanged and WAL archiving reports zero failures. The former schema003 binary
-  is not a compatible image-only rollback target after this migration.
-- Base checks and the updated overlay render pass. The guarded patch/migration
-  and final overlay pass server-side dry-run. Live TLS/readiness, ten exact source
-  assets, security/no-store headers, both auth providers, closed anonymous APIs,
-  private metrics and the empty browser model-origin allowlist pass.
-- Desktop and 16 KB emulator Chrome display the updated app. Authentik reaches
-  its normal owner login form. Authenticated production flows require owner
-  sign-in; disposable local household/QR/import test evidence remains applicable.
-  No phone or owner credentials were used.
-- See the [deployment record](../deploy/theficos/README.md) for source/image,
-  backup and recovery details. Private evidence: `/private/tmp/usuals-upgrade-20261020/`.
-
 ## Android 2026.10.20.1 candidate verification
 
 - Maintainer authorized a single-commit working history, an explicit-lease force
@@ -1258,8 +1231,8 @@ elapsed household pilot remain separate acceptance gates.
   passed the Android build, tests, lint and alignment gate, server/browser gate,
   and automatic publication job. CodeQL also passed. CI created version
   2026.10.20.2, code 26102002, with bot commit
-  `00013e991314bfcfa9a134874de409fe53af5b7b` and checked parent
-  `3ae870b09d9a596dd4232e6ee67b3804e83306cc`. Only version properties and five
+  `7c3abf49e4f9f35d22923367768be517452fda7d` and checked parent
+  `509bc9ddd3af85175878332649d3eef788e92b0a`. Only version properties and five
   localized changelogs changed in the bot commit. No tag was exposed before
   signing and independent clean reproduction passed.
 - [Stable release 2026.10.20.2](https://github.com/vitofico/usuals/releases/tag/v2026.10.20.2)

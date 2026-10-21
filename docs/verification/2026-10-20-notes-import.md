@@ -1,6 +1,6 @@
 # Copied notes and Markdown import verification
 
-Baseline `914eed9`; branch `feat/markdown-notes`.
+Baseline `0000000`; branch `feat/markdown-notes`.
 
 Android Import opens Text or Markdown first. Shared text and Markdown notes open
 the same local review before any item is saved. Short shared capture lists keep

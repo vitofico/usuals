@@ -1,6 +1,6 @@
 # One-scan pairing verification
 
-Branch `feat/unified-pairing`, rebased on `78532ad`.
+Branch `feat/unified-pairing`, rebased on `0000000`.
 
 Android has one Sharing screen for server sign-in, household creation and
 invitations. Invites use pairing v2: a link key only the two phones know, a

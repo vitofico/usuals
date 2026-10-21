@@ -1,6 +1,6 @@
 # Streamlined settings verification
 
-Baseline `a9b0200`; branch `feat/streamlined-settings`.
+Baseline `7e0c9be`; branch `feat/streamlined-settings`.
 
 Android Settings now opens a focused server connection, with compact appearance,
 privacy and help controls. Direct AI remains under Help and about > Advanced.

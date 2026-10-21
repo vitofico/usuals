@@ -1,15 +1,13 @@
 # Shared-list relay runbook
 
-Use an explicit deployment authorization before applying these steps. Vito
-authorized the initial theficos deployment on 2026-10-18; see its
-[deployment record](../../deploy/theficos/README.md) for observed configuration,
-completed checks and remaining pilot gates. Record source commit, image digest,
-config and operator at each deployment. Do not put secrets in command arguments,
-logs or Git.
+Use an explicit deployment authorization before applying these steps. Record
+source commit, image digest, config and operator at each deployment in a private
+operator record, never in this repository. Do not put secrets in command
+arguments, logs or Git.
 
 ## First deployment
 
-1. Confirm MicroK8s version/admission, the `theficos` amd64 node, available RAM/
+1. Confirm MicroK8s version/admission, the target amd64 node, available RAM/
    disk, hostpath storage, NFS reachability/private UID70 directory, Traefik labels,
    cert-manager issuer and intended DNS/hostname. Confirm HTTP redirects to TLS.
    Verify CNI NetworkPolicy enforcement and Traefik's sanitized/appended forwarding
