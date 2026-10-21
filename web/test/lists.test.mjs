@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Problem } from "../src/wire.mjs";
-import { ListStore, ListFeed, ListsApi, access, problem } from "../src/lists.mjs";
+import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "../src/lists.mjs";
 import { intent } from "../src/intents.mjs";
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const person = (id, name = id) => ({ id, name });
-const shared = (id, seq, { name = id, role = "owner", owner = person("me"), members, rows = {} } = {}) => ({
+const shared = (id, seq, { name = id, role = "owner", owner = person("me"), members, rows = {}, archived = false, archivedByOwner = false } = {}) => ({
   id, seq, role, owner, members: members ?? [{ id: owner.id, name: owner.name, role: "owner" }],
   projection: { name, rows, tombstones: {}, aliases: {}, conflicts: {}, rejected: {}, purchases: {} },
+  archived, archivedByOwner,
 });
 const page = (cursor, { lists = [], removed = [], reset = false, hasMore = false } = {}) => ({ cursor, reset, hasMore, lists, removed });
 
@@ -220,6 +221,19 @@ test("deleting, leaving, adding and removing people use their routes and update 
   assert.ok(h.calls.every((c) => c.options.csrf === "csrf-token"));
 });
 
+test("archiving and restoring send the flag to the list's route with CSRF and store the list the server returns", async () => {
+  const h = apiHarness((_path, options) => shared("L", h.calls.length + 3, { archived: options.body.archived }));
+  h.store.put(shared("L", 3));
+  const archived = await h.api.archive("L", true);
+  assert.deepEqual([h.calls[0].path, h.calls[0].options.method, h.calls[0].options.body, h.calls[0].options.csrf],
+    ["/api/lists/L/archived", "PUT", { archived: true }, "csrf-token"]);
+  assert.equal(h.store.lists.get("L"), archived);
+  assert.equal(archived.archived, true);
+  await h.api.archive("L", false);
+  assert.deepEqual(h.calls[1].options.body, { archived: false });
+  assert.equal(h.store.lists.get("L").archived, false);
+});
+
 test("people search sends the query and reads without CSRF", async () => {
   const h = apiHarness({ people: [{ id: "ana", name: "Ana", detail: "ana@usuals.example.org" }] });
   assert.equal((await h.api.people("")).length, 1);
@@ -247,4 +261,27 @@ test("conflicts and rejections are reported in the projection's own terms", () =
   assert.equal(problem({ results: [{ id: "x", outcome: "conflict" }], list }), "conflict_stale");
   assert.equal(problem({ results: [{ id: "r", outcome: "rejected" }], list }), "rejected");
   assert.equal(problem({ results: [{ id: "u", outcome: "upgrade_required" }], list }), "upgrade_required");
+});
+
+test("archived lists leave the selector and the selection moves to the first list that is not archived", () => {
+  const name = (l) => l.projection.name;
+  const lists = [shared("c", 1, { name: "Chores" }), shared("b", 2, { name: "Bakery", archived: true }),
+    shared("a", 3, { name: "Apples" }), shared("z", 4, { name: "Zoo", archived: true, archivedByOwner: true })];
+  const kept = arrange(lists, "c", name, "en");
+  assert.deepEqual(kept.active.map((l) => l.id), ["a", "c"]);
+  assert.deepEqual(kept.archived.map((l) => l.id), ["b", "z"]);
+  assert.equal(kept.selected, "c");
+  // Archived here, on another device or by the owner: the next render shows the first list left.
+  assert.equal(arrange(lists, "b", name, "en").selected, "a");
+  assert.equal(arrange(lists, null, name, "en").selected, "a");
+  assert.equal(arrange(lists, "gone", name, "en").selected, "a");
+  const none = arrange(lists.filter((l) => l.archived), "b", name, "en");
+  assert.deepEqual([none.active, none.selected], [[], null]);
+  assert.deepEqual(none.archived.map((l) => l.id), ["b", "z"]);
+});
+
+test("only the owner restores a list the owner archived; an editor restores their own archive or leaves the owner's", () => {
+  assert.equal(archivedAction(shared("L", 1, { role: "owner", archived: true, archivedByOwner: true })), "restore");
+  assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true })), "restore");
+  assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true, archivedByOwner: true })), "leave");
 });

@@ -301,6 +301,13 @@ main {
   align-items: center;
   gap: 8px;
 }
+.archived {
+  margin-top: 20px;
+}
+.archived summary {
+  padding: 18px 26px;
+  font-size: 12px;
+}
 .menu-actions {
   display: grid;
   gap: 10px;

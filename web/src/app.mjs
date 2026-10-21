@@ -1,6 +1,6 @@
 import { requireThat, hash } from "./wire.mjs";
 import { RunScope, request } from "./client.mjs";
-import { ListStore, ListFeed, ListsApi, access, problem } from "./lists.mjs";
+import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "./lists.mjs";
 import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
@@ -343,21 +343,42 @@ async function render() {
 const listName = (list) => list.projection.name || t("untitledList");
 // The capture field survives re-rendering, so a change arriving from the phone never eats what is being typed.
 const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 1000, autocomplete: "off", required: true });
+// Whether the Archived area is open survives re-rendering too.
+let archivedOpen = false;
+function archivedRow(list) {
+  const values = { name: listName(list) };
+  return el("li", { class: "item" },
+    el("div", { class: "item-info" }, el("div", { class: "item-name" }, values.name),
+      archivedAction(list) === "leave" ? el("div", { class: "item-meta" }, t("archivedByOwner")) : null),
+    archivedAction(list) === "leave"
+      ? button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(list.id, account.user.id), values),
+        "danger", { "aria-label": t("leaveListName", values) })
+      : button(t("restoreList"), () => act(async () => { await lists.archive(list.id, false); selected = list.id; }),
+        "secondary", { "aria-label": t("restoreListName", values) }));
+}
+function archivedArea(archived) {
+  if (!archived.length) return null;
+  return el("section", { class: "paper archived" },
+    el("details", { open: archivedOpen || null, ontoggle: (event) => { archivedOpen = event.target.open; } },
+      el("summary", {}, t("archivedLists", { count: archived.length })),
+      el("ul", { class: "items" }, archived.map(archivedRow))));
+}
 function renderLists() {
   if (!store.cursor) {
     $("content").replaceChildren(title("listTitle", "listSubtitle"), paragraph("loading"));
     return;
   }
-  const all = [...store.lists.values()].sort((a, b) => listName(a).localeCompare(listName(b), locale) || (a.id < b.id ? -1 : 1));
-  if (!all.length) {
-    $("content").replaceChildren(title("listTitle", "listSubtitle"),
+  const { active, archived, selected: shown } = arrange(store.lists.values(), selected, listName, locale);
+  selected = shown;
+  if (!active.length) {
+    $("content").replaceChildren(title("listTitle", "listSubtitle"), el("div", {},
       el("section", { class: "paper empty" },
         el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
-        el("h2", {}, t("firstListTitle")), paragraph("firstListText"),
-        button(t("newList"), newListDialog, "primary")));
+        ...(archived.length ? [paragraph("allListsArchived")] : [el("h2", {}, t("firstListTitle")), paragraph("firstListText")]),
+        button(t("newList"), newListDialog, "primary")),
+      archivedArea(archived)));
     return;
   }
-  if (!store.lists.has(selected)) selected = all[0].id;
   const list = store.lists.get(selected), id = list.id, items = listRows(list.projection),
     needed = items.filter((r) => !isChecked(r)), picked = items.filter(isChecked);
   const focused = document.activeElement === captureInput;
@@ -365,7 +386,7 @@ function renderLists() {
   captureInput.setAttribute("aria-label", t("addPlaceholder"));
   const select = el("select", { class: "list-select", "aria-label": t("listLabel"),
     onchange: (event) => { selected = event.target.value; clearNotice(); render().catch(failure); } },
-  all.map((l) => el("option", { value: l.id, ...(l.id === id ? { selected: true } : {}) }, listName(l))));
+  active.map((l) => el("option", { value: l.id, ...(l.id === id ? { selected: true } : {}) }, listName(l))));
   const capture = el("form", { class: "capture", onsubmit: (event) => {
     event.preventDefault();
     const name = captureInput.value.trim();
@@ -411,7 +432,7 @@ function renderLists() {
     el("p", {}, t(people.length > 1 ? "sharedText" : "privateText")));
   $("content").replaceChildren(
     title("listTitle", "listSubtitle", el("span", { class: "pill" }, t("itemCount", { count: needed.length }))),
-    el("div", { class: "list-layout" }, paper, aside));
+    el("div", { class: "list-layout" }, el("div", {}, paper, archivedArea(archived)), aside));
   if (focused) captureInput.focus({ preventScroll: true });
 }
 /** Shows what the server recorded for this change: a conflict or a rejection, in the projection's own terms. */
@@ -529,6 +550,8 @@ function listMenu(listId) {
       // A rename is guarded by the name this browser showed, so two people renaming at once see a conflict.
       button(t("renameList"), () => nameDialog("renameList", list.projection.name, (name) => change(listId, "list_name", rename(list.projection, name)))),
       button(t("importTitle"), () => { closeDialog(); openImport(listId); }),
+      button(t("archiveList"), () => messageDialog("archiveListTitle", list.role === "owner" ? "archiveListOwnerText" : "archiveListText",
+        () => lists.archive(listId, true), values)),
       list.role === "owner"
         ? button(t("deleteList"), () => messageDialog("deleteListTitle", "deleteListText", () => lists.delete(listId), values), "danger")
         : button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(listId, account.user.id), values), "danger")),

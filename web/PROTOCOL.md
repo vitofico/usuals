@@ -59,6 +59,10 @@ never stops the app from starting.
 - **Lists.** `PUT /api/lists/{uuid}` with `{"projection": {"name": …}}` creates
   one (200 or 201); a 409 `list_exists` retries once with a new id.
   `DELETE /api/lists/{id}` deletes an owned list (204).
+  `PUT /api/lists/{id}/archived` with `{"archived": true}` archives a list and
+  `false` restores it; the reply's list replaces the shown one. A list with
+  `archived` leaves the selector for the Archived area, which offers Restore,
+  or Leave when an editor sees `archivedByOwner`.
 
 ## Sharing
 

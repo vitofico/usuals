@@ -175,6 +175,12 @@ export class ListsApi {
     this.store.put(list);
     return list;
   }
+  /** Archives the list (true) or restores it (false): for everyone when the owner asks, otherwise for this account only. */
+  async archive(listId, archived) {
+    const list = await this.#call(`/api/lists/${listId}/archived`, { method: "PUT", body: { archived }, max: LIST_MAX });
+    this.store.put(list);
+    return list;
+  }
   async people(query) {
     return (await this.#call("/api/people?" + new URLSearchParams({ q: query }))).people;
   }
@@ -190,6 +196,19 @@ export function access(list, me) {
     action: member.role === "owner" ? null : member.id === me ? "leave" : list.role === "owner" ? "remove" : null,
   }));
 }
+
+/**
+ * The lists by name, split into the selector's and the archived ones, and the list to show: the selected one while it
+ * is not archived, otherwise the first one left, or null when every list is archived.
+ */
+export function arrange(lists, selected, name, locale) {
+  const sorted = [...lists].sort((a, b) => name(a).localeCompare(name(b), locale) || (a.id < b.id ? -1 : 1));
+  const active = sorted.filter((l) => !l.archived), archived = sorted.filter((l) => l.archived);
+  return { active, archived, selected: active.some((l) => l.id === selected) ? selected : active[0]?.id ?? null };
+}
+
+/** What an archived list offers: an editor's restore cannot undo the owner's archive, so they may only leave it. */
+export const archivedAction = (list) => list.role === "editor" && list.archivedByOwner ? "leave" : "restore";
 
 /** The first result the person should hear about, named as the projection records it. */
 export function problem({ results, list }) {
