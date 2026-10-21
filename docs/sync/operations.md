@@ -1,21 +1,9 @@
-# Local S0 operations inventory
+# Operations
 
-Observed 2026-10-16 from local files only, at Vito's direction. These are
-repository conventions, not a claim about live cluster health. Other repos
-contain local work; no file in them was edited. No kubeconfig, secret contents,
-SSH connection or Kubernetes API was used.
+Conventions for running the Usuals server and the pins it was built against.
+The [deployment package](../../deploy/README.md) implements them.
 
-## Existing services
-
-| Evidence | Observation | Usuals decision |
-|---|---|---|
-| The maintainer's cluster repository README | Single-node MicroK8s; Kustomize; Traefik; cert-manager; SOPS/age | Follow this stack in a later reviewed deployment. |
-| Spunto `deploy/k8s/README.md` and `ingress.yaml` | amd64 node, `microk8s-hostpath`, Traefik `websecure`, ClusterIssuer `letsencrypt-prod`, service hostname under `example.org` | Propose `usuals.example.org`, namespace `usuals`; DNS and certificate availability require live validation after deployment approval. |
-| Spunto `deploy/k8s/deployment.yaml` | One replica, immutable locally imported image, imagePullPolicy Never, UID/GID 10001, no service token, read-only filesystem, dropped capabilities, startup/readiness/liveness probes | Use local image import rather than registry publication; render content-addressed references only. No image import now. |
-| Quire server PostgreSQL manifests in the maintainer's cluster repository | Dedicated PostgreSQL 16 instance and RWO 5 GiB PVC | Use a separate Usuals database/role and dedicated RWO disk; do not reuse Quire credentials or alter its database. A new PostgreSQL 16 instance is the default until approved DBA reuse. |
-| `quire/server/README.md` | Separate server, `/health` and `/readyz`, migration step and explicit server configuration | Keep probes generic, migrations explicit, configuration environment-based with secret-file inputs. No retailer/model proxy or inherited auth. |
-| Spunto `deploy/k8s` storage example | Separate backup directory on a shared filesystem, NFS for backup artifacts, Borg integration | Backups may use the same off-database storage convention. Never put live PostgreSQL data on that NFS share. |
-| Cluster backup configuration, capability-only inspection | Borgmatic, PostgreSQL dump hooks, daily retention/scheduling | Existing daily dumps do not establish 15-minute RPO or WAL recovery. Add a reviewed Usuals dump/archive job and restore drill; no current backup guarantee. No secret values were read into this record. |
+## Deployment checks
 
 Future deployment review must verify DNS A/AAAA, public 80/443, issuer readiness,
 Traefik forwarded-header handling, change-feed requests held open for up to 25
@@ -23,7 +11,7 @@ seconds, namespace network-policy selectors, node disk/memory capacity, non-root
 volume permissions, database TLS if outside the dedicated namespace and
 off-cluster Borg restore capability.
 Trust forwarded IPs only from known ingress peers; rate limits must not trust
-arbitrary X-Forwarded-For. Do not copy Spunto's Ollama mounts/configuration.
+arbitrary X-Forwarded-For.
 
 ## Version pins
 
@@ -65,7 +53,7 @@ or newer schemas. No migration framework dependency is selected implicitly.
 
 ## Resource and recovery targets
 
-Start relay at 100m CPU/256 MiB request, 1 CPU/512 MiB limit; database at
+Start relay at 100m CPU/256 MiB request, 1 CPU/768 MiB limit; database at
 500m/512 MiB request, 1 GiB memory limit and 10 GiB RWO hostpath storage.
 Measure heap, native memory, connections and load before approving those limits.
 One server replica and one database instance, with bounded worker/connection
@@ -82,9 +70,9 @@ session and phone connection is revoked and every client's list feed starts over
 outside restored database state, keep the server identity and the list key in
 separate escrow, and fail startup if either is lost.
 
-Local S0 can proceed from this inventory. Applying manifests, provisioning DNS,
+Applying manifests, provisioning DNS,
 creating database users, decrypting/applying SOPS files, importing images and
-changing backup jobs all require Vito's deployment approval first.
+changing backup jobs all require the operator's deployment approval first.
 
 S5 now provides the [local deployment package](../../deploy/README.md) and
 [restore runbook](runbook.md). Base/WAL recovery and bounded container smoke checks passed locally; live

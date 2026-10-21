@@ -57,7 +57,7 @@ place instead of promised in several. The User-Agent and the timeouts are still
 owed, because nothing in `:shop` opens a socket yet. Point 2 is entirely ahead of
 the code: there is no login, no WebView and no cookie store anywhere in the tree,
 and the feasibility spike that would produce one has not been done
-([GAP-SHOP-1](../known-issues.md#gap-shop-1--there-is-no-real-shop-adapter--high)).
+(GAP-SHOP-1, retired with the shop adapter).
 This ADR is what that work will be held to, not a description of it.
 
 ## Consequences

@@ -6,8 +6,8 @@ The approved implementation covers Android and web. It adds a public server-link
 and QR handoff, admitted-account household creation, full-code device comparison,
 a retained source-list action, and the server AI default with optional personal
 credentials for operator-approved profiles. Shopping encryption and Room's
-released schema remain unchanged. Initial implementation verification used disposable local fixtures. Subsequent
-explicitly authorized publication and live deployment are recorded below.
+released schema remain unchanged. Initial implementation verification used disposable local fixtures. Publication
+is recorded below.
 
 ## Automated checks
 
