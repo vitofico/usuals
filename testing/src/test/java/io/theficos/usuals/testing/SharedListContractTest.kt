@@ -197,7 +197,7 @@ class SharedListContractTest {
 
     @Test fun `HTTP contract requires authentication on every data route`() {
         val publicRoutes = setOf("/healthz", "/readyz", "/v1/server-info",
-            "/v1/devices/challenge", "/v1/devices/session", "/v1/join-requests")
+            "/v1/devices/challenge", "/v1/devices/session", "/v1/invites/{i}/open", "/v1/join-requests")
         for ((path, methods) in api().getValue("paths").jsonObject) {
             for (method in methods.jsonObject.values) {
                 val security = method.jsonObject.getValue("security").jsonArray

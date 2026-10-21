@@ -133,6 +133,7 @@ class WebIdentityTest {
         val cookie = login(); val account = caller(cookie); web.link(account, proof())
         val previous = db.transaction { c ->
             c.execute("DROP TABLE ai_vision_check,ai_usage,ai_preference,native_session,connection_ticket,web_created_household"); c.execute("DELETE FROM schema_migration WHERE version>=4")
+            c.execute("ALTER TABLE invitation DROP COLUMN descriptor"); c.execute("ALTER TABLE join_request DROP COLUMN mac")
             c.query("SELECT version,checksum FROM schema_migration ORDER BY version") { it.getInt(1) to it.getString(2) }
         }
         db.migrate(); db.migrate(); db.checkSchema()
@@ -270,6 +271,7 @@ class WebIdentityTest {
         db.transaction { c ->
             listOf("ai_vision_check", "ai_usage", "ai_preference", "native_session", "connection_ticket", "web_created_household", "local_login", "local_credential", "web_device_session", "web_device", "web_session", "web_login", "web_user").forEach { c.execute("DROP TABLE $it") }
             c.execute("DELETE FROM schema_migration WHERE version>=2")
+            c.execute("ALTER TABLE invitation DROP COLUMN descriptor"); c.execute("ALTER TABLE join_request DROP COLUMN mac")
         }
         val checksum = db.transaction { it.query("SELECT checksum FROM schema_migration WHERE version=1") { row -> row.getString(1) }.single() }
         assertThrows(IllegalStateException::class.java) { db.checkSchema() }

@@ -4,7 +4,7 @@
     <string name="connection_intro">Connect once to share lists and use this server’s optional AI. Paste a server link or scan its QR code below.</string>
     <string name="connection_link">Server link</string>
     <string name="connection_connect">Connect this server</string>
-    <string name="connection_compare">Compare every group of this code with the browser before approving.</string>
+    <string name="connection_compare">Check that your browser shows the same code before you approve.</string>
     <string name="connection_signin">Sign in in your browser</string>
     <string name="connection_waiting">Waiting for browser approval…</string>
     <string name="connection_cancel">Cancel connection</string>

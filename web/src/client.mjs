@@ -27,6 +27,7 @@ import {
   seal,
   verifyReceipt,
 } from "./crypto.mjs";
+import { parseInviteLink, admitKey, macKey, joinMac, joinCode, descriptorAnchor, MAX_INVITE_LIFETIME } from "./pairing.mjs";
 import {
   body,
   devices,
@@ -172,55 +173,6 @@ export async function request(
     reader?.releaseLock();
   }
 }
-function originValid(value) {
-  const url = new URL(value);
-  return (
-    url.origin === value &&
-    !url.username &&
-    !url.password &&
-    (url.protocol === "https:" ||
-      (url.protocol === "http:" &&
-        ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
-  );
-}
-export function parseInvitation(uri, origin) {
-  requireThat(
-    typeof uri === "string" &&
-      uri.startsWith("usuals://join#") &&
-      uri.length <= 4096,
-  );
-  const value = strictJson(unb64(uri.slice(uri.indexOf("#") + 1)), 3072);
-  requireThat(
-    Object.keys(value).every((k) =>
-      [
-        "version",
-        "origin",
-        "serverId",
-        "householdId",
-        "genesisHash",
-        "ownerDeviceId",
-        "ownerFingerprint",
-        "inviteId",
-        "memberId",
-        "role",
-        "secret",
-        "expiresAt",
-      ].includes(k),
-    ) &&
-      value.version === 1 &&
-      value.role === "editor" &&
-      Number.isSafeInteger(value.expiresAt) &&
-      value.expiresAt > 0 &&
-      originValid(value.origin) &&
-      value.origin === origin,
-    "wrong_origin",
-  );
-  for (const k of ["householdId", "ownerDeviceId", "inviteId", "memberId"])
-    uuid(value[k]);
-  for (const k of ["serverId", "genesisHash", "ownerFingerprint", "secret"])
-    unb64(value[k], 32);
-  return value;
-}
 export class HouseholdClient {
   constructor(
     vault,
@@ -249,8 +201,7 @@ export class HouseholdClient {
   abandonRejectedCreation() { return this.serial(() => owner.abandonRejectedCreation(this)); }
   invite(id) { return this.serial(() => owner.invite(this, id)); }
   applicants(id) { return this.serial(() => owner.applicants(this, id)); }
-  approve(id, pending, trusted) { return this.serial(() => owner.approve(this, id, pending, trusted)); }
-  approveQr(id, uri, invitation) { return this.serial(() => owner.approveQr(this, id, uri, invitation)); }
+  approve(id, pending) { return this.serial(() => owner.approve(this, id, pending)); }
   removeDevice(id, device) { return this.serial(() => owner.remove(this, id, device)); }
   discardInvalidMembership(id) { return this.serial(() => owner.discardInvalidPending(this, id)); }
   denyApplicant(id, request) { return this.serial(async () => {
@@ -370,15 +321,53 @@ export class HouseholdClient {
       return this.call(path, { ...options, token: await this.session(id) });
     }
   }
-  requestJoin(uri) {
+  /** Opens an invite link (https or app wrapper); the same link again resends the waiting request. */
+  requestJoin(text) {
     return this.serial(async () => {
-      const invitation = parseInvitation(uri, this.origin);
-      requireThat(invitation.expiresAt > this.clock(), "invite_expired");
+      const link = parseInviteLink(text);
+      requireThat(link.origin === this.origin, "wrong_origin");
+      const waiting = this.vault.read().joining;
+      if (waiting?.invitation.inviteId === link.inviteId) {
+        await this.sendJoin(waiting);
+        return this.pendingCode();
+      }
+      requireThat(!waiting && !this.vault.read().creating, "already_joined");
+      const admit = await this.scope.wait(admitKey(link.key)),
+        opened = await this.call(`/v1/invites/${link.inviteId}/open`, {
+          method: "POST",
+          body: { secret: b64(admit) },
+        }),
+        descriptor = unb64(opened.descriptor);
+      // The link pins these bytes, so the relay cannot swap the household or its owner.
+      requireThat(b64(await this.scope.wait(descriptorAnchor(descriptor))) === b64(link.anchor), "unverified");
+      const d = strictJson(descriptor, 2048);
       requireThat(
-        !this.vault.read().households[invitation.householdId] &&
-          !this.vault.read().joining && !this.vault.read().creating,
-        "already_joined",
+        Object.keys(d).sort().join() ===
+          "genesisHash,householdId,memberId,origin,ownerDeviceId,ownerFingerprint,role,serverId,version" &&
+          d.version === 2 &&
+          d.origin === this.origin &&
+          d.role === "editor",
+        "unverified",
       );
+      for (const k of ["householdId", "ownerDeviceId", "memberId"]) uuid(d[k]);
+      for (const k of ["serverId", "genesisHash", "ownerFingerprint"]) unb64(d[k], 32);
+      requireThat(Number.isSafeInteger(opened.expiresAt) && opened.expiresAt > this.clock() && opened.expiresAt <= this.clock() + MAX_INVITE_LIFETIME, "invite_expired");
+      requireThat(!this.vault.read().households[d.householdId], "already_joined");
+      const invitation = {
+        version: 2,
+        origin: this.origin,
+        serverId: d.serverId,
+        householdId: d.householdId,
+        genesisHash: d.genesisHash,
+        ownerDeviceId: d.ownerDeviceId,
+        ownerFingerprint: d.ownerFingerprint,
+        inviteId: link.inviteId,
+        memberId: d.memberId,
+        role: d.role,
+        secret: b64(admit),
+        expiresAt: opened.expiresAt,
+        key: b64(link.key),
+      };
       const server = await this.info();
       requireThat(server.serverId === invitation.serverId);
       const device = await this.scope.wait(newDevice()),
@@ -418,17 +407,20 @@ export class HouseholdClient {
         }),
       );
       await this.sendJoin(pending);
-      return this.pendingFingerprint();
+      return this.pendingCode();
     });
   }
   async sendJoin(p) {
+    const body = {
+      secret: p.invitation.secret,
+      assertion: b64(joinBytes(p.assertion)),
+      signature: p.signature,
+    };
+    if (p.invitation.key)
+      body.mac = await this.scope.wait(joinMac(await macKey(unb64(p.invitation.key, 32)), joinBytes(p.assertion)));
     const value = await this.call("/v1/join-requests", {
       method: "POST",
-      body: {
-        secret: p.invitation.secret,
-        assertion: b64(joinBytes(p.assertion)),
-        signature: p.signature,
-      },
+      body,
       status: 202,
     });
     requireThat(
@@ -436,21 +428,12 @@ export class HouseholdClient {
         value.expiresAt === p.assertion.expiresAt,
     );
   }
-  async pendingFingerprint() {
+  /** The six digits the owner sees beside this request; null for a request made before pairing v2. */
+  async pendingCode() {
     const p = this.vault.read().joining;
     requireThat(p, "not_found");
-    return hex(
-      unb64(
-        await this.scope.wait(
-          fingerprint(
-            p.server.serverId,
-            p.invitation.householdId,
-            p.device.publicKeys,
-          ),
-        ),
-        32,
-      ),
-    );
+    if (!p.invitation.key) return null;
+    return this.scope.wait(joinCode(await macKey(unb64(p.invitation.key, 32)), joinBytes(p.assertion)));
   }
   async chain(id, token, pin, server) {
     const proofs = [];

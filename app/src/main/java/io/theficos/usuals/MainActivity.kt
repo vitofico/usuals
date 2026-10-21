@@ -151,7 +151,7 @@ internal fun shareConsumedIn(savedInstanceState: Bundle?): Boolean =
 internal fun sharedTextOf(intent: Intent?): String? =
     if (intent?.action == Intent.ACTION_SEND && intent.type in setOf("text/plain", "text/markdown", "text/x-markdown")) {
         intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.takeIf { it.isNotBlank() }
-    } else if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == "usuals" && intent.data?.host in setOf("join", "connect")) {
+    } else if (intent?.action == Intent.ACTION_VIEW && intent.data?.scheme == "usuals" && intent.data?.host in setOf("join", "connect", "connected")) {
         intent.dataString
     } else {
         null

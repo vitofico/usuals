@@ -1,1 +1,1 @@
-Importez des notes copiées de Google Keep ou d’une autre application. Listes texte, Markdown, puces et cases sont lus localement et vérifiés avant ajout. Les articles cochés sont ignorés.
+Le partage suit désormais un seul parcours guidé : connectez votre serveur, enregistrez le fichier de récupération, puis invitez avec un code QR. L’autre téléphone rejoint en un scan, les deux écrans affichent les mêmes six chiffres et une touche suffit pour approuver. Une invitation dure 24 heures et ne sert qu’une fois.

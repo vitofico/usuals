@@ -58,15 +58,13 @@ in subsequent manifests/invitations. Household identity is that genesis hash. TL
 a server claiming another origin is rejected. Do not reuse Quire credentials,
 Spunto bearer tokens, Authentik forward-auth or provider keys.
 
-An owner invitation contains the exact HTTPS origin, server identity, household
-genesis fingerprint and random invitation secret. QR reading does not use the
+An owner invitation is a pairing v2 link (below). QR reading does not use the
 app's grocery GTIN scanner. Applicant generates both keys locally and signs
-a join assertion with its signing key. The inviter verifies proof and confirms
-the applicant's complete key fingerprint via a reverse QR displayed by the
-applicant, or a separate authenticated channel. A fingerprint covers both
-public keys, server and household. There is no approve-without-verification path.
-The applicant similarly checks the owner's fingerprint from the invitation.
-The relay cannot replace a public key using a directory response alone.
+a join assertion with its signing key. The inviting device verifies proof and
+the assertion's MAC under the link key, which the relay never sees. There is no
+approve-without-verification path. The applicant checks the owner's fingerprint
+from the descriptor the link anchors. The relay cannot replace a public key using
+a directory response alone.
 Fingerprint bytes are SHA256(`ASCII("USUALS/FINGERPRINT/1\0") || serverId
 || householdId || Ed25519PublicKey32 || X25519PublicKey32`). Public keys are
 raw 32-byte values; fixed profile parameters reconstruct Tink key objects.
@@ -80,12 +78,35 @@ The join signing input is `ASCII("USUALS/JOIN/1\0") || bytes(originUtf8)
 || challengeId || nonce32 || u64(assertionExpiresAtMillis)`. Ids are UUID bytes.
 The server requires arrival before the 60-second challenge expiry and consumes
 that nonce once; the signed assertion expires no later than the invitation's
-10-minute expiry. Pending owner responses return the exact assertion and
-signature, never the secret. The owner verifies signature, origin/pins, expiry,
-all identities and both key bytes before comparing the reverse-QR fingerprint.
+expiry (24 hours for v2). Pending owner responses return the exact assertion,
+signature and MAC, never the secret. The owner verifies signature, origin/pins,
+expiry, all identities and both key bytes, then the MAC with its stored link key.
 Approval binds the assertion hash/request id into the signed manifest; the
 applicant verifies that binding and its keys before accepting membership.
 A generic session proof does not substitute for this join assertion.
+
+### Pairing v2
+
+The owner draws a random 32-byte link key `k` and derives, with HKDF-SHA256 and
+an empty salt, `admit = HKDF(k, "USUALS/INVITE/2/admit")` and `macKey = HKDF(k,
+"USUALS/INVITE/2/mac")`, 32 bytes each. It uploads the descriptor, the exact
+UTF-8 JSON `{version:2, origin, serverId, householdId, genesisHash,
+ownerDeviceId, ownerFingerprint, memberId, role}`, plus `SHA256(admit)`, and keeps
+`k` in its wrapped state per outstanding invite (Android) or vault (browser).
+
+The link is `https://<origin>/join#2.<b64url(inviteId16 || k32 || anchor16)>`
+with `anchor = SHA256("USUALS/INVITE/2\0" || descriptor)[0..16]`; the app form is
+`usuals://join#` plus the base64url link. The applicant opens the invite with
+`admit`, checks the anchor and that the descriptor's origin is the link's origin,
+then sends `mac = HMAC-SHA256(macKey, "USUALS/JOIN-MAC/2\0" || assertion)` with
+the unchanged `USUALS/JOIN/1` assertion. Both screens may show `uint32be(HMAC(
+macKey, "USUALS/JOIN-CODE/2\0" || assertion)[0..4]) mod 10^6`.
+
+The relay knows `admit` but not `k`, so it cannot produce a MAC over substituted
+keys, and it cannot swap the household or owner without breaking the anchor.
+Whoever holds the link can ask to join; the owner's tap, single use and the
+24-hour expiry bound that. The server connection code is likewise
+`uint32be(fingerprint[0..4]) mod 10^6` of the existing connection fingerprint.
 
 Join requests consume an invitation only when approval commits; rate-limit
 requests and expiry prevent unbounded pending state. Denial/cancellation may

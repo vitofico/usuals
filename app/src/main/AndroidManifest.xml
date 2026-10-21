@@ -82,6 +82,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="usuals" android:host="join" />
                 <data android:scheme="usuals" android:host="connect" />
+                <data android:scheme="usuals" android:host="connected" />
             </intent-filter>
             <!--
               Share a plain-text note, Markdown list or recipe link for review.

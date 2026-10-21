@@ -1,1 +1,1 @@
-Importa notas copiadas de Google Keep u otra aplicación. Listas de texto, Markdown, viñetas y casillas se leen localmente y se revisan antes de añadir. Se omiten los artículos marcados.
+Compartir es ahora un solo proceso guiado: conecta tu servidor, guarda el archivo de recuperación e invita con un código QR. El otro teléfono se une con un escaneo, ambos muestran los mismos seis dígitos y un toque lo aprueba. Las invitaciones duran 24 horas y sirven una vez.

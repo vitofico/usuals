@@ -1,5 +1,24 @@
 # Changelog
 
+## One-scan pairing and shared lists
+
+- Put server connection, household creation and invitations on one Android
+  Sharing screen that shows only the current step. Settings shows one Server
+  and sharing row.
+- Sign in through the browser with matching six-digit codes. The household is
+  drafted as soon as the browser approves, including after Return to Usuals.
+- Save the recovery file once: the app writes it, reads it back and checks it.
+  Copy the separate key and confirm before creating.
+- Invite with one QR code or link. The other phone scans it in Usuals or with
+  the camera through the server's join page, both phones show the same six
+  digits, and the owner approves with one tap. Invites work once and expire
+  after 24 hours; the relay cannot extend them.
+- Stop waiting on a denied or expired join. Browser joiners reopen the invite
+  link after signing in.
+- Server migration 006 stores invite descriptors and join proofs. Older app
+  versions keep existing households and report that an update is needed for
+  new invites.
+
 ## Copied notes and Markdown lists
 
 - Put text and Markdown first under a visible Import action on Android.

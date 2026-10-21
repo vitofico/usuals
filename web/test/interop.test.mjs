@@ -28,6 +28,9 @@ import {
 } from "../src/crypto.mjs";
 import { verifyChain, body } from "../src/membership.mjs";
 import { reduce, snapshotDecode } from "../src/reducer.mjs";
+import { parseInviteLink, verifyJoinMac, macKey, joinCode, descriptorAnchor } from "../src/pairing.mjs";
+import { HouseholdClient } from "../src/client.mjs";
+import { vaultInitial } from "../src/vault.mjs";
 const directory = process.env.USUALS_WEB_INTEROP_DIR;
 test(
   "Kotlin Tink and browser WebCrypto interoperate in both directions",
@@ -160,5 +163,32 @@ test(
         f.receipt.previousHead,
       ),
     );
+  },
+);
+
+test(
+  "pairing v2 joins made in Kotlin verify in the browser and browser joins are written for Kotlin",
+  { skip: !directory },
+  async () => {
+    const f = JSON.parse(await readFile(join(directory, "kotlin-input.json"), "utf8")),
+      link = parseInviteLink(f.inviteLink), mac = await macKey(link.key), bytes = joinBytes(f.joinAssertion);
+    assert.deepEqual(await descriptorAnchor(unb64(f.inviteDescriptor)), link.anchor);
+    assert.equal(await verifyJoinMac(mac, bytes, f.joinPending.mac), true);
+    assert.equal(await joinCode(mac, bytes), f.joinCode);
+    let state = vaultInitial(), sent = null;
+    const vault = { read: () => structuredClone(state), mutate: async (action) => { const next = structuredClone(state); action(next); state = next; },
+        reserve: async () => {} },
+      transport = async (path, options) => {
+        if (path === `/v1/invites/${link.inviteId}/open`) return { descriptor: f.inviteDescriptor, expiresAt: f.invitation.expiresAt };
+        if (path === "/v1/server-info") return f.server;
+        if (path === "/v1/devices/challenge") return { challengeId: crypto.randomUUID(), nonce: f.joinAssertion.nonce,
+          serverId: f.server.serverId, expiresAt: Date.now() + 60000, purpose: options.body.purpose };
+        if (path === "/v1/join-requests") { sent = options.body; return { requestId: state.joining.assertion.requestId, expiresAt: state.joining.assertion.expiresAt }; }
+        throw new Error("Unexpected join route " + path);
+      },
+      client = new HouseholdClient(vault, { csrfToken: "csrf" }, { origin: f.origin, transport });
+    const code = await client.requestJoin(f.inviteLink);
+    await writeFile(join(directory, "browser-join-output.json"), JSON.stringify({ request: sent, code }));
+    client.stop();
   },
 );

@@ -1,1 +1,1 @@
-Import copied notes from Google Keep or another app. Plain lists, Markdown, bullets and checkboxes work locally, with review before adding. Checked items are skipped.
+Sharing is now one guided flow: connect your server, save the recovery file, then invite with one QR code. The other phone joins with one scan, both screens show the same six digits and one tap approves. Invites last 24 hours and work once.
