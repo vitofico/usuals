@@ -1,6 +1,6 @@
 import { requireThat, hash } from "./wire.mjs";
 import { RunScope, request } from "./client.mjs";
-import { ListStore, ListFeed, ListsApi, access, arrange, problem, restorable } from "./lists.mjs";
+import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "./lists.mjs";
 import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
 import { palettes, readPalette, writePalette } from "./appearance.mjs";
@@ -345,16 +345,23 @@ const listName = (list) => list.projection.name || t("untitledList");
 const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 1000, autocomplete: "off", required: true });
 // Whether the Archived area is open survives re-rendering too.
 let archivedOpen = false;
+function archivedRow(list) {
+  const values = { name: listName(list) };
+  return el("li", { class: "item" },
+    el("div", { class: "item-info" }, el("div", { class: "item-name" }, values.name),
+      archivedAction(list) === "leave" ? el("div", { class: "item-meta" }, t("archivedByOwner")) : null),
+    archivedAction(list) === "leave"
+      ? button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(list.id, account.user.id), values),
+        "danger", { "aria-label": t("leaveListName", values) })
+      : button(t("restoreList"), () => act(async () => { await lists.archive(list.id, false); selected = list.id; }),
+        "secondary", { "aria-label": t("restoreListName", values) }));
+}
 function archivedArea(archived) {
   if (!archived.length) return null;
   return el("section", { class: "paper archived" },
     el("details", { open: archivedOpen || null, ontoggle: (event) => { archivedOpen = event.target.open; } },
       el("summary", {}, t("archivedLists", { count: archived.length })),
-      el("ul", { class: "items" }, archived.map((l) => el("li", { class: "item" },
-        el("div", { class: "item-info" }, el("div", { class: "item-name" }, listName(l)),
-          restorable(l) ? null : el("div", { class: "item-meta" }, t("archivedByOwner"))),
-        restorable(l) ? button(t("restoreList"), () => act(async () => { await lists.archive(l.id, false); selected = l.id; }),
-          "secondary", { "aria-label": t("restoreListName", { name: listName(l) }) }) : null)))));
+      el("ul", { class: "items" }, archived.map(archivedRow))));
 }
 function renderLists() {
   if (!store.cursor) {
@@ -367,7 +374,7 @@ function renderLists() {
     $("content").replaceChildren(title("listTitle", "listSubtitle"), el("div", {},
       el("section", { class: "paper empty" },
         el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
-        el("h2", {}, t("firstListTitle")), paragraph("firstListText"),
+        ...(archived.length ? [paragraph("allListsArchived")] : [el("h2", {}, t("firstListTitle")), paragraph("firstListText")]),
         button(t("newList"), newListDialog, "primary")),
       archivedArea(archived)));
     return;

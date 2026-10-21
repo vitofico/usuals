@@ -61,8 +61,8 @@ never stops the app from starting.
   `DELETE /api/lists/{id}` deletes an owned list (204).
   `PUT /api/lists/{id}/archived` with `{"archived": true}` archives a list and
   `false` restores it; the reply's list replaces the shown one. A list with
-  `archived` leaves the selector for the Archived area, which offers Restore
-  unless an editor sees `archivedByOwner`.
+  `archived` leaves the selector for the Archived area, which offers Restore,
+  or Leave when an editor sees `archivedByOwner`.
 
 ## Sharing
 

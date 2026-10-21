@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Problem } from "../src/wire.mjs";
-import { ListStore, ListFeed, ListsApi, access, arrange, problem, restorable } from "../src/lists.mjs";
+import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "../src/lists.mjs";
 import { intent } from "../src/intents.mjs";
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
@@ -280,8 +280,8 @@ test("archived lists leave the selector and the selection moves to the first lis
   assert.deepEqual(none.archived.map((l) => l.id), ["b", "z"]);
 });
 
-test("only the owner restores a list the owner archived; an editor restores their own archive", () => {
-  assert.equal(restorable(shared("L", 1, { role: "owner", archived: true, archivedByOwner: true })), true);
-  assert.equal(restorable(shared("L", 1, { role: "editor", archived: true })), true);
-  assert.equal(restorable(shared("L", 1, { role: "editor", archived: true, archivedByOwner: true })), false);
+test("only the owner restores a list the owner archived; an editor restores their own archive or leaves the owner's", () => {
+  assert.equal(archivedAction(shared("L", 1, { role: "owner", archived: true, archivedByOwner: true })), "restore");
+  assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true })), "restore");
+  assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true, archivedByOwner: true })), "leave");
 });

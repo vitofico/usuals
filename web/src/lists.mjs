@@ -207,8 +207,8 @@ export function arrange(lists, selected, name, locale) {
   return { active, archived, selected: active.some((l) => l.id === selected) ? selected : active[0]?.id ?? null };
 }
 
-/** An editor's restore cannot undo the owner's archive, so it is not offered. */
-export const restorable = (list) => list.role === "owner" || !list.archivedByOwner;
+/** What an archived list offers: an editor's restore cannot undo the owner's archive, so they may only leave it. */
+export const archivedAction = (list) => list.role === "editor" && list.archivedByOwner ? "leave" : "restore";
 
 /** The first result the person should hear about, named as the projection records it. */
 export function problem({ results, list }) {
