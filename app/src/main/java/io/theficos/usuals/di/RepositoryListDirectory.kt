@@ -18,7 +18,7 @@ class RepositoryListDirectory(private val repository: ListRepository, private va
             val current = lists.firstOrNull { it.id == selected }
             ListDirectory(selected, lists.map { NamedList(it.id, it.name, people(it) > 1, it.archiveSource != null, it.role == "editor", it.archived, it.archivedByOwner) }, status.pending,
                 status.conflicts.map { ListConflict(it.id, it.itemId, it.current, it.incoming, it.kind) },
-                if (current?.synced != true) null else if (account == null) SyncStatus.SIGN_IN else synced)
+                if (current?.synced != true) null else if (account == null) SyncStatus.SIGN_IN else synced, current?.let { replica.unused(it) } == true)
         }
     }
     override suspend fun dismissConflict(id: String) = replica.dismissConflict(id)

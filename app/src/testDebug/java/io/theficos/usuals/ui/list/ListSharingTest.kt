@@ -131,6 +131,23 @@ class ListSharingTest {
         assertThat(changes).hasSize(2)
     }
 
+    @Test fun `the blank starting list offers no Archive`() {
+        val lists = MutableStateFlow(ListDirectory("blank", listOf(NamedList("blank", "", shared = false)), unused = true))
+        val directory = object : ListDirectoryStore {
+            override fun observe() = lists
+            override suspend fun select(id: String) = Unit
+            override suspend fun create(name: String) = Unit
+        }
+        val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
+            override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Rename").assertExists()
+        compose.onNodeWithText("Archive").assertDoesNotExist()
+    }
+
     @Test fun `swiping a row invokes removal once`() {
         var state by mutableStateOf(ListUiState(pending = listOf(ListRow(ItemId("milk"), "Milk"))))
         val removed = mutableListOf<ItemId>()

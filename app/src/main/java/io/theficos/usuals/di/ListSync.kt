@@ -88,14 +88,15 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
 
     /**
      * Archives or restores a list. On the server the owner does it for everyone and an editor only for
-     * themself; only the owner restores what the owner archived. A list only this phone holds changes here.
+     * themself; only the owner restores what the owner archived. A list the server does not hold yet
+     * changes only on the phone, under the push lock so an upload in flight cannot undo it; [create]
+     * says what its upload carries.
      */
-    suspend fun archive(list: String, archived: Boolean) {
-        val entry = lists.find(list) ?: return
+    suspend fun archive(list: String, archived: Boolean) = pushing.withLock {
+        val entry = lists.find(list) ?: return@withLock
         require(archived || entry.role != "editor" || !entry.archivedByOwner)
-        if (!entry.synced) return writes.withLock { replica.archive(list, archived) }
-        if (!entry.created) push()
-        online { token, _ -> service.archive(list, archived).also { commit(token) { replica.accept(it) } } }
+        if (!entry.synced || !entry.created) return@withLock writes.withLock { replica.archive(list, archived) }
+        online { token, _ -> val shared = service.archive(list, archived); commit(token) { replica.accept(shared) } }
     }
 
     suspend fun people(query: String): List<Person> = online { _, _ -> service.people(query) }
@@ -173,9 +174,11 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
         var id = list
         while (true) {
             try {
+                // A list archived on the phone before any server confirmed it stays archived in the account. Read
+                // first: a feed page that lands while the list is being created overwrites the local flag.
+                val archived = lists.find(id)?.let { it.archived && it.seq == 0L } == true
                 var created = service.create(id, replica.creation(id).let { if (it.name.isBlank()) it.copy(name = unnamed) else it })
-                // A list archived on the phone before any server confirmed it stays archived in the account.
-                if (lists.find(id)?.let { it.archived && it.seq == 0L } == true && !created.archived) created = service.archive(id, true)
+                if (archived && !created.archived) created = service.archive(id, true)
                 commit(token) { replica.accept(created) }
                 return id
             } catch (problem: RelayProblem) {

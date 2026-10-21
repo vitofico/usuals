@@ -134,6 +134,22 @@ class HistoryRepositoryTest {
         } finally { second.close() }
     }
 
+    @Test fun `importing into an archived list leaves the selection on a list that is not archived`() = runTest {
+        val source = database()
+        try {
+            source.listDao().insert(ListEntity("kept", "Kept")); source.listDao().select(ListSelectionEntity(listId = "kept"))
+            val sourceItems = ItemRepository(source, { now }, ::id)
+            sourceItems.add(ParsedItem("milk"))
+            val exported = HistoryRepository(source, sourceItems, { now }, ::id).exportJson()
+            database.listDao().insert(ListEntity("current", "Current")); database.listDao().insert(ListEntity("kept", "Kept", archived = true))
+            database.listDao().select(ListSelectionEntity(listId = "current"))
+            history.importJson(exported)
+            assertThat(database.listDao().selected()).isEqualTo("current")
+            assertThat(database.listDao().find("kept")!!.archived).isTrue()
+            assertThat(database.historyDao().allItems("kept")).hasSize(1)
+        } finally { source.close() }
+    }
+
     @Test fun `an old live-list export cannot resurrect a purchase after its tombstone was reaped`() = runTest {
         val milk = items.add(ParsedItem("milk"))
         val oldExport = history.exportJson()
