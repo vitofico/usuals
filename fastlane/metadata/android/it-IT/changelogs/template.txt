@@ -1,1 +1,1 @@
-Importa note copiate da Google Keep o un’altra app. Liste di testo, Markdown, punti elenco e caselle vengono letti localmente e verificati prima di aggiungerli. Gli articoli già spuntati sono esclusi.
+La condivisione ora è un unico percorso guidato: collega il server, salva il file di recupero e invita con un codice QR. L’altro telefono si unisce con una scansione, entrambi mostrano le stesse sei cifre e un tocco approva. Gli inviti durano 24 ore e valgono una volta sola.
