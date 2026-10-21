@@ -23,8 +23,24 @@ data class ListSelectionEntity(@PrimaryKey val singleton: Int = 1, val listId: S
 data class SharedPreferenceEntity(val listId: String, val key: String, val category: String?, val repeatEveryDays: Int?)
 @Entity(tableName = "local_item_pref", primaryKeys = ["listId", "key"])
 data class LocalPreferenceEntity(val listId: String, val key: String, val muted: Boolean, val snoozedUntil: Long?)
-@Entity(tableName = "sync_projection")
-data class ProjectionEntity(@PrimaryKey val listId: String, val confirmed: String, val optimistic: String)
+/**
+ * One part of a list's encoded projection. [optimistic] parts hold the list with its pending intents applied, the others
+ * the server's confirmed copy. Android reads a row through a 2 MB cursor window and a list may reach 7 MB, so each copy
+ * is cut into parts.
+ */
+@Entity(tableName = "sync_projection", primaryKeys = ["listId", "optimistic", "part"])
+data class ProjectionPartEntity(val listId: String, val optimistic: Boolean, val part: Int, val text: String)
+/** Characters per part. A character takes at most 4 bytes in UTF-8, so a part stays under 1 MB. */
+internal const val PROJECTION_PART = 200_000
+internal fun String.projectionParts(): List<String> = buildList {
+    var start = 0
+    while (start < length) {
+        // A surrogate pair stays in one part: SQLite stores UTF-8, which has no encoding for half of one.
+        val end = minOf(start + PROJECTION_PART, length).let { if (it < length && this@projectionParts[it - 1].isHighSurrogate()) it - 1 else it }
+        add(substring(start, end))
+        start = end
+    }
+}
 /** An acknowledged intent is no longer pending; it stays so its conflict can still be reviewed. */
 @Entity(tableName = "sync_outbox", primaryKeys = ["listId", "intentId"], indices = [Index("listId", "ordinal", unique = true)])
 data class OutboxEntity(val listId: String, val intentId: String, val ordinal: Long, val command: String, val acknowledged: Boolean = false)

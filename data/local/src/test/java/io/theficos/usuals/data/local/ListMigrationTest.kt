@@ -52,7 +52,7 @@ class ListMigrationTest {
         db.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { assertThat(it.count).isEqualTo(0) }
         db.close()
         db = UsualsDatabase.build(context)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(7)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(8)
         assertThat(db.historyDao().allItems(scope)).containsExactlyElementsIn(items)
         db.listDao().insert(ListEntity("camping", "Camping"))
         db.itemDao().insert(items.first().copy(listId = "camping"))
@@ -109,7 +109,7 @@ class ListMigrationTest {
                     MIGRATION_4_5.migrate(db)
                     error("simulated interruption before migration commit")
                 }
-            }, MIGRATION_5_6, MIGRATION_6_7).build()
+            }, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
         assertThat(runCatching { db.openHelper.writableDatabase }.isFailure).isTrue()
         db.close()
         SQLiteDatabase.openDatabase(context.getDatabasePath(UsualsDatabase.NAME).path, null, SQLiteDatabase.OPEN_READONLY).use { old ->

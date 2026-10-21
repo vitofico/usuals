@@ -22,6 +22,11 @@ records with the account model: each list records whether it belongs to the sign
 account, whether the server has created it, its last feed sequence, role and members.
 The 6-to-7 migration keeps every list, a former household list included, as an
 ordinary local list with what its screen showed, so signing in uploads it whole.
+Schema 8 stores each copy of a list's projection (confirmed, and with pending
+intents applied) in parts of at most 200,000 characters, because Android reads a
+row through a 2 MB cursor window and a list may reach 7 MB. The 7-to-8 migration
+splits the old rows inside SQLite, since a row already past the window cannot be
+read out to split it.
 Unreleased schemas 1 to 3 keep their destructive upgrade policy. Every later schema
 change needs a migration and a migration test.
 

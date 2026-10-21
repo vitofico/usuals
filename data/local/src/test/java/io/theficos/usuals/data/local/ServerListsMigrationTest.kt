@@ -58,7 +58,7 @@ class ServerListsMigrationTest {
         val name = "server-lists-migration.db"
         schemaSix(name)
         var db = UsualsDatabase.build(context, name)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(7)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(8)
         assertThat(db.listDao().all()).containsExactly(ListEntity("shared-list", "Groceries"), ListEntity("camping", "Camping", "archive-1"),
             ListEntity("old", "Old", archived = true)).inOrder()
         assertThat(db.listDao().selected()).isEqualTo("shared-list")
@@ -68,7 +68,8 @@ class ServerListsMigrationTest {
         assertThat(db.historyDao().preferences("camping")).containsExactly(ItemPreferenceEntity("tent", "GEAR", true, null, 30, "camping"))
         assertThat(db.historyDao().aliases("camping")).containsExactly(ItemAliasEntity("tents", "tent", "camping"))
         val shown = json.encodeToString(Projection(name = "Groceries", nameRevision = "intent-1"))
-        assertThat(db.syncDao().projection("shared-list")).isEqualTo(ProjectionEntity("shared-list", shown, shown))
+        assertThat(db.syncDao().projection("shared-list", optimistic = false)).containsExactly(shown)
+        assertThat(db.syncDao().projection("shared-list", optimistic = true)).containsExactly(shown)
         assertThat(db.syncDao().pending("shared-list").map { it.intentId to it.acknowledged }).containsExactly("intent-0" to true, "intent-1" to true).inOrder()
         assertThat(db.syncDao().feed()).isNull()
         db.openHelper.writableDatabase.query("SELECT name FROM sqlite_master WHERE name IN ('household','member_ref','device_ref','sync_received','sync_cursor')").use { assertThat(it.count).isEqualTo(0) }

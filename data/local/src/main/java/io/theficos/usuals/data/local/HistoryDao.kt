@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface HistoryDao {
     @RawQuery(observedEntities = [ListSelectionEntity::class, ListEntity::class, ItemEntity::class,
-        ProjectionEntity::class, TripEntity::class, PurchaseEntity::class, SharedPreferenceEntity::class, LocalPreferenceEntity::class, ItemAliasEntity::class])
+        ProjectionPartEntity::class, TripEntity::class, PurchaseEntity::class, SharedPreferenceEntity::class, LocalPreferenceEntity::class, ItemAliasEntity::class])
     fun observeShoppingInvalidations(query: SupportSQLiteQuery): Flow<Int>
 
     @Query("SELECT * FROM trip WHERE listId = :listId ORDER BY closedAt DESC, id ASC")

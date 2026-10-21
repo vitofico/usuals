@@ -17,12 +17,17 @@ interface SyncDao {
     @Query("SELECT intentId FROM conflict_dismissal WHERE listId = :listId")
     suspend fun dismissals(listId: String): List<String>
 
-    @Query("SELECT * FROM sync_projection WHERE listId = :listId")
-    suspend fun projection(listId: String): ProjectionEntity?
-    @Query("SELECT * FROM sync_projection WHERE listId = :listId")
-    fun observeProjection(listId: String): Flow<ProjectionEntity?>
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun saveProjection(projection: ProjectionEntity)
+    /** A copy's parts in order. Android re-runs a query for each cursor window it fills; the transaction keeps them on one save. */
+    @Transaction
+    @Query("SELECT text FROM sync_projection WHERE listId = :listId AND optimistic = :optimistic ORDER BY part")
+    suspend fun projection(listId: String, optimistic: Boolean): List<String>
+    @Transaction
+    @Query("SELECT text FROM sync_projection WHERE listId = :listId AND optimistic = 1 ORDER BY part")
+    fun observeOptimistic(listId: String): Flow<List<String>>
+    @Query("DELETE FROM sync_projection WHERE listId = :listId AND optimistic = :optimistic")
+    suspend fun clearProjection(listId: String, optimistic: Boolean)
+    @Insert
+    suspend fun insertProjection(parts: List<ProjectionPartEntity>)
     @Query("SELECT * FROM sync_outbox WHERE listId = :listId ORDER BY ordinal")
     suspend fun pending(listId: String): List<OutboxEntity>
     @Query("SELECT * FROM sync_outbox WHERE listId = :listId ORDER BY ordinal")
