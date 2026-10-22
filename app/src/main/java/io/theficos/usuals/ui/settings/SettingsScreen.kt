@@ -136,10 +136,7 @@ fun SettingsScreen(
                 when (selected) {
                     "appearance" -> AppearanceSection(palette, onPaletteChange)
                     "allergens" -> rowFacts?.let { AllergensSection(it) }
-                    "privacy" -> {
-                        PrivacySection(state, vm::setScanLookup, vm::setBasketOverview)
-                        if (state.settings.scanLookupEnabled && rowFacts != null) RowFactsSection(rowFacts)
-                    }
+                    "privacy" -> PrivacySection(state, vm::setScanLookup, vm::setBasketOverview, rowFacts)
                     else -> {
                         TextButton(onClick = { panel = null; onOpenTutorial() }) { Text(stringResource(R.string.tutorial_replay)) }
                         AboutSection(state)
@@ -324,7 +321,12 @@ private fun ModelProbeReport(probe: ProbeState<ModelCapabilities>, modelName: St
  * warning that gets skimmed the day it matters.
  */
 @Composable
-private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Unit, onBasketOverview: (Boolean) -> Unit) {
+private fun PrivacySection(
+    state: SettingsUiState,
+    onScanLookup: (Boolean) -> Unit,
+    onBasketOverview: (Boolean) -> Unit,
+    rowFacts: io.theficos.usuals.ui.product.RowFactsStore?,
+) {
     var details by rememberSaveable { mutableStateOf(false) }
     Section(stringResource(R.string.settings_privacy_title), collapsible = false) {
         Row(Modifier.fillMaxWidth().toggleable(state.settings.scanLookupEnabled, role = Role.Switch, onValueChange = onScanLookup), verticalAlignment = Alignment.CenterVertically) {
@@ -332,8 +334,9 @@ private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Un
             Switch(checked = state.settings.scanLookupEnabled, onCheckedChange = null)
         }
         Quiet(stringResource(R.string.scan_lookup_hint))
-        // It reads product details lookups saved, so it is offered only beside a lookup that is on.
+        // Both read only what lookups saved, so they are offered only beside a lookup that is on.
         if (state.settings.scanLookupEnabled) {
+            rowFacts?.let { RowFactsSection(it) }
             Row(Modifier.fillMaxWidth().toggleable(state.settings.basketOverviewEnabled, role = Role.Switch, onValueChange = onBasketOverview), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.basket_title), modifier = Modifier.weight(1f))
                 Switch(checked = state.settings.basketOverviewEnabled, onCheckedChange = null)
