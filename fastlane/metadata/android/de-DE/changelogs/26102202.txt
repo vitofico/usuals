@@ -1,0 +1,1 @@
+Der Import einer langen Notiz friert die App nicht mehr ein: Das Blatt schließt sofort und die Artikel kommen im Hintergrund dazu. Abgehakte Artikel einer Notiz kommen abgehakt an. Wiederholte Emoji als Menge sind jetzt ein Schalter, standardmäßig aus, die Emoji bleiben also im Namen. Alles entfernen geht auch bei langen Listen schnell.

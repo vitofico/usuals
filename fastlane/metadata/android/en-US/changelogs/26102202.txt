@@ -1,0 +1,1 @@
+Importing a long note no longer freezes the app: the sheet closes at once and items are added in the background. Ticked items in a note arrive ticked. Repeated emoji as a quantity is now a switch, off by default, so emoji stay in the name. Removing all items is fast on long lists.
