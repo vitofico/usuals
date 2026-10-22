@@ -7,8 +7,9 @@ if not __debug__:
 root = pathlib.Path(__file__).resolve().parents[2]
 image = 'postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea'
 directory = pathlib.Path(tempfile.mkdtemp(prefix='usuals-restore-drill-'))
-names = ['usuals-restore-source-' + str(os.getpid()), 'usuals-restore-target-' + str(os.getpid())]
+names = ['usuals-restore-' + role + '-' + str(os.getpid()) for role in ('source', 'target', 'pruned')]
 volumes = [name + '-data' for name in names] + [names[0] + '-backup']
+backup = volumes[-1]
 def run(args, **kwargs):
     return subprocess.check_output(args, stderr=subprocess.PIPE, **kwargs).decode().strip()
 def sql(name, statement):
@@ -18,6 +19,16 @@ def wait(name):
         if subprocess.run(['docker','exec',name,'pg_isready','-h','127.0.0.1','-U','postgres'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0: return
         time.sleep(.5)
     raise RuntimeError('Local restore database not ready')
+def restore(name, volume, base):
+    run(['docker','run','--platform','linux/amd64','--rm','-v',volume+':/restore','-v',backup+':/backup:ro',image,'sh','-ec',
+        'cp -a '+base+'/. /restore/; rm -f /restore/postmaster.pid /restore/standby.signal; touch /restore/recovery.signal; chown -R postgres:postgres /restore; chmod 700 /restore'])
+    run(['docker','run','--platform','linux/amd64','--rm','-d','--name',name,'--env-file',str(env),'-v',volume+':/var/lib/postgresql/data','-v',backup+':/backup:ro',image,
+        'postgres','-c','archive_mode=off','-c','restore_command=gzip -dc /backup/wal/%f.gz > %p'])
+    wait(name)
+def archived(name, segment):
+    return subprocess.run(['docker','exec',name,'test','-f','/backup/wal/'+segment+'.gz'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+def bases():
+    return run(['docker','exec',names[0],'sh','-ec','find /backup/base -mindepth 1 -maxdepth 1 -type d ! -name ".*"']).splitlines()
 try:
     run(['docker','pull','--platform','linux/amd64',image])
     metadata = json.loads(run(['docker','image','inspect','--platform','linux/amd64',image]))[0]
@@ -27,20 +38,20 @@ try:
     run(['docker','pull','--platform','linux/amd64',image])
     env = directory/'postgres.env'; env.write_text('POSTGRES_PASSWORD='+secrets.token_hex(32)+'\n')
     for volume in volumes: run(['docker','volume','create',volume])
-    run(['docker','run','--platform','linux/amd64','--rm','-v',volumes[2]+':/backup',image,'sh','-ec','mkdir -p /backup/wal /backup/base; chown -R postgres:postgres /backup; chmod 700 /backup /backup/wal /backup/base'])
-    run(['docker','run','--platform','linux/amd64','--rm','-d','--name',names[0],'--env-file',str(env),'-v',volumes[0]+':/var/lib/postgresql/data','-v',volumes[2]+':/backup','-v',str(root/'deploy/k8s/tools')+':/opt/usuals:ro',image,
+    run(['docker','run','--platform','linux/amd64','--rm','-v',backup+':/backup',image,'sh','-ec','mkdir -p /backup/wal /backup/base; chown -R postgres:postgres /backup; chmod 700 /backup /backup/wal /backup/base'])
+    run(['docker','run','--platform','linux/amd64','--rm','-d','--name',names[0],'--env-file',str(env),'-v',volumes[0]+':/var/lib/postgresql/data','-v',backup+':/backup','-v',str(root/'deploy/k8s/tools')+':/opt/usuals:ro',image,
         'postgres','-c','wal_level=replica','-c','archive_mode=on','-c','archive_timeout=60s','-c','archive_command=timeout 30s /opt/usuals/archive-wal "%p" "%f"'])
     wait(names[0])
     assert run(['docker','exec',names[0],'uname','-m']) == 'x86_64'
     sql(names[0], 'CREATE TABLE drill_marker (id integer PRIMARY KEY, value text); INSERT INTO drill_marker VALUES (1,\'before base\');')
     run(['docker','exec','--user','postgres',names[0],'/opt/usuals/base-backup'])
-    base = run(['docker','exec',names[0],'sh','-ec','find /backup/base -mindepth 1 -maxdepth 1 -type d ! -name ".*"']).splitlines()
+    base = bases()
     assert len(base) == 1
     written = time.monotonic()
     segment = sql(names[0], "INSERT INTO drill_marker VALUES (2,'after base via WAL'); SELECT pg_walfile_name(pg_current_wal_lsn());").splitlines()[-1]
     sql(names[0], 'SELECT pg_switch_wal();')
     for _ in range(90):
-        if subprocess.run(['docker','exec',names[0],'test','-f','/backup/wal/'+segment+'.gz'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0: break
+        if archived(names[0], segment): break
         time.sleep(.5)
     else: raise RuntimeError('WAL archiving did not complete')
     archive_seconds = time.monotonic() - written
@@ -50,15 +61,25 @@ try:
     assert different.returncode != 0
     run(['docker','exec',names[0],'rm','/backup/wal/TEST.gz'])
     started = time.monotonic()
-    run(['docker','run','--platform','linux/amd64','--rm','-v',volumes[1]+':/restore','-v',volumes[2]+':/backup:ro',image,'sh','-ec',
-        'cp -a '+base[0]+'/. /restore/; rm -f /restore/postmaster.pid /restore/standby.signal; touch /restore/recovery.signal; chown -R postgres:postgres /restore; chmod 700 /restore'])
-    run(['docker','run','--platform','linux/amd64','--rm','-d','--name',names[1],'--env-file',str(env),'-v',volumes[1]+':/var/lib/postgresql/data','-v',volumes[2]+':/backup:ro',image,
-        'postgres','-c','archive_mode=off','-c','restore_command=gzip -dc /backup/wal/%f.gz > %p'])
-    wait(names[1])
+    restore(names[1], volumes[1], base[0])
     assert run(['docker','exec',names[1],'uname','-m']) == 'x86_64'
     assert sql(names[1], 'SELECT count(*) FROM drill_marker;') == '2'
     rto = time.monotonic() - started
-    print(json.dumps({'passed':True,'postgresPlatform':'linux/amd64','postgresImageId':metadata['Id'],'baseVerified':True,'postBaseWalCommitRecovered':True,'conflictingArchiveRejected':True,
+    # Retention: a newer base with one kept removes the older base and the WAL before it, and the rest still restores.
+    time.sleep(1.1)
+    run(['docker','exec','--user','postgres','-e','USUALS_KEEP_BASES=1',names[0],'/opt/usuals/base-backup'])
+    kept = bases()
+    assert len(kept) == 1 and kept != base, 'Retention kept the wrong base'
+    assert not archived(names[0], segment), 'WAL before the kept base survived'
+    after = sql(names[0], "INSERT INTO drill_marker VALUES (3,'after pruning via WAL'); SELECT pg_walfile_name(pg_current_wal_lsn());").splitlines()[-1]
+    sql(names[0], 'SELECT pg_switch_wal();')
+    for _ in range(90):
+        if archived(names[0], after): break
+        time.sleep(.5)
+    else: raise RuntimeError('WAL archiving after pruning did not complete')
+    restore(names[2], volumes[2], kept[0])
+    assert sql(names[2], 'SELECT count(*) FROM drill_marker;') == '3'
+    print(json.dumps({'passed':True,'postgresPlatform':'linux/amd64','postgresImageId':metadata['Id'],'baseVerified':True,'postBaseWalCommitRecovered':True,'conflictingArchiveRejected':True,'retentionPrunedAndRestored':True,
         'localArchiveSeconds':round(archive_seconds,3),'localRestoreSeconds':round(rto,3),
         'offClusterRpoVerified':False,'clusterRestoreVerified':False}))
 except Exception as error:

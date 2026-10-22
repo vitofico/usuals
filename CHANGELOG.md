@@ -14,6 +14,9 @@
 - Sync skips intents the server already settled, prunes them from the outbox,
   skips re-applying a list it just pushed, and keeps its status checks off the
   main thread.
+- Self-hosters can turn on backup retention: with `USUALS_KEEP_BASES` set, the
+  base-backup job keeps the newest base backups and the WAL they need, and removes
+  the rest only after the kept ones verify.
 - The relay server checks lists it produced itself by their size bounds only,
   and the strict JSON check compiles its number pattern once.
 

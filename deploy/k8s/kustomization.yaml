@@ -14,6 +14,7 @@ configMapGenerator:
     files:
       - archive-wal=tools/archive-wal
       - base-backup=tools/base-backup
+      - prune-backups=tools/prune-backups
       - initialize.sql
       - initialize-replication.sh
 # Secret files and explicit one-shot identity/migration jobs are operator steps.

@@ -15,3 +15,5 @@ pg_verifybackup "$staging"
 sync
 mv "$staging" "$directory/$name"
 sync
+# Opt-in retention; unset keeps every base and all archived WAL.
+if [ -n "${USUALS_KEEP_BASES:-}" ]; then "$(dirname "$0")/prune-backups"; fi
