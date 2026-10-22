@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_facts_grades">Afficher les notes dans la liste</string>
+    <string name="row_facts_grades_hint">Les lignes affichent le Nutri-Score déjà enregistré sur ce téléphone pour leur produit. La liste ne recherche jamais rien.</string>
+</resources>

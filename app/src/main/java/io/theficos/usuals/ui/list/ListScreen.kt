@@ -42,6 +42,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
 import io.theficos.usuals.ui.theme.categoryAccent
+import io.theficos.usuals.ui.NutriScoreChip
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
@@ -757,6 +760,14 @@ private fun ItemRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        row.grade?.let { grade ->
+            // Its own tap target, so the grade opens the facts behind it instead of checking the row.
+            Box(Modifier.minimumInteractiveComponentSize()
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.product_details)) { actions.onProductInfo(row) }
+                .alpha(if (row.checked) 0.5f else 1f), contentAlignment = Alignment.Center) {
+                NutriScoreChip(grade)
+            }
+        }
         if (row.fromSuggestion && row.repeatEveryDays != null) {
             Icon(Icons.Outlined.Repeat, stringResource(R.string.repeat_added),
                 tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 7.dp, end = 8.dp).size(18.dp))

@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 UsualsApp(
                     palette = palette,
                     onPaletteChange = ServiceLocator.themePreferences::select,
+                    rowFacts = ServiceLocator.rowFactsStore,
                     showTutorial = !tutorialCompleted && allowsTutorial(intent) && sharedText == null && openListRequest == 0,
                     onTutorialFinished = ServiceLocator.tutorialPreferences::complete,
                     sharedText = sharedText,

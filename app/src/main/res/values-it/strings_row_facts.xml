@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_facts_grades">Mostra i punteggi nella lista</string>
+    <string name="row_facts_grades_hint">Le righe mostrano il Nutri-Score già salvato su questo telefono per il loro prodotto. La lista non cerca mai nulla.</string>
+</resources>

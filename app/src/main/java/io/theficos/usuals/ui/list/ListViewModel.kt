@@ -34,8 +34,11 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -69,6 +72,7 @@ class ListViewModel(
     private val recipeStore: RecipeStore = NoRecipeStore,
     private val scanStore: ScanStore? = null,
     private val productInfoStore: io.theficos.usuals.ui.product.ProductInfoStore? = null,
+    private val rowFacts: io.theficos.usuals.ui.product.RowFactsSource = io.theficos.usuals.ui.product.NoRowFacts,
     private val prompts: PromptMemory = InMemoryPromptMemory(),
     private val directoryStore: ListDirectoryStore = NoListDirectory,
     val reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
@@ -129,6 +133,23 @@ class ListViewModel(
     private val listed = combine(shopping, shoppingTools.state, screen.map { it.selectedStore }.distinctUntilChanged(), ::list)
         .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
 
+    /** This phone's row-fact choices, or null while lookup is off: row facts follow the opt-in. */
+    private val factChoices = combine(rowFacts.lookupEnabled, rowFacts.choices) { on, choices -> choices.takeIf { on } }
+        .distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Cached records for the barcodes on screen, read and never fetched: a
+     * barcode nobody has looked up stays bare until its sheet is opened.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val facts = combine(factChoices, listed) { choices, listed -> if (choices?.active == true) listed.barcodes else emptySet() }
+        .distinctUntilChanged()
+        .flatMapLatest { gtins -> if (gtins.isEmpty()) flowOf(emptyMap()) else rowFacts.cached(gtins).catch { emit(emptyMap()) } }
+
+    /** [listed] with what the cache says about each row's product. */
+    private val shown = combine(listed, facts, factChoices) { listed, facts, choices -> listed.withFacts(facts, choices) }
+        .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
+
     private val matches = combine(listed, screen.map { (it.capture as? CaptureState.Typing)?.draft.orEmpty() }.distinctUntilChanged()) { listed, draft ->
         if (draft.isBlank()) emptyList()
         else smartStore.autocomplete(parser.parse(draft).lastOrNull()?.name ?: draft, listed.snapshot.history, listed.ordered)
@@ -140,7 +161,7 @@ class ListViewModel(
      * would drop characters and move the cursor.
      */
     val state: StateFlow<ListUiState> =
-        combine(listed, matches, screen, directory) { listed, matches, screenState, lists ->
+        combine(shown, matches, screen, directory) { listed, matches, screenState, lists ->
             val name = lists.lists.firstOrNull { it.id == lists.selected }?.name?.ifBlank { null }
             if (directoryStore !== NoListDirectory && lists.selected.isNotEmpty() && listed.snapshot.listId != lists.selected) {
                 ListUiState(directory = lists, header = ListHeader(name = name), busy = true)
@@ -826,7 +847,23 @@ class ListViewModel(
         val presentation: Map<ItemId, ItemPresentation> = emptyMap(),
         val memory: BarcodeMemory = BarcodeMemory(snapshot.history),
         val rows: ListUiState = ListUiState(),
-    )
+    ) {
+        /** Every product barcode a visible row stands for, its own or remembered. */
+        val barcodes: Set<Gtin> = (rows.pending + rows.checked + rows.deferred).mapNotNull { it.productGtin }.toSet()
+
+        fun withRows(next: ListUiState) = Listed(snapshot, ordered, presentation, memory, next)
+    }
+
+    private fun Listed.withFacts(facts: Map<Gtin, io.theficos.usuals.enrich.ProductQuality>, choices: io.theficos.usuals.ui.product.RowFactsChoices?): Listed {
+        if (choices == null || facts.isEmpty()) return this
+        fun ListRow.annotated(): ListRow {
+            // A sister-database record has no grade to show, whatever its fields say.
+            val quality = productGtin?.let(facts::get)?.takeIf { it.productType == io.theficos.usuals.enrich.ProductType.FOOD } ?: return this
+            return copy(grade = quality.nutriScore.takeIf { choices.showGrades })
+        }
+        return withRows(rows.copy(pending = rows.pending.map { it.annotated() }, checked = rows.checked.map { it.annotated() },
+            deferred = rows.deferred.map { it.annotated() }))
+    }
 
     private fun list(snapshot: ShoppingSnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, selectedStore: String?): Listed {
         val facts = snapshot.history

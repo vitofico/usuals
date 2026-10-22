@@ -9,6 +9,9 @@ import io.theficos.usuals.enrich.ProductType
 import io.theficos.usuals.enrich.QualityCache
 import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.model.Gtin
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * [QualityCache] over the `product_quality` table: what `InMemoryQualityCache`
@@ -81,6 +84,22 @@ class RoomQualityCache(
     /** Records [outcome] as learned now. Same rules, including the one about failures. */
     suspend fun put(outcome: QualityLookup) = put(outcome, clock())
 
+    /**
+     * The stated records for [gtins], again whenever the cache changes. Confirmed
+     * absences are left out: for a list row they mean the same as no row.
+     *
+     * Chunked because SQLite on the oldest supported Android binds at most 999
+     * parameters, and one query per chunk is cheaper than a reason to crash.
+     */
+    fun observe(gtins: Set<Gtin>): Flow<Map<Gtin, ProductQuality>> {
+        if (gtins.isEmpty()) return flowOf(emptyMap())
+        val parts = gtins.map { it.value }.chunked(OBSERVE_CHUNK).map { dao.observe(it) }
+        return combine(parts) { chunks ->
+            chunks.asList().flatten().mapNotNull { it.toCached() }
+                .mapNotNull { cached -> cached.quality?.let { cached.gtin to it } }.toMap()
+        }
+    }
+
     private fun row(
         gtin: Gtin,
         quality: ProductQuality?,
@@ -108,6 +127,10 @@ class RoomQualityCache(
         confirmedMissing = confirmedMissing,
         fetchedAt = atEpochMillis,
     )
+
+    private companion object {
+        const val OBSERVE_CHUNK = 500
+    }
 }
 
 /**

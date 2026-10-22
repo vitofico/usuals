@@ -196,6 +196,9 @@ object ServiceLocator {
     val productInfoStore: io.theficos.usuals.ui.product.ProductInfoStore by resettable {
         RepositoryProductInfoStore(qualityCache, offClient, settingsStore::scanLookupEnabled, System::currentTimeMillis)
     }
+    /** This phone's choices about product facts on list rows; see [preferenceRowFacts]. */
+    val rowFactsStore: io.theficos.usuals.ui.product.RowFactsStore by resettable { preferenceRowFacts(context) }
+    val rowFacts: io.theficos.usuals.ui.product.RowFactsSource by resettable { RepositoryRowFacts(qualityCache, settingsStore.scanLookup, rowFactsStore) }
     val barcodeCategories: BarcodeCategories by resettable { BarcodeCategories(categoryClassifier) }
     val scanStore: ScanStore by resettable {
         RepositoryScanStore(itemRepository, historyRepository, smartStore, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)

@@ -38,6 +38,7 @@ object UsualsViewModelFactories {
                 recipeStore = ServiceLocator.recipeStore,
                 scanStore = ServiceLocator.scanStore,
                 productInfoStore = ServiceLocator.productInfoStore,
+                rowFacts = ServiceLocator.rowFacts,
                 prompts = ServiceLocator.promptMemory,
                 directoryStore = ServiceLocator.listDirectory,
                 shoppingTools = ServiceLocator.shoppingTools,

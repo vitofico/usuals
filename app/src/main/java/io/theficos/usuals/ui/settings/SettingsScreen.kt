@@ -71,6 +71,7 @@ fun SettingsScreen(
     onOpenTutorial: () -> Unit = {},
     onOpenAdvanced: () -> Unit = {},
     advanced: Boolean = false,
+    rowFacts: io.theficos.usuals.ui.product.RowFactsStore? = null,
 ) {
     val state by vm.state.collectAsState()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -129,7 +130,10 @@ fun SettingsScreen(
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (selected) {
                     "appearance" -> AppearanceSection(palette, onPaletteChange)
-                    "privacy" -> PrivacySection(state, vm::setScanLookup)
+                    "privacy" -> {
+                        PrivacySection(state, vm::setScanLookup)
+                        if (state.settings.scanLookupEnabled && rowFacts != null) RowFactsSection(rowFacts)
+                    }
                     else -> {
                         TextButton(onClick = { panel = null; onOpenTutorial() }) { Text(stringResource(R.string.tutorial_replay)) }
                         AboutSection(state)
@@ -346,6 +350,20 @@ private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Un
             Bullet(stringResource(R.string.connection_privacy))
         }
     }
+}
+
+/**
+ * Product facts on list rows, under the lookup switch because they only ever
+ * show what lookup saved. Hidden while lookup is off, when rows show none.
+ */
+@Composable
+private fun RowFactsSection(store: io.theficos.usuals.ui.product.RowFactsStore) {
+    val choices by store.state.collectAsState()
+    Row(Modifier.fillMaxWidth().toggleable(choices.showGrades, role = Role.Switch, onValueChange = store::showGrades), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.row_facts_grades), modifier = Modifier.weight(1f))
+        Switch(checked = choices.showGrades, onCheckedChange = null)
+    }
+    Quiet(stringResource(R.string.row_facts_grades_hint))
 }
 
 // Presupuesto ---------------------------------------------------------------

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_facts_grades">Bewertungen in der Liste anzeigen</string>
+    <string name="row_facts_grades_hint">Zeilen zeigen den bereits auf diesem Telefon gespeicherten Nutri-Score ihres Produkts. Die Liste schlägt nie etwas nach.</string>
+</resources>

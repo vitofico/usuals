@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Product facts on list rows, read from what lookup already saved on this phone. -->
+<resources>
+    <string name="row_facts_grades">Show grades on the list</string>
+    <string name="row_facts_grades_hint">Rows show the Nutri-Score already saved on this phone for their product. The list never looks anything up.</string>
+</resources>

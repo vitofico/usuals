@@ -88,6 +88,8 @@ data class ListRow(
      */
     val productGtin: io.theficos.usuals.model.Gtin? = gtin,
     val provenance: io.theficos.usuals.ui.product.ProductProvenance? = gtin?.let { io.theficos.usuals.ui.product.ProductProvenance.Scanned },
+    /** The cached Nutri-Score to show on the row; null shows nothing, including "does not apply". */
+    val grade: io.theficos.usuals.enrich.NutriScore? = null,
 )
 
 /**
