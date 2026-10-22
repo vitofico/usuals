@@ -1,1 +1,1 @@
-Edita la nota de un artículo: mantén pulsado el artículo y cambia o vacía el campo Nota. Las notas también se siguen escribiendo directamente, como Leche (sin lactosa) o Leche para el café.
+La importación ahora admite notas de hasta 500 artículos, así que una lista larga de Google Keep entra entera. Si una nota sigue siendo demasiado larga, la pantalla de importación lo indica arriba en lugar de debajo del teclado.

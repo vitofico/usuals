@@ -1,1 +1,1 @@
-Edit an item's note: hold the item and change or clear the Note field. Notes still come from typing too, as in Milk (lactose free) or Milk for the cake.
+Import now takes notes of up to 500 items, so a long Google Keep list comes in whole. If a note is still too long, the import screen says so at the top instead of below the keyboard.

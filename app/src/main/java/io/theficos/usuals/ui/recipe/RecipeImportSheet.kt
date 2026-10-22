@@ -78,6 +78,8 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                             RecipeSource.PHOTO -> R.string.recipe_source_photo
                         })) }) }
                 }
+                // Above the input, so it stays visible over the keyboard after a long paste.
+                (state.result as? RecipeLoad.Failed)?.let { Text(recipeProblem(it), color = MaterialTheme.colorScheme.error) }
                 when (state.source) {
                     RecipeSource.URL -> {
                         OutlinedTextField(state.url, onUrl, label = { Text(stringResource(R.string.recipe_url)) }, singleLine = true,
@@ -102,7 +104,7 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                 }
                 when (val result = state.result) {
                     null -> if (state.source == RecipeSource.URL) Text(stringResource(R.string.recipe_intro, stringResource(R.string.app_name)))
-                    is RecipeLoad.Failed -> Text(recipeProblem(result), color = MaterialTheme.colorScheme.error)
+                    is RecipeLoad.Failed -> Unit
                     is RecipeLoad.Unstructured -> {
                         Text(stringResource(R.string.recipe_no_structured))
                         Text(stringResource(R.string.recipe_model_privacy), style = MaterialTheme.typography.bodySmall)

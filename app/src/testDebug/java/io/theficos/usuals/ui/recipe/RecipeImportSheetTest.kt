@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -31,6 +32,14 @@ class RecipeImportSheetTest {
         }
         compose.onNodeWithText("Close").assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Import list or recipe").assertDoesNotExist()
+    }
+    @Test fun `a note that is too long says so above a long pasted text`() {
+        val note = (1..600).joinToString("\n") { "- item $it" }
+        compose.setContent { UsualsTheme {
+            RecipeImportSheet(RecipeUiState(source = RecipeSource.MARKDOWN, markdown = note, result = RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE)),
+                onUrl = {}, onRead = {}, onModel = {}, onToggle = {}, onAdd = {}, onDismiss = {})
+        } }
+        compose.onNodeWithText("This source is too large", substring = true).assertIsDisplayed()
     }
     @Test fun `Markdown and photo both require an explicit review action`() {
         var state by mutableStateOf(RecipeUiState(source = RecipeSource.MARKDOWN, markdown = "- milk"))
