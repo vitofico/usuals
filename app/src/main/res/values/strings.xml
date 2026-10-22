@@ -34,13 +34,12 @@
     <!-- Capture band -->
     <string name="capture_hint">Hold to speak</string>
     <string name="capture_listening">Listening</string>
-    <string name="capture_band">Capture bar, hold to speak</string>
     <string name="capture_write_hint">Type what you need</string>
     <string name="capture_add">Add</string>
     <string name="capture_speech_unavailable">Dictation is not available on this phone, type what you need.</string>
     <string name="capture_scan">Scan a barcode</string>
 
-    <string name="capture_type">Type items</string>
+    <string name="capture_type">Add items</string>
 
     <!-- Scan screen -->
     <string name="scan_title">Scan</string>

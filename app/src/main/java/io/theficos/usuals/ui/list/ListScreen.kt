@@ -985,19 +985,19 @@ private fun CaptureTypeButton(onType: () -> Unit, modifier: Modifier) {
         .clickable(role = Role.Button, onClick = onType).semantics { contentDescription = label }
         .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.quiet_list_add_items), Modifier.weight(1f).padding(start = 6.dp),
+        Text(label, Modifier.weight(1f).padding(start = 6.dp),
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun CaptureVoiceButton(listening: Boolean, hold: Modifier, modifier: Modifier) {
-    val label = stringResource(R.string.capture_band)
+    val label = stringResource(if (listening) R.string.capture_listening else R.string.capture_hint)
     Row(modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary).then(hold)
         .semantics { contentDescription = label }.testTag(CaptureBandTag)
         .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Mic, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
-        Text(stringResource(if (listening) R.string.capture_listening else R.string.capture_hint),
+        Text(label,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.weight(1f).padding(start = 6.dp))
     }

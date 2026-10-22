@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="quiet_list_add_items">Añadir artículos</string>
     <string name="quiet_list_empty_title">Añade tu primer artículo</string>
     <string name="quiet_list_empty_help">Escribe abajo, mantén pulsado para hablar o escanea un código de barras.</string>
     <string name="quiet_list_store_filter">Tienda: %1$s</string>

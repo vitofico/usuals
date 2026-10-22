@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -85,6 +87,11 @@ class InterfaceSweepDeviceTest {
         show { ListContent(populated, ListActions(onCreateList = { created = it })) }
         compose.onNodeWithText("Milk").assertIsDisplayed()
         compose.onNodeWithText("Add items").assertIsDisplayed()
+            .assertContentDescriptionEquals("Add items")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertHasClickAction()
+        compose.onNodeWithText("Hold to speak").assertIsDisplayed()
+        compose.onNodeWithTag(CaptureBandTag).assertContentDescriptionEquals("Hold to speak")
         record("list")
         compose.onNodeWithText("Groceries").performClick()
         compose.onNodeWithText("New list").performClick()
@@ -105,6 +112,9 @@ class InterfaceSweepDeviceTest {
         compose.onNodeWithText("Add items").assertIsDisplayed()
         compose.onNodeWithText("Milk").assertIsDisplayed()
         record("list-large-dark")
+        show { ListContent(populated.copy(capture = CaptureState.Listening("two litres")), ListActions()) }
+        compose.onNodeWithText("Listening").assertIsDisplayed()
+        compose.onNodeWithTag(CaptureBandTag).assertContentDescriptionEquals("Listening")
         show { ListContent(populated.copy(capture = CaptureState.Typing("mi"), autocomplete = listOf(ItemMemory("milk", "Milk", 4, 1_000))), ListActions()) }
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         record("typing")

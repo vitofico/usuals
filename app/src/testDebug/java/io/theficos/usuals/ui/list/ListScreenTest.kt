@@ -6,6 +6,12 @@ import io.theficos.usuals.model.MeasureUnit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -54,7 +60,10 @@ class ListScreenTest {
                 ListContent(ListUiState(), ListActions(onType = { typed++ }, onCaptureStart = { voice++ }))
             }
         }
-        compose.onNodeWithContentDescription("Type items").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Add items").assertIsDisplayed()
+            .assertContentDescriptionEquals("Add items")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertHasClickAction().performClick()
         assertThat(typed).isEqualTo(1)
         assertThat(voice).isEqualTo(0)
     }
@@ -152,29 +161,42 @@ class ListScreenTest {
     fun voice_starts_on_press_and_stops_on_release() {
         var started = 0
         var ended = 0
+        var capture by mutableStateOf<CaptureState>(CaptureState.Idle)
 
         compose.setContent {
             UsualsTheme {
                 ListContent(
-                    state = ListUiState(),
+                    state = ListUiState(capture = capture),
                     actions = ListActions(
-                        onCaptureStart = { started++ },
-                        onCaptureEnd = { ended++ },
+                        onCaptureStart = {
+                            started++
+                            capture = CaptureState.Listening()
+                        },
+                        onCaptureEnd = {
+                            ended++
+                            capture = CaptureState.Idle
+                        },
                     ),
                 )
             }
         }
 
-        compose.onNodeWithTag(CaptureBandTag).assertIsDisplayed().performTouchInput {
-            down(center)
-            advanceEventTime(200)
-        }
+        compose.onNodeWithText("Hold to speak").assertIsDisplayed()
+        compose.onNodeWithTag(CaptureBandTag).assertIsDisplayed()
+            .assertContentDescriptionEquals("Hold to speak").performTouchInput {
+                down(center)
+                advanceEventTime(200)
+            }
         compose.runOnIdle {
             assertThat(started).isEqualTo(1)
             assertThat(ended).isEqualTo(0)
         }
+        compose.onNodeWithText("Listening").assertIsDisplayed()
+        compose.onNodeWithTag(CaptureBandTag).assertContentDescriptionEquals("Listening")
         compose.onNodeWithTag(CaptureBandTag).performTouchInput { up() }
         compose.runOnIdle { assertThat(ended).isEqualTo(1) }
+        compose.onNodeWithText("Hold to speak").assertIsDisplayed()
+        compose.onNodeWithTag(CaptureBandTag).assertContentDescriptionEquals("Hold to speak")
     }
 
     @Test

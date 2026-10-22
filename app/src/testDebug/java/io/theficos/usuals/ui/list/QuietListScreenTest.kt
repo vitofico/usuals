@@ -152,7 +152,7 @@ class QuietListScreenTest {
             }
         }
         compose.onNodeWithText("Milk").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Type items").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithContentDescription("Add items").assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         compose.onNodeWithTag(CaptureBandTag).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         compose.onNodeWithContentDescription("Scan a barcode").assertIsDisplayed().assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
     }
