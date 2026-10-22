@@ -29,6 +29,7 @@ fun ScanNameSheet(offer: ScanNameOffer, remaining: Int, busy: Boolean, onConfirm
                 Text(stringResource(when (problem) {
                     ScanNameProblem.LOOKUP_DISABLED -> R.string.scan_name_disabled
                     ScanNameProblem.NOT_FOUND -> R.string.scan_name_not_found
+                    ScanNameProblem.NOT_FOOD -> R.string.product_not_food
                     ScanNameProblem.UNAVAILABLE -> R.string.scan_name_unavailable
                     ScanNameProblem.RESTRICTED -> R.string.scan_name_restricted
                 }, stringResource(R.string.app_name)))

@@ -21,8 +21,11 @@ without microphone access. Optional shopping reminders use local notifications.
 ## Requests you choose
 
 - Product lookup is off by default. Enabling Open Food Facts lookup sends the
-  scanned barcode directly to Open Food Facts. Your IP address is visible to
-  that service. Product data is cached locally and its source is credited.
+  scanned barcode directly to Open Food Facts. When Open Food Facts answers that
+  the barcode is not food, the same barcode is also sent to the sister database
+  it names (Open Beauty Facts, Open Products Facts or Open Pet Food Facts, run by
+  the same organisation) for a product name. Your IP address is visible to
+  those services. Product data is cached locally and its source is credited.
 - Sharing a recipe URL fetches that page directly from your device. The website
   sees the URL and connection metadata. Structured recipe parsing is local.
 - Model assistance is optional and disabled by default. An explicit model action

@@ -1,10 +1,11 @@
 package io.theficos.usuals.data.local
 
 import io.theficos.usuals.enrich.CachedQuality
-import io.theficos.usuals.enrich.EcoScore
+import io.theficos.usuals.enrich.GreenScore
 import io.theficos.usuals.enrich.NovaGroup
 import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.enrich.ProductQuality
+import io.theficos.usuals.enrich.ProductType
 import io.theficos.usuals.enrich.QualityCache
 import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.model.Gtin
@@ -96,7 +97,10 @@ class RoomQualityCache(
         sourceModifiedAtEpochSeconds = quality?.sourceModifiedAtEpochSeconds,
         nutriScore = quality?.nutriScore?.name,
         novaGroup = quality?.novaGroup?.name,
-        ecoScore = quality?.ecoScore?.name,
+        ecoScore = quality?.greenScore?.name,
+        nutriScoreNotApplicable = quality?.nutriScoreNotApplicable,
+        // FOOD is the default meaning of NULL, so only sister-database types are written.
+        productType = quality?.productType?.takeIf { it != ProductType.FOOD }?.name,
         // TagList, not a join: a null list has to come back null and an empty
         // list has to come back empty. See `QualityEntity.allergens`.
         allergens = TagList.encode(quality?.allergens),
@@ -157,7 +161,11 @@ private fun QualityEntity.stated(): ProductQuality = ProductQuality(
     sourceModifiedAtEpochSeconds = sourceModifiedAtEpochSeconds,
     nutriScore = enumOrNull<NutriScore>(nutriScore),
     novaGroup = enumOrNull<NovaGroup>(novaGroup),
-    ecoScore = enumOrNull<EcoScore>(ecoScore),
+    nutriScoreNotApplicable = nutriScoreNotApplicable == true,
+    greenScore = enumOrNull<GreenScore>(ecoScore),
+    // An unknown type from a later build reads as food: the safe direction,
+    // because food is what this build knows how to show.
+    productType = enumOrNull<ProductType>(productType) ?: ProductType.FOOD,
     allergens = TagList.decode(allergens),
     additives = TagList.decode(additives),
 )

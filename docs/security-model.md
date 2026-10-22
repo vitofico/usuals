@@ -63,7 +63,11 @@ not encrypt a connection or attest the endpoint.
 
 Scan lookup is off by default. When enabled in Settings or the scanner, a barcode is sent
 directly to Open Food Facts for a proposed product name, category and product
-details (brand, pack size, ingredients, nutrition grades, allergens and traces). The name
+details (brand, pack size, ingredients, nutrition grades, allergens and traces). When Open
+Food Facts answers that a barcode is not food, the same barcode goes to the sister database
+that answer names (Open Beauty Facts, Open Products Facts or Open Pet Food Facts) for a name,
+brand and pack size, under the same rate-limit permit. Those hosts come from a fixed table in
+the app, never from the response, and redirects are not followed. The name
 changes only after confirmation and the sheet credits Open Food Facts under
 ODbL. Opt-out gates new requests, including ones waiting for a rate-limit permit.
 With lookup off, scanning makes no request and offers manual naming. The list

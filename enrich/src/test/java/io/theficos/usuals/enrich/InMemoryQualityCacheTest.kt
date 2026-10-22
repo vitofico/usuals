@@ -26,7 +26,7 @@ class InMemoryQualityCacheTest {
     private val huevos = gtin("8400000007894")
 
     private val stated = ProductQuality(nutriScore = NutriScore.B, novaGroup = NovaGroup.PROCESSED)
-    private val corrected = ProductQuality(nutriScore = NutriScore.C, ecoScore = EcoScore.D)
+    private val corrected = ProductQuality(nutriScore = NutriScore.C, greenScore = GreenScore.D)
 
     // region what the cache refuses to remember
 

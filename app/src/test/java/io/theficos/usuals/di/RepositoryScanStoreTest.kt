@@ -96,6 +96,35 @@ class RepositoryScanStoreTest {
         }
     }
 
+    @Test fun `non-food answers file the scan by their database and say so plainly when unnamed`() = runTest {
+        val id = items.add(ParsedItem(code.value), gtin = code)
+        fun answering(quality: ProductQuality) = store({ true }) { object : ProductEnricher {
+            override suspend fun lookup(gtin: Gtin) = QualityLookup.Found(gtin, quality)
+        } }
+        val unnamed = answering(ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true)).lookup(id, code)!!
+        assertThat(unnamed.problem).isEqualTo(ScanNameProblem.NOT_FOOD)
+        assertThat(unnamed.name).isNull()
+        assertThat(unnamed.category).isEqualTo(Category.PERSONAL_CARE)
+
+        val named = answering(ProductQuality(productType = ProductType.PRODUCT, nutriScoreNotApplicable = true,
+            productName = "Lavavajillas")).lookup(id, code)!!
+        assertThat(named.problem).isNull()
+        assertThat(named.name).isEqualTo("Lavavajillas")
+        assertThat(named.category).isEqualTo(Category.HOUSEHOLD)
+
+        // The name alone would read as a snack; the database says pet food, and there is no pet aisle.
+        val pet = answering(ProductQuality(productType = ProductType.PET_FOOD, nutriScoreNotApplicable = true,
+            productName = "dog biscuits", categories = listOf("en:biscuits"))).lookup(id, code)!!
+        assertThat(pet.category).isEqualTo(Category.HOUSEHOLD)
+
+        assertThat(answering(ProductQuality.EMPTY.copy(productType = ProductType.BEAUTY)).lookup(id, code)!!.problem)
+            .isEqualTo(ScanNameProblem.NOT_FOOD)
+        assertThat(answering(ProductQuality.EMPTY).lookup(id, code)!!.problem).isEqualTo(ScanNameProblem.NOT_FOUND)
+
+        assertThat(answering(ProductQuality(productType = ProductType.BEAUTY)).confirm(unnamed, "hand cream")).isTrue()
+        assertThat(smart.present(items.items(), history.snapshot())[id]!!.category).isEqualTo(Category.PERSONAL_CARE)
+    }
+
     @Test fun `opt out while lookup waits discards the name and explains the disabled gate`() = runTest {
         var enabled = true
         val gate = CompletableDeferred<Unit>()

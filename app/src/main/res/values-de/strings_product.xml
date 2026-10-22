@@ -20,4 +20,5 @@
     <string name="product_unavailable">Die Produktdetails konnten nicht aktualisiert werden. Gespeicherte Daten werden unten angezeigt.</string>
     <string name="product_source_updated">Quelle aktualisiert: %1$s</string>
     <string name="product_not_found">Für diesen Barcode wurde kein Produkt gefunden. Du kannst fehlende Angaben auf Open Food Facts ergänzen.</string>
+    <string name="product_not_food">Kein Lebensmittel. Open Food Facts erfasst dieses Produkt nicht.</string>
 </resources>

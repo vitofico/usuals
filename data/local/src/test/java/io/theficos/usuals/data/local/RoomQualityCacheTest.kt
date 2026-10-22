@@ -3,11 +3,12 @@ package io.theficos.usuals.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import io.theficos.usuals.enrich.EcoScore
 import io.theficos.usuals.enrich.FailureReason
+import io.theficos.usuals.enrich.GreenScore
 import io.theficos.usuals.enrich.NovaGroup
 import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.enrich.ProductQuality
+import io.theficos.usuals.enrich.ProductType
 import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.enrich.SkipReason
 import io.theficos.usuals.model.Gtin
@@ -57,7 +58,7 @@ class RoomQualityCacheTest {
     private val stated = ProductQuality(
         nutriScore = NutriScore.B,
         novaGroup = NovaGroup.PROCESSED,
-        ecoScore = EcoScore.C,
+        greenScore = GreenScore.C,
         allergens = listOf("en:milk", "en:gluten"),
         additives = listOf("en:e322"),
         productName = "Test milk",
@@ -158,11 +159,52 @@ class RoomQualityCacheTest {
         assertThat(quality).isEqualTo(stated)
         assertThat(quality.nutriScore).isEqualTo(NutriScore.B)
         assertThat(quality.novaGroup).isEqualTo(NovaGroup.PROCESSED)
-        assertThat(quality.ecoScore).isEqualTo(EcoScore.C)
+        assertThat(quality.greenScore).isEqualTo(GreenScore.C)
         // Order is part of the value: a list read back shuffled is a different
         // list, and equality would not have caught a set-shaped encoding.
         assertThat(quality.allergens).containsExactly("en:milk", "en:gluten").inOrder()
         assertThat(quality.additives).containsExactly("en:e322").inOrder()
+    }
+
+    @Test
+    fun `the Green-Score grades beyond the old Eco-Score scale round trip, and old letters still read`() = runTest {
+        cache.put(QualityLookup.Found(leche, ProductQuality(greenScore = GreenScore.A_PLUS)), now)
+        cache.put(QualityLookup.Found(pan, ProductQuality(greenScore = GreenScore.F)), now)
+        // What an Eco-Score era build wrote: the bare letter, which must keep its meaning.
+        db.qualityDao().upsert(QualityEntity(gtin = huevos.value, ecoScore = "A", fetchedAt = now))
+
+        assertThat(cache.get(leche)!!.quality!!.greenScore).isEqualTo(GreenScore.A_PLUS)
+        assertThat(cache.get(pan)!!.quality!!.greenScore).isEqualTo(GreenScore.F)
+        assertThat(cache.get(huevos)!!.quality!!.greenScore).isEqualTo(GreenScore.A)
+    }
+
+    @Test
+    fun `does not apply and not stated stay different facts on disk`() = runTest {
+        cache.put(QualityLookup.Found(leche, ProductQuality(nutriScoreNotApplicable = true)), now)
+        cache.put(QualityLookup.Found(pan, ProductQuality.EMPTY), now)
+
+        assertThat(db.qualityDao().find(leche.value)!!.nutriScoreNotApplicable).isTrue()
+        assertThat(db.qualityDao().find(pan.value)!!.nutriScoreNotApplicable).isFalse()
+        assertThat(cache.get(leche)!!.quality!!.nutriScoreNotApplicable).isTrue()
+        assertThat(cache.get(pan)!!.quality!!.nutriScoreNotApplicable).isFalse()
+    }
+
+    /**
+     * The non-food answer used to arrive as a failure, so nothing was written
+     * and every rescan of a shampoo spent a permit to be told the same thing.
+     */
+    @Test
+    fun `a non-food answer is kept with its type, and food rows store no type`() = runTest {
+        val shampoo = ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true, productName = "Hand cream")
+        cache.put(QualityLookup.Found(aceite, shampoo), now)
+        cache.put(QualityLookup.Found(leche, stated), now)
+
+        val entry = cache.get(aceite)!!
+        assertThat(entry.confirmedMissing).isFalse()
+        assertThat(entry.quality).isEqualTo(shampoo)
+        assertThat(db.qualityDao().find(aceite.value)!!.productType).isEqualTo("BEAUTY")
+        assertThat(db.qualityDao().find(leche.value)!!.productType).isNull()
+        assertThat(cache.get(leche)!!.quality!!.productType).isEqualTo(ProductType.FOOD)
     }
 
     // endregion

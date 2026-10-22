@@ -2,6 +2,7 @@
 <resources>
     <string name="quality_nutri_score">Nutri-Score %1$s</string>
     <string name="quality_nutri_score_absent">Nutri-Score: non indicato</string>
+    <string name="quality_nutri_score_not_applicable">Nutri-Score: non applicabile</string>
     <string name="quality_nova_1">NOVA 1 (non trasformato)</string>
     <string name="quality_nova_2">NOVA 2 (ingrediente culinario)</string>
     <string name="quality_nova_3">NOVA 3 (trasformato)</string>

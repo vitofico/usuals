@@ -58,7 +58,7 @@ class ServerListsMigrationTest {
         val name = "server-lists-migration.db"
         schemaSix(name)
         var db = UsualsDatabase.build(context, name)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(8)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(9)
         assertThat(db.listDao().all()).containsExactly(ListEntity("shared-list", "Groceries"), ListEntity("camping", "Camping", "archive-1"),
             ListEntity("old", "Old", archived = true)).inOrder()
         assertThat(db.listDao().selected()).isEqualTo("shared-list")

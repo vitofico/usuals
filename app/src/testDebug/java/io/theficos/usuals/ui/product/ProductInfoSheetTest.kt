@@ -32,6 +32,26 @@ class ProductInfoSheetTest {
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertThat(settings).isTrue()
     }
+    @Test fun `a non-food product says so instead of listing food facts as not stated`() {
+        val quality = ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true, productName = "Hand cream")
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Cream", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true),
+            {}, {}, {},
+        ) } }
+        compose.onNodeWithText("Hand cream").assertIsDisplayed()
+        compose.onNodeWithText("Not a food product", substring = true).assertIsDisplayed()
+        compose.onAllNodes(hasText("Nutri-Score", substring = true)).assertCountEquals(0)
+        compose.onAllNodes(hasText("Ingredients", substring = true)).assertCountEquals(0)
+    }
+    @Test fun `a food Nutri-Score does not apply to reads differently from one nobody stated`() {
+        val quality = ProductQuality(productName = "Beer", nutriScoreNotApplicable = true)
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Beer", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true),
+            {}, {}, {},
+        ) } }
+        compose.onNodeWithText("Nutri-Score: does not apply").assertExists()
+        compose.onAllNodes(hasText("Nutri-Score: not stated")).assertCountEquals(0)
+    }
     @Test fun `unknown codes offer contribution without unresolved name placeholders`() {
         compose.setContent { UsualsTheme { ProductInfoSheet(
             ProductInfoState(gtin, gtin.value, loading = false, lookupEnabled = true, result = QualityLookup.Missing(gtin)),

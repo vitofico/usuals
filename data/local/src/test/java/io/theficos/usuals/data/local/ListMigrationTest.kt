@@ -52,7 +52,7 @@ class ListMigrationTest {
         db.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { assertThat(it.count).isEqualTo(0) }
         db.close()
         db = UsualsDatabase.build(context)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(8)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(9)
         assertThat(db.historyDao().allItems(scope)).containsExactlyElementsIn(items)
         db.listDao().insert(ListEntity("camping", "Camping"))
         db.itemDao().insert(items.first().copy(listId = "camping"))

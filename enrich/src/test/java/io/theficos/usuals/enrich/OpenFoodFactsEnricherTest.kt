@@ -57,6 +57,7 @@ class OpenFoodFactsEnricherTest {
         isRestricted: (Gtin) -> Boolean = { false },
         permitsPerWindow: Int = 100,
         sleep: suspend (Long) -> Unit = { millis -> waits += millis },
+        allowRequest: () -> Boolean = { true },
     ) = OpenFoodFactsEnricher(
         userAgent = USER_AGENT,
         rateLimiter = OffRateLimiter(
@@ -67,6 +68,14 @@ class OpenFoodFactsEnricherTest {
         ),
         isRestricted = isRestricted,
         baseUrl = server.url("/").toString(),
+        // Each sister database on its own path of the same scripted server, so
+        // a test can tell from the request which host the barcode went to.
+        sisterBaseUrls = mapOf(
+            ProductType.BEAUTY to server.url("/beauty/").toString(),
+            ProductType.PRODUCT to server.url("/products/").toString(),
+            ProductType.PET_FOOD to server.url("/petfood/").toString(),
+        ),
+        allowRequest = allowRequest,
     )
 
     /** Wraps [productFields] in the v3 envelope OFF returns for a record that exists. */
@@ -100,7 +109,7 @@ class OpenFoodFactsEnricherTest {
         assertThat(spreadQuality.novaGroup).isEqualTo(NovaGroup.ULTRA_PROCESSED)
         // The trap, in one assertion: this record has a real nutrition grade and
         // the word "unknown" where the eco grade goes. Only one of them is data.
-        assertThat(spreadQuality.ecoScore).isNull()
+        assertThat(spreadQuality.greenScore).isNull()
         assertThat(spreadQuality.allergens)
             .containsExactly("en:milk", "en:nuts", "en:soybeans").inOrder()
         assertThat(spreadQuality.additives).containsExactly("en:e322", "en:e322i").inOrder()
@@ -119,12 +128,34 @@ class OpenFoodFactsEnricherTest {
         val unknown = quality()
 
         assertThat(notApplicable.nutriScore).isNull()
-        assertThat(notApplicable.ecoScore).isNull()
+        // Not a grade, but not nothing either: "does not apply" is kept apart
+        // from "nobody graded it", which is what the second record says.
+        assertThat(notApplicable.nutriScoreNotApplicable).isTrue()
+        assertThat(unknown.nutriScoreNotApplicable).isFalse()
+        assertThat(notApplicable.greenScore).isNull()
         assertThat(unknown.nutriScore).isNull()
-        assertThat(unknown.ecoScore).isNull()
+        assertThat(unknown.greenScore).isNull()
         // The rest of the record is still good. A sentinel in one field is not a
         // reason to throw away the facts next to it.
         assertThat(unknown.novaGroup).isEqualTo(NovaGroup.UNPROCESSED)
+    }
+
+    @Test
+    fun `the Green-Score reads A+ and F, and the renamed field wins over the old one`() = runTest {
+        enqueueRecord(""""ecoscore_grade":"a-plus"""")
+        enqueueRecord(""""ecoscore_grade":"A+"""")
+        enqueueRecord(""""ecoscore_grade":"f"""")
+        enqueueRecord(""""environmental_score_grade":"b","ecoscore_grade":"d"""")
+        enqueueRecord(""""environmental_score_grade":"a-plus"""")
+        enqueueRecord(""""ecoscore_grade":"g"""")
+
+        assertThat(quality().greenScore).isEqualTo(GreenScore.A_PLUS)
+        assertThat(quality().greenScore).isEqualTo(GreenScore.A_PLUS)
+        assertThat(quality().greenScore).isEqualTo(GreenScore.F)
+        assertThat(quality().greenScore).isEqualTo(GreenScore.B)
+        assertThat(quality().greenScore).isEqualTo(GreenScore.A_PLUS)
+        // A letter past the scale is a word we do not know, not a grade.
+        assertThat(quality().greenScore).isNull()
     }
 
     @Test
@@ -185,6 +216,107 @@ class OpenFoodFactsEnricherTest {
 
         assertThat(outcome).isEqualTo(QualityLookup.Missing(absent))
         assertThat(outcome.cacheable).isTrue()
+    }
+
+    /**
+     * A shampoo scanned with lookup on. OFF answers 404 and names the sister
+     * database; that answer is kept, and one more read under the same permit
+     * asks that database for a name.
+     */
+    @Test
+    fun `a non-food barcode is an answer with its type and a name from the sister database`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "beauty")))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(
+            """{"code":"$SHAMPOO","errors":[],"status":"success","result":{"id":"product_found"},""" +
+                """"product":{"code":"$SHAMPOO","product_name":"Champú de ejemplo","brands":"Example",""" +
+                """"quantity":"400 ml","nutriscore_grade":"e","categories_tags":["en:shampoos"]}}""",
+        ))
+        val shampoo = Gtin.parse(SHAMPOO)!!
+
+        val outcome = enricher(permitsPerWindow = 1, sleep = { throw AssertionError("a second permit was taken") })
+            .lookup(shampoo)
+
+        assertThat(outcome).isEqualTo(QualityLookup.Found(shampoo, ProductQuality(
+            productType = ProductType.BEAUTY,
+            nutriScoreNotApplicable = true,
+            productName = "Champú de ejemplo",
+            brands = "Example",
+            packageSize = "400 ml",
+        )))
+        assertThat(outcome.cacheable).isTrue()
+        assertThat(server.takeRequest().requestUrl!!.encodedPath).isEqualTo("/api/v3/product/$SHAMPOO.json")
+        val sister = server.takeRequest()
+        assertThat(sister.requestUrl!!.encodedPath).isEqualTo("/beauty/api/v3/product/$SHAMPOO.json")
+        assertThat(sister.getHeader("User-Agent")).isEqualTo(USER_AGENT)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `each non-food type is asked about at its own sister host`() = runTest {
+        val shampoo = Gtin.parse(SHAMPOO)!!
+        for ((wire, path) in listOf("product" to "/products/", "petfood" to "/petfood/")) {
+            server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, wire)))
+            server.enqueue(MockResponse().setResponseCode(404).setBody(NOT_FOUND_BODY.replace(ABSENT, SHAMPOO)))
+            val outcome = enricher().lookup(shampoo) as QualityLookup.Found
+            assertThat(outcome.quality.productName).isNull()
+            assertThat(outcome.quality.nutriScoreNotApplicable).isTrue()
+            server.takeRequest()
+            assertThat(server.takeRequest().requestUrl!!.encodedPath).startsWith(path)
+        }
+    }
+
+    /**
+     * The sister read is a convenience for naming. When it fails the type
+     * answer still stands, because it is what OFF said and it is what stops
+     * the rescan loop.
+     */
+    @Test
+    fun `a failed sister read still leaves the type answer from Open Food Facts`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "beauty")))
+        server.enqueue(MockResponse().setResponseCode(500))
+        val shampoo = Gtin.parse(SHAMPOO)!!
+
+        val outcome = enricher().lookup(shampoo)
+
+        assertThat(outcome).isEqualTo(QualityLookup.Found(shampoo,
+            ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true)))
+    }
+
+    @Test
+    fun `a sister redirect is not followed and no host is taken from the response`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "beauty")))
+        server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", server.url("/elsewhere").toString()))
+
+        val outcome = enricher().lookup(Gtin.parse(SHAMPOO)!!) as QualityLookup.Found
+
+        assertThat(outcome.quality.productName).isNull()
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `revoking consent after the first answer keeps the barcode off the sister host`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "beauty")))
+        var asked = 0
+        val outcome = enricher(allowRequest = { asked++ < 2 }).lookup(Gtin.parse(SHAMPOO)!!)
+
+        assertThat(outcome).isEqualTo(QualityLookup.Skipped(Gtin.parse(SHAMPOO)!!, SkipReason.OPTED_OUT))
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `a sister answer without a type we know, or for another code, is still a failure`() = runTest {
+        val shampoo = Gtin.parse(SHAMPOO)!!
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "furniture")))
+        assertThat(enricher().lookup(shampoo)).isEqualTo(QualityLookup.Failed(shampoo, FailureReason.MALFORMED))
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(SHAMPOO, "food")))
+        assertThat(enricher().lookup(shampoo)).isEqualTo(QualityLookup.Failed(shampoo, FailureReason.MALFORMED))
+        server.enqueue(MockResponse().setResponseCode(404).setBody(sisterBody(ABSENT, "beauty")))
+        assertThat(enricher().lookup(shampoo)).isEqualTo(QualityLookup.Failed(shampoo, FailureReason.MALFORMED))
+        server.enqueue(MockResponse().setResponseCode(404).setBody(
+            """{"code":"$SHAMPOO","errors":[],"result":{"id":"product_found_with_a_different_product_type"}}""",
+        ))
+        assertThat(enricher().lookup(shampoo)).isEqualTo(QualityLookup.Failed(shampoo, FailureReason.MALFORMED))
+        assertThat(server.requestCount).isEqualTo(4)
     }
 
     @Test
@@ -398,7 +530,7 @@ class OpenFoodFactsEnricherTest {
         // change to it should have to be made twice, deliberately.
         assertThat(request.requestUrl!!.queryParameter("fields")).isEqualTo(
             "code,product_name,categories_tags,nutriscore_grade," +
-                "nova_group,ecoscore_grade,allergens_tags,additives_tags,generic_name,brands,quantity," +
+                "nova_group,ecoscore_grade,environmental_score_grade,allergens_tags,additives_tags,generic_name,brands,quantity," +
                 "ingredients_text,traces_tags,last_modified_t,product_name_en,generic_name_en,ingredients_text_en",
         )
         // No search, no second page, no crawl.
@@ -442,6 +574,19 @@ class OpenFoodFactsEnricherTest {
 
         const val SPREAD = "8471100000009"
         const val ABSENT = "9642138750214"
+
+        /** A valid EAN-13 standing in for a shampoo; the body below is scripted, not captured. */
+        const val SHAMPOO = "8400000000017"
+
+        /**
+         * The 404 OFF sends for a barcode filed in a sister database, in the
+         * shape observed live on 2026-10-22: the type is in `errors[].field`.
+         */
+        fun sisterBody(code: String, type: String) = """
+            {"code":"$code","errors":[{"field":{"id":"product_type","value":"$type"},
+              "impact":{"id":"failure"},"message":{"id":"product_found_with_a_different_product_type"}}],
+             "result":{"id":"product_found_with_a_different_product_type"},"status":"failure","warnings":[]}
+        """.trimIndent()
 
         /** A valid EAN-13 in the GS1 in-store range, which OFF cannot resolve. */
         const val IN_STORE = "2000000000008"

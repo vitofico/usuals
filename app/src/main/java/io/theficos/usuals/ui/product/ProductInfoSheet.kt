@@ -48,7 +48,8 @@ fun ProductInfoSheet(state: ProductInfoState, onRefresh: () -> Unit, onSettings:
                 message?.let { Text(stringResource(it)) }
             }
             if (state.result == null && state.cached?.confirmedMissing == true) Text(stringResource(R.string.product_not_found))
-            if (quality != null) {
+            if (quality != null && quality.productType != ProductType.FOOD) Text(stringResource(R.string.product_not_food))
+            if (quality != null && quality.productType == ProductType.FOOD) {
                 QualityChip(quality)
                 HorizontalDivider()
                 Text(stringResource(R.string.product_ingredients), style = MaterialTheme.typography.titleMedium)

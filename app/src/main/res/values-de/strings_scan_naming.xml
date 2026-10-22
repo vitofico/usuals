@@ -2,7 +2,7 @@
 <resources>
     <string name="scan_lookup_toggle">Namen gescannter Produkte suchen</string>
     <string name="scan_lookup_hint">Standardmäßig aus. Sendet Barcodes an Open Food Facts, um Namen und Kategorien vorzuschlagen. Du bestätigst jeden Namen. Scannen funktioniert immer auch offline.</string>
-    <string name="scan_lookup_privacy">Wenn du die Barcode-Suche aktivierst, sendet Usuals gescannte Barcodes direkt an Open Food Facts, um Namen, Kategorien und Produktdetails abzurufen. Deine Listen und dein Einkaufsverlauf werden nie gesendet. Die Suche ist standardmäßig aus.</string>
+    <string name="scan_lookup_privacy">Wenn du die Barcode-Suche aktivierst, sendet Usuals gescannte Barcodes direkt an Open Food Facts, um Namen, Kategorien und Produktdetails abzurufen. Barcodes, die Open Food Facts nicht als Lebensmittel führt, gehen zusätzlich an die passende Schwesterdatenbank (Open Beauty Facts, Open Products Facts oder Open Pet Food Facts). Deine Listen und dein Einkaufsverlauf werden nie gesendet. Die Suche ist standardmäßig aus.</string>
     <string name="scan_name_manual">Artikel benennen</string>
     <string name="scan_name_offer">Diesen Produktnamen verwenden?</string>
     <string name="scan_name_barcode">Barcode: %1$s</string>

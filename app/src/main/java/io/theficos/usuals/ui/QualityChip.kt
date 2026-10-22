@@ -20,7 +20,8 @@ fun QualityChip(quality: ProductQuality?, modifier: Modifier = Modifier) {
             Fact(stringResource(R.string.quality_record_blank))
         } else {
             Fact(quality.nutriScore?.let { stringResource(R.string.quality_nutri_score, it.name) }
-                ?: stringResource(R.string.quality_nutri_score_absent))
+                ?: stringResource(if (quality.nutriScoreNotApplicable) R.string.quality_nutri_score_not_applicable
+                    else R.string.quality_nutri_score_absent))
             Fact(quality.novaGroup?.let { stringResource(novaLabelOf(it)) }
                 ?: stringResource(R.string.quality_nova_absent))
             Fact(allergensSentence(quality.allergens))

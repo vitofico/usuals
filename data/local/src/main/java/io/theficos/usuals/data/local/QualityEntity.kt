@@ -18,7 +18,12 @@ data class QualityEntity(
     val nutriScore: String? = null,
     /** A `NovaGroup` name, or null when OFF stated none. */
     val novaGroup: String? = null,
-    /** An `EcoScore` name, or null when OFF stated none. */
+    /**
+     * A `GreenScore` name, or null when OFF stated none. The column keeps its
+     * Eco-Score era name: SQLite on the oldest supported Android cannot rename a
+     * column in place, and the stored values `A` to `E` still read as the same
+     * Green-Score grades.
+     */
     val ecoScore: String? = null,
     /**
      * Allergen tags, encoded by [TagList], or NULL when OFF stated nothing.
@@ -63,6 +68,18 @@ data class QualityEntity(
     val ingredients: String? = null,
     val traces: String? = null,
     val sourceModifiedAtEpochSeconds: Long? = null,
+    /**
+     * True when the source says Nutri-Score does not apply. NULL on rows cached
+     * before schema 9, which never recorded it; they read as "not stated" until
+     * their next refresh rather than being guessed at.
+     */
+    val nutriScoreNotApplicable: Boolean? = null,
+    /**
+     * A `ProductType` name for a barcode Open Food Facts filed in a sister
+     * database, or NULL for its own food records, including every row from
+     * before schema 9.
+     */
+    val productType: String? = null,
 )
 
 /**

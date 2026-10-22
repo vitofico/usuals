@@ -23,8 +23,8 @@ import org.junit.Test
  *
  *     USUALS_OFF_LIVE=1 scripts/dgradle :enrich:test
  *
- * Without that variable it is skipped, not failed. It spends at most three
- * requests against a documented budget of fifteen a minute, uses a real contact
+ * Without that variable it is skipped, not failed. It spends at most five
+ * requests (one of them at a sister database) against a documented budget of fifteen a minute, uses a real contact
  * address in the User-Agent as OFF requires, and reads only. It never writes,
  * never searches and never crawls.
  */
@@ -80,6 +80,21 @@ class OpenFoodFactsLiveContractTest {
         assertThat(outcome).isInstanceOf(QualityLookup.Found::class.java)
     }
 
+    @Test
+    fun `a non-food barcode is still named by its sister database`() = runTest {
+        assumeTrue(liveRequested())
+
+        val outcome = liveEnricher().lookup(Gtin.parse(BEAUTY_PRODUCT)!!)
+
+        // Two contracts at once: OFF still answers a non-food barcode with the
+        // sister-database 404 we parse, and that database still serves the v3
+        // read. Losing either surfaces as a missing type or a missing name.
+        assertThat(outcome).isInstanceOf(QualityLookup.Found::class.java)
+        val quality = (outcome as QualityLookup.Found).quality
+        assertThat(quality.productType).isEqualTo(ProductType.BEAUTY)
+        assertThat(quality.productName).isNotNull()
+    }
+
     private companion object {
 
         fun liveRequested(): Boolean = System.getenv("USUALS_OFF_LIVE") == "1"
@@ -104,5 +119,8 @@ class OpenFoodFactsLiveContractTest {
          * likely reason and the fix is a new code, not a code change.
          */
         const val ABSENT_PRODUCT = "9642138750214"
+
+        /** A hand cream filed in Open Beauty Facts, probed on 2026-10-22. */
+        const val BEAUTY_PRODUCT = "8410757001090"
     }
 }
