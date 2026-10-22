@@ -1,0 +1,1 @@
+Import now takes notes of up to 500 items, so a long Google Keep list comes in whole. If a note is still too long, the import screen says so at the top instead of below the keyboard.

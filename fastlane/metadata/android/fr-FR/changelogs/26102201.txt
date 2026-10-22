@@ -1,0 +1,1 @@
+L’importation accepte désormais des notes jusqu’à 500 articles, donc une longue liste Google Keep arrive en entier. Si une note reste trop longue, l’écran d’importation l’indique en haut plutôt que sous le clavier.

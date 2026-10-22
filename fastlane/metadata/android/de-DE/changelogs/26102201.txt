@@ -1,0 +1,1 @@
+Der Import nimmt jetzt Notizen mit bis zu 500 Artikeln an, eine lange Google-Keep-Liste kommt also vollständig an. Ist eine Notiz trotzdem zu lang, sagt der Importbildschirm das oben statt unter der Tastatur.
