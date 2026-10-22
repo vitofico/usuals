@@ -20,7 +20,7 @@ class RepositoryListDirectory(private val repository: ListRepository, private va
                 status.conflicts.map { ListConflict(it.id, it.itemId, it.current, it.incoming, it.kind) },
                 if (current?.synced != true) null else if (account == null) SyncStatus.SIGN_IN else synced, current?.let { replica.unused(it) } == true)
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)
     override suspend fun dismissConflict(id: String) = replica.dismissConflict(id)
     override suspend fun select(id: String) = repository.select(id)
     override suspend fun create(name: String) { repository.create(name) }
