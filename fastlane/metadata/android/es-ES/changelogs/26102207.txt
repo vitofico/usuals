@@ -1,0 +1,1 @@
+Los favoritos explican cómo guardar y reutilizar productos, e indican cuáles ya están en la lista. Oculta las sugerencias del historial al escribir con No sugerir más. Mueve o copia productos a otra lista desde el editor, conservando cantidades y detalles.
