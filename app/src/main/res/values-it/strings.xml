@@ -31,7 +31,7 @@
     <string name="scan_title">Scansiona</string>
     <string name="scan_back">Indietro</string>
     <string name="scan_intro">Scansiona una confezione</string>
-    <string name="scan_guidance">Inquadra il codice a barre. La fotocamera si ferma quando lo legge.</string>
+    <string name="scan_guidance">Inquadra il codice a barre a un palmo di distanza. Tocca per mettere a fuoco, pizzica per lo zoom. La fotocamera si ferma quando legge un codice.</string>
     <string name="scan_permission_rationale">Per leggere un codice a barre serve la fotocamera. Viene usata solo in questa schermata e non vengono salvate immagini.</string>
     <string name="scan_permission_grant">Usa la fotocamera</string>
     <string name="scan_permission_denied">Nessun accesso alla fotocamera. Digita il codice, funziona allo stesso modo.</string>

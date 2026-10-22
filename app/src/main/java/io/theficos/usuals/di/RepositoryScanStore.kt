@@ -9,33 +9,18 @@ import io.theficos.usuals.parse.ItemIdentity
 import io.theficos.usuals.parse.Normalizer
 import io.theficos.usuals.smart.BarcodeCategories
 import io.theficos.usuals.smart.Category
-import io.theficos.usuals.ui.list.*
 import io.theficos.usuals.ui.scan.*
 import kotlinx.coroutines.CancellationException
 
 class RepositoryScanStore(
     private val items: ItemRepository,
     private val history: HistoryRepository,
-    private val smart: SmartStore,
     private val enabled: () -> Boolean,
     private val enricher: () -> ProductEnricher,
     private val categories: BarcodeCategories,
 ) : ScanStore {
-    override suspend fun add(gtin: Gtin) = items.transaction {
-        val facts = history.snapshot()
-        val key = ItemIdentity.resolve("gtin:${gtin.value}", facts.aliases.associate { it.fromKey to it.toKey })
-        // Confirmed aliases survive Finish and removal. Prefer the person's
-        // display spelling when an active row or a purchase still carries it.
-        val knownName = if (key == "gtin:${gtin.value}" || key.startsWith("gtin:")) null else {
-            items.items().firstOrNull { Normalizer.normalize(it.name) == key }?.name
-                ?: facts.purchases.filter { Normalizer.normalize(it.name) == key }.maxByOrNull { it.boughtAt }?.name
-                ?: key
-        }
-        items.add(ParsedItem(knownName ?: gtin.value), gtin = gtin)
-    }
-
-    override suspend fun lookup(id: ItemId, gtin: Gtin): ScanNameOffer? {
-        if (items.items().none { it.id == id && it.name == gtin.value }) return null
+    override suspend fun lookup(gtin: Gtin): ScanNameOffer {
+        rememberedName(gtin)?.let { return ScanNameOffer(gtin, it, null, false) }
         val result = if (enabled()) {
             try { enricher().lookup(gtin) }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -53,11 +38,24 @@ class RepositoryScanStore(
             accepted?.productName != null -> null
             else -> ScanNameProblem.UNAVAILABLE
         }
-        val current = items.items().firstOrNull { it.id == id && it.name == gtin.value } ?: return null
         // The database a non-food barcode lives in already says which aisle it
         // belongs to, even when it has no name, and outranks a guess from the name.
         val category = nonFood?.let(::aisleOf) ?: accepted?.productName?.let { categories.category(accepted.categories, it) }
-        return ScanNameOffer(id, gtin, accepted?.productName, category, accepted != null, problem, current.version, accepted)
+        return ScanNameOffer(gtin, accepted?.productName, category, accepted != null, problem, accepted)
+    }
+
+    /**
+     * Confirmed aliases survive Finish and removal. Prefer the person's display
+     * spelling when an active row or a purchase still carries it.
+     */
+    private suspend fun rememberedName(gtin: Gtin): String? = items.transaction {
+        val facts = history.snapshot()
+        val key = ItemIdentity.resolve("gtin:${gtin.value}", facts.aliases.associate { it.fromKey to it.toKey })
+        if (key.startsWith("gtin:")) null else {
+            items.items().firstOrNull { Normalizer.normalize(it.name) == key }?.name
+                ?: facts.purchases.filter { Normalizer.normalize(it.name) == key }.maxByOrNull { it.boughtAt }?.name
+                ?: key
+        }
     }
 
     /** There is no pet aisle, so pet food is shopped with the household goods. */
@@ -67,28 +65,22 @@ class RepositoryScanStore(
         ProductType.FOOD -> null
     }
 
-    override suspend fun mergePreview(offer: ScanNameOffer, name: String): ScanMerge? = items.transaction {
-        val active = items.items()
-        val source = active.firstOrNull { it.id == offer.id && !it.checked } ?: return@transaction null
-        offer.version?.let { pinned ->
-            if (source.version?.fields?.get("name") != pinned.fields["name"] || source.version?.lifecycle != pinned.lifecycle) return@transaction null
+    override suspend fun add(offer: ScanNameOffer, name: String): ItemId = items.transaction {
+        val trimmed = name.trim()
+        require(trimmed.any(Char::isLetter))
+        val facts = history.snapshot()
+        val aliases = facts.aliases.associate { it.fromKey to it.toKey }
+        val barcode = "gtin:${offer.gtin.value}"
+        val key = ItemIdentity.resolve(Normalizer.normalize(trimmed), aliases)
+        // The alias is what names the next scan of this barcode. It can be
+        // refused when the list still holds an open code-only row of the same
+        // barcode; the product is added under its name all the same.
+        if (ItemIdentity.resolve(barcode, aliases) != key) history.saveAlias(ItemAlias(barcode, key))
+        val existing = ItemIdentity.preferences(facts.preferences, aliases)[key]
+        // A category the person chose for this item outranks the lookup's guess.
+        if (offer.category != null && existing?.category == null) {
+            history.savePreference((existing ?: ItemPreference(key)).copy(key = key, category = offer.category.name))
         }
-        val aliases = history.snapshot().aliases.associate { it.fromKey to it.toKey }
-        val key = ItemIdentity.resolve(Normalizer.normalize(name), aliases)
-        val destination = active.firstOrNull { it.id != source.id && !it.checked && ItemIdentity.key(it, aliases) == key }
-            ?: return@transaction null
-        ScanMerge(source, destination)
-    }
-    override suspend fun merge(review: ScanMerge): Boolean = items.merge(requireNotNull(review.source.version), requireNotNull(review.destination.version))
-    override suspend fun confirm(offer: ScanNameOffer, name: String): Boolean {
-        val item = items.items().firstOrNull { it.id == offer.id } ?: return false
-        val presentation = smart.present(listOf(item), history.snapshot())[item.id]
-        val pinned = offer.version?.facts?.let { org.json.JSONObject(it) }
-        val quantity = if (pinned == null) item.quantity else if (pinned.isNull("quantity")) null else
-            Quantity(pinned.getString("quantity").toDouble(), MeasureUnit.valueOf(pinned.getString("unit")))
-        val store = if (pinned == null) item.store else if (pinned.isNull("store")) null else pinned.getString("store")
-        val note = if (pinned == null) item.note else if (pinned.isNull("note")) null else pinned.getString("note")
-        return smart.edit(ItemEdit(item.id, name, quantity, presentation?.override ?: offer.category,
-            presentation?.repeatEveryDays, store, offer.version, changeRepeat = false, note = note))
+        items.add(ParsedItem(trimmed), gtin = offer.gtin)
     }
 }

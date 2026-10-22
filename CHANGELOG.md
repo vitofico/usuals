@@ -1,5 +1,16 @@
 # Changelog
 
+## Scans ask before adding
+
+- A scanned barcode no longer lands on the list as bare digits. The scanner
+  asks "Add this product?" with the looked-up or remembered name, or asks you
+  to name it, and adds nothing until you confirm. Scanning a product already
+  on the list joins its row.
+- Small and curved labels, such as spice jars and bottles, read more reliably:
+  the camera starts at 2x zoom so the label can be held in focus, reads at a
+  higher resolution, and a read that flickers between frames still counts.
+  Tap the preview to focus and pinch to zoom.
+
 ## Product facts on the list
 
 With Open Food Facts lookup on:

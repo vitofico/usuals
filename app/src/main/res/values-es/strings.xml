@@ -31,7 +31,7 @@
     <string name="scan_title">Escanear</string>
     <string name="scan_back">Atrás</string>
     <string name="scan_intro">Escanea un envase</string>
-    <string name="scan_guidance">Coloca el código de barras dentro del recuadro. La cámara se pausa al leerlo.</string>
+    <string name="scan_guidance">Coloca el código de barras dentro del recuadro, a un palmo de distancia. Toca para enfocar y pellizca para hacer zoom. La cámara se pausa al leer un código.</string>
     <string name="scan_permission_rationale">Para leer un código de barras hace falta la cámara. Solo se usa en esta pantalla y no se guarda ninguna imagen.</string>
     <string name="scan_permission_grant">Usar la cámara</string>
     <string name="scan_permission_denied">Sin acceso a la cámara. Escribe el código, funciona igual.</string>

@@ -41,7 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import io.theficos.usuals.R
 import io.theficos.usuals.model.Gtin
-import io.theficos.usuals.model.Item
 
 /**
  * Where the camera stands with this screen.
@@ -82,8 +80,9 @@ private enum class CameraPermission { UNASKED, GRANTED, DENIED }
  * Scanning a barcode.
  *
  * Each camera read pauses capture until the person asks for the next item.
- * Validated barcodes add local rows immediately, once per session. Optional
- * names arrive for confirmation. Typed entry remains available without a camera.
+ * A validated barcode is only a candidate: the caller looks it up and the
+ * person confirms a name before anything reaches the list. Typed entry remains
+ * available without a camera.
  *
  * The screen calls [onScanned] and leaves navigation alone: whoever routed here
  * pops. Popping from both ends would take two screens off the back stack.
@@ -93,6 +92,8 @@ private enum class CameraPermission { UNASKED, GRANTED, DENIED }
  *   so this is held above it and handed back in.
  * @param onCameraRefused called the first time they say no, so the refusal
  *   outlives this screen.
+ * @param pendingCodes barcodes still being looked up or waiting for a name.
+ * @param lastScan how the latest confirmation ended, added or not.
  */
 @Composable
 fun ScanScreen(
@@ -104,7 +105,8 @@ fun ScanScreen(
     lookupEnabled: Boolean = false,
     lookupReady: Boolean = true,
     onLookupChanged: (Boolean) -> Unit = {},
-    lastScannedItem: Item? = null,
+    pendingCodes: Set<String> = emptySet(),
+    lastScan: ScanResult? = null,
 ) {
     val context = LocalContext.current
     val camera = LocalBarcodeCamera.current
@@ -128,9 +130,7 @@ fun ScanScreen(
     }
     var typed by rememberSaveable { mutableStateOf("") }
     var invalid by remember { mutableStateOf(false) }
-    var scannedCodes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var capturedCode by rememberSaveable { mutableStateOf<String?>(null) }
-    var duplicate by rememberSaveable { mutableStateOf(false) }
     var cameraGeneration by rememberSaveable { mutableStateOf(0) }
 
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -146,11 +146,7 @@ fun ScanScreen(
             invalid = false
             typed = ""
             capturedCode = gtin.value
-            duplicate = gtin.value in scannedCodes
-            if (!duplicate) {
-                scannedCodes = scannedCodes + gtin.value
-                onScanned(gtin)
-            }
+            onScanned(gtin)
         }
     }
 
@@ -183,8 +179,6 @@ fun ScanScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Spacer(Modifier.height(4.dp))
-            if (scannedCodes.isNotEmpty()) Text(pluralStringResource(R.plurals.scan_count, scannedCodes.size, scannedCodes.size),
-                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             if (capturedCode == null) {
                 Text(stringResource(R.string.scan_intro), style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.primary)
@@ -197,21 +191,24 @@ fun ScanScreen(
             val onCameraCode: (String) -> Unit = { code ->
                 if (capturedCode == null && generation == cameraGeneration) submit(code)
             }
-            if (capturedCode != null) {
-                val savedName = lastScannedItem?.takeIf { it.gtin?.value == capturedCode && it.name != capturedCode }?.name
+            val code = capturedCode
+            if (code != null) {
+                val pending = code in pendingCodes
+                val addedName = lastScan?.takeIf { it.gtin.value == code }?.addedName
                 SectionCard {
-                    Icon(Icons.Outlined.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                    if (addedName != null) {
+                        Icon(Icons.Outlined.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                    }
                     Text(when {
-                        duplicate -> stringResource(R.string.scan_duplicate, capturedCode!!)
-                        savedName != null -> stringResource(R.string.scan_saved_name, savedName)
-                        else -> stringResource(R.string.scan_saved, capturedCode!!)
+                        pending -> stringResource(R.string.scan_checking, code)
+                        addedName != null -> stringResource(R.string.scan_saved_name, addedName)
+                        else -> stringResource(R.string.scan_not_added, code)
                     }, style = MaterialTheme.typography.titleMedium)
                 }
                 Button(onClick = {
                     cameraGeneration++
                     capturedCode = null
-                    duplicate = false
-                }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.scan_next)) }
+                }, enabled = !pending, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.scan_next)) }
             } else if (!camera.isAvailable) {
                 // This phone has no camera, so the permission would buy the
                 // person nothing. Say the camera is not here and let the field

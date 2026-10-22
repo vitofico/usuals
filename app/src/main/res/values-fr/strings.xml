@@ -31,7 +31,7 @@
     <string name="scan_title">Scanner</string>
     <string name="scan_back">Retour</string>
     <string name="scan_intro">Scannez un emballage</string>
-    <string name="scan_guidance">Placez le code-barres dans le cadre. La caméra se met en pause après la lecture.</string>
+    <string name="scan_guidance">Placez le code-barres dans le cadre, à une main de distance. Touchez pour faire la mise au point, pincez pour zoomer. La caméra se met en pause après la lecture.</string>
     <string name="scan_permission_rationale">La lecture d’un code-barres nécessite la caméra. Elle est utilisée uniquement sur cet écran et aucune image n’est enregistrée.</string>
     <string name="scan_permission_grant">Utiliser la caméra</string>
     <string name="scan_permission_denied">Pas d’accès à la caméra. Saisissez le code, cela fonctionne aussi.</string>

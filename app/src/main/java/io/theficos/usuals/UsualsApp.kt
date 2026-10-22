@@ -182,19 +182,20 @@ fun UsualsApp(
                     lookupEnabled = lookupState.settings.scanLookupEnabled,
                     lookupReady = lookupState.loaded,
                     onLookupChanged = settings::setScanLookup,
-                    lastScannedItem = listState.lastScannedItem,
+                    pendingCodes = listState.scanPending.mapTo(mutableSetOf()) { it.value },
+                    lastScan = listState.lastScan,
                 )
             }
             listState.scanNames.firstOrNull()?.let { offer ->
                 ScanNameSheet(
                     offer, listState.scanNames.size, listState.busy,
-                    { name -> listViewModel.onConfirmScanName(offer.id, name) },
-                    { listViewModel.onSkipScanName(offer.id) }, listViewModel::onSkipScanNames,
+                    { name -> listViewModel.onConfirmScanName(offer.gtin, name) },
+                    { listViewModel.onSkipScanName(offer.gtin) }, listViewModel::onSkipScanNames,
                     onEnableLookup = if (lookupState.loaded) ({
                         settings.setScanLookup(true)
-                        listViewModel.onRetryScanName(offer.id)
+                        listViewModel.onRetryScanName(offer.gtin)
                     }) else null,
-                    onRetry = { listViewModel.onRetryScanName(offer.id) },
+                    onRetry = { listViewModel.onRetryScanName(offer.gtin) },
                 )
             }
         }

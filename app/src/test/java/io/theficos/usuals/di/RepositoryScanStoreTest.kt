@@ -8,7 +8,6 @@ import io.theficos.usuals.enrich.*
 import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.*
 import io.theficos.usuals.smart.*
-import io.theficos.usuals.ui.list.ItemEdit
 import io.theficos.usuals.ui.scan.ScanNameProblem
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
@@ -38,49 +37,62 @@ class RepositoryScanStoreTest {
     }
     @After fun close() = db.close()
     private fun store(enabled: () -> Boolean, enricher: () -> ProductEnricher) =
-        RepositoryScanStore(items, history, smart, enabled, enricher, BarcodeCategories(classifier))
+        RepositoryScanStore(items, history, enabled, enricher, BarcodeCategories(classifier))
 
-    @Test fun `off means the network client is never constructed and a name can be supplied offline`() = runTest {
+    @Test fun `off means the network client is never constructed and a confirmed name adds the product`() = runTest {
         var constructed = 0
         val scans = store({ false }) { constructed++; error("network must stay disconnected") }
-        val id = scans.add(code)
-        items.edit(id, code.value, null, emptyList(), note = "two packs")
-        val offer = scans.lookup(id, code)!!
+        val offer = scans.lookup(code)
         assertThat(constructed).isEqualTo(0)
         assertThat(offer.name).isNull()
         assertThat(offer.problem).isEqualTo(ScanNameProblem.LOOKUP_DISABLED)
-        assertThat(items.find(id)!!.name).isEqualTo(code.value)
-        assertThat(scans.confirm(offer, "washing liquid")).isTrue()
+        assertThat(items.items()).isEmpty()
+        val id = scans.add(offer, " washing liquid ")
         assertThat(items.find(id)!!.name).isEqualTo("washing liquid")
-        assertThat(items.find(id)!!.note).isEqualTo("two packs")
+        assertThat(items.find(id)!!.gtin).isEqualTo(code)
         assertThat(history.snapshot().aliases).containsExactly(ItemAlias("gtin:${code.value}", "washing liquid"))
     }
 
-    @Test fun `confirmed names survive Finish and removal while lookup stays off`() = runTest {
+    @Test fun `a barcode alone is never added`() = runTest {
+        val scans = store({ false }) { error("off") }
+        val offer = scans.lookup(code)
+        for (name in listOf("", "  ", code.value)) {
+            assertThat(runCatching { scans.add(offer, name) }.isFailure).isTrue()
+        }
+        assertThat(items.items()).isEmpty()
+    }
+
+    @Test fun `confirmed names name later scans without a lookup, after Finish and removal`() = runTest {
         val scans = store({ false }) { error("network must stay disconnected") }
-        val id = scans.add(code)
-        scans.confirm(scans.lookup(id, code)!!, "Washing Liquid")
+        val id = scans.add(scans.lookup(code), "Washing Liquid")
         items.setChecked(id, true)
         history.finish()
-        val next = scans.add(code)
+        val remembered = scans.lookup(code)
+        assertThat(remembered.name).isEqualTo("Washing Liquid")
+        assertThat(remembered.problem).isNull()
+        val next = scans.add(remembered, remembered.name!!)
         assertThat(items.find(next)!!.name).isEqualTo("Washing Liquid")
-        assertThat(scans.lookup(next, code)).isNull()
         items.delete(next)
-        val afterRemoval = scans.add(code)
-        assertThat(items.find(afterRemoval)!!.name).isEqualTo("Washing Liquid")
+        assertThat(scans.lookup(code).name).isEqualTo("Washing Liquid")
         assertThat(history.snapshot().purchases).hasSize(1)
     }
 
-    @Test fun `manual aliases still name a rescan without purchase history`() = runTest {
+    @Test fun `renaming a remembered barcode moves its alias`() = runTest {
         val scans = store({ false }) { error("off") }
-        val id = scans.add(code)
-        scans.confirm(scans.lookup(id, code)!!, "washing liquid")
-        items.delete(id)
-        assertThat(items.find(scans.add(code))!!.name).isEqualTo("washing liquid")
+        items.delete(scans.add(scans.lookup(code), "washing liquid"))
+        scans.add(scans.lookup(code), "dish soap")
+        assertThat(history.snapshot().aliases).containsExactly(ItemAlias("gtin:${code.value}", "dish soap"))
+        assertThat(scans.lookup(code).name).isEqualTo("dish soap")
+    }
+
+    @Test fun `a confirmed scan of a product already listed joins its row`() = runTest {
+        val scans = store({ false }) { error("off") }
+        val milk = items.add(ParsedItem("milk"))
+        assertThat(scans.add(scans.lookup(code), "Milk")).isEqualTo(milk)
+        assertThat(items.items()).hasSize(1)
     }
 
     @Test fun `lookup distinguishes absent names from failures and store codes`() = runTest {
-        val id = items.add(ParsedItem(code.value), gtin = code)
         val outcomes = listOf(
             QualityLookup.Missing(code) to ScanNameProblem.NOT_FOUND,
             QualityLookup.Found(code, ProductQuality.EMPTY) to ScanNameProblem.NOT_FOUND,
@@ -92,36 +104,35 @@ class RepositoryScanStoreTest {
             val scans = store({ true }) { object : ProductEnricher {
                 override suspend fun lookup(gtin: Gtin) = outcome
             } }
-            assertThat(scans.lookup(id, code)!!.problem).isEqualTo(problem)
+            assertThat(scans.lookup(code).problem).isEqualTo(problem)
         }
     }
 
     @Test fun `non-food answers file the scan by their database and say so plainly when unnamed`() = runTest {
-        val id = items.add(ParsedItem(code.value), gtin = code)
         fun answering(quality: ProductQuality) = store({ true }) { object : ProductEnricher {
             override suspend fun lookup(gtin: Gtin) = QualityLookup.Found(gtin, quality)
         } }
-        val unnamed = answering(ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true)).lookup(id, code)!!
+        val unnamed = answering(ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true)).lookup(code)
         assertThat(unnamed.problem).isEqualTo(ScanNameProblem.NOT_FOOD)
         assertThat(unnamed.name).isNull()
         assertThat(unnamed.category).isEqualTo(Category.PERSONAL_CARE)
 
         val named = answering(ProductQuality(productType = ProductType.PRODUCT, nutriScoreNotApplicable = true,
-            productName = "Lavavajillas")).lookup(id, code)!!
+            productName = "Lavavajillas")).lookup(code)
         assertThat(named.problem).isNull()
         assertThat(named.name).isEqualTo("Lavavajillas")
         assertThat(named.category).isEqualTo(Category.HOUSEHOLD)
 
         // The name alone would read as a snack; the database says pet food, and there is no pet aisle.
         val pet = answering(ProductQuality(productType = ProductType.PET_FOOD, nutriScoreNotApplicable = true,
-            productName = "dog biscuits", categories = listOf("en:biscuits"))).lookup(id, code)!!
+            productName = "dog biscuits", categories = listOf("en:biscuits"))).lookup(code)
         assertThat(pet.category).isEqualTo(Category.HOUSEHOLD)
 
-        assertThat(answering(ProductQuality.EMPTY.copy(productType = ProductType.BEAUTY)).lookup(id, code)!!.problem)
+        assertThat(answering(ProductQuality.EMPTY.copy(productType = ProductType.BEAUTY)).lookup(code).problem)
             .isEqualTo(ScanNameProblem.NOT_FOOD)
-        assertThat(answering(ProductQuality.EMPTY).lookup(id, code)!!.problem).isEqualTo(ScanNameProblem.NOT_FOUND)
+        assertThat(answering(ProductQuality.EMPTY).lookup(code).problem).isEqualTo(ScanNameProblem.NOT_FOUND)
 
-        assertThat(answering(ProductQuality(productType = ProductType.BEAUTY)).confirm(unnamed, "hand cream")).isTrue()
+        val id = answering(ProductQuality(productType = ProductType.BEAUTY)).add(unnamed, "hand cream")
         assertThat(smart.present(items.items(), history.snapshot())[id]!!.category).isEqualTo(Category.PERSONAL_CARE)
     }
 
@@ -134,17 +145,16 @@ class RepositoryScanStoreTest {
                 return QualityLookup.Found(gtin, ProductQuality(productName = "test milk"))
             }
         } }
-        val id = scans.add(code)
-        val result = async { scans.lookup(id, code) }
+        val result = async { scans.lookup(code) }
         runCurrent()
         enabled = false
         gate.complete(Unit)
-        val offer = result.await()!!
+        val offer = result.await()
         assertThat(offer.name).isNull()
         assertThat(offer.problem).isEqualTo(ScanNameProblem.LOOKUP_DISABLED)
     }
 
-    @Test fun `ten scans exist before slow lookup completes and names change only on confirmation`() = runTest {
+    @Test fun `slow lookups add nothing and only confirmed names reach the list`() = runTest {
         val gate = CompletableDeferred<Unit>()
         val enricher = object : ProductEnricher {
             override suspend fun lookup(gtin: Gtin): QualityLookup {
@@ -157,41 +167,22 @@ class RepositoryScanStoreTest {
             val sum = base.mapIndexed { n, digit -> digit.digitToInt() * if (n % 2 == 0) 1 else 3 }.sum()
             Gtin.parse(base + ((10 - sum % 10) % 10))!!
         }
-        val ids = codes.map { scans.add(it) }
-        val lookups = ids.zip(codes).map { (id, code) -> async { scans.lookup(id, code) } }
+        val lookups = codes.map { async { scans.lookup(it) } }
         runCurrent()
         assertThat(lookups.all { !it.isCompleted }).isTrue()
-        assertThat(items.items()).hasSize(10)
-        assertThat(items.items().map { it.name }).containsExactlyElementsIn(codes.map { it.value })
-        assertThat(items.items().all { it.quantity == null }).isTrue()
+        assertThat(items.items()).isEmpty()
         gate.complete(Unit)
-        val offers = lookups.awaitAll().filterNotNull()
-        assertThat(offers).hasSize(10)
-        assertThat(items.items().map { it.name }).containsExactlyElementsIn(codes.map { it.value })
-        scans.confirm(offers.first(), "test milk")
-        assertThat(smart.present(items.items(), history.snapshot())[ids.first()]!!.category).isEqualTo(Category.DAIRY)
-        assertThat(items.items().count { it.name == "test milk" }).isEqualTo(1)
+        val offers = lookups.awaitAll()
+        assertThat(items.items()).isEmpty()
+        val id = scans.add(offers.first(), "test milk")
+        assertThat(smart.present(items.items(), history.snapshot())[id]!!.category).isEqualTo(Category.DAIRY)
+        assertThat(items.items().map { it.name }).containsExactly("test milk")
     }
 
-    @Test fun `a manual category and store survive a later barcode name confirmation`() = runTest {
+    @Test fun `a category the person chose outranks the lookup's guess`() = runTest {
         val scans = store({ false }) { error("off") }
-        val id = scans.add(code)
-        smart.edit(ItemEdit(id, code.value, null, Category.HOUSEHOLD, null, "market"))
-        val offer = scans.lookup(id, code)!!
-        scans.confirm(offer.copy(category = Category.DAIRY), "soap")
-        assertThat(items.find(id)!!.store).isEqualTo("market")
+        history.savePreference(ItemPreference("soap", category = Category.HOUSEHOLD.name))
+        val id = scans.add(scans.lookup(code).copy(category = Category.DAIRY), "soap")
         assertThat(smart.present(items.items(), history.snapshot())[id]!!.category).isEqualTo(Category.HOUSEHOLD)
-    }    @Test fun `scan naming preserves newer quantity and refuses a stale renamed source merge`() = runTest {
-        val scans = store({ false }) { error("off") }
-        val id = scans.add(code)
-        val offer = scans.lookup(id, code)!!
-        items.setQuantity(id, Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(scans.confirm(offer, "milk")).isTrue()
-        assertThat(items.find(id)!!.quantity!!.amount).isEqualTo(2.0)
-        items.add(ParsedItem("bread"))
-        assertThat(scans.mergePreview(offer, "bread")).isNull()
-        assertThat(scans.confirm(offer, "bread")).isFalse()
-        assertThat(items.find(id)!!.name).isEqualTo("milk")
     }
-
 }

@@ -122,11 +122,10 @@ establish extraction, not the accuracy of a publisher's ingredients.
 
 ## Scan and widget checks
 
-Scan lookup starts off. The phase 6 device check added ten valid distinct
-barcodes through the scanner without waiting for name lookup. All ten rows
-appeared, and the app's UID network byte counters were unchanged. Unit tests
-also hold ten lookups behind a gate while checking that all rows already exist,
-and revoke opt-in while a request waits for a shared rate-limit permit.
+Scan lookup starts off. A scan adds nothing until its name is confirmed; with
+lookup off the sheet asks for a name and makes no network request. Unit tests
+hold ten lookups behind a gate while checking that no row exists yet, and revoke
+opt-in while a request waits for a shared rate-limit permit.
 
 Enable lookup explicitly in Settings to test a real package, confirm the offered
 name and category, and check the Open Food Facts ODbL credit. In airplane mode,
