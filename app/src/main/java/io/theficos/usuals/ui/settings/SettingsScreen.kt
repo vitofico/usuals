@@ -21,6 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -37,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.Composable
@@ -48,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -114,19 +122,16 @@ fun SettingsScreen(
                 BudgetSection(state, vm)
             } else {
                 SectionCard {
-                    Text(stringResource(R.string.account_title), style = MaterialTheme.typography.titleLarge)
-                    Text(state.account?.let { stringResource(R.string.settings_account_on, it.host) } ?: stringResource(R.string.settings_offline),
-                        style = MaterialTheme.typography.bodyMedium)
-                    Button(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_account_open)) }
-                }
-                SectionCard {
-                    TextButton(onClick = { panel = "appearance" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.appearance_title)) }
-                    TextButton(onClick = { panel = "privacy" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_privacy_title)) }
+                    SettingsLink(stringResource(R.string.account_title), Icons.Outlined.AccountCircle,
+                        state.account?.let { stringResource(R.string.settings_account_on, it.host) } ?: stringResource(R.string.settings_offline), onOpenAccount)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsLink(stringResource(R.string.appearance_title), Icons.Outlined.Palette) { panel = "appearance" }
+                    SettingsLink(stringResource(R.string.settings_privacy_title), Icons.Outlined.Shield) { panel = "privacy" }
                     // Flags come only from what lookup saved, so the list hides with it.
                     if (state.settings.scanLookupEnabled && rowFacts != null) {
-                        TextButton(onClick = { panel = "allergens" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.row_facts_allergens)) }
+                        SettingsLink(stringResource(R.string.row_facts_allergens), Icons.Outlined.WarningAmber) { panel = "allergens" }
                     }
-                    TextButton(onClick = { panel = "help" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_help)) }
+                    SettingsLink(stringResource(R.string.settings_help), Icons.AutoMirrored.Outlined.HelpOutline) { panel = "help" }
                 }
             }
             Spacer(Modifier.height(32.dp))
@@ -149,6 +154,19 @@ fun SettingsScreen(
                 }
             } },
             confirmButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.recipe_close)) } })
+    }
+}
+
+@Composable
+private fun SettingsLink(label: String, icon: ImageVector, supporting: String? = null, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

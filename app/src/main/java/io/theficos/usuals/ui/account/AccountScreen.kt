@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
 import io.theficos.usuals.sync.Pairing
 import io.theficos.usuals.ui.components.SectionCard
+import io.theficos.usuals.ui.components.DisclosureSection
+import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.delay
 
 /** The browser's "Return to Usuals" link: it only brings the person back, the sign-in poll does the rest. */
@@ -66,7 +68,7 @@ fun AccountScreen(vm: AccountViewModel, onBack: () -> Unit, link: String? = null
                     Button(enabled = !state.busy, onClick = vm::connectOffer, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.account_connect)) }
                     TextButton(enabled = !state.busy, onClick = vm::dismissOffer) { Text(stringResource(R.string.account_not_now)) }
                 }
-                else -> SignedOut(state, vm, onScan = { scanning = true }, onSignOut = { signingOut = true })
+                else -> AccountSignIn(state, vm::field, vm::signInInBrowser, onScan = { scanning = true }, onSignOut = { signingOut = true })
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -83,7 +85,11 @@ fun AccountScreen(vm: AccountViewModel, onBack: () -> Unit, link: String? = null
 }
 
 @Composable
-private fun SignedOut(state: AccountState, vm: AccountViewModel, onScan: () -> Unit, onSignOut: () -> Unit) {
+internal fun AccountSignIn(state: AccountState, onOriginChange: (String) -> Unit, onSignIn: () -> Unit, onScan: () -> Unit, onSignOut: () -> Unit) {
+    var browserExpanded by rememberSaveable { mutableStateOf(state.origin.isNotBlank()) }
+    LaunchedEffect(state.origin, state.problem) {
+        if (state.origin.isNotBlank()) browserExpanded = true
+    }
     if (state.expired) SectionCard {
         Text(stringResource(R.string.account_expired_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.account_expired_help))
@@ -94,12 +100,11 @@ private fun SignedOut(state: AccountState, vm: AccountViewModel, onScan: () -> U
         Text(stringResource(R.string.account_scan_help))
         Button(enabled = !state.busy, onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.account_scan)) }
     }
-    SectionCard {
-        Text(stringResource(R.string.account_browser_title), style = MaterialTheme.typography.titleMedium)
+    DisclosureSection(stringResource(R.string.quiet_account_browser), browserExpanded, { browserExpanded = it }) {
         Text(stringResource(R.string.account_browser_help))
-        OutlinedTextField(state.origin, vm::field, enabled = !state.busy, label = { Text(stringResource(R.string.account_server)) },
+        OutlinedTextField(state.origin, onOriginChange, enabled = !state.busy, label = { Text(stringResource(R.string.account_server)) },
             placeholder = { Text("https://usuals.example.org") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedButton(enabled = !state.busy && state.origin.isNotBlank(), onClick = vm::signInInBrowser, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(enabled = !state.busy && state.origin.isNotBlank(), onClick = onSignIn, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.connection_signin))
         }
     }

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="shopping_tools">Outils de courses</string>
     <string name="shopping_start">Commencer les courses</string>
     <string name="shopping_stop">Quitter le mode courses</string>
     <string name="shopping_mode">Mode courses</string>

@@ -7,7 +7,6 @@
     <string name="account_scan">Scanner le QR de l’application web</string>
     <string name="account_camera_help">Autorisez l’appareil photo pour scanner le code, ou connectez-vous plus bas dans le navigateur.</string>
     <string name="account_allow_camera">Autoriser l’appareil photo</string>
-    <string name="account_browser_title">Pas d’ordinateur sous la main ?</string>
     <string name="account_browser_help">Saisissez l’adresse de votre serveur et connectez-vous dans le navigateur de ce téléphone.</string>
     <string name="account_server">Adresse du serveur</string>
     <string name="account_offer_title">Se connecter à %1$s ?</string>

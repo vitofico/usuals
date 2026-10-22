@@ -7,7 +7,6 @@
     <string name="account_scan">Escanear el QR de la aplicación web</string>
     <string name="account_camera_help">Permite la cámara para escanear el código, o inicia sesión en el navegador más abajo.</string>
     <string name="account_allow_camera">Permitir cámara</string>
-    <string name="account_browser_title">¿No tienes un ordenador a mano?</string>
     <string name="account_browser_help">Escribe la dirección de tu servidor e inicia sesión en el navegador de este teléfono.</string>
     <string name="account_server">Dirección del servidor</string>
     <string name="account_offer_title">¿Conectar con %1$s?</string>

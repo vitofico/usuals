@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quiet_item_details">Dettagli</string>
+    <string name="quiet_item_actions">Altre azioni</string>
+    <string name="quiet_item_category">Categoria: %1$s</string>
+    <string name="quiet_item_remove_title">Rimuovere %1$s?</string>
+    <string name="quiet_item_remove_help">Rimuove questo articolo dalla lista senza registrare un acquisto.</string>
+    <string name="quiet_favorites_info">Informazioni sui preferiti</string>
+    <string name="quiet_favorites_intro">Salva qui gli articoli abituali. Aggiungili a qualsiasi lista quando ti servono.</string>
+    <string name="quiet_favorite_options">Opzioni per il preferito %1$s</string>
+    <string name="quiet_shopping_preferences">Preferenze di spesa</string>
+    <string name="quiet_history_options">Opzioni della cronologia</string>
+    <string name="quiet_history_about">Informazioni sulla cronologia</string>
+</resources>

@@ -1,1 +1,1 @@
-Favourites explain how to save and reuse essentials, and show what is already on your list. Hide unwanted purchase-history suggestions while typing with Don’t suggest again. Move or copy items to another list from the item editor, keeping quantities and product details.
+A calmer interface across Android and the web. The list and adding items come first; tools and suggestions open when you need them. Simpler item editing, compact favourites, clearer history, larger touch targets and better keyboard navigation. All five languages and three palettes retained.

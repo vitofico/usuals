@@ -4,12 +4,13 @@ package io.theficos.usuals.ui.history
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -19,18 +20,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import io.theficos.usuals.ui.components.SectionCard
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -77,6 +81,8 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
     val resolver = LocalContext.current.contentResolver
     val scope = rememberCoroutineScope()
     var pastOpen by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var infoOpen by rememberSaveable { mutableStateOf(false) }
     var pasted by rememberSaveable { mutableStateOf("") }
     var date by rememberSaveable { mutableStateOf(vm.today()) }
     val locale = LocalConfiguration.current.locales[0]
@@ -130,13 +136,33 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             }
         }
     }
-    // An edge-to-edge window no longer resizes for the keyboard, so the content pads for it.
+    if (infoOpen) AlertDialog(onDismissRequest = { infoOpen = false },
+        title = { Text(stringResource(R.string.history_transfer_title)) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.history_intro))
+            Text(stringResource(R.string.history_transfer_hint))
+        } },
+        confirmButton = { TextButton(onClick = { infoOpen = false }) { Text(stringResource(R.string.shopping_close)) } })
     Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
         TopAppBar(title = { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.history_back))
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.history_back)) }
+        }, actions = {
+            Box {
+                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.quiet_history_options)) }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.history_past_title)) }, onClick = { menuOpen = false; vm.dismissNotice(); pastOpen = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.history_export)) }, onClick = { menuOpen = false; export.launch("usuals-${vm.today()}.json") })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.history_import)) }, onClick = { menuOpen = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.quiet_history_about)) }, onClick = { menuOpen = false; infoOpen = true })
+                }
             }
         })
+    }, bottomBar = {
+        if (state.selected.isNotEmpty()) Surface(modifier = Modifier.imePadding(), color = MaterialTheme.colorScheme.surface) {
+            Button(onClick = vm::rebuy, modifier = Modifier.navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp).fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.history_add_selected, state.selected.size))
+            }
+        }
     }) { padding ->
         // No spacedBy: a trip's purchases are items of their own, drawn as one card, so the gaps are explicit.
         LazyColumn(
@@ -145,26 +171,8 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             item {
                 OutlinedTextField(value = state.query, onValueChange = vm::search, singleLine = true,
                     label = { Text(stringResource(R.string.history_search)) }, modifier = Modifier.fillMaxWidth())
-                if (state.selected.isNotEmpty()) Button(onClick = vm::rebuy, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.history_add_selected, state.selected.size))
-                }
-                Text(stringResource(R.string.history_rebuy_review), style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.history_intro), style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)
-                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(16.dp)).padding(20.dp))
-                SectionCard(title = stringResource(R.string.history_transfer_title)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { export.launch("usuals-${vm.today()}.json") }) {
-                        Text(stringResource(R.string.history_export))
-                    }
-                    OutlinedButton(onClick = { importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) {
-                        Text(stringResource(R.string.history_import))
-                    }
-                }
-                Text(stringResource(R.string.history_transfer_hint), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(stringResource(R.string.history_rebuy_review), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
             }
             state.notice?.let { notice ->
                 item {
@@ -179,12 +187,6 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                         HistoryNotice.FAILED -> R.string.history_failed
                     }, stringResource(R.string.app_name)))
                     TextButton(onClick = vm::dismissNotice) { Text(stringResource(R.string.history_dismiss)) }
-                }
-            }
-            item {
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = { vm.dismissNotice(); pastOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.history_past_title))
                 }
             }
             if (state.history.trips.isEmpty()) {

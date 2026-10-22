@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="memory_favorites_tools">Favourites &amp; tools</string>
     <string name="memory_favorites_help">Save items here to add them to any list again, with their quantity and store. You choose when to add them. Items already open are skipped.</string>
     <string name="memory_on_list">On list</string>
     <string name="memory_favorite_on_list">%1$s is already on this list</string>

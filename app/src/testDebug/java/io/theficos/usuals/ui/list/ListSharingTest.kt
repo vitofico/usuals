@@ -53,14 +53,13 @@ class ListSharingTest {
         assertThat(send.getStringExtra(Intent.EXTRA_TEXT)).isEqualTo("☐ Milk ×2\n☑ Bread")
     }
 
-    @Test fun `the share icon and the menu both open the share sheet`() {
+    @Test fun `sharing remains available through the labelled list menu`() {
         var opened = 0
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}, onOpenSharing = { opened++ }) } }
-        compose.onNodeWithContentDescription("Share").performClick()
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Share").performClick()
-        assertThat(opened).isEqualTo(2)
+        assertThat(opened).isEqualTo(1)
     }
 
     @Test fun `the menu deletes an owned list and leaves one someone else owns`() {
@@ -79,6 +78,7 @@ class ListSharingTest {
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Manage list").performClick()
         compose.onNodeWithText("Leave list").assertDoesNotExist()
         compose.onNodeWithText("Delete list").performClick()
         compose.onNodeWithText("Delete list").performClick()
@@ -87,6 +87,7 @@ class ListSharingTest {
         lists.value = lists.value.copy(selected = "theirs")
         compose.waitForIdle()
         compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Manage list").performClick()
         compose.onNodeWithText("Delete list").assertDoesNotExist()
         compose.onNodeWithText("Leave list").assertExists()
     }
@@ -110,13 +111,14 @@ class ListSharingTest {
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Manage list").performClick()
         compose.onNodeWithText("Archive").performClick()
         compose.onNodeWithText("Archive Home?").assertExists()
         compose.onNodeWithText("Archive").performClick()
         compose.waitForIdle()
         assertThat(changes).containsExactly("own" to true)
         compose.onNodeWithText("Home").performClick()
-        compose.onNodeWithText("Archived").assertExists()
+        compose.onNodeWithText("Archived (2)").performClick()
         compose.onNodeWithText("Archived by the owner. Only the owner can restore it.").assertExists()
         compose.onAllNodesWithText("Restore").assertCountEquals(1)
         compose.onAllNodesWithText("Leave list").assertCountEquals(1)
@@ -144,6 +146,7 @@ class ListSharingTest {
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Manage list").performClick()
         compose.onNodeWithText("Rename").assertExists()
         compose.onNodeWithText("Archive").assertDoesNotExist()
     }

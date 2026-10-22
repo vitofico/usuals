@@ -1,5 +1,8 @@
 package io.theficos.usuals.ui.list
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.*
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -22,13 +25,12 @@ class EditItemSheetTest {
         val row = ListRow(ItemId("milk"), "Milk", Quantity(2.0, MeasureUnit.LITRE), note = "for the cake", rawName = "milk", category = Category.DAIRY)
         compose.setContent { UsualsTheme { EditItemSheet(row, false, { saved = it }, {}, {}) } }
         compose.onNodeWithText("for the cake").assertExists()
-        val fields = compose.onAllNodes(hasSetTextAction())
-        fields[0].performTextReplacement("oat milk")
-        fields[1].performTextReplacement(" lactose free ")
-        fields[2].performTextReplacement("1")
-        fields[3].performTextReplacement("21")
-        fields[4].performTextReplacement("greengrocer")
-        compose.onNodeWithText("Automatic").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Name").performTextReplacement("oat milk")
+        compose.onNodeWithText("Quantity").performTextReplacement("1")
+        compose.onNodeWithText("Note (optional)").performTextReplacement(" lactose free ")
+        compose.onNodeWithText("Repeat every (days)").performScrollTo().performTextReplacement("21")
+        compose.onNodeWithText("Store tag (optional)").performScrollTo().performTextReplacement("greengrocer")
+        compose.onNodeWithText("Category: Automatic").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Household").performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Save").assertIsEnabled().performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertThat(saved!!.name).isEqualTo("oat milk")
@@ -42,9 +44,46 @@ class EditItemSheetTest {
     @Test fun `clearing the note saves none`() {
         var saved: ItemEdit? = null
         compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk", note = "for the cake", rawName = "milk"), false, { saved = it }, {}, {}) } }
-        compose.onAllNodes(hasSetTextAction())[1].performTextReplacement("  ")
+        compose.onNodeWithText("Note (optional)").performTextReplacement("  ")
         compose.onNodeWithText("Save").performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertThat(saved!!.note).isNull()
+    }
+
+    @Test fun `a simple item starts with core fields and optional details stay behind their label`() {
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk"), false, {}, {}, {}) } }
+        compose.onNodeWithText("Name").assertIsDisplayed()
+        compose.onNodeWithText("Quantity").assertIsDisplayed()
+        compose.onNodeWithText("Save").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        compose.onNodeWithText("Note (optional)").assertDoesNotExist()
+        compose.onNodeWithText("Details").performClick()
+        compose.onNodeWithText("Note (optional)").assertExists()
+    }
+
+    @Test fun `save and cancel stay visible with large text and expanded details`() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 1.6f)) {
+                UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk", note = "for the cake", store = "Market"), false, {}, {}, {}) }
+            }
+        }
+        compose.onNodeWithText("Save").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        compose.onNodeWithText("Repeat every (days)").performScrollTo()
+        compose.onNodeWithText("Save").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
+    @Test fun `removing an item requires confirming the named item`() {
+        var removed: ItemId? = null
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk"), false, {}, {}, { removed = it }) } }
+        compose.onNodeWithText("Remove").assertDoesNotExist()
+        compose.onNodeWithText("More actions").performScrollTo().performClick()
+        compose.onNodeWithText("Remove").performScrollTo().performClick()
+        compose.onNodeWithText("Remove Milk?").assertExists()
+        assertThat(removed).isNull()
+        compose.onAllNodesWithText("Remove").onLast().performClick()
+        assertThat(removed).isEqualTo(ItemId("milk"))
     }
 
     @Test fun `long press edits without checking or deleting`() {

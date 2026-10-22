@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="shopping_tools">Herramientas de compra</string>
     <string name="shopping_start">Empezar compra</string>
     <string name="shopping_stop">Salir del modo compra</string>
     <string name="shopping_mode">Modo compra</string>

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="recipe_title">Importer une liste ou recette</string>
-    <string name="recipe_import">Importer</string>
     <string name="recipe_close">Fermer</string>
     <string name="recipe_url">URL de la recette</string>
     <string name="recipe_read">Lire la recette</string>

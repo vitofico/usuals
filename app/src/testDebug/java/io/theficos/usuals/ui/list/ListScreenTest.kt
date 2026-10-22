@@ -65,7 +65,7 @@ class ListScreenTest {
             UsualsTheme { ListContent(state = ListUiState(), actions = ListActions()) }
         }
 
-        compose.onNodeWithText("Hold the bar and say what you need.").assertIsDisplayed()
+        compose.onNodeWithText("Type below, hold to speak, or scan a barcode.").assertIsDisplayed()
         // The band is still there and still says what to do with it.
         compose.onNodeWithText("Hold to speak").assertIsDisplayed()
     }
@@ -203,6 +203,7 @@ class ListScreenTest {
             }
         }
         compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Manage list").performClick()
         compose.onNodeWithText("Remove all items").performClick()
         compose.onNodeWithText("Remove all items from Home?").assertIsDisplayed()
         compose.runOnIdle { assertThat(cleared).isEqualTo(0) }

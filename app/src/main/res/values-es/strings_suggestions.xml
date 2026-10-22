@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestions_title">¿Te acuerdas de esto?</string>
     <string name="suggestion_repeat">Toca tu regla de repetición</string>
     <string name="suggestion_interval">Suele tocar por estas fechas</string>
     <string name="suggestion_staple">Comprado en al menos la mitad de tus últimas compras</string>

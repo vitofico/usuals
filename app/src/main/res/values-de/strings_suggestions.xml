@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestions_title">Daran gedacht?</string>
     <string name="suggestion_repeat">Deine Wiederholungsregel ist fällig</string>
     <string name="suggestion_interval">Üblicherweise jetzt wieder fällig</string>
     <string name="suggestion_staple">Bei mindestens der Hälfte deiner letzten Einkäufe gekauft</string>

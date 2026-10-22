@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quiet_list_add_items">Artikel hinzufügen</string>
+    <string name="quiet_list_empty_title">Füge deinen ersten Artikel hinzu</string>
+    <string name="quiet_list_empty_help">Tippe unten, halte zum Sprechen gedrückt oder scanne einen Barcode.</string>
+    <string name="quiet_list_store_filter">Geschäft: %1$s</string>
+    <string name="quiet_list_import">Rezept oder Liste importieren</string>
+    <plurals name="quiet_list_suggestions">
+        <item quantity="one">Vorschläge (%1$d)</item>
+        <item quantity="other">Vorschläge (%1$d)</item>
+    </plurals>
+    <plurals name="quiet_list_archived">
+        <item quantity="one">Archiviert (%1$d)</item>
+        <item quantity="other">Archiviert (%1$d)</item>
+    </plurals>
+    <string name="quiet_list_manage">Liste verwalten</string>
+    <string name="quiet_list_options">Listenoptionen</string>
+</resources>

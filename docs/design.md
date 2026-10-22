@@ -15,7 +15,7 @@ change has one source.
 
 The mark is a rounded U with a separate dot above its right stem. The canonical
 artwork is `web/assets/mark.svg`: champagne on a rounded aubergine tile. Android's
-header and empty state retain those brand colours across all palettes. The
+launcher, widget and tutorial retain those brand colours across all palettes. The
 launcher uses the same geometry within the adaptive icon safe area; its monochrome
 layer reuses the foreground drawable so the silhouettes cannot diverge. Android
 controls the launcher's outer mask and themed colours. No bitmap or remote
@@ -82,10 +82,14 @@ category, including supporting text on tinted containers.
   main list heading. Keep titles and controls in the bundled Manrope variable
   font. Grocery names remain 16 sp, with 14 sp supporting text and 12 sp metadata.
   Serif headings use regular weight; controls use semibold instead of heavy bold.
-- Put the mark and brand on a quiet masthead. Give the list title its own line
-  so long list names do not compete with recipe, history and sharing actions.
-  Keep counts and those actions together below it, separated from the list by
-  a fine rule. Preserve list selection and every sync status.
+- Give the actual list name the header, with its picker and one labelled
+  options menu. Keep the item count quiet and preserve every sync warning.
+  History, favourites, import and sharing stay in the menu; list management
+  has its own group. Avoid separate brand, actions and tools bars above the list.
+- Suggestions start as a counted disclosure. Each suggestion has one Add
+  action; Not now and Don't suggest again live in its named options menu.
+  Show one store selector when filtering is useful. While typing, keep the
+  heading compact and focus on the draft and purchase-history completions.
 - Group grocery rows on ivory paper with 16 dp outer corners and inset dividers.
   Quantity badges use the background colour and 6 dp corners. Keep check circles
   visible and completed names struck through. Preserve checkbox semantics.
@@ -93,11 +97,15 @@ category, including supporting text on tinted containers.
   action retains Material's 48 dp touch target. Text wraps where supported and
   respects system font scaling. A clipped list title retains its existing picker.
 - Use a floating capture dock with a subtle hairline, 22 dp corners and no shadow.
-  Voice uses the palette's main action; keyboard is neutral and scan uses its
-  secondary container.
+  Add items is explicitly labelled; hold-to-speak remains labelled and scan
+  stays secondary. Controls wrap into two rows on narrow screens or large text.
   Preserve press-and-hold voice capture, keyboard fallback and scanner pause.
-- Supporting forms use outlined paper cards with 20 dp corners. History uses
-  champagne for its introduction. Recipe review retains explicit selections;
+- Supporting forms use outlined paper cards with 20 dp corners. Start item
+  editing with name and quantity, then disclose optional details and secondary
+  actions. Keep Save, Cancel and sheet Close outside the scrolling body.
+  Favourites are compact reusable rows, with preferences and aisle order
+  disclosed separately. History starts with search and purchases; data
+  management stays in its options menu. Recipe review retains explicit selections;
   scan results retain explicit product-name confirmation and attribution.
 
 The unmodified variable font comes from
@@ -110,3 +118,17 @@ Typography, colour and shape definitions live in `:app`'s `ui/theme`; all UI cop
 lives in Android string resources. Adding a UI language still only adds complete
 `values-xx/` resource files. The web client follows the same palette and type
 hierarchy while retaining semantic controls and visible focus states.
+
+## Browser hierarchy
+
+The selected list is the page title. A quiet Change list action opens list
+selection; List options contains the remaining list actions. The capture field
+and its labelled Add button are the clear next step. Picked-up rows have a
+counted disclosure and Finish shopping remains reachable without expanding it.
+
+Navigation shows Lists and Account. Appearance, language and the guided tour
+share Preferences, which keeps the mobile header to one small band. Account
+starts with connecting a phone, then named groups for optional AI and security
+settings. Forms retain explicit consent and review before external processing.
+Dialogs have accessible titles, scrolling content, visible actions and focus
+restoration. Text wraps even for unbroken names; controls have 48 px targets.

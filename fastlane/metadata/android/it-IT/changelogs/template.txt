@@ -1,1 +1,1 @@
-I preferiti spiegano come salvare e riutilizzare i prodotti e indicano quelli già in lista. Nascondi i suggerimenti della cronologia mentre scrivi con Non suggerire più. Sposta o copia i prodotti in un’altra lista dall’editor, conservando quantità e dettagli.
+Un’interfaccia più essenziale su Android e web. La lista e l’aggiunta dei prodotti vengono prima; strumenti e suggerimenti si aprono quando servono. Modifica più semplice, preferiti compatti, cronologia più chiara, controlli più grandi e migliore navigazione da tastiera. Restano tutte le cinque lingue e le tre palette.
