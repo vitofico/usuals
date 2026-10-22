@@ -53,3 +53,31 @@ private val DarkCategories = mapOf(
 
 internal fun categoryAccent(category: Category, darkTheme: Boolean): Color =
     (if (darkTheme) DarkCategories else LightCategories).getValue(category)
+
+/**
+ * Data colours for product grade chips, best to worst. They state a fact about a
+ * product rather than the brand, so the palette picker and dark mode leave them
+ * alone. The hues follow the familiar green to red progression but are our own
+ * contrast-tuned values: the Nutri-Score rules of use forbid reproducing any
+ * part of its logo, and every glyph colour keeps at least 4.5:1 on its fill so
+ * the letter, not the hue, carries the meaning for colour-blind readers.
+ */
+internal enum class GradeShade(val fill: Color, val glyph: Color) {
+    STEP_1(Color(0xFF1B7A3A), Color(0xFFFFFFFF)),
+    STEP_2(Color(0xFF7CB22E), Color(0xFF16210A)),
+    STEP_3(Color(0xFFF2C200), Color(0xFF2A2100)),
+    STEP_4(Color(0xFFE8780C), Color(0xFF2B1600)),
+    STEP_5(Color(0xFFC9361A), Color(0xFFFFFFFF)),
+    STEP_6(Color(0xFF9E2A1B), Color(0xFFFFFFFF)),
+}
+
+/**
+ * Amber for allergen flags. Like the grade shades it marks a fact about a
+ * product, so it stays the same under every palette; both values keep 4.5:1 on
+ * every palette's backgrounds and surfaces, and the words, not the hue, carry
+ * the warning.
+ */
+private val CautionLight = Color(0xFF7A4B00)
+private val CautionDark = Color(0xFFF2BE5C)
+
+internal fun cautionColor(darkTheme: Boolean): Color = if (darkTheme) CautionDark else CautionLight

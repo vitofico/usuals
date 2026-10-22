@@ -27,6 +27,7 @@ class OpenFoodFactsEnricher(
     private val singleFlight: SingleFlight<Gtin, QualityLookup> = SingleFlight(),
     private val isRestricted: (Gtin) -> Boolean = RestrictedCirculation::isRestricted,
     baseUrl: String = DEFAULT_BASE_URL,
+    sisterBaseUrls: Map<ProductType, String> = SISTER_BASE_URLS,
     connectTimeoutMillis: Long = DEFAULT_CONNECT_TIMEOUT_MILLIS,
     readTimeoutMillis: Long = DEFAULT_READ_TIMEOUT_MILLIS,
     callTimeoutMillis: Long = DEFAULT_CALL_TIMEOUT_MILLIS,
@@ -42,6 +43,13 @@ class OpenFoodFactsEnricher(
     }
 
     private val endpoint: HttpUrl = baseUrl.toHttpUrl()
+
+    /**
+     * Where a non-food barcode is asked about next. Our own table, never a host
+     * taken from a response, so a tampered or misdirected answer cannot choose
+     * where the barcode goes.
+     */
+    private val sisterEndpoints: Map<ProductType, HttpUrl> = sisterBaseUrls.mapValues { it.value.toHttpUrl() }
 
     /**
      * The caller's client, rebuilt rather than used as given.
@@ -100,9 +108,40 @@ class OpenFoodFactsEnricher(
 
     // ---- the wire ----------------------------------------------------------
 
+    /**
+     * One read, or two when Open Food Facts says the barcode is not food.
+     *
+     * The second read goes to the sister database for that product type, under
+     * the permit the first one took. That bends "one permit, one request" on
+     * purpose: both hosts belong to one organisation, the second read happens
+     * only after an explicit answer naming its database, and spending a second
+     * permit would make a non-food scan wait behind a full window for a name.
+     * Whatever the sister read returns, the type answer stands: it is what Open
+     * Food Facts said, and caching it is what stops every rescan of a shampoo
+     * spending a permit to be told the same thing.
+     */
     private suspend fun fetch(gtin: Gtin): QualityLookup = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(productUrl(gtin)).get().build()
-        try {
+        val answer = ask(endpoint, gtin)
+        val type = (answer as? QualityLookup.Found)?.quality?.productType?.takeIf { it != ProductType.FOOD }
+            ?: return@withContext answer
+        val sister = sisterEndpoints[type]
+        // Consent is checked again because this read sends the barcode to a host
+        // the person has not been asked about since the first request went out.
+        if (sister == null || !allowRequest()) return@withContext answer
+        val record = (ask(sister, gtin) as? QualityLookup.Found)?.quality
+        // Only the naming facts are kept. Grades in a sister record are not food
+        // grades, and its category tags do not map onto shopping aisles.
+        QualityLookup.Found(gtin, notFood(type).copy(
+            productName = record?.productName,
+            brands = record?.brands,
+            packageSize = record?.packageSize,
+            sourceModifiedAtEpochSeconds = record?.sourceModifiedAtEpochSeconds,
+        ))
+    }
+
+    private fun ask(base: HttpUrl, gtin: Gtin): QualityLookup {
+        val request = Request.Builder().url(productUrl(base, gtin)).get().build()
+        return try {
             client.newCall(request).execute().use { response -> read(gtin, response) }
         } catch (timeout: SocketTimeoutException) {
             // A connect or read timeout. Worth trying again later, which is why
@@ -118,12 +157,12 @@ class OpenFoodFactsEnricher(
     }
 
     /** Locale fields are requested only for the current language and English fallback. */
-    private fun productUrl(gtin: Gtin): HttpUrl {
+    private fun productUrl(base: HttpUrl, gtin: Gtin): HttpUrl {
         val language = preferredLanguage().lowercase(java.util.Locale.ROOT).takeIf { it.matches(Regex("[a-z]{2,3}")) } ?: "en"
         val localized = listOf(language, "en").distinct().flatMap { lang ->
             listOf("product_name_$lang", "generic_name_$lang", "ingredients_text_$lang")
         }
-        return endpoint.newBuilder()
+        return base.newBuilder()
             .addPathSegments("api/v3/product/${gtin.value}.json")
             .addQueryParameter("fields", (listOf(FIELDS) + localized).joinToString(","))
             .addQueryParameter("lc", language)
@@ -199,17 +238,35 @@ class OpenFoodFactsEnricher(
      * `product_not_found` is more likely to be us asking a URL that no longer
      * exists than OFF confirming an absence, and the cost of getting that wrong
      * is a negative cache entry that outlives the mistake.
+     *
+     * The one other word accepted is OFF saying the barcode belongs to a sister
+     * database, and only with the type it names in `errors[].field` (observed as
+     * `{"id": "product_type", "value": "beauty"}`). That is an answer about the
+     * product, not about our URL: it is cached as a record of that type so a
+     * rescan does not ask again, and [fetch] may then read the sister database
+     * for a name.
      */
     private fun readMiss(gtin: Gtin, body: String?): QualityLookup {
         val root = parseObject(body) ?: return QualityLookup.Failed(gtin, FailureReason.MALFORMED)
         if (!codeMatches(root, gtin)) return QualityLookup.Failed(gtin, FailureReason.MALFORMED)
-        val resultId = (root["result"] as? JsonObject)?.stringOrNull("id")
-        return if (resultId == PRODUCT_NOT_FOUND) {
-            QualityLookup.Missing(gtin)
-        } else {
-            QualityLookup.Failed(gtin, FailureReason.MALFORMED)
+        return when ((root["result"] as? JsonObject)?.stringOrNull("id")) {
+            PRODUCT_NOT_FOUND -> QualityLookup.Missing(gtin)
+            PRODUCT_IN_SISTER_DATABASE -> productTypeOf(root)?.let { QualityLookup.Found(gtin, notFood(it)) }
+                ?: QualityLookup.Failed(gtin, FailureReason.MALFORMED)
+            else -> QualityLookup.Failed(gtin, FailureReason.MALFORMED)
         }
     }
+
+    /** The non-food type named in a sister-database answer, or null when it names none we know. */
+    private fun productTypeOf(root: JsonObject): ProductType? =
+        (root["errors"] as? JsonArray).orEmpty().asSequence()
+            .mapNotNull { (it as? JsonObject)?.get("field") as? JsonObject }
+            .filter { it.stringOrNull("id") == "product_type" }
+            .mapNotNull { NON_FOOD_TYPES[it.stringOrNull("value")] }
+            .firstOrNull()
+
+    /** A non-food answer before any sister record is read: no food grade applies to it. */
+    private fun notFood(type: ProductType) = ProductQuality(productType = type, nutriScoreNotApplicable = true)
 
     private fun codeMatches(record: JsonObject, gtin: Gtin): Boolean {
         val code = record["code"] ?: return true
@@ -223,8 +280,13 @@ class OpenFoodFactsEnricher(
         productName = localizedText(product, "product_name", 160) ?: localizedText(product, "generic_name", 160),
         categories = tagsOrNull(product["categories_tags"]),
         nutriScore = gradeOrNull<NutriScore>(product.stringOrNull("nutriscore_grade")),
+        nutriScoreNotApplicable = product.stringOrNull("nutriscore_grade")?.trim()?.lowercase(java.util.Locale.ROOT) == NOT_APPLICABLE,
         novaGroup = novaGroupOrNull(product["nova_group"]),
-        ecoScore = gradeOrNull<EcoScore>(product.stringOrNull("ecoscore_grade")),
+        // The v3.1 name first: API versions after v3 renamed the field, and the
+        // old name may stop being sent before this client moves off v3.
+        greenScore = greenScoreOrNull(
+            product.stringOrNull("environmental_score_grade") ?: product.stringOrNull("ecoscore_grade"),
+        ),
         allergens = tagsOrNull(product["allergens_tags"]),
         additives = tagsOrNull(product["additives_tags"]),
         brands = cleanText(product.stringOrNull("brands"), 240),
@@ -242,12 +304,22 @@ class OpenFoodFactsEnricher(
      * words OFF writes where a grade would go, and neither is a grade, so
      * neither matches an enum entry and both come back null. Anything else OFF
      * invents later fails the same way, which is the point of matching against
-     * the enum instead of trusting the string.
+     * the enum instead of trusting the string. "Not applicable" is still worth
+     * knowing, so [qualityOf] reads it separately rather than through here.
      */
     private inline fun <reified T : Enum<T>> gradeOrNull(raw: String?): T? {
         val letter = raw?.trim()?.uppercase() ?: return null
         if (letter.length != 1) return null
         return enumValues<T>().firstOrNull { it.name == letter }
+    }
+
+    /**
+     * The Green-Score, whose top grade OFF writes as `a-plus`. `a+` is accepted
+     * too because it is how the grade is printed, and costs one entry.
+     */
+    private fun greenScoreOrNull(raw: String?): GreenScore? = when (raw?.trim()?.lowercase(java.util.Locale.ROOT)) {
+        "a-plus", "a+" -> GreenScore.A_PLUS
+        else -> gradeOrNull<GreenScore>(raw)
     }
 
     /**
@@ -309,9 +381,16 @@ class OpenFoodFactsEnricher(
          */
         const val DEFAULT_BASE_URL: String = "https://world.openfoodfacts.org"
 
+        /** The sister databases, verified to serve the same v3 product read on 2026-10-22. */
+        val SISTER_BASE_URLS: Map<ProductType, String> = mapOf(
+            ProductType.BEAUTY to "https://world.openbeautyfacts.org",
+            ProductType.PRODUCT to "https://world.openproductsfacts.org",
+            ProductType.PET_FOOD to "https://world.openpetfoodfacts.org",
+        )
+
         /** Only mapped fields are requested; no catalogue search is performed. */
         const val FIELDS: String = "code,product_name,categories_tags,nutriscore_grade," +
-            "nova_group,ecoscore_grade,allergens_tags,additives_tags,generic_name,brands,quantity," +
+            "nova_group,ecoscore_grade,environmental_score_grade,allergens_tags,additives_tags,generic_name,brands,quantity," +
             "ingredients_text,traces_tags,last_modified_t"
 
         /**
@@ -396,6 +475,15 @@ private const val HTTP_TOO_MANY_REQUESTS = 429
 private const val HTTP_SERVER_ERROR = 500
 
 private const val PRODUCT_NOT_FOUND = "product_not_found"
+private const val PRODUCT_IN_SISTER_DATABASE = "product_found_with_a_different_product_type"
+private const val NOT_APPLICABLE = "not-applicable"
+
+/** The `product_type` values OFF names in a sister-database answer. */
+private val NON_FOOD_TYPES: Map<String?, ProductType> = mapOf(
+    "beauty" to ProductType.BEAUTY,
+    "product" to ProductType.PRODUCT,
+    "petfood" to ProductType.PET_FOOD,
+)
 private const val MAX_BODY_BYTES = 1_048_576L
 
 /** Generous next to a real record: the worst offenders carry a couple of dozen additives. */

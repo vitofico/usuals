@@ -1,13 +1,17 @@
 package io.theficos.usuals.data.local
 
 import io.theficos.usuals.enrich.CachedQuality
-import io.theficos.usuals.enrich.EcoScore
+import io.theficos.usuals.enrich.GreenScore
 import io.theficos.usuals.enrich.NovaGroup
 import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.enrich.ProductQuality
+import io.theficos.usuals.enrich.ProductType
 import io.theficos.usuals.enrich.QualityCache
 import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.model.Gtin
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * [QualityCache] over the `product_quality` table: what `InMemoryQualityCache`
@@ -41,6 +45,15 @@ class RoomQualityCache(
 ) : QualityCache {
 
     override suspend fun get(gtin: Gtin): CachedQuality? = dao.find(gtin.value)?.toCached()
+
+    /**
+     * Every stored answer for [gtins] in one query per chunk, for screens that
+     * need a whole list's facts at once. Chunked because SQLite caps the number
+     * of bound parameters in one statement.
+     */
+    suspend fun getAll(gtins: Collection<Gtin>): Map<Gtin, CachedQuality> =
+        gtins.map { it.value }.distinct().chunked(MAX_BOUND).flatMap { dao.findAll(it) }
+            .mapNotNull { it.toCached() }.associateBy { it.gtin }
 
     override suspend fun put(outcome: QualityLookup, atEpochMillis: Long) {
         // The gate is [QualityLookup.cacheable] rather than a check on the
@@ -80,6 +93,22 @@ class RoomQualityCache(
     /** Records [outcome] as learned now. Same rules, including the one about failures. */
     suspend fun put(outcome: QualityLookup) = put(outcome, clock())
 
+    /**
+     * The stated records for [gtins], again whenever the cache changes. Confirmed
+     * absences are left out: for a list row they mean the same as no row.
+     *
+     * Chunked because SQLite on the oldest supported Android binds at most 999
+     * parameters, and one query per chunk is cheaper than a reason to crash.
+     */
+    fun observe(gtins: Set<Gtin>): Flow<Map<Gtin, ProductQuality>> {
+        if (gtins.isEmpty()) return flowOf(emptyMap())
+        val parts = gtins.map { it.value }.chunked(MAX_BOUND).map { dao.observe(it) }
+        return combine(parts) { chunks ->
+            chunks.asList().flatten().mapNotNull { it.toCached() }
+                .mapNotNull { cached -> cached.quality?.let { cached.gtin to it } }.toMap()
+        }
+    }
+
     private fun row(
         gtin: Gtin,
         quality: ProductQuality?,
@@ -96,7 +125,10 @@ class RoomQualityCache(
         sourceModifiedAtEpochSeconds = quality?.sourceModifiedAtEpochSeconds,
         nutriScore = quality?.nutriScore?.name,
         novaGroup = quality?.novaGroup?.name,
-        ecoScore = quality?.ecoScore?.name,
+        ecoScore = quality?.greenScore?.name,
+        nutriScoreNotApplicable = quality?.nutriScoreNotApplicable,
+        // FOOD is the default meaning of NULL, so only sister-database types are written.
+        productType = quality?.productType?.takeIf { it != ProductType.FOOD }?.name,
         // TagList, not a join: a null list has to come back null and an empty
         // list has to come back empty. See `QualityEntity.allergens`.
         allergens = TagList.encode(quality?.allergens),
@@ -104,6 +136,11 @@ class RoomQualityCache(
         confirmedMissing = confirmedMissing,
         fetchedAt = atEpochMillis,
     )
+
+    private companion object {
+        // Below SQLite's oldest default limit of 999 variables.
+        const val MAX_BOUND = 500
+    }
 }
 
 /**
@@ -157,7 +194,11 @@ private fun QualityEntity.stated(): ProductQuality = ProductQuality(
     sourceModifiedAtEpochSeconds = sourceModifiedAtEpochSeconds,
     nutriScore = enumOrNull<NutriScore>(nutriScore),
     novaGroup = enumOrNull<NovaGroup>(novaGroup),
-    ecoScore = enumOrNull<EcoScore>(ecoScore),
+    nutriScoreNotApplicable = nutriScoreNotApplicable == true,
+    greenScore = enumOrNull<GreenScore>(ecoScore),
+    // An unknown type from a later build reads as food: the safe direction,
+    // because food is what this build knows how to show.
+    productType = enumOrNull<ProductType>(productType) ?: ProductType.FOOD,
     allergens = TagList.decode(allergens),
     additives = TagList.decode(additives),
 )

@@ -12,7 +12,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
+import io.theficos.usuals.enrich.ProductType
 import io.theficos.usuals.ui.QualityAttribution
+import io.theficos.usuals.ui.ScoreStrip
 import io.theficos.usuals.ui.list.categoryLabel
 
 @Composable
@@ -29,6 +31,7 @@ fun ScanNameSheet(offer: ScanNameOffer, remaining: Int, busy: Boolean, onConfirm
                 Text(stringResource(when (problem) {
                     ScanNameProblem.LOOKUP_DISABLED -> R.string.scan_name_disabled
                     ScanNameProblem.NOT_FOUND -> R.string.scan_name_not_found
+                    ScanNameProblem.NOT_FOOD -> R.string.product_not_food
                     ScanNameProblem.UNAVAILABLE -> R.string.scan_name_unavailable
                     ScanNameProblem.RESTRICTED -> R.string.scan_name_restricted
                 }, stringResource(R.string.app_name)))
@@ -45,6 +48,7 @@ fun ScanNameSheet(offer: ScanNameOffer, remaining: Int, busy: Boolean, onConfirm
             offer.quality?.let { quality ->
                 quality.brands?.let { Text(stringResource(R.string.product_brand, it)) }
                 quality.packageSize?.let { Text(stringResource(R.string.product_pack, it)) }
+                if (quality.productType == ProductType.FOOD) ScoreStrip(quality)
             }
             if (offer.fromOff) TextButton(onClick = { uri.openUri("https://world.openfoodfacts.org/product/${offer.gtin.value}") }) { QualityAttribution() }
             Row {

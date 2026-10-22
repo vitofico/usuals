@@ -63,7 +63,11 @@ not encrypt a connection or attest the endpoint.
 
 Scan lookup is off by default. When enabled in Settings or the scanner, a barcode is sent
 directly to Open Food Facts for a proposed product name, category and product
-details (brand, pack size, ingredients, nutrition grades, allergens and traces). The name
+details (brand, pack size, ingredients, nutrition grades, allergens and traces). When Open
+Food Facts answers that a barcode is not food, the same barcode goes to the sister database
+that answer names (Open Beauty Facts, Open Products Facts or Open Pet Food Facts) for a name,
+brand and pack size, under the same rate-limit permit. Those hosts come from a fixed table in
+the app, never from the response, and redirects are not followed. The name
 changes only after confirmation and the sheet credits Open Food Facts under
 ODbL. Opt-out gates new requests, including ones waiting for a rate-limit permit.
 With lookup off, scanning makes no request and offers manual naming. The list
@@ -72,7 +76,11 @@ local, separate from shopping history, and never included in a shopping-data
 JSON export. Direct database device transfer can carry the local cache to the
 receiving phone. Product details show saved data immediately, including when
 lookup is off. Only consented reads refresh it; failures retain saved data with
-a visible error and saved date. Responses are size-bounded and mismatched codes
+a visible error and saved date. While lookup is on, list rows show cached grades
+and allergen flags read from that cache only; they never trigger a request. The
+allergen avoid list is health data and stays in its own preference file on the
+phone: it is not part of the synced list, the JSON export, cloud backup or device
+transfer. Responses are size-bounded and mismatched codes
 are rejected. The source/contribution link opens the product page in the browser
 only after an explicit tap. Usuals performs no product writes.
 The home-screen widget reads unchecked rows locally and opens the list; it

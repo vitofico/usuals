@@ -2,7 +2,7 @@
 <resources>
     <string name="scan_lookup_toggle">Look up scanned product names</string>
     <string name="scan_lookup_hint">Off by default. Send barcodes to Open Food Facts to offer names and categories. You confirm each name. Scanning always works without a connection.</string>
-    <string name="scan_lookup_privacy">If you enable barcode lookup, Usuals sends scanned barcodes directly to Open Food Facts for product names, categories and product details. Your lists and purchase history are never sent. Lookup is off by default.</string>
+    <string name="scan_lookup_privacy">If you enable barcode lookup, Usuals sends scanned barcodes directly to Open Food Facts for product names, categories and product details. Barcodes Open Food Facts files as non-food also go to its sister database for that kind of product (Open Beauty Facts, Open Products Facts or Open Pet Food Facts). Your lists and purchase history are never sent. Lookup is off by default.</string>
     <string name="scan_name_manual">Name this scan</string>
     <string name="scan_name_offer">Use this product name?</string>
     <string name="scan_name_barcode">Barcode: %1$s</string>

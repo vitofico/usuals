@@ -20,4 +20,7 @@
     <string name="product_unavailable">Impossibile aggiornare i dettagli. I dati salvati sono mostrati qui sotto.</string>
     <string name="product_source_updated">Fonte aggiornata: %1$s</string>
     <string name="product_not_found">Nessun prodotto trovato per questo codice. Puoi aggiungere i dettagli mancanti su Open Food Facts.</string>
+    <string name="product_not_food">Non è un prodotto alimentare. Open Food Facts non lo copre.</string>
+    <string name="product_remembered">In base al prodotto che hai scansionato il %1$s</string>
+    <string name="product_remembered_undated">In base al prodotto che hai scansionato per questo articolo</string>
 </resources>

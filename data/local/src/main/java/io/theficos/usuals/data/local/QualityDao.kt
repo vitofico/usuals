@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Local product-cache reads and replacement writes. This table contains no user
@@ -16,6 +17,21 @@ interface QualityDao {
     /** What is stored for this barcode, whatever state it is in. */
     @Query("SELECT * FROM product_quality WHERE gtin = :gtin LIMIT 1")
     suspend fun find(gtin: String): QualityEntity?
+
+    /** What is stored for any of these barcodes; absent ones simply have no row. */
+    @Query("SELECT * FROM product_quality WHERE gtin IN (:gtins)")
+    suspend fun findAll(gtins: List<String>): List<QualityEntity>
+    /**
+     * What is stored for these barcodes, again after every write to the table.
+     *
+     * The cache used to be read only on demand, because nothing on screen
+     * depended on it changing. List rows now show cached grades and allergen
+     * flags, and a row should light up as soon as the product sheet or a scan
+     * saves an answer rather than on the next list change. Only reads observe:
+     * an uncached barcode stays uncached until someone opens its sheet.
+     */
+    @Query("SELECT * FROM product_quality WHERE gtin IN (:gtins)")
+    fun observe(gtins: List<String>): Flow<List<QualityEntity>>
 
     /** A later answer replaces an earlier one. See the class KDoc for why that is safe. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

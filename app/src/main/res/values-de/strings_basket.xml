@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="basket_title">Warenkorb-Überblick</string>
+    <string name="basket_source">Auf diesem Telefon aus bereits gespeicherten Produktdaten berechnet. Es wird nichts Neues abgefragt.</string>
+    <string name="basket_processing_title">Verarbeitung</string>
+    <string name="basket_ultra_none">Keines der bekannten Produkte ist hochverarbeitet.</string>
+    <string name="basket_ultra_under_one">Weniger als 1 von 10 bekannten Produkten ist hochverarbeitet.</string>
+    <plurals name="basket_ultra_about">
+        <item quantity="one">Etwa %1$d von 10 bekannten Produkten ist hochverarbeitet.</item>
+        <item quantity="other">Etwa %1$d von 10 bekannten Produkten sind hochverarbeitet.</item>
+    </plurals>
+    <string name="basket_ultra_over_nine">Mehr als 9 von 10 bekannten Produkten sind hochverarbeitet.</string>
+    <string name="basket_ultra_all">Alle bekannten Produkte sind hochverarbeitet.</string>
+    <string name="basket_bucket_unprocessed">Unverarbeitet oder gering verarbeitet: %1$d</string>
+    <string name="basket_bucket_processed">Verarbeitet: %1$d</string>
+    <string name="basket_bucket_ultra">Hochverarbeitet: %1$d</string>
+    <string name="basket_food_coverage">Basierend auf %1$d von %2$d Lebensmitteln.</string>
+    <string name="basket_fresh_produce">Frisches Obst und Gemüse als unverarbeitet gezählt.</string>
+    <string name="basket_nutri_title">Nutri-Score</string>
+    <string name="basket_nutri_grade">%1$s %2$d</string>
+    <string name="basket_nutri_coverage">Bekannt für %1$d von %2$d Produkten, für die er gilt.</string>
+    <string name="basket_nutri_note">Der Nutri-Score vergleicht Produkte derselben Art. Er ist keine Bewertung des ganzen Warenkorbs.</string>
+    <string name="basket_not_enough">Noch nicht genug Produktdaten.</string>
+    <string name="basket_grow_hint">Die Abdeckung wächst mit dem Scannen: Scanne ein Produkt einmal, und Usuals merkt es sich für spätere Listen.</string>
+    <plurals name="basket_not_food">
+        <item quantity="one">%1$d Non-Food-Artikel nicht gezählt.</item>
+        <item quantity="other">%1$d Non-Food-Artikel nicht gezählt.</item>
+    </plurals>
+    <string name="basket_setting_hint">Standardmäßig aus. Fasst zusammen, wie verarbeitet die Lebensmittel einer Liste oder eines früheren Einkaufs sind, aus bereits auf diesem Telefon gespeicherten Produktdaten. Es wird nichts Neues gesendet.</string>
+</resources>

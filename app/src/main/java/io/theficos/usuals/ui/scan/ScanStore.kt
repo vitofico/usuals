@@ -3,7 +3,7 @@ package io.theficos.usuals.ui.scan
 import io.theficos.usuals.model.*
 import io.theficos.usuals.smart.Category
 
-enum class ScanNameProblem { LOOKUP_DISABLED, NOT_FOUND, UNAVAILABLE, RESTRICTED }
+enum class ScanNameProblem { LOOKUP_DISABLED, NOT_FOUND, NOT_FOOD, UNAVAILABLE, RESTRICTED }
 
 data class ScanNameOffer(
     val id: ItemId,

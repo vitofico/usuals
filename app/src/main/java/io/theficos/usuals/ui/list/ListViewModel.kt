@@ -2,6 +2,7 @@ package io.theficos.usuals.ui.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.theficos.usuals.smart.BarcodeMemory
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.SuggestionChoice
@@ -33,8 +34,11 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -68,6 +72,7 @@ class ListViewModel(
     private val recipeStore: RecipeStore = NoRecipeStore,
     private val scanStore: ScanStore? = null,
     private val productInfoStore: io.theficos.usuals.ui.product.ProductInfoStore? = null,
+    private val rowFacts: io.theficos.usuals.ui.product.RowFactsSource = io.theficos.usuals.ui.product.NoRowFacts,
     private val prompts: PromptMemory = InMemoryPromptMemory(),
     private val directoryStore: ListDirectoryStore = NoListDirectory,
     val reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
@@ -75,6 +80,7 @@ class ListViewModel(
     private val background: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
     /** Where rows are worked out from the list and its history. Tests pass their main dispatcher. */
     private val compute: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default,
+    private val basket: io.theficos.usuals.ui.basket.BasketSource? = null,
 ) : ViewModel() {
 
     /** State the screen owns rather than the database: what is open, what is being said. */
@@ -96,6 +102,9 @@ class ListViewModel(
         val scanNames: List<ScanNameOffer> = emptyList(),
         val lastScanId: ItemId? = null,
         val selectedStore: String? = null,
+        /** Read from settings when the screen opens, so the menu entry follows a change made in Settings. */
+        val basketAvailable: Boolean = false,
+        val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
         /**
          * Set once dictation has been refused or has failed. The design says
          * not to re-prompt after a denial, so this latches for the lifetime of
@@ -104,7 +113,7 @@ class ListViewModel(
         val speechBlocked: Boolean = false,
     )
 
-    private val screen = MutableStateFlow(ScreenState())
+    private val screen = MutableStateFlow(ScreenState(basketAvailable = basket?.enabled() == true))
     private val mergeQueue = ArrayDeque<MergeReview>()
     private var productJob: Job? = null
     private var scanNameGeneration = 0
@@ -128,6 +137,23 @@ class ListViewModel(
     private val listed = combine(shopping, shoppingTools.state, screen.map { it.selectedStore }.distinctUntilChanged(), ::list)
         .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
 
+    /** This phone's row-fact choices, or null while lookup is off: row facts follow the opt-in. */
+    private val factChoices = combine(rowFacts.lookupEnabled, rowFacts.choices) { on, choices -> choices.takeIf { on } }
+        .distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Cached records for the barcodes on screen, read and never fetched: a
+     * barcode nobody has looked up stays bare until its sheet is opened.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val facts = combine(factChoices, listed) { choices, listed -> if (choices?.active == true) listed.barcodes else emptySet() }
+        .distinctUntilChanged()
+        .flatMapLatest { gtins -> if (gtins.isEmpty()) flowOf(emptyMap()) else rowFacts.cached(gtins).catch { emit(emptyMap()) } }
+
+    /** [listed] with what the cache says about each row's product. */
+    private val shown = combine(listed, facts, factChoices) { listed, facts, choices -> listed.withFacts(facts, choices) }
+        .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
+
     private val matches = combine(listed, screen.map { (it.capture as? CaptureState.Typing)?.draft.orEmpty() }.distinctUntilChanged()) { listed, draft ->
         if (draft.isBlank()) emptyList()
         else smartStore.autocomplete(parser.parse(draft).lastOrNull()?.name ?: draft, listed.snapshot.history, listed.ordered)
@@ -139,7 +165,7 @@ class ListViewModel(
      * would drop characters and move the cursor.
      */
     val state: StateFlow<ListUiState> =
-        combine(listed, matches, screen, directory) { listed, matches, screenState, lists ->
+        combine(shown, matches, screen, directory) { listed, matches, screenState, lists ->
             val name = lists.lists.firstOrNull { it.id == lists.selected }?.name?.ifBlank { null }
             if (directoryStore !== NoListDirectory && lists.selected.isNotEmpty() && listed.snapshot.listId != lists.selected) {
                 ListUiState(directory = lists, header = ListHeader(name = name), busy = true)
@@ -176,10 +202,11 @@ class ListViewModel(
         viewModelScope.launch {
             productJob?.cancel()
             recipeJob?.cancel()
+            basketJob?.cancel()
             scanNameGeneration++
             skippedScanNames.clear()
             mergeQueue.clear()
-            screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, busy = true)
+            screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, basketAvailable = screen.value.basketAvailable, busy = true)
             try { change() }
             catch (_: Exception) { screen.update { it.copy(historyError = true) } }
             finally { screen.update { it.copy(busy = false) } }
@@ -193,6 +220,8 @@ class ListViewModel(
     }
 
     fun onOpened() {
+        val available = basket?.enabled() == true
+        screen.update { it.copy(basketAvailable = available, basket = it.basket.takeIf { available }) }
         refreshPrompts(shopping.value.items, shopping.value.history)
         refreshOffers(shopping.value.items, shopping.value.history)
         viewModelScope.launch { maintainRepeats(shopping.value.items, shopping.value.history) }
@@ -204,7 +233,7 @@ class ListViewModel(
         catch (_: Exception) { screen.update { it.copy(historyError = true) } }
     }
 
-    fun onEditItem(id: ItemId) { val item = shopping.value.items.firstOrNull { it.id == id } ?: return; onEditRow(toRow(item, smartStore.present(listOf(item), shopping.value.history)[id])) }
+    fun onEditItem(id: ItemId) { val item = shopping.value.items.firstOrNull { it.id == id } ?: return; onEditRow(toRow(item, smartStore.present(listOf(item), shopping.value.history)[id], BarcodeMemory(shopping.value.history))) }
     fun onEditRow(row: ListRow) { screen.update { it.copy(editingId = row.id, editingSnapshot = row, editingConflictId = null, prompt = null) } }
     fun onDismissEdit() {
         screen.update { it.copy(editingId = null, editingConflictId = null) }
@@ -212,17 +241,41 @@ class ListViewModel(
     }
 
     fun onProductInfo(row: ListRow) {
-        val gtin = row.gtin ?: return
+        val gtin = row.productGtin ?: return
         val reader = productInfoStore ?: return
         productJob?.cancel()
         screen.update { it.copy(editingId = null, editingSnapshot = null,
-            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled())) }
+            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled(), provenance = row.provenance,
+                avoid = factChoices.value?.avoid.orEmpty())) }
         loadProduct(refresh = false)
     }
 
     fun onDismissProduct() {
         productJob?.cancel()
         screen.update { it.copy(productInfo = null) }
+    }
+
+    private var basketJob: Job? = null
+
+    /** Opens the overview for the whole list, read once from details already on the phone. */
+    fun onBasketOverview() {
+        val source = basket ?: return
+        if (!source.enabled()) { screen.update { it.copy(basketAvailable = false, basket = null) }; return }
+        val snapshot = shopping.value
+        basketJob?.cancel()
+        screen.update { it.copy(basket = io.theficos.usuals.ui.basket.BasketSheetState(), editingId = null) }
+        basketJob = viewModelScope.launch {
+            try {
+                val overview = source.forList(snapshot.items, snapshot.history)
+                screen.update { it.copy(basket = it.basket?.copy(overview = overview)) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(basket = null, historyError = true) } }
+        }
+    }
+
+    fun onDismissBasket() {
+        basketJob?.cancel()
+        screen.update { it.copy(basket = null) }
     }
 
     fun onRefreshProduct() { if (screen.value.productInfo?.loading == false) loadProduct(refresh = true) }
@@ -823,8 +876,26 @@ class ListViewModel(
         val snapshot: ShoppingSnapshot = ShoppingSnapshot(),
         val ordered: List<Item> = emptyList(),
         val presentation: Map<ItemId, ItemPresentation> = emptyMap(),
+        val memory: BarcodeMemory = BarcodeMemory(snapshot.history),
         val rows: ListUiState = ListUiState(),
-    )
+    ) {
+        /** Every product barcode a visible row stands for, its own or remembered. */
+        val barcodes: Set<Gtin> = (rows.pending + rows.checked + rows.deferred).mapNotNull { it.productGtin }.toSet()
+
+        fun withRows(next: ListUiState) = Listed(snapshot, ordered, presentation, memory, next)
+    }
+
+    private fun Listed.withFacts(facts: Map<Gtin, io.theficos.usuals.enrich.ProductQuality>, choices: io.theficos.usuals.ui.product.RowFactsChoices?): Listed {
+        if (choices == null || facts.isEmpty()) return this
+        fun ListRow.annotated(): ListRow {
+            // A sister-database record has no grade to show, whatever its fields say.
+            val quality = productGtin?.let(facts::get)?.takeIf { it.productType == io.theficos.usuals.enrich.ProductType.FOOD } ?: return this
+            return copy(grade = quality.nutriScore.takeIf { choices.showGrades },
+                allergens = io.theficos.usuals.smart.AllergenAvoidance.match(quality.allergens, quality.traces, choices.avoid).takeIf { it.flagged })
+        }
+        return withRows(rows.copy(pending = rows.pending.map { it.annotated() }, checked = rows.checked.map { it.annotated() },
+            deferred = rows.deferred.map { it.annotated() }))
+    }
 
     private fun list(snapshot: ShoppingSnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, selectedStore: String?): Listed {
         val facts = snapshot.history
@@ -837,24 +908,27 @@ class ListViewModel(
         val filter = selectedStore?.takeIf { it in stores }
         val visible = if (filter == null) ordered else ordered.filter { it.store == filter }
         val presentation = smartStore.present(ordered, facts)
+        val memory = BarcodeMemory(facts)
         val saved = personal.deferred[snapshot.listId]
         val deferred = saved?.rows.orEmpty().takeUnless { saved != null && facts.trips.any { it.id !in saved.trips } }.orEmpty()
         fun isDeferred(item: Item) = !item.checked && deferred[item.id.value] == (item.version?.lifecycle ?: item.createdAt.toString())
-        return Listed(snapshot, ordered, presentation, ListUiState(
+        return Listed(snapshot, ordered, presentation, memory, ListUiState(
             personal = personal,
-            deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id]) },
+            deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id], memory) },
             suggestions = smartStore.suggestions(clock(), facts, ordered),
             stores = stores, selectedStore = filter,
             // Everything on the list, bought or not. It is the size of the
             // shop, which is what the number is being read for.
             header = ListHeader(itemCount = visible.size),
-            pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id]) },
-            checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id]) },
+            pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id], memory) },
+            checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id], memory) },
         ))
     }
 
     private fun project(listed: Listed, matches: List<ItemMemory>, screen: ScreenState): ListUiState = listed.rows.copy(
         productInfo = screen.productInfo,
+        basketAvailable = screen.basketAvailable,
+        basket = screen.basket,
         mergeReview = screen.mergeReview,
         scanMerge = screen.scanMerge,
         repeatOffer = screen.repeatOffer,
@@ -867,26 +941,34 @@ class ListViewModel(
         busy = screen.busy,
         historyError = screen.historyError,
         capture = screen.capture,
-        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id]) },
+        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id], listed.memory) },
         autocomplete = matches,
     )
 
-    private fun toRow(item: Item, presentation: ItemPresentation?) = ListRow(
-        id = item.id,
-        name = displayName(item.name),
-        quantity = item.quantity,
-        note = item.note,
-        checked = item.checked,
-        rawName = item.name,
-        gtin = item.gtin,
-        category = presentation?.category ?: Category.OTHER,
-        categoryOverride = presentation?.override,
-        repeatEveryDays = presentation?.repeatEveryDays,
-        fromSuggestion = item.fromSuggestion,
-        quantityHint = presentation?.quantityHint,
-        store = item.store,
-        version = item.version,
-    )
+    private fun toRow(item: Item, presentation: ItemPresentation?, memory: BarcodeMemory): ListRow {
+        // Typed rows ask too, not only suggestions and repeats: a staple scanned
+        // once then shows its product on every later trip.
+        val remembered = if (item.gtin == null) memory.remembered(item) else null
+        return ListRow(
+            id = item.id,
+            name = displayName(item.name),
+            quantity = item.quantity,
+            note = item.note,
+            checked = item.checked,
+            rawName = item.name,
+            gtin = item.gtin,
+            category = presentation?.category ?: Category.OTHER,
+            categoryOverride = presentation?.override,
+            repeatEveryDays = presentation?.repeatEveryDays,
+            fromSuggestion = item.fromSuggestion,
+            quantityHint = presentation?.quantityHint,
+            store = item.store,
+            version = item.version,
+            productGtin = item.gtin ?: remembered?.gtin,
+            provenance = if (item.gtin != null) io.theficos.usuals.ui.product.ProductProvenance.Scanned
+                else remembered?.let { io.theficos.usuals.ui.product.ProductProvenance.Remembered(it.lastBoughtAt) },
+        )
+    }
 
     /**
      * Lift the first letter for display only.

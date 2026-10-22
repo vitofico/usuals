@@ -37,6 +37,9 @@ data class ListUiState(
     /** The row being edited, if any. */
     val editing: ListRow? = null,
     val productInfo: io.theficos.usuals.ui.product.ProductInfoState? = null,
+    /** Whether the menu offers the basket overview: its setting and Open Food Facts lookup are both on. */
+    val basketAvailable: Boolean = false,
+    val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
     val autocomplete: List<ItemMemory> = emptyList(),
     val suggestions: List<Suggestion> = emptyList(),
     val scanMerge: io.theficos.usuals.ui.scan.ScanMerge? = null,
@@ -81,6 +84,17 @@ data class ListRow(
     val fromSuggestion: Boolean = false,
     val quantityHint: Quantity? = null,
     val store: String? = null,
+    /**
+     * The barcode Product details opens: the row's own, else the one the
+     * household's history remembers for it. Only [gtin] is ever stored, so a
+     * remembered code never reaches a purchase as if it had been scanned.
+     */
+    val productGtin: io.theficos.usuals.model.Gtin? = gtin,
+    val provenance: io.theficos.usuals.ui.product.ProductProvenance? = gtin?.let { io.theficos.usuals.ui.product.ProductProvenance.Scanned },
+    /** The cached Nutri-Score to show on the row; null shows nothing, including "does not apply". */
+    val grade: io.theficos.usuals.enrich.NutriScore? = null,
+    /** Avoided allergens the cached record lists; null when there is nothing to flag. */
+    val allergens: io.theficos.usuals.smart.AllergenMatch? = null,
 )
 
 /**

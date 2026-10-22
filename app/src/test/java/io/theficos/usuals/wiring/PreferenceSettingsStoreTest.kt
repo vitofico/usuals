@@ -56,4 +56,14 @@ class PreferenceSettingsStoreTest {
         assertThat(store.scanLookupEnabled()).isFalse()
         assertThat(PreferenceSettingsStore(context).load().scanLookupEnabled).isFalse()
     }
+
+    @Test
+    fun the_basket_overview_is_off_by_default_and_its_choice_outlives_an_older_save() = runTest {
+        val store = PreferenceSettingsStore(context)
+        assertThat(store.basketOverviewEnabled()).isFalse()
+        store.setBasketOverviewEnabled(true)
+        store.save(AppSettings())
+        assertThat(store.basketOverviewEnabled()).isTrue()
+        assertThat(PreferenceSettingsStore(context).load().basketOverviewEnabled).isTrue()
+    }
 }

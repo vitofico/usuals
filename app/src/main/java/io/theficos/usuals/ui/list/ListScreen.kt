@@ -42,6 +42,12 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
 import io.theficos.usuals.ui.theme.categoryAccent
+import io.theficos.usuals.ui.NutriScoreChip
+import io.theficos.usuals.ui.allergenList
+import io.theficos.usuals.ui.theme.cautionColor
+import io.theficos.usuals.smart.AllergenMatch
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
@@ -193,6 +199,8 @@ data class ListActions(
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
+    /** Null hides the menu entry: the basket overview is off. */
+    val onBasketOverview: (() -> Unit)? = null,
     val onRenameList: (String, String) -> Unit = { _, _ -> },
     val onRemoveList: (String) -> Unit = {},
     val onArchiveList: (String, Boolean) -> Unit = { _, _ -> },
@@ -236,6 +244,7 @@ fun ListScreen(
     val view = androidx.compose.ui.platform.LocalView.current
     var reminderOpen by rememberSaveable { mutableStateOf(false) }
     if (reminderOpen) vm.reminders?.let { io.theficos.usuals.ui.shopping.ReminderSheet(it) { reminderOpen = false } }
+    state.basket?.let { io.theficos.usuals.ui.basket.BasketOverviewSheet(it, vm::onDismissBasket) }
     if (toolsOpen) io.theficos.usuals.ui.shopping.ShoppingToolsSheet(state.personal, state.selectedStore,
         vm::updateShoppingTools, vm::onAddFavorite, { toolsOpen = false },
         onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } })
@@ -347,6 +356,7 @@ fun ListScreen(
             onShareList = onOpenSharing,
             onRenameList = vm::onRenameList,
             onRemoveList = vm::onRemoveList,
+            onBasketOverview = if (state.basketAvailable) vm::onBasketOverview else null,
             onArchiveList = vm::onArchiveList,
             onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
@@ -393,7 +403,7 @@ fun ListContent(
             onRemove = { actions.onRemoveRow?.invoke(row) ?: actions.onConfirmRemove(it) },
             onPin = { actions.onPin(row) }, onDefer = { actions.onDefer(row) },
             pinned = state.personal.portable.favorites.any { it.name == row.rawName && it.quantity == row.quantity },
-            onProductInfo = row.gtin?.let { { actions.onProductInfo(row) } })
+            onProductInfo = row.productGtin?.let { { actions.onProductInfo(row) } })
     }
     state.productInfo?.let { info ->
         io.theficos.usuals.ui.product.ProductInfoSheet(info, actions.onRefreshProduct,
@@ -514,7 +524,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
     }
 }
 
-/** The list's few actions: share, send as text, rename, archive, and delete it or, for someone else's list, leave it. */
+/** The list's few actions: share, send as text, the basket overview when it is on, rename, archive, and delete it or, for someone else's list, leave it. */
 @Composable
 private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
     var open by remember { mutableStateOf(false) }
@@ -532,6 +542,9 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
+            actions.onBasketOverview?.let { overview ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.basket_title)) }, enabled = header.itemCount > 0, onClick = { open = false; overview() })
+            }
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_clear)) }, enabled = header.itemCount > 0, onClick = { open = false; clearing = selected?.id ?: "" })
             if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
@@ -749,6 +762,7 @@ private fun ItemRow(
                 textDecoration = if (row.checked) TextDecoration.LineThrough else TextDecoration.None,
                 color = if (row.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             )
+            row.allergens?.let { AllergenLine(it, row.checked) }
             row.store?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary) }
             row.note?.let { note ->
                 Text(
@@ -759,6 +773,14 @@ private fun ItemRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        row.grade?.let { grade ->
+            // Its own tap target, so the grade opens the facts behind it instead of checking the row.
+            Box(Modifier.minimumInteractiveComponentSize()
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.product_details)) { actions.onProductInfo(row) }
+                .alpha(if (row.checked) 0.5f else 1f), contentAlignment = Alignment.Center) {
+                NutriScoreChip(grade)
+            }
+        }
         if (row.fromSuggestion && row.repeatEveryDays != null) {
             Icon(Icons.Outlined.Repeat, stringResource(R.string.repeat_added),
                 tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 7.dp, end = 8.dp).size(18.dp))
@@ -773,6 +795,24 @@ private fun ItemRow(
                 Text(hint, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+}
+
+/** "Contains milk" under the name, in amber with an icon, so it reads as a warning without relying on colour. */
+@Composable
+private fun AllergenLine(match: AllergenMatch, checked: Boolean) {
+    val contains = allergenList(match.contains)
+    val traces = allergenList(match.mayContain)
+    val text = when {
+        match.mayContain.isEmpty() -> stringResource(R.string.row_allergen_contains, contains)
+        match.contains.isEmpty() -> stringResource(R.string.row_allergen_may_contain, traces)
+        else -> stringResource(R.string.row_allergen_both, contains, traces)
+    }
+    // A bought row is dimmed like its name; the warning mattered before it went in the trolley.
+    val color = if (checked) MaterialTheme.colorScheme.onSurfaceVariant else cautionColor(MaterialTheme.colorScheme.background.luminance() < 0.5f)
+    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.WarningAmber, null, tint = color, modifier = Modifier.padding(end = 4.dp).size(14.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, color = color)
     }
 }
 

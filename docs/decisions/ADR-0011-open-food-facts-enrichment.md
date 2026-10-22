@@ -58,7 +58,11 @@ quantity. No score is assigned to a typed shopping name.
 
 Responses are bounded to 1 MiB and returned barcodes must match the requested
 canonical GTIN when present. Only a `product_not_found` result is a confirmed
-miss. Room migration 5 to 6 adds nullable product-cache columns without changing
+miss. A `product_found_with_a_different_product_type` result naming `beauty`,
+`product` or `petfood` is cached as a non-food answer of that type: the scan is
+filed under Personal care or Household, Nutri-Score is recorded as not applying,
+and one read of the matching sister database, under the same permit and from a
+fixed host table, supplies a name when it has one (amended 2026-10-22). Room migration 5 to 6 adds nullable product-cache columns without changing
 shopping rows, aliases, JSON archives or relay operations. Cached details can be
 read with lookup off. Opening an old cache entry refreshes it only with consent;
 refresh shares the scanner client, in-flight requests and 15 reads/minute budget.

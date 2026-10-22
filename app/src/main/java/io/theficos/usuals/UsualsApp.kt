@@ -91,6 +91,7 @@ fun UsualsApp(
     onSharedTextConsumed: () -> Unit = {},
     palette: AppPalette = AppPalette.PLUM,
     onPaletteChange: (AppPalette) -> Unit = {},
+    rowFacts: io.theficos.usuals.ui.product.RowFactsStore? = null,
     showTutorial: Boolean = false,
     onTutorialFinished: () -> Unit = {},
 ) {
@@ -141,7 +142,7 @@ fun UsualsApp(
                 onOpenTutorial = { tutorialRequested = true },
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
-                palette = palette, onPaletteChange = onPaletteChange)
+                palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts)
         }
 
         composable(Routes.ADVANCED) {

@@ -2,7 +2,7 @@
 <resources>
     <string name="scan_lookup_toggle">Rechercher les noms des produits scannés</string>
     <string name="scan_lookup_hint">Désactivé par défaut. Envoie les codes-barres à Open Food Facts pour proposer des noms et catégories. Vous confirmez chaque nom. Le scan fonctionne toujours hors connexion.</string>
-    <string name="scan_lookup_privacy">Si vous activez la recherche par code, Usuals envoie les codes scannés directement à Open Food Facts pour obtenir noms, catégories et détails des produits. Vos listes et votre historique d’achats ne sont jamais envoyés. La recherche est désactivée par défaut.</string>
+    <string name="scan_lookup_privacy">Si vous activez la recherche par code, Usuals envoie les codes scannés directement à Open Food Facts pour obtenir noms, catégories et détails des produits. Les codes qu’Open Food Facts classe comme non alimentaires sont aussi envoyés à sa base sœur pour ce type de produit (Open Beauty Facts, Open Products Facts ou Open Pet Food Facts). Vos listes et votre historique d’achats ne sont jamais envoyés. La recherche est désactivée par défaut.</string>
     <string name="scan_name_manual">Nommer cet article</string>
     <string name="scan_name_offer">Utiliser ce nom de produit ?</string>
     <string name="scan_name_barcode">Code-barres : %1$s</string>

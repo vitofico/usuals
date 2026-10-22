@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_facts_grades">Afficher les notes dans la liste</string>
+    <string name="row_facts_grades_hint">Les lignes affichent le Nutri-Score déjà enregistré sur ce téléphone pour leur produit. La liste ne recherche jamais rien.</string>
+    <string name="row_facts_allergens">Allergènes à signaler</string>
+    <string name="row_facts_allergens_hint">Les lignes dont le produit enregistré en mentionne un le signalent. Vos choix restent sur ce téléphone : ils ne sont jamais synchronisés, partagés, exportés ni sauvegardés.</string>
+    <string name="row_facts_allergens_caution">Open Food Facts est une base collaborative, parfois incomplète. Une ligne sans signalement n’est pas une garantie : vérifiez toujours l’emballage.</string>
+    <string name="row_facts_allergens_unstated">Allergènes non renseignés, vérifiez l’emballage.</string>
+    <string name="row_allergen_contains">Contient : %1$s</string>
+    <string name="row_allergen_may_contain">Peut contenir : %1$s</string>
+    <string name="row_allergen_both">Contient : %1$s. Peut contenir : %2$s</string>
+</resources>

@@ -1,5 +1,27 @@
 # Changelog
 
+## Product facts on the list
+
+With Open Food Facts lookup on:
+
+- The product sheet shows Nutri-Score, NOVA and Green-Score as coloured chips,
+  each with its letter or number. Grades that are not stated or do not apply
+  are shown as such, never as a colour. Additives are listed by E-number.
+- Allergens and traces are named in your language.
+- Rows show their Nutri-Score from what this phone already looked up. A
+  setting turns this off.
+- Items you never scanned this time (suggestions, repeats, typed staples) use
+  the product your household scanned before, when there is only one. The sheet
+  says which product it is based on, and nothing is recorded as a scan.
+- You can pick allergens to flag. Rows and the product sheet then say
+  "Contains milk" or "May contain tree nuts". The choice stays on this phone.
+- Basket overview, off by default: the share of ultra-processed items and a
+  count of Nutri-Score grades for the current list and for each past trip,
+  shown only once enough items have product data.
+- Scanning shampoo or detergent no longer fails: it is filed under Personal
+  care or Household and named from Open Beauty Facts or Open Products Facts.
+- Green-Score A+ and F are read correctly.
+
 ## Long lists stay fast
 
 - Typing in the add field no longer recomputes the whole list on every key.

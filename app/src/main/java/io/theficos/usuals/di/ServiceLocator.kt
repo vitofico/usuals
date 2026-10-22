@@ -196,6 +196,15 @@ object ServiceLocator {
     val productInfoStore: io.theficos.usuals.ui.product.ProductInfoStore by resettable {
         RepositoryProductInfoStore(qualityCache, offClient, settingsStore::scanLookupEnabled, System::currentTimeMillis)
     }
+    /** Reads the local quality cache only: the overview never asks Open Food Facts for anything. */
+    val basketSource: io.theficos.usuals.ui.basket.BasketSource by resettable {
+        io.theficos.usuals.ui.basket.BasketSource(categoryClassifier, qualityCache::getAll) {
+            settingsStore.scanLookupEnabled() && settingsStore.basketOverviewEnabled()
+        }
+    }
+    /** This phone's choices about product facts on list rows; see [preferenceRowFacts]. */
+    val rowFactsStore: io.theficos.usuals.ui.product.RowFactsStore by resettable { preferenceRowFacts(context) }
+    val rowFacts: io.theficos.usuals.ui.product.RowFactsSource by resettable { RepositoryRowFacts(qualityCache, settingsStore.scanLookup, rowFactsStore) }
     val barcodeCategories: BarcodeCategories by resettable { BarcodeCategories(categoryClassifier) }
     val scanStore: ScanStore by resettable {
         RepositoryScanStore(itemRepository, historyRepository, smartStore, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)

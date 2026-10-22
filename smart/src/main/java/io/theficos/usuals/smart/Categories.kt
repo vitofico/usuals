@@ -19,6 +19,15 @@ class CategoryClassifier(packs: List<InputLanguage>) {
             .thenBy { it.category.ordinal }.thenBy { it.key },
     )
 
+    private val produceNames = seeds.filter { it.category == Category.PRODUCE }.map { it.key }.toSet()
+
+    /**
+     * True when the whole name is a produce seed word. [classify] matches a seed
+     * anywhere in a name, so "salsa de tomate" can file under Produce; a fact
+     * about the food itself has to hold for the name as a whole.
+     */
+    fun isProduceName(name: String): Boolean = Normalizer.normalize(name) in produceNames
+
     fun classify(name: String, override: String? = null): Category {
         Category.entries.firstOrNull { it.name == override }?.let { return it }
         val key = " ${Normalizer.normalize(name)} "
