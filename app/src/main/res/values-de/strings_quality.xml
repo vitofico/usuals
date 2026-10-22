@@ -1,16 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="quality_nutri_score">Nutri-Score %1$s</string>
-    <string name="quality_nutri_score_absent">Nutri-Score: nicht angegeben</string>
-    <string name="quality_nutri_score_not_applicable">Nutri-Score: nicht anwendbar</string>
+    <string name="quality_nutri_score_absent">Nutri-Score nicht angegeben</string>
+    <string name="quality_nutri_score_not_applicable">Nutri-Score nicht anwendbar</string>
+    <string name="quality_nutri_score_meaning">Nährwertbewertung, von A (am besten) bis E</string>
     <string name="quality_nova_1">NOVA 1 (unverarbeitet)</string>
     <string name="quality_nova_2">NOVA 2 (Küchenzutat)</string>
     <string name="quality_nova_3">NOVA 3 (verarbeitet)</string>
     <string name="quality_nova_4">NOVA 4 (hochverarbeitet)</string>
-    <string name="quality_nova_absent">NOVA: nicht angegeben</string>
+    <string name="quality_nova_absent">NOVA nicht angegeben</string>
+    <string name="quality_nova_meaning">Verarbeitungsgrad, von 1 (unverarbeitet) bis 4 (hochverarbeitet)</string>
+    <string name="quality_green_score">Green-Score %1$s</string>
+    <string name="quality_green_score_absent">Green-Score nicht angegeben</string>
+    <string name="quality_green_score_meaning">Umweltauswirkung, von A+ bis F. Außerhalb Frankreichs experimentell.</string>
+    <string name="quality_not_stated">Nicht angegeben</string>
+    <string name="quality_does_not_apply">Nicht anwendbar</string>
+    <plurals name="quality_additives">
+        <item quantity="one">%1$d Zusatzstoff: %2$s</item>
+        <item quantity="other">%1$d Zusatzstoffe: %2$s</item>
+    </plurals>
+    <string name="quality_additives_absent">Zusatzstoffe: nicht angegeben</string>
+    <string name="quality_additives_none_listed">Open Food Facts führt keine Zusatzstoffe auf.</string>
     <string name="quality_allergens">Allergene: %1$s</string>
     <string name="quality_allergens_absent">Allergene: nicht angegeben</string>
     <string name="quality_allergens_none_listed">Open Food Facts führt keine Allergene auf. Die Datenbank wird gemeinschaftlich gepflegt. Das ist keine Garantie: Prüfe die Verpackung.</string>
+    <string name="quality_allergen_gluten">Gluten</string>
+    <string name="quality_allergen_crustaceans">Krebstiere</string>
+    <string name="quality_allergen_eggs">Eier</string>
+    <string name="quality_allergen_fish">Fisch</string>
+    <string name="quality_allergen_peanuts">Erdnüsse</string>
+    <string name="quality_allergen_soybeans">Soja</string>
+    <string name="quality_allergen_milk">Milch</string>
+    <string name="quality_allergen_nuts">Schalenfrüchte</string>
+    <string name="quality_allergen_celery">Sellerie</string>
+    <string name="quality_allergen_mustard">Senf</string>
+    <string name="quality_allergen_sesame_seeds">Sesamsamen</string>
+    <string name="quality_allergen_sulphites">Schwefeldioxid und Sulfite</string>
+    <string name="quality_allergen_lupin">Lupinen</string>
+    <string name="quality_allergen_molluscs">Weichtiere</string>
     <string name="quality_record_blank">Open Food Facts hat einen Eintrag für dieses Produkt, er ist jedoch leer.</string>
     <string name="quality_attribution">Produktdaten von Open Food Facts unter der ODbL-Lizenz.</string>
 </resources>

@@ -1,17 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- What Open Food Facts says about a scanned product. Facts, never a verdict. -->
 <resources>
+    <!-- Scale names are the same in every language. -->
+    <string name="quality_scale_nutri_score" translatable="false">Nutri-Score</string>
+    <string name="quality_scale_nova" translatable="false">NOVA</string>
+    <string name="quality_scale_green_score" translatable="false">Green-Score</string>
     <string name="quality_nutri_score">Nutri-Score %1$s</string>
-    <string name="quality_nutri_score_absent">Nutri-Score: not stated</string>
-    <string name="quality_nutri_score_not_applicable">Nutri-Score: does not apply</string>
+    <string name="quality_nutri_score_absent">Nutri-Score not stated</string>
+    <string name="quality_nutri_score_not_applicable">Nutri-Score does not apply</string>
+    <string name="quality_nutri_score_meaning">Nutrition grade, from A (best) to E</string>
     <string name="quality_nova_1">NOVA 1 (unprocessed)</string>
     <string name="quality_nova_2">NOVA 2 (culinary ingredient)</string>
     <string name="quality_nova_3">NOVA 3 (processed)</string>
     <string name="quality_nova_4">NOVA 4 (ultra-processed)</string>
-    <string name="quality_nova_absent">NOVA: not stated</string>
+    <string name="quality_nova_absent">NOVA not stated</string>
+    <string name="quality_nova_meaning">Food processing, from 1 (unprocessed) to 4 (ultra-processed)</string>
+    <string name="quality_green_score">Green-Score %1$s</string>
+    <string name="quality_green_score_absent">Green-Score not stated</string>
+    <string name="quality_green_score_meaning">Environmental impact, from A+ to F. Experimental outside France.</string>
+    <string name="quality_not_stated">Not stated</string>
+    <string name="quality_does_not_apply">Does not apply</string>
+    <plurals name="quality_additives">
+        <item quantity="one">%1$d additive: %2$s</item>
+        <item quantity="other">%1$d additives: %2$s</item>
+    </plurals>
+    <string name="quality_additives_absent">Additives: not stated</string>
+    <string name="quality_additives_none_listed">Open Food Facts lists no additives.</string>
     <string name="quality_allergens">Allergens: %1$s</string>
     <string name="quality_allergens_absent">Allergens: not stated</string>
     <string name="quality_allergens_none_listed">Open Food Facts lists no allergens. It is a crowd-sourced database, so that is not a guarantee: check the packaging.</string>
+    <!-- The 14 allergens of EU Regulation 1169/2011, Annex II, keyed by Open Food Facts tag and worded as each
+         language's version of the regulation names them, cased to sit inside a sentence. "Nuts" there means tree
+         nuts, said outright in English so nobody reads it as peanuts. -->
+    <string name="quality_allergen_gluten">gluten</string>
+    <string name="quality_allergen_crustaceans">crustaceans</string>
+    <string name="quality_allergen_eggs">eggs</string>
+    <string name="quality_allergen_fish">fish</string>
+    <string name="quality_allergen_peanuts">peanuts</string>
+    <string name="quality_allergen_soybeans">soybeans</string>
+    <string name="quality_allergen_milk">milk</string>
+    <string name="quality_allergen_nuts">tree nuts</string>
+    <string name="quality_allergen_celery">celery</string>
+    <string name="quality_allergen_mustard">mustard</string>
+    <string name="quality_allergen_sesame_seeds">sesame seeds</string>
+    <string name="quality_allergen_sulphites">sulphur dioxide and sulphites</string>
+    <string name="quality_allergen_lupin">lupin</string>
+    <string name="quality_allergen_molluscs">molluscs</string>
     <string name="quality_record_blank">Open Food Facts has a record for this product, but it is empty.</string>
     <!-- ODbL credit, shown wherever Open Food Facts data is displayed. -->
     <string name="quality_attribution">Product data from Open Food Facts, under the ODbL licence.</string>

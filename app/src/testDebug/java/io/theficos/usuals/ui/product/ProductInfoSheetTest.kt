@@ -49,8 +49,17 @@ class ProductInfoSheetTest {
             ProductInfoState(gtin, "Beer", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true),
             {}, {}, {},
         ) } }
-        compose.onNodeWithText("Nutri-Score: does not apply").assertExists()
-        compose.onAllNodes(hasText("Nutri-Score: not stated")).assertCountEquals(0)
+        compose.onNodeWithContentDescription("Nutri-Score does not apply").assertExists()
+        compose.onNodeWithText("Does not apply").assertExists()
+        compose.onAllNodes(hasContentDescription("Nutri-Score not stated")).assertCountEquals(0)
+    }
+    @Test fun `traces use the reader's allergen names and keep unknown tags as they are`() {
+        val quality = ProductQuality(productName = "Biscuits", traces = listOf("en:eggs", "en:sesame-seeds", "en:kiwi"))
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Biscuits", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true),
+            {}, {}, {},
+        ) } }
+        compose.onNodeWithText("May contain traces of: eggs, sesame seeds, kiwi").performScrollTo().assertIsDisplayed()
     }
     @Test fun `unknown codes offer contribution without unresolved name placeholders`() {
         compose.setContent { UsualsTheme { ProductInfoSheet(

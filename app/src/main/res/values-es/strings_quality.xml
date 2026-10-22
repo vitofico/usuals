@@ -1,16 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="quality_nutri_score">Nutri-Score %1$s</string>
-    <string name="quality_nutri_score_absent">Nutri-Score: no indicado</string>
-    <string name="quality_nutri_score_not_applicable">Nutri-Score: no aplicable</string>
+    <string name="quality_nutri_score_absent">Nutri-Score no indicado</string>
+    <string name="quality_nutri_score_not_applicable">Nutri-Score no aplicable</string>
+    <string name="quality_nutri_score_meaning">Calificación nutricional, de A (la mejor) a E</string>
     <string name="quality_nova_1">NOVA 1 (sin procesar)</string>
     <string name="quality_nova_2">NOVA 2 (ingrediente culinario)</string>
     <string name="quality_nova_3">NOVA 3 (procesado)</string>
     <string name="quality_nova_4">NOVA 4 (ultraprocesado)</string>
-    <string name="quality_nova_absent">NOVA: no indicado</string>
+    <string name="quality_nova_absent">NOVA no indicado</string>
+    <string name="quality_nova_meaning">Grado de procesamiento, de 1 (sin procesar) a 4 (ultraprocesado)</string>
+    <string name="quality_green_score">Green-Score %1$s</string>
+    <string name="quality_green_score_absent">Green-Score no indicado</string>
+    <string name="quality_green_score_meaning">Impacto ambiental, de A+ a F. Experimental fuera de Francia.</string>
+    <string name="quality_not_stated">No indicado</string>
+    <string name="quality_does_not_apply">No aplicable</string>
+    <plurals name="quality_additives">
+        <item quantity="one">%1$d aditivo: %2$s</item>
+        <item quantity="many">%1$d aditivos: %2$s</item>
+        <item quantity="other">%1$d aditivos: %2$s</item>
+    </plurals>
+    <string name="quality_additives_absent">Aditivos: no indicados</string>
+    <string name="quality_additives_none_listed">Open Food Facts no indica aditivos.</string>
     <string name="quality_allergens">Alérgenos: %1$s</string>
     <string name="quality_allergens_absent">Alérgenos: no indicados</string>
     <string name="quality_allergens_none_listed">Open Food Facts no indica alérgenos. Es una base de datos colaborativa, así que no es una garantía: comprueba el envase.</string>
+    <string name="quality_allergen_gluten">gluten</string>
+    <string name="quality_allergen_crustaceans">crustáceos</string>
+    <string name="quality_allergen_eggs">huevos</string>
+    <string name="quality_allergen_fish">pescado</string>
+    <string name="quality_allergen_peanuts">cacahuetes</string>
+    <string name="quality_allergen_soybeans">soja</string>
+    <string name="quality_allergen_milk">leche</string>
+    <string name="quality_allergen_nuts">frutos de cáscara</string>
+    <string name="quality_allergen_celery">apio</string>
+    <string name="quality_allergen_mustard">mostaza</string>
+    <string name="quality_allergen_sesame_seeds">granos de sésamo</string>
+    <string name="quality_allergen_sulphites">dióxido de azufre y sulfitos</string>
+    <string name="quality_allergen_lupin">altramuces</string>
+    <string name="quality_allergen_molluscs">moluscos</string>
     <string name="quality_record_blank">Open Food Facts tiene una ficha de este producto, pero está vacía.</string>
     <string name="quality_attribution">Datos del producto de Open Food Facts, bajo licencia ODbL.</string>
 </resources>

@@ -42,4 +42,10 @@ class ThemeContrastTest {
                 .that(ratio(scheme.outline, scheme.surface).toDouble()).isAtLeast(3.0)
         }
     }
+
+    @Test fun `every grade glyph is readable on its fill`() {
+        for (shade in GradeShade.entries) {
+            assertWithMessage("grade %s", shade).that(ratio(shade.glyph, shade.fill).toDouble()).isAtLeast(4.5)
+        }
+    }
 }
