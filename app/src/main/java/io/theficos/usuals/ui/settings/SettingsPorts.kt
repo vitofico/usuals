@@ -19,6 +19,9 @@ interface SettingsStore {
     /** Privacy gates must observe opt-out before asynchronous persistence finishes. */
     fun setScanLookupEnabled(enabled: Boolean) = Unit
 
+    /** Immediate for the same reason: the list menu reads it when the person comes back. */
+    fun setBasketOverviewEnabled(enabled: Boolean) = Unit
+
     suspend fun load(): AppSettings
 
     suspend fun save(settings: AppSettings)

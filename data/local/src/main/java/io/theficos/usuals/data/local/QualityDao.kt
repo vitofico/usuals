@@ -17,6 +17,10 @@ interface QualityDao {
     @Query("SELECT * FROM product_quality WHERE gtin = :gtin LIMIT 1")
     suspend fun find(gtin: String): QualityEntity?
 
+    /** What is stored for any of these barcodes; absent ones simply have no row. */
+    @Query("SELECT * FROM product_quality WHERE gtin IN (:gtins)")
+    suspend fun findAll(gtins: List<String>): List<QualityEntity>
+
     /** A later answer replaces an earlier one. See the class KDoc for why that is safe. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: QualityEntity)

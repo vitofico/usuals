@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="basket_title">Resumen de la cesta</string>
+    <string name="basket_source">Calculado en este teléfono con los datos de productos ya guardados aquí. No se consulta nada nuevo.</string>
+    <string name="basket_processing_title">Procesamiento</string>
+    <string name="basket_ultra_none">Ninguno de los productos conocidos es ultraprocesado.</string>
+    <string name="basket_ultra_under_one">Menos de 1 de cada 10 productos conocidos es ultraprocesado.</string>
+    <plurals name="basket_ultra_about">
+        <item quantity="one">Aproximadamente %1$d de cada 10 productos conocidos es ultraprocesado.</item>
+        <item quantity="other">Aproximadamente %1$d de cada 10 productos conocidos son ultraprocesados.</item>
+        <item quantity="many">Aproximadamente %1$d de cada 10 productos conocidos son ultraprocesados.</item>
+    </plurals>
+    <string name="basket_ultra_over_nine">Más de 9 de cada 10 productos conocidos son ultraprocesados.</string>
+    <string name="basket_ultra_all">Todos los productos conocidos son ultraprocesados.</string>
+    <string name="basket_bucket_unprocessed">Sin procesar o mínimamente procesados: %1$d</string>
+    <string name="basket_bucket_processed">Procesados: %1$d</string>
+    <string name="basket_bucket_ultra">Ultraprocesados: %1$d</string>
+    <string name="basket_food_coverage">Basado en %1$d de %2$d productos alimentarios.</string>
+    <string name="basket_fresh_produce">La fruta y la verdura frescas cuentan como sin procesar.</string>
+    <string name="basket_nutri_title">Nutri-Score</string>
+    <string name="basket_nutri_grade">%1$s %2$d</string>
+    <string name="basket_nutri_coverage">Conocido para %1$d de %2$d productos a los que se aplica.</string>
+    <string name="basket_nutri_note">Nutri-Score compara productos del mismo tipo. No es una puntuación de toda la cesta.</string>
+    <string name="basket_not_enough">Aún no hay suficientes datos de productos.</string>
+    <string name="basket_grow_hint">La cobertura crece al escanear: escanea un producto una vez y Usuals lo recordará en las próximas listas.</string>
+    <plurals name="basket_not_food">
+        <item quantity="one">%1$d artículo no alimentario no contado.</item>
+        <item quantity="other">%1$d artículos no alimentarios no contados.</item>
+        <item quantity="many">%1$d artículos no alimentarios no contados.</item>
+    </plurals>
+    <string name="basket_setting_hint">Desactivado por defecto. Añade un resumen de cuán procesada está la comida de una lista o de una compra pasada, con datos de productos ya guardados en este teléfono. No se envía nada nuevo.</string>
+</resources>

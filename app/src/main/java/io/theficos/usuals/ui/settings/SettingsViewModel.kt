@@ -216,6 +216,11 @@ class SettingsViewModel(
         updateSettings { it.copy(scanLookupEnabled = enabled) }
     }
 
+    fun setBasketOverview(enabled: Boolean) {
+        store.setBasketOverviewEnabled(enabled)
+        updateSettings { it.copy(basketOverviewEnabled = enabled) }
+    }
+
     fun setDailyCallCeiling(ceiling: Int) {
         val next = ceiling.coerceAtLeast(0)
         budget.changeCeiling(next)

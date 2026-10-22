@@ -309,6 +309,33 @@ class RoomQualityCacheTest {
 
     // endregion
 
+    @Test
+    fun `a batch read returns every stored answer and skips barcodes never asked about`() = runTest {
+        cache.put(QualityLookup.Found(leche, stated), now)
+        cache.put(QualityLookup.Missing(pan), now)
+
+        val found = cache.getAll(listOf(leche, pan, huevos, leche))
+
+        assertThat(found.keys).containsExactly(leche, pan)
+        assertThat(found.getValue(leche)).isEqualTo(cache.get(leche))
+        assertThat(found.getValue(pan).confirmedMissing).isTrue()
+        assertThat(cache.getAll(emptyList())).isEmpty()
+    }
+
+    @Test
+    fun `a batch read larger than one statement's parameters still answers`() = runTest {
+        cache.put(QualityLookup.Found(aceite, stated), now)
+        // Valid EAN-13s by check digit, so they parse; none is stored.
+        val many = (0 until 1_200).mapNotNull { Gtin.parse(ean13("400000%06d".format(it))) } + aceite
+
+        assertThat(cache.getAll(many).keys).containsExactly(aceite)
+    }
+
+    private fun ean13(twelve: String): String {
+        val sum = twelve.mapIndexed { i, c -> (c - '0') * if (i % 2 == 0) 1 else 3 }.sum()
+        return twelve + (10 - sum % 10) % 10
+    }
+
     private fun gtin(raw: String): Gtin =
         requireNotNull(Gtin.parse(raw)) { "fixture is not a valid GTIN: $raw" }
 }

@@ -199,6 +199,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                         Text(formatter.format(Instant.ofEpochMilli(trip.closedAt)), style = MaterialTheme.typography.titleMedium)
                         Text(pluralStringResource(R.plurals.history_item_count, rows.size, rows.size),
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        state.baskets[trip.id]?.let { io.theficos.usuals.ui.basket.BasketTripSummary(it) }
                         TextButton(onClick = { vm.selectTrip(trip.id) }) { Text(stringResource(R.string.history_select_trip)) }
                     }
                 }

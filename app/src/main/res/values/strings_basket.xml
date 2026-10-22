@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The basket overview: counts that describe a list or trip, never a verdict or an average grade. -->
+<resources>
+    <string name="basket_title">Basket overview</string>
+    <string name="basket_source">Worked out on this phone from product details already saved here. Nothing new is looked up.</string>
+    <string name="basket_processing_title">Processing</string>
+    <string name="basket_ultra_none">None of the known items are ultra-processed.</string>
+    <string name="basket_ultra_under_one">Fewer than 1 in 10 known items is ultra-processed.</string>
+    <plurals name="basket_ultra_about">
+        <item quantity="one">About %1$d in 10 known items is ultra-processed.</item>
+        <item quantity="other">About %1$d in 10 known items are ultra-processed.</item>
+    </plurals>
+    <string name="basket_ultra_over_nine">More than 9 in 10 known items are ultra-processed.</string>
+    <string name="basket_ultra_all">All known items are ultra-processed.</string>
+    <string name="basket_bucket_unprocessed">Unprocessed or minimally processed: %1$d</string>
+    <string name="basket_bucket_processed">Processed: %1$d</string>
+    <string name="basket_bucket_ultra">Ultra-processed: %1$d</string>
+    <string name="basket_food_coverage">Based on %1$d of %2$d food items.</string>
+    <string name="basket_fresh_produce">Fresh produce counted as unprocessed.</string>
+    <string name="basket_nutri_title">Nutri-Score</string>
+    <string name="basket_nutri_grade">%1$s %2$d</string>
+    <string name="basket_nutri_coverage">Known for %1$d of %2$d items it applies to.</string>
+    <string name="basket_nutri_note">Nutri-Score compares products of the same kind. It is not a score for the whole basket.</string>
+    <string name="basket_not_enough">Not enough product data yet.</string>
+    <string name="basket_grow_hint">Coverage grows as you scan: scan an item once and Usuals remembers its product on later lists.</string>
+    <plurals name="basket_not_food">
+        <item quantity="one">%1$d non-food item not counted.</item>
+        <item quantity="other">%1$d non-food items not counted.</item>
+    </plurals>
+    <string name="basket_setting_hint">Off by default. Adds a summary of how processed the food on a list or past trip is, from product details already saved on this phone. Nothing new is sent anywhere.</string>
+</resources>

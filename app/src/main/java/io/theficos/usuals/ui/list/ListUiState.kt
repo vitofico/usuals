@@ -37,6 +37,9 @@ data class ListUiState(
     /** The row being edited, if any. */
     val editing: ListRow? = null,
     val productInfo: io.theficos.usuals.ui.product.ProductInfoState? = null,
+    /** Whether the menu offers the basket overview: its setting and Open Food Facts lookup are both on. */
+    val basketAvailable: Boolean = false,
+    val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
     val autocomplete: List<ItemMemory> = emptyList(),
     val suggestions: List<Suggestion> = emptyList(),
     val scanMerge: io.theficos.usuals.ui.scan.ScanMerge? = null,

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="basket_title">Aperçu du panier</string>
+    <string name="basket_source">Calculé sur ce téléphone à partir des fiches produits déjà enregistrées ici. Rien de nouveau n\'est recherché.</string>
+    <string name="basket_processing_title">Transformation</string>
+    <string name="basket_ultra_none">Aucun des produits connus n\'est ultra-transformé.</string>
+    <string name="basket_ultra_under_one">Moins de 1 produit connu sur 10 est ultra-transformé.</string>
+    <plurals name="basket_ultra_about">
+        <item quantity="one">Environ %1$d produit connu sur 10 est ultra-transformé.</item>
+        <item quantity="other">Environ %1$d produits connus sur 10 sont ultra-transformés.</item>
+        <item quantity="many">Environ %1$d produits connus sur 10 sont ultra-transformés.</item>
+    </plurals>
+    <string name="basket_ultra_over_nine">Plus de 9 produits connus sur 10 sont ultra-transformés.</string>
+    <string name="basket_ultra_all">Tous les produits connus sont ultra-transformés.</string>
+    <string name="basket_bucket_unprocessed">Non transformés ou peu transformés : %1$d</string>
+    <string name="basket_bucket_processed">Transformés : %1$d</string>
+    <string name="basket_bucket_ultra">Ultra-transformés : %1$d</string>
+    <string name="basket_food_coverage">Sur la base de %1$d des %2$d produits alimentaires.</string>
+    <string name="basket_fresh_produce">Fruits et légumes frais comptés comme non transformés.</string>
+    <string name="basket_nutri_title">Nutri-Score</string>
+    <string name="basket_nutri_grade">%1$s %2$d</string>
+    <string name="basket_nutri_coverage">Connu pour %1$d des %2$d produits concernés.</string>
+    <string name="basket_nutri_note">Le Nutri-Score compare des produits de même nature. Ce n\'est pas une note pour tout le panier.</string>
+    <string name="basket_not_enough">Pas encore assez de données produits.</string>
+    <string name="basket_grow_hint">La couverture augmente en scannant : scannez un produit une fois et Usuals s\'en souviendra dans les prochaines listes.</string>
+    <plurals name="basket_not_food">
+        <item quantity="one">%1$d article non alimentaire non compté.</item>
+        <item quantity="other">%1$d articles non alimentaires non comptés.</item>
+        <item quantity="many">%1$d articles non alimentaires non comptés.</item>
+    </plurals>
+    <string name="basket_setting_hint">Désactivé par défaut. Ajoute un résumé du degré de transformation des aliments d\'une liste ou de courses passées, à partir des fiches produits déjà enregistrées sur ce téléphone. Rien de nouveau n\'est envoyé.</string>
+</resources>

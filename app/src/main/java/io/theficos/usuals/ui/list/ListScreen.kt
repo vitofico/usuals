@@ -192,6 +192,8 @@ data class ListActions(
     val onOpenHistory: () -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
+    /** Null hides the menu entry: the basket overview is off. */
+    val onBasketOverview: (() -> Unit)? = null,
     val onRenameList: (String, String) -> Unit = { _, _ -> },
     val onRemoveList: (String) -> Unit = {},
     val onArchiveList: (String, Boolean) -> Unit = { _, _ -> },
@@ -235,6 +237,7 @@ fun ListScreen(
     val view = androidx.compose.ui.platform.LocalView.current
     var reminderOpen by rememberSaveable { mutableStateOf(false) }
     if (reminderOpen) vm.reminders?.let { io.theficos.usuals.ui.shopping.ReminderSheet(it) { reminderOpen = false } }
+    state.basket?.let { io.theficos.usuals.ui.basket.BasketOverviewSheet(it, vm::onDismissBasket) }
     if (toolsOpen) io.theficos.usuals.ui.shopping.ShoppingToolsSheet(state.personal, state.selectedStore,
         vm::updateShoppingTools, vm::onAddFavorite, { toolsOpen = false },
         onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } })
@@ -346,6 +349,7 @@ fun ListScreen(
             onShareList = onOpenSharing,
             onRenameList = vm::onRenameList,
             onRemoveList = vm::onRemoveList,
+            onBasketOverview = if (state.basketAvailable) vm::onBasketOverview else null,
             onArchiveList = vm::onArchiveList,
             onShareText = {
                 val text = (state.pending + state.deferred + state.checked).joinToString("\n") { row ->
@@ -512,7 +516,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
     }
 }
 
-/** The list's few actions: share, send as text, rename, archive, and delete it or, for someone else's list, leave it. */
+/** The list's few actions: share, send as text, the basket overview when it is on, rename, archive, and delete it or, for someone else's list, leave it. */
 @Composable
 private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
     var open by remember { mutableStateOf(false) }
@@ -530,6 +534,9 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
+            actions.onBasketOverview?.let { overview ->
+                DropdownMenuItem(text = { Text(stringResource(R.string.basket_title)) }, enabled = header.itemCount > 0, onClick = { open = false; overview() })
+            }
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_clear)) }, enabled = header.itemCount > 0, onClick = { open = false; clearing = selected?.id ?: "" })
             if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })

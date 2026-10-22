@@ -16,6 +16,8 @@ data class AppSettings(
     /** quire's `ai_daily_budget`, where zero disables the model rather than lifting the limit. */
     val dailyCallCeiling: Int = DEFAULT_DAILY_CALL_CEILING,
     val scanLookupEnabled: Boolean = false,
+    /** Off by default, and only offered while [scanLookupEnabled] is on. */
+    val basketOverviewEnabled: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_DAILY_CALL_CEILING = 200

@@ -3,6 +3,8 @@ package io.theficos.usuals.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.theficos.usuals.model.HistorySnapshot
+import io.theficos.usuals.ui.basket.BasketOverview
+import io.theficos.usuals.ui.basket.BasketSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,12 +20,15 @@ import java.time.format.DateTimeParseException
 
 enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY_LIST, FAILED, REBOUGHT }
 data class HistoryUiState(val history: HistorySnapshot = HistorySnapshot(), val notice: HistoryNotice? = null,
-    val scope: String = "", val query: String = "", val selected: Set<String> = emptySet(), val added: Int = 0)
+    val scope: String = "", val query: String = "", val selected: Set<String> = emptySet(), val added: Int = 0,
+    /** Basket overview per trip id, empty while the overview is off. */
+    val baskets: Map<String, BasketOverview> = emptyMap())
 
 class HistoryViewModel(
     private val store: HistoryStore,
     private val clock: () -> Long = System::currentTimeMillis,
     private val zone: ZoneId = ZoneId.systemDefault(),
+    private val basket: BasketSource? = null,
 ) : ViewModel() {
     private val notice = MutableStateFlow<HistoryNotice?>(null)
     private val query = MutableStateFlow("")
@@ -31,11 +36,20 @@ class HistoryViewModel(
     private val selected = MutableStateFlow(Selection())
     private var rebuying = false
     private val added = MutableStateFlow(0)
-    private val source = if (store is ScopedHistoryStore) store.observeShopping().map { it.listId to it.history }
-        else store.observe().map { "" to it }
+    private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>)
+    private val source = (if (store is ScopedHistoryStore) store.observeShopping().map { it.listId to it.history }
+        else store.observe().map { "" to it }).map { (scope, history) -> Sourced(scope, history, baskets(history)) }
     val state: StateFlow<HistoryUiState> = combine(source, notice, query, selected, added) { source, message, text, ids, count ->
-        HistoryUiState(source.second, message, source.first, text, ids.takeIf { it.scope == source.first }?.ids.orEmpty(), count)
+        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HistoryUiState())
+
+    /** Read from the phone's saved product details only; a failed read leaves the trips without the section. */
+    private suspend fun baskets(history: HistorySnapshot): Map<String, BasketOverview> {
+        val source = basket?.takeIf { it.enabled() } ?: return emptyMap()
+        return try { source.forTrips(history) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { emptyMap() }
+    }
 
     fun search(text: String) { query.value = text; selected.value = Selection() }
     fun select(id: String) {

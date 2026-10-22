@@ -43,6 +43,17 @@ class PreferenceSettingsStore(
         }
     }
 
+    @Volatile private var basketOverviewOverride: Boolean? = null
+
+    fun basketOverviewEnabled(): Boolean = basketOverviewOverride ?: prefs.getBoolean(KEY_BASKET_OVERVIEW, false)
+
+    override fun setBasketOverviewEnabled(enabled: Boolean) {
+        basketOverviewOverride = enabled
+        synchronized(mutationLock) {
+            prefs.edit().putBoolean(KEY_BASKET_OVERVIEW, enabled).apply()
+        }
+    }
+
     fun dailyCallCeiling(): Int = prefs.getInt(KEY_DAILY_CALL_CEILING, AppSettings.DEFAULT_DAILY_CALL_CEILING).coerceAtLeast(0)
 
     override suspend fun load(): AppSettings {
@@ -51,6 +62,7 @@ class PreferenceSettingsStore(
             provider = providers.load() ?: defaults.provider,
             dailyCallCeiling = dailyCallCeiling(),
             scanLookupEnabled = scanLookupEnabled(),
+            basketOverviewEnabled = basketOverviewEnabled(),
         )
     }
 
@@ -66,6 +78,7 @@ class PreferenceSettingsStore(
             prefs.edit()
                 .putInt(KEY_DAILY_CALL_CEILING, settings.dailyCallCeiling)
                 .putBoolean("scan_lookup", scanLookupOverride ?: settings.scanLookupEnabled)
+                .putBoolean(KEY_BASKET_OVERVIEW, basketOverviewOverride ?: settings.basketOverviewEnabled)
                 .commit()
         }
     }
@@ -74,5 +87,6 @@ class PreferenceSettingsStore(
         const val FILE_NAME = "app_settings"
 
         const val KEY_DAILY_CALL_CEILING = "daily_call_ceiling"
+        const val KEY_BASKET_OVERVIEW = "basket_overview"
     }
 }
