@@ -18,9 +18,14 @@ class MarkdownIngredientsTest {
             .containsExactly("2 l milk", "eggs", "apples", "bread", "salt", "pears", "rice").inOrder()
         assertThat(reader.read("Shopping list\n☑ milk\n[x] bread").ingredients).containsExactly("milk", "bread").inOrder()
     }
-    @Test fun aKeepListWithSomeRowsTickedImportsEveryRow() {
-        assertThat(reader.read("Lista della spesa\n[ ] Latte\n[ ] Uova\n[X] Alici 🐟🐟\n[ ] Pane\n[X] Feta\n[ ] Mele\n[X] Babybell").ingredients)
-            .containsExactly("Latte", "Uova", "2 Alici", "Pane", "Feta", "Mele", "Babybell").inOrder()
+    @Test fun aKeepListWithSomeRowsTickedImportsEveryRowAndRemembersWhichWereTicked() {
+        val document = reader.read("Lista della spesa\n[ ] Latte\n[ ] Uova\n[X] Alici 🐟🐟\n[ ] Pane\n[X] Feta\n[ ] Mele\n[X] Babybell")
+        assertThat(document.ingredients).containsExactly("Latte", "Uova", "Alici 🐟🐟", "Pane", "Feta", "Mele", "Babybell").inOrder()
+        assertThat(document.checked).containsExactly(2, 4, 6)
+        assertThat(reader.read("- [x] milk\n- [ ] eggs\n☑ bread\n☐ salt\n- https://example.invalid\n[x] rice").checked).containsExactly(0, 2, 4)
+    }
+    @Test fun emojiStayInTheNameUnlessQuantitiesAreTurnedOn() {
+        assertThat(reader.read("- Cerveza 🍺🍺🍺\n- 🍅 Tomatoes").ingredients).containsExactly("Cerveza 🍺🍺🍺", "🍅 Tomatoes").inOrder()
     }
     @Test fun plainRecipeIngredientsDoNotIncludeMethodOrFencedNotes() {
         assertThat(reader.read("# Soup\n## Ingredients\n2 onions\n1 l water\n## Method\nBoil\n- stir").ingredients)
@@ -77,7 +82,7 @@ class MarkdownIngredientsTest {
     @Test fun aKeepListTickedOffOnTheLastTripImportsWithEmojiCountsAsQuantities() {
         val note = "[X] Alici  🐟🐟 \n[X] Cerveza 🍺🍺🍺\n[X] Piselli 🟢🟢🟢🟢   \n[X] Zucca 🎃🎃 \n[X] Pomodorini 🍅 🍅 \n" +
             "[X] Feta 🧀🧀 \n[X] Anticalcare doccia\n[X] Babybell\n[X] Yogurt naturale BIO \n[X] Aglio 🧄🧄   \n[X] Cipolle rosse 🧅🧅 "
-        val lines = reader.read(note).ingredients
+        val lines = reader.read(note, emojiQuantities = true).ingredients
         assertThat(lines).containsExactly("2 Alici", "3 Cerveza", "4 Piselli", "2 Zucca", "2 Pomodorini", "2 Feta",
             "Anticalcare doccia", "Babybell", "Yogurt naturale BIO", "2 Aglio", "2 Cipolle rosse").inOrder()
         val beer = IngredientLineParser().parse(lines[1])!!
@@ -85,7 +90,7 @@ class MarkdownIngredientsTest {
         assertThat(beer.quantity).isEqualTo(Quantity.pieces(3))
     }
     @Test fun aSingleOrMixedEmojiDecoratesTheNameWithoutBecomingAQuantity() {
-        assertThat(reader.read("- 🍅 Tomatoes\n- Beer 🍺\n- Party 🎉🍺\n- 2 Lemons 🍋🍋\n- 🍺🍺").ingredients)
+        assertThat(reader.read("- 🍅 Tomatoes\n- Beer 🍺\n- Party 🎉🍺\n- 2 Lemons 🍋🍋\n- 🍺🍺", emojiQuantities = true).ingredients)
             .containsExactly("Tomatoes", "Beer", "Party", "2 Lemons", "🍺🍺").inOrder()
     }
     @Test fun emptySourcesStayEmpty() {
@@ -96,9 +101,10 @@ class MarkdownIngredientsTest {
     }
     @Test fun aLongKeepListImportsWhole() {
         val note = (1..300).joinToString("\n") { if (it % 3 == 0) "[X] Item $it 🍅🍅" else "[ ] Item $it" }
-        val lines = reader.read(note).ingredients
-        assertThat(lines).hasSize(300)
-        assertThat(lines.last()).isEqualTo("2 Item 300")
+        val document = reader.read(note)
+        assertThat(document.ingredients).hasSize(300)
+        assertThat(document.ingredients.last()).isEqualTo("Item 300 🍅🍅")
+        assertThat(document.checked).hasSize(100)
     }
     @Test(expected = IllegalArgumentException::class) fun oversizedListsAreRejectedRatherThanPartiallyImported() {
         reader.read((0..MarkdownIngredients.MAX_ITEMS).joinToString("\n") { "- item $it" })

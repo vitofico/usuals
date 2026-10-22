@@ -21,14 +21,14 @@ data class RecipeUiState(val url: String = "", val busy: Boolean = false, val re
 interface RecipeStore {
     suspend fun read(url: String): RecipeLoad
     suspend fun model(url: String, text: String): RecipeLoad
-    suspend fun markdown(text: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
+    suspend fun markdown(text: String, emojiQuantities: Boolean = false): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun review(parsed: List<ParsedItem>): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
-    suspend fun markdownFile(uri: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
+    suspend fun markdownFile(uri: String, emojiQuantities: Boolean = false): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun photoPreview(uri: String): RecipeLoad = RecipeLoad.Failed(importProblem = ImportProblem.READ)
     suspend fun photo(image: ModelImage): RecipeLoad = RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
     fun cameraUri(): String? = null
     fun releaseCamera(uri: String) = Unit
-    suspend fun add(items: List<ParsedItem>)
+    suspend fun add(rows: List<IngredientReview>)
 }
 
 interface RecipeImportFiles {
@@ -47,5 +47,5 @@ object NoRecipeImportFiles : RecipeImportFiles {
 object NoRecipeStore : RecipeStore {
     override suspend fun read(url: String) = RecipeLoad.Failed(RecipeProblem.UNREACHABLE)
     override suspend fun model(url: String, text: String) = RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
-    override suspend fun add(items: List<ParsedItem>) = Unit
+    override suspend fun add(rows: List<IngredientReview>) = Unit
 }

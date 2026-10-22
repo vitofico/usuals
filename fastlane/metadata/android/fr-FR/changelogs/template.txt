@@ -1,1 +1,1 @@
-L’importation accepte désormais des notes jusqu’à 500 articles, donc une longue liste Google Keep arrive en entier. Si une note reste trop longue, l’écran d’importation l’indique en haut plutôt que sous le clavier.
+Importer une longue note ne bloque plus l’app : la fiche se ferme tout de suite et les articles s’ajoutent en arrière-plan. Les articles cochés dans la note arrivent cochés. Les emoji répétés comme quantité sont désormais un interrupteur, désactivé par défaut, donc les emoji restent dans le nom. Tout retirer est rapide même sur une longue liste.

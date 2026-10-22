@@ -54,6 +54,29 @@ class ItemRepository(
         require(result.outcome in setOf(Outcome.APPLIED, Outcome.MERGED, Outcome.CONFLICT))
         ItemId(requireNotNull(kept))
     }
+    /**
+     * Adds up to [IMPORT_BATCH] new rows, ticked or not, as one change. Capturing them one by one rewrites
+     * the list snapshot once per row, which made a long note take seconds and hold the database meanwhile.
+     */
+    suspend fun addBatch(rows: List<Pair<ParsedItem, Boolean>>): List<ItemId> = database.withTransaction {
+        require(rows.size <= IMPORT_BATCH)
+        if (rows.isEmpty()) return@withTransaction emptyList()
+        val scope = listId()
+        val now = clock()
+        val aliases = database.historyDao().aliases(scope).associate { it.fromKey to it.toKey }
+        val first = nextPosition()
+        val entities = rows.mapIndexed { index, (parsed, checked) -> ItemEntity(newId(), parsed.name, parsed.name.trim(), Normalizer.normalize(parsed.name),
+            parsed.quantity?.amount, parsed.quantity?.unit?.name, parsed.note, null, checked = checked, checkedAt = if (checked) now else null,
+            position = first + index * POSITION_STEP, createdAt = now, updatedAt = now, listId = scope) }
+        val result = replica.submitTo(scope, "import", buildJsonObject {
+            put("rows", JsonArray(entities.map { row -> buildJsonObject {
+                put("id", row.id); put("facts", row.facts(aliases)); put("expectedLifecycle", JsonNull); put("expected", buildJsonObject { })
+                put("archived", false); put("deleted", false)
+            } }))
+        })
+        require(result.outcome == Outcome.APPLIED)
+        entities.map { ItemId(it.id) }
+    }
     suspend fun addRepeat(key: String, name: String, asOf: Long): ItemId? = database.withTransaction {
         var proposed: String? = null
         val scope = listId()
@@ -181,18 +204,22 @@ class ItemRepository(
         })
         result.outcome == Outcome.MERGED
     }
-    suspend fun delete(id: ItemId, version: ItemVersion? = null) = database.withTransaction {
-        if (version != null) require(version.id == id.value && version.list == listId())
-        val existing = dao.find(id.value, listId()) ?: return@withTransaction
-        if (existing.deletedAt != null) return@withTransaction
-        val aliases = database.historyDao().aliases(listId()).associate { it.fromKey to it.toKey }
-        val key = ItemIdentity.key(existing.toItem(), aliases)
-        val pref = database.historyDao().preferences(listId()).firstOrNull { it.key == key }
-        if (pref?.repeatEveryDays != null) database.historyDao().saveLocalPreferences(listOf(LocalPreferenceEntity(listId(), key, pref.muted, clock())))
-        replica.submit("delete") { state, _ -> buildJsonObject {
-            put("target", id.value); put("expected", buildJsonObject { version?.fields?.forEach { (key, value) -> put(key, value?.let(::JsonPrimitive) ?: JsonNull) }; put("lifecycle", (if (version != null) version.lifecycle else state.rows[id.value]?.lifecycle)?.let(::JsonPrimitive) ?: JsonNull) })
+    suspend fun delete(id: ItemId, version: ItemVersion? = null) = deleteAll(listOf(id to version))
+    /** Each row is still its own delete for sync, but the list is rewritten once, so emptying a long list is quick. */
+    suspend fun deleteAll(rows: List<Pair<ItemId, ItemVersion?>>) = database.withTransaction {
+        val scope = listId()
+        rows.forEach { (id, version) -> if (version != null) require(version.id == id.value && version.list == scope) }
+        val live = rows.mapNotNull { (id, version) -> dao.find(id.value, scope)?.takeIf { it.deletedAt == null }?.let { it to version } }
+        if (live.isEmpty()) return@withTransaction
+        val aliases = database.historyDao().aliases(scope).associate { it.fromKey to it.toKey }
+        val repeating = database.historyDao().preferences(scope).filter { it.repeatEveryDays != null }.associateBy { it.key }
+        database.historyDao().saveLocalPreferences(live.mapNotNull { (row, _) -> repeating[ItemIdentity.key(row.toItem(), aliases)] }
+            .distinctBy { it.key }.map { LocalPreferenceEntity(scope, it.key, it.muted, clock()) })
+        val state = replica.projection(scope)
+        replica.submitAll(scope, "delete", live.map { (row, version) -> buildJsonObject {
+            put("target", row.id); put("expected", buildJsonObject { version?.fields?.forEach { (key, value) -> put(key, value?.let(::JsonPrimitive) ?: JsonNull) }; put("lifecycle", (if (version != null) version.lifecycle else state.rows[row.id]?.lifecycle)?.let(::JsonPrimitive) ?: JsonNull) })
             put("deletedAt", clock()); put("updatedAt", clock())
-        } }
+        } })
     }
     suspend fun reap(olderThanMillis: Long = FORTNIGHT_MILLIS): Int = replica.reap(clock() - olderThanMillis)
     suspend fun nextPosition(): Double = (dao.maxPosition(listId()) ?: 0.0) + POSITION_STEP
@@ -200,6 +227,8 @@ class ItemRepository(
     companion object {
         /** Gap between consecutive rows, leaving room to drag something in between. */
         const val POSITION_STEP: Double = 1.0
+        /** The reducer bounds one import change to 100 rows. */
+        const val IMPORT_BATCH = 100
 
         /** Fourteen days, the tombstone window from design section 7.1. */
         const val FORTNIGHT_MILLIS: Long = 14L * 24 * 60 * 60 * 1000

@@ -48,20 +48,27 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val scope = database.listDao().selected()
         submitTo(scope, kind, makePayload(projection(scope), scope))
     }
-    suspend fun submitTo(scope: String, kind: String, payload: JsonObject): Reduction = database.withTransaction {
+    suspend fun submitTo(scope: String, kind: String, payload: JsonObject): Reduction = submitAll(scope, kind, listOf(payload)).single()
+    /** Several intents of one kind, each sent on its own, but the stored list is read and rewritten once. */
+    suspend fun submitAll(scope: String, kind: String, payloads: List<JsonObject>): List<Reduction> = database.withTransaction {
         val saved = stored(scope, optimistic = true)
         val before = saved ?: seed(scope)
-        val intent = Intent(newId(), scope, kind, payload, normalizer = NORMALIZER_VERSION)
-        val result = reducer.apply(before, intent)
-        check(result.outcome != Outcome.UPGRADE_REQUIRED)
-        materialize(scope, before, result.projection)
         val synced = database.listDao().find(scope)?.synced == true
-        val encoded = json.encodeToString(result.projection)
+        var after = before
+        val results = payloads.map { payload ->
+            val intent = Intent(newId(), scope, kind, payload, normalizer = NORMALIZER_VERSION)
+            val result = reducer.apply(after, intent)
+            check(result.outcome != Outcome.UPGRADE_REQUIRED)
+            after = result.projection
+            database.syncDao().enqueue(OutboxEntity(scope, intent.id, database.syncDao().nextOrdinal(scope), json.encodeToString(intent), acknowledged = !synced))
+            result
+        }
+        materialize(scope, before, after)
+        val encoded = json.encodeToString(after)
         save(scope, optimistic = true, encoded)
         // A synced list's confirmed copy changes only with a server answer, and both copies are stored together.
         if (!synced) save(scope, optimistic = false, encoded) else if (saved == null) save(scope, optimistic = false, json.encodeToString(before))
-        database.syncDao().enqueue(OutboxEntity(scope, intent.id, database.syncDao().nextOrdinal(scope), json.encodeToString(intent), acknowledged = !synced))
-        result
+        results
     }
     suspend fun rename(scope: String, name: String): Reduction = database.withTransaction {
         require(name.isNotBlank() && name.length <= 100)

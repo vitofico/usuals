@@ -41,13 +41,13 @@ internal class RepositoryRecipeStore(
             planner.planParsed(parsed.map { it.name to it }, history.snapshot(), items.items(), clock()), viaModel = true)
     }
 
-    override suspend fun markdown(text: String): RecipeLoad = try {
-        val document = markdown.read(text)
+    override suspend fun markdown(text: String, emojiQuantities: Boolean): RecipeLoad = try {
+        val document = markdown.read(text, emojiQuantities)
         RecipeLoad.Review("", document.title, null,
-            planner.plan(document.ingredients, history.snapshot(), items.items(), clock()))
+            planner.plan(document.ingredients, history.snapshot(), items.items(), clock(), document.checked))
     } catch (_: IllegalArgumentException) { RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE) }
 
-    override suspend fun markdownFile(uri: String): RecipeLoad = importing { markdown(files.markdown(uri)) }
+    override suspend fun markdownFile(uri: String, emojiQuantities: Boolean): RecipeLoad = importing { markdown(files.markdown(uri), emojiQuantities) }
     override suspend fun review(parsed: List<ParsedItem>): RecipeLoad {
         if (parsed.size > MarkdownIngredients.MAX_ITEMS) return RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE)
         return RecipeLoad.Review("", null, null,
@@ -76,15 +76,12 @@ internal class RepositoryRecipeStore(
     private suspend fun importing(read: suspend () -> RecipeLoad): RecipeLoad = try { read() }
         catch (problem: ImportFailure) { RecipeLoad.Failed(importProblem = problem.problem) }
 
-    override suspend fun add(items: List<ParsedItem>) {
-        this.items.transaction {
-            val facts = history.snapshot()
-            val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-            val present = this.items.items().map { ItemIdentity.key(it, aliases) }.toMutableSet()
-            for (item in items) {
-                val key = ItemIdentity.resolve(Normalizer.normalize(item.name), aliases)
-                if (key.isNotBlank() && present.add(key)) this.items.add(item)
-            }
-        }
+    /** Writes in bounded batches, each its own short transaction, so the list stays usable while a long note lands. */
+    override suspend fun add(rows: List<IngredientReview>) {
+        val facts = history.snapshot()
+        val aliases = facts.aliases.associate { it.fromKey to it.toKey }
+        val present = items.items().map { ItemIdentity.key(it, aliases) }.toMutableSet()
+        val fresh = rows.filter { row -> ItemIdentity.resolve(Normalizer.normalize(row.item.name), aliases).let { it.isNotBlank() && present.add(it) } }
+        for (batch in fresh.chunked(ItemRepository.IMPORT_BATCH)) items.addBatch(batch.map { it.item to it.checked })
     }
 }

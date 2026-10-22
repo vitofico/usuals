@@ -33,7 +33,10 @@
     <string name="recipe_source_url">Link</string>
     <string name="recipe_source_markdown">Text or Markdown</string>
     <string name="recipe_source_photo">Photo</string>
-    <string name="recipe_markdown_help">Paste a note from Google Keep or another app, or open a UTF-8 text or Markdown file. Use one item per line, bullets or checkboxes. Import stays on this device. Checked items come in too. Repeated emoji set the quantity: Beer 🍺🍺🍺 adds 3 beers.</string>
+    <string name="recipe_markdown_help">Paste a note from Google Keep or another app, or open a UTF-8 text or Markdown file. Use one item per line, bullets or checkboxes. Import stays on this device. Checked items come in ticked.</string>
+    <string name="recipe_emoji_quantities">Repeated emoji set the quantity</string>
+    <string name="recipe_emoji_quantities_help">Beer 🍺🍺🍺 adds 3 beers. When off, emoji stay in the item name.</string>
+    <string name="recipe_ticked">Ticked in the note, added ticked</string>
     <string name="recipe_markdown_text">Paste your list</string>
     <string name="recipe_markdown_file">Open text or Markdown file</string>
     <string name="recipe_read_markdown">Review items</string>

@@ -34,7 +34,10 @@
     <string name="recipe_source_url">Link</string>
     <string name="recipe_source_markdown">Testo o Markdown</string>
     <string name="recipe_source_photo">Foto</string>
-    <string name="recipe_markdown_help">Incolla una nota da Google Keep o un’altra app, oppure apri un file di testo o Markdown UTF-8. Usa un articolo per riga, punti elenco o caselle. L’importazione avviene su questo dispositivo. Entrano anche gli articoli spuntati. Le emoji ripetute indicano la quantità: Birra 🍺🍺🍺 aggiunge 3 birre.</string>
+    <string name="recipe_markdown_help">Incolla una nota da Google Keep o un’altra app, oppure apri un file di testo o Markdown UTF-8. Usa un articolo per riga, punti elenco o caselle. L’importazione avviene su questo dispositivo. Gli articoli spuntati entrano già spuntati.</string>
+    <string name="recipe_emoji_quantities">Le emoji ripetute indicano la quantità</string>
+    <string name="recipe_emoji_quantities_help">Birra 🍺🍺🍺 aggiunge 3 birre. Se disattivato, le emoji restano nel nome dell’articolo.</string>
+    <string name="recipe_ticked">Spuntato nella nota, aggiunto spuntato</string>
     <string name="recipe_markdown_text">Incolla la tua lista</string>
     <string name="recipe_markdown_file">Apri file di testo o Markdown</string>
     <string name="recipe_read_markdown">Rivedi articoli</string>

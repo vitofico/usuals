@@ -2,7 +2,7 @@ package io.theficos.usuals.recipe
 
 import kotlinx.serialization.json.*
 
-data class RecipeDocument(val title: String?, val ingredients: List<String>, val servings: String?, val instructions: List<String>)
+data class RecipeDocument(val title: String?, val ingredients: List<String>, val servings: String?, val instructions: List<String>, val checked: Set<Int> = emptySet())
 
 /** Reads embedded data only. No scripts execute and no linked context is fetched. */
 class RecipeJsonLd {

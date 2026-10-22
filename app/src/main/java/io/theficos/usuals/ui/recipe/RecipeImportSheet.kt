@@ -42,7 +42,8 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                       onSource: (RecipeSource) -> Unit = {}, onMarkdown: (String) -> Unit = {},
                       onReadMarkdown: () -> Unit = {}, onMarkdownFile: (String) -> Unit = {},
                       onPhoto: (String) -> Unit = {}, cameraUri: () -> String? = { null },
-                      releasePhoto: (String) -> Unit = {}, onFileFailure: () -> Unit = {}) {
+                      releasePhoto: (String) -> Unit = {}, onFileFailure: () -> Unit = {},
+                      emojiQuantities: Boolean = false, onEmojiQuantities: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     var capture by rememberSaveable { mutableStateOf<String?>(null) }
     val photo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { onPhoto(it.toString()) } }
@@ -58,15 +59,14 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) takePhoto() else onFileFailure()
     }
-    val adding = state.busy && state.result is RecipeLoad.Review
-    ModalBottomSheet(onDismissRequest = { if (!adding) onDismiss() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Outlined.MenuBook, null, tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(end = 12.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
                         .padding(8.dp).size(24.dp))
                 Text(stringResource(R.string.recipe_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                TextButton(onClick = onDismiss, enabled = !adding) { Text(stringResource(R.string.recipe_close)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.recipe_close)) }
             }
             if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (state.result !is RecipeLoad.Review) Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -90,6 +90,7 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                         Text(stringResource(R.string.recipe_markdown_help))
                         OutlinedTextField(state.markdown, onMarkdown, label = { Text(stringResource(R.string.recipe_markdown_text)) }, minLines = 4, maxLines = 7,
                             enabled = !state.busy, modifier = Modifier.fillMaxWidth())
+                        EmojiQuantitySwitch(emojiQuantities, onEmojiQuantities, !state.busy)
                         OutlinedButton(enabled = !state.busy, onClick = { markdown.launch(arrayOf("text/*", "application/octet-stream")) }) { Text(stringResource(R.string.recipe_markdown_file)) }
                         Button(enabled = !state.busy && state.markdown.isNotBlank(), onClick = onReadMarkdown) { Text(stringResource(R.string.recipe_read_markdown)) }
                     }
@@ -122,6 +123,7 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                 is RecipeLoad.Review -> {
                     result.title?.let { Text(it, style = MaterialTheme.typography.headlineSmall) }
                     result.servings?.let { Text(stringResource(R.string.recipe_servings, it)) }
+                    if (state.source == RecipeSource.MARKDOWN && state.markdown.isNotBlank()) EmojiQuantitySwitch(emojiQuantities, onEmojiQuantities, !state.busy)
                     Text(stringResource(if (result.viaModel) R.string.recipe_model_review else R.string.recipe_review_hint), style = MaterialTheme.typography.bodySmall)
                     LazyColumn(Modifier.weight(1f, fill = false)) {
                         itemsIndexed(result.rows, key = { _, row -> row.key }) { index, row ->
@@ -136,6 +138,7 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                                     Text(row.item.name, style = MaterialTheme.typography.bodyLarge)
                                     Text(row.original, style = MaterialTheme.typography.bodySmall)
                                     row.item.quantity?.let { Text(quantityText(it), style = MaterialTheme.typography.labelMedium) }
+                                    if (row.checked) Text(stringResource(R.string.recipe_ticked), style = MaterialTheme.typography.labelSmall)
                                     if (row.reason != IngredientReason.NONE) Text(stringResource(when (row.reason) {
                                         IngredientReason.ON_LIST -> R.string.recipe_on_list
                                         IngredientReason.PANTRY -> R.string.recipe_pantry
@@ -155,6 +158,17 @@ fun RecipeImportSheet(state: RecipeUiState, onUrl: (String) -> Unit, onRead: () 
                 else -> Unit
             }
         }
+    }
+}
+
+@Composable
+private fun EmojiQuantitySwitch(checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(stringResource(R.string.recipe_emoji_quantities))
+            Text(stringResource(R.string.recipe_emoji_quantities_help), style = MaterialTheme.typography.bodySmall)
+        }
+        Switch(checked, onChange, enabled = enabled)
     }
 }
 

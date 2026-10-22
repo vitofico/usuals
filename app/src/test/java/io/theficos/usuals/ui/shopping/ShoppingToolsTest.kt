@@ -10,10 +10,11 @@ class ShoppingToolsTest {
         var disk: String? = null
         val store = ShoppingToolsStore(write = { disk = it })
         val favorite = SavedShoppingItem("favorite", "Milk", 2.0, "LITRE")
-        store.pin(favorite); store.mode(true); store.keepAwake(true); store.haptics(true)
+        store.pin(favorite); store.mode(true); store.keepAwake(true); store.haptics(true); store.emojiQuantities(true)
         store.order("market", Category.entries.reversed())
         val restored = ShoppingToolsStore(read = { disk })
         assertThat(restored.state.value).isEqualTo(store.state.value)
+        assertThat(restored.state.value.emojiQuantities).isTrue()
         assertThat(restored.state.value.portable.categoryOrder("market").first()).isEqualTo(Category.OTHER)
         assertThat(restored.state.value.portable.categoryOrder("other")).isEqualTo(Category.entries)
     }
