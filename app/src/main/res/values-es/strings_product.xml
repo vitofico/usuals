@@ -20,4 +20,6 @@
     <string name="product_unavailable">No se han podido actualizar los detalles. Los datos guardados se muestran a continuación.</string>
     <string name="product_source_updated">Fuente actualizada: %1$s</string>
     <string name="product_not_found">No se ha encontrado un producto con este código. Puedes aportar los datos que faltan en Open Food Facts.</string>
+    <string name="product_remembered">Según el producto que escaneaste el %1$s</string>
+    <string name="product_remembered_undated">Según el producto que escaneaste para este artículo</string>
 </resources>

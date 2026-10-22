@@ -41,4 +41,15 @@ class ProductInfoSheetTest {
         compose.onAllNodes(hasText("%1\$s", substring = true)).assertCountEquals(0)
         compose.onNodeWithText("View or contribute on Open Food Facts").performScrollTo().assertIsDisplayed()
     }
+    @Test fun `a remembered barcode says it is the product scanned before`() {
+        val provenance = androidx.compose.runtime.mutableStateOf<ProductProvenance>(ProductProvenance.Remembered(1_696_334_400_000L))
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Milk", loading = false, provenance = provenance.value), {}, {}, {},
+        ) } }
+        compose.onNodeWithText("Based on the product you scanned on October 3, 2023").assertIsDisplayed()
+        provenance.value = ProductProvenance.Remembered(null)
+        compose.onNodeWithText("Based on the product you scanned for this item").assertIsDisplayed()
+        provenance.value = ProductProvenance.Scanned
+        compose.onAllNodes(hasText("Based on the product", substring = true)).assertCountEquals(0)
+    }
 }

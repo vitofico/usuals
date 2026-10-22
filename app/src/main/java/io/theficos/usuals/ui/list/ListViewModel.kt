@@ -2,6 +2,7 @@ package io.theficos.usuals.ui.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.theficos.usuals.smart.BarcodeMemory
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.SuggestionChoice
@@ -204,7 +205,7 @@ class ListViewModel(
         catch (_: Exception) { screen.update { it.copy(historyError = true) } }
     }
 
-    fun onEditItem(id: ItemId) { val item = shopping.value.items.firstOrNull { it.id == id } ?: return; onEditRow(toRow(item, smartStore.present(listOf(item), shopping.value.history)[id])) }
+    fun onEditItem(id: ItemId) { val item = shopping.value.items.firstOrNull { it.id == id } ?: return; onEditRow(toRow(item, smartStore.present(listOf(item), shopping.value.history)[id], BarcodeMemory(shopping.value.history))) }
     fun onEditRow(row: ListRow) { screen.update { it.copy(editingId = row.id, editingSnapshot = row, editingConflictId = null, prompt = null) } }
     fun onDismissEdit() {
         screen.update { it.copy(editingId = null, editingConflictId = null) }
@@ -212,11 +213,11 @@ class ListViewModel(
     }
 
     fun onProductInfo(row: ListRow) {
-        val gtin = row.gtin ?: return
+        val gtin = row.productGtin ?: return
         val reader = productInfoStore ?: return
         productJob?.cancel()
         screen.update { it.copy(editingId = null, editingSnapshot = null,
-            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled())) }
+            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled(), provenance = row.provenance)) }
         loadProduct(refresh = false)
     }
 
@@ -823,6 +824,7 @@ class ListViewModel(
         val snapshot: ShoppingSnapshot = ShoppingSnapshot(),
         val ordered: List<Item> = emptyList(),
         val presentation: Map<ItemId, ItemPresentation> = emptyMap(),
+        val memory: BarcodeMemory = BarcodeMemory(snapshot.history),
         val rows: ListUiState = ListUiState(),
     )
 
@@ -837,19 +839,20 @@ class ListViewModel(
         val filter = selectedStore?.takeIf { it in stores }
         val visible = if (filter == null) ordered else ordered.filter { it.store == filter }
         val presentation = smartStore.present(ordered, facts)
+        val memory = BarcodeMemory(facts)
         val saved = personal.deferred[snapshot.listId]
         val deferred = saved?.rows.orEmpty().takeUnless { saved != null && facts.trips.any { it.id !in saved.trips } }.orEmpty()
         fun isDeferred(item: Item) = !item.checked && deferred[item.id.value] == (item.version?.lifecycle ?: item.createdAt.toString())
-        return Listed(snapshot, ordered, presentation, ListUiState(
+        return Listed(snapshot, ordered, presentation, memory, ListUiState(
             personal = personal,
-            deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id]) },
+            deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id], memory) },
             suggestions = smartStore.suggestions(clock(), facts, ordered),
             stores = stores, selectedStore = filter,
             // Everything on the list, bought or not. It is the size of the
             // shop, which is what the number is being read for.
             header = ListHeader(itemCount = visible.size),
-            pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id]) },
-            checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id]) },
+            pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id], memory) },
+            checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id], memory) },
         ))
     }
 
@@ -867,26 +870,34 @@ class ListViewModel(
         busy = screen.busy,
         historyError = screen.historyError,
         capture = screen.capture,
-        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id]) },
+        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id], listed.memory) },
         autocomplete = matches,
     )
 
-    private fun toRow(item: Item, presentation: ItemPresentation?) = ListRow(
-        id = item.id,
-        name = displayName(item.name),
-        quantity = item.quantity,
-        note = item.note,
-        checked = item.checked,
-        rawName = item.name,
-        gtin = item.gtin,
-        category = presentation?.category ?: Category.OTHER,
-        categoryOverride = presentation?.override,
-        repeatEveryDays = presentation?.repeatEveryDays,
-        fromSuggestion = item.fromSuggestion,
-        quantityHint = presentation?.quantityHint,
-        store = item.store,
-        version = item.version,
-    )
+    private fun toRow(item: Item, presentation: ItemPresentation?, memory: BarcodeMemory): ListRow {
+        // Typed rows ask too, not only suggestions and repeats: a staple scanned
+        // once then shows its product on every later trip.
+        val remembered = if (item.gtin == null) memory.remembered(item) else null
+        return ListRow(
+            id = item.id,
+            name = displayName(item.name),
+            quantity = item.quantity,
+            note = item.note,
+            checked = item.checked,
+            rawName = item.name,
+            gtin = item.gtin,
+            category = presentation?.category ?: Category.OTHER,
+            categoryOverride = presentation?.override,
+            repeatEveryDays = presentation?.repeatEveryDays,
+            fromSuggestion = item.fromSuggestion,
+            quantityHint = presentation?.quantityHint,
+            store = item.store,
+            version = item.version,
+            productGtin = item.gtin ?: remembered?.gtin,
+            provenance = if (item.gtin != null) io.theficos.usuals.ui.product.ProductProvenance.Scanned
+                else remembered?.let { io.theficos.usuals.ui.product.ProductProvenance.Remembered(it.lastBoughtAt) },
+        )
+    }
 
     /**
      * Lift the first letter for display only.

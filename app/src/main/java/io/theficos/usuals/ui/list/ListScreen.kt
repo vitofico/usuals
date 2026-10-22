@@ -392,7 +392,7 @@ fun ListContent(
             onRemove = { actions.onRemoveRow?.invoke(row) ?: actions.onConfirmRemove(it) },
             onPin = { actions.onPin(row) }, onDefer = { actions.onDefer(row) },
             pinned = state.personal.portable.favorites.any { it.name == row.rawName && it.quantity == row.quantity },
-            onProductInfo = row.gtin?.let { { actions.onProductInfo(row) } })
+            onProductInfo = row.productGtin?.let { { actions.onProductInfo(row) } })
     }
     state.productInfo?.let { info ->
         io.theficos.usuals.ui.product.ProductInfoSheet(info, actions.onRefreshProduct,

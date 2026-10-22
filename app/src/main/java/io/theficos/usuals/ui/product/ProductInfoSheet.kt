@@ -28,6 +28,11 @@ fun ProductInfoSheet(state: ProductInfoState, onRefresh: () -> Unit, onSettings:
             Text(stringResource(R.string.product_details), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Text(quality?.productName ?: state.title, style = MaterialTheme.typography.headlineMedium)
             Text(stringResource(R.string.scan_name_barcode, state.gtin.value), style = MaterialTheme.typography.bodySmall)
+            (state.provenance as? ProductProvenance.Remembered)?.let { memory ->
+                Text(memory.lastBoughtAt?.let { stringResource(R.string.product_remembered,
+                    DateFormat.getDateInstance(DateFormat.LONG, locale).format(Date(it))) }
+                    ?: stringResource(R.string.product_remembered_undated), style = MaterialTheme.typography.bodySmall)
+            }
             quality?.brands?.let { Text(stringResource(R.string.product_brand, it)) }
             quality?.packageSize?.let { Text(stringResource(R.string.product_pack, it)) }
             if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
