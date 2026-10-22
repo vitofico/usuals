@@ -31,7 +31,8 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
 
     fun create(access: AccountAccess, list: String, request: CreateList): Pair<ListView, Boolean> {
         id(list)
-        val plain = stored(request.projection)
+        // A client's snapshot: every fact is checked as the reducer would check it.
+        val plain = SnapshotCodec.encode(request.projection)
         val (view, created) = db.transaction { c ->
             access.verify(c)
             // Serializes this account's creates, so a retried create and the list limit cannot race.
@@ -69,7 +70,8 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             }
             // The reducer returns its input unchanged only for resends and intents it cannot read: no new seq.
             if (projection === before) return@transaction BatchView(results, view(c, access.user, list, locked.seq, text))
-            val plain = stored(projection)
+            // The reducer's output from a stored list needs only the snapshot bounds, not a replay of its facts.
+            val plain = SnapshotCodec.encode(projection, replay = false)
             val seq = next(c)
             c.execute("UPDATE list SET projection=?,seq=? WHERE id=?", cipher.seal(list, plain), seq, id(list))
             members = current(c, list)
@@ -205,11 +207,6 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
     private fun current(c: Connection, list: String) =
         c.query("SELECT user_id FROM list_member WHERE list_id=? AND removed IS NULL", id(list)) { it.getObject(1).toString() }
     private fun next(c: Connection) = c.query("UPDATE list_counter SET seq=seq+1 RETURNING seq") { it.getLong(1) }.single()
-    /** Validates a projection as a snapshot (413 beyond 7 MB encoded) and returns the bare JSON that is sealed. */
-    private fun stored(projection: Projection): ByteArray {
-        SnapshotCodec.encode(projection)
-        return Wire.json.encodeToString(Projection.serializer(), projection).toByteArray()
-    }
     private fun view(c: Connection, user: String, list: String, seq: Long, plain: ByteArray) = views(c, user, mapOf(list to (seq to plain))).getValue(list)
     @OptIn(ExperimentalSerializationApi::class)
     private fun views(c: Connection, user: String, lists: Map<String, Pair<Long, ByteArray>>): Map<String, ListView> {
