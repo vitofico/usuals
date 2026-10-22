@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_facts_grades">Mostra i punteggi nella lista</string>
+    <string name="row_facts_grades_hint">Le righe mostrano il Nutri-Score già salvato su questo telefono per il loro prodotto. La lista non cerca mai nulla.</string>
+    <string name="row_facts_allergens">Allergeni da segnalare</string>
+    <string name="row_facts_allergens_hint">Le righe il cui prodotto salvato ne elenca uno lo segnalano. Le tue scelte restano su questo telefono: non vengono mai sincronizzate, condivise, esportate o incluse nei backup.</string>
+    <string name="row_facts_allergens_caution">Open Food Facts è collaborativa e può essere incompleta. Una riga senza segnalazione non è una garanzia: controlla sempre la confezione.</string>
+    <string name="row_facts_allergens_unstated">Allergeni non indicati, controlla la confezione.</string>
+    <string name="row_allergen_contains">Contiene: %1$s</string>
+    <string name="row_allergen_may_contain">Può contenere: %1$s</string>
+    <string name="row_allergen_both">Contiene: %1$s. Può contenere: %2$s</string>
+</resources>

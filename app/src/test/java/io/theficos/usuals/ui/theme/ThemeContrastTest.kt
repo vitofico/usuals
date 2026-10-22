@@ -38,6 +38,9 @@ class ThemeContrastTest {
                 assertWithMessage("%s category %s", name, category)
                     .that(ratio(accent, surface).toDouble()).isAtLeast(3.0)
             }
+            for (surface in listOf(scheme.background, scheme.surface, scheme.surfaceContainerLow)) {
+                assertWithMessage("%s allergen caution", name).that(ratio(cautionColor(dark), surface).toDouble()).isAtLeast(4.5)
+            }
             assertWithMessage("%s control outlines", name)
                 .that(ratio(scheme.outline, scheme.surface).toDouble()).isAtLeast(3.0)
         }

@@ -29,6 +29,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,6 +44,7 @@ import io.theficos.usuals.enrich.NovaGroup
 import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.enrich.ProductQuality
 import io.theficos.usuals.ui.theme.GradeShade
+import io.theficos.usuals.ui.theme.cautionColor
 import java.util.Locale
 
 /**
@@ -64,10 +70,11 @@ fun NutriScoreChip(grade: NutriScore?, modifier: Modifier = Modifier, compact: B
 /**
  * Nutri-Score, NOVA and Green-Score side by side, then additives and allergens,
  * for the product sheet. Each scale keeps its own unknown state: a gap in the
- * source is shown as a gap, never folded into a grade.
+ * source is shown as a gap, never folded into a grade. Allergens in [avoid]
+ * stand out in the allergen line.
  */
 @Composable
-fun ScorePanel(quality: ProductQuality, modifier: Modifier = Modifier) {
+fun ScorePanel(quality: ProductQuality, modifier: Modifier = Modifier, avoid: Set<String> = emptySet()) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (quality.isBlank) {
             Text(stringResource(R.string.quality_record_blank), style = MaterialTheme.typography.bodyMedium)
@@ -95,7 +102,7 @@ fun ScorePanel(quality: ProductQuality, modifier: Modifier = Modifier) {
             supporting = stringResource(if (quality.greenScore != null) R.string.quality_green_score_meaning else R.string.quality_not_stated),
         )
         Text(additivesSentence(quality.additives), style = MaterialTheme.typography.bodyMedium)
-        Text(allergensSentence(quality.allergens), style = MaterialTheme.typography.bodyMedium)
+        Text(allergensSentence(quality.allergens, avoid), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -129,9 +136,33 @@ fun QualityAttribution(modifier: Modifier = Modifier) {
 
 /** Allergen or trace tags in the reader's language, comma separated. */
 @Composable
-fun allergenList(tags: List<String>): String = tags.map { tag ->
-    ALLERGEN_NAMES[tag.trim().lowercase(Locale.ROOT)]?.let { stringResource(it) } ?: plainTag(tag)
-}.joinToString(", ")
+fun allergenList(tags: List<String>): String = tags.map { allergenName(it) }.joinToString(", ")
+
+/** One allergen or trace tag in the reader's language, or its tag text when it is not one of the 14. */
+@Composable
+fun allergenName(tag: String): String = ALLERGEN_NAMES[tag.trim().lowercase(Locale.ROOT)]?.let { stringResource(it) } ?: plainTag(tag)
+
+/** The tags the avoid list can hold: the 14 regulated allergens, in the regulation's order. */
+internal val AVOIDABLE_ALLERGENS: List<String> get() = ALLERGEN_NAMES.keys.toList()
+
+/**
+ * [template]'s one `%1$s` filled with [tags], the ones in [avoid] in bold
+ * caution amber, so an avoided allergen is found at a glance in a long list.
+ */
+@Composable
+fun highlightedAllergens(template: Int, tags: List<String>, avoid: Set<String>): AnnotatedString {
+    val raw = stringResource(template)
+    val caution = cautionColor(MaterialTheme.colorScheme.background.luminance() < 0.5f)
+    val names = tags.map { allergenName(it) to (it.trim().lowercase(Locale.ROOT) in avoid) }
+    return buildAnnotatedString {
+        append(raw.substringBefore(SLOT))
+        names.forEachIndexed { i, (name, avoided) ->
+            if (i > 0) append(", ")
+            if (avoided) withStyle(SpanStyle(color = caution, fontWeight = FontWeight.Bold)) { append(name) } else append(name)
+        }
+        append(raw.substringAfter(SLOT, ""))
+    }
+}
 
 /** `en:e322i` reads as E322i, the way packs print it; anything else keeps its tag text. */
 internal fun additiveLabel(tag: String): String {
@@ -237,11 +268,15 @@ private fun additivesSentence(additives: List<String>?): String = when {
 }
 
 @Composable
-private fun allergensSentence(allergens: List<String>?): String = when {
-    allergens == null -> stringResource(R.string.quality_allergens_absent)
-    allergens.isEmpty() -> stringResource(R.string.quality_allergens_none_listed)
-    else -> stringResource(R.string.quality_allergens, allergenList(allergens))
+private fun allergensSentence(allergens: List<String>?, avoid: Set<String>): AnnotatedString = when {
+    // Someone who flags allergens is told plainly that silence here is not an answer.
+    allergens == null && avoid.isNotEmpty() -> AnnotatedString(stringResource(R.string.row_facts_allergens_unstated))
+    allergens == null -> AnnotatedString(stringResource(R.string.quality_allergens_absent))
+    allergens.isEmpty() -> AnnotatedString(stringResource(R.string.quality_allergens_none_listed))
+    else -> highlightedAllergens(R.string.quality_allergens, allergens, avoid)
 }
+
+private const val SLOT = "%1${'$'}s"
 
 private fun plainTag(tag: String): String = tag.substringAfterLast(':').trim()
 

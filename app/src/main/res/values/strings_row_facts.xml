@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Product facts on list rows, read from what lookup already saved on this phone. -->
+<resources>
+    <string name="row_facts_grades">Show grades on the list</string>
+    <string name="row_facts_grades_hint">Rows show the Nutri-Score already saved on this phone for their product. The list never looks anything up.</string>
+    <string name="row_facts_allergens">Allergens to flag</string>
+    <string name="row_facts_allergens_hint">Rows whose saved product lists one of these say so. Your choices stay on this phone: they are never synced, shared, exported or backed up.</string>
+    <string name="row_facts_allergens_caution">Open Food Facts is community-contributed and may be incomplete. A row without a flag is not a promise: always check the packaging.</string>
+    <string name="row_facts_allergens_unstated">Allergens not stated, check the packaging.</string>
+    <string name="row_allergen_contains">Contains %1$s</string>
+    <string name="row_allergen_may_contain">May contain %1$s</string>
+    <string name="row_allergen_both">Contains %1$s. May contain %2$s</string>
+</resources>

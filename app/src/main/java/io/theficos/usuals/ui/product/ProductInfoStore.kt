@@ -19,6 +19,8 @@ data class ProductInfoState(
     val stale: Boolean = false,
     val result: QualityLookup? = null,
     val provenance: ProductProvenance? = null,
+    /** Allergen tags this phone flags, highlighted where the sheet names them. */
+    val avoid: Set<String> = emptySet(),
 )
 
 /** Where a row's product barcode came from, so the sheet can say when it is the household's memory rather than a scan. */

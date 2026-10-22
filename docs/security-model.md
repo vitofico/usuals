@@ -76,7 +76,11 @@ local, separate from shopping history, and never included in a shopping-data
 JSON export. Direct database device transfer can carry the local cache to the
 receiving phone. Product details show saved data immediately, including when
 lookup is off. Only consented reads refresh it; failures retain saved data with
-a visible error and saved date. Responses are size-bounded and mismatched codes
+a visible error and saved date. While lookup is on, list rows show cached grades
+and allergen flags read from that cache only; they never trigger a request. The
+allergen avoid list is health data and stays in its own preference file on the
+phone: it is not part of the synced list, the JSON export, cloud backup or device
+transfer. Responses are size-bounded and mismatched codes
 are rejected. The source/contribution link opens the product page in the browser
 only after an explicit tap. Usuals performs no product writes.
 The home-screen widget reads unchecked rows locally and opens the list; it

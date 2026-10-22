@@ -4,6 +4,9 @@ import android.content.Context
 import io.theficos.usuals.auth.ProviderSettingsStore
 import io.theficos.usuals.ui.settings.AppSettings
 import io.theficos.usuals.ui.settings.SettingsStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Where the settings screen's choices actually live on the phone.
@@ -36,8 +39,14 @@ class PreferenceSettingsStore(
 
     fun scanLookupEnabled(): Boolean = scanLookupOverride ?: prefs.getBoolean("scan_lookup", false)
 
+    private val scanLookupState = MutableStateFlow(scanLookupEnabled())
+
+    /** The opt-in as it changes, for list rows that show cached product facts only while it is on. */
+    val scanLookup: StateFlow<Boolean> = scanLookupState.asStateFlow()
+
     override fun setScanLookupEnabled(enabled: Boolean) {
         scanLookupOverride = enabled
+        scanLookupState.value = enabled
         synchronized(mutationLock) {
             prefs.edit().putBoolean("scan_lookup", enabled).apply()
         }
@@ -81,6 +90,7 @@ class PreferenceSettingsStore(
                 .putBoolean(KEY_BASKET_OVERVIEW, basketOverviewOverride ?: settings.basketOverviewEnabled)
                 .commit()
         }
+        scanLookupState.value = scanLookupEnabled()
     }
 
     private companion object {
