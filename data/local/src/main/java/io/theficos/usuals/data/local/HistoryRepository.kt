@@ -82,13 +82,11 @@ class HistoryRepository(
                 quantityUnit = draft.quantity?.unit?.name, checked = true, checkedAt = boughtAt,
                 createdAt = boughtAt, updatedAt = boughtAt), trip, aliases)
         }
-        // A long past list becomes bounded intents inside one local transaction.
-        for (batch in purchases.chunked(99)) {
-            replica.submit("import") { _, _ -> buildJsonObject {
-                put("trips", JsonArray(listOf(buildJsonObject { put("id", trip.id); put("closedAt", trip.closedAt) })))
-                put("purchases", JsonArray(batch.map { it.facts() }))
-            } }.also { require(it.outcome == Outcome.APPLIED) }
-        }
+        // A long past list becomes bounded intents, and the list is rewritten once.
+        replica.submitAll(trip.listId, "import", purchases.chunked(99).map { batch -> buildJsonObject {
+            put("trips", JsonArray(listOf(buildJsonObject { put("id", trip.id); put("closedAt", trip.closedAt) })))
+            put("purchases", JsonArray(batch.map { it.facts() }))
+        } }).forEach { require(it.outcome == Outcome.APPLIED) }
         FinishedTrip(trip.domain(), purchases.size)
     }
 
@@ -178,15 +176,18 @@ class HistoryRepository(
         } }
         val tripFacts = archive.trips.filter { it.id !in existingTrips }.map { buildJsonObject { put("id", it.id); put("closedAt", it.closedAt) } }
         val purchaseFacts = archive.purchases.filter { it.id !in existingPurchases }.map { it.facts() }
-        // Preserve parent-before-child order while bounding each encrypted import command.
-        for (batch in tripFacts.chunked(100)) replica.submitTo(scope, "import", buildJsonObject { put("trips", JsonArray(batch)) }).also { require(it.outcome == Outcome.APPLIED) }
-        for (batch in (patches.map { "rows" to it } + purchaseFacts.map { "purchases" to it }).chunked(100)) {
-            replica.submitTo(scope, "import", buildJsonObject {
+        // Preserve parent-before-child order while bounding each encrypted import command; the list is rewritten once.
+        val chunks = tripFacts.chunked(100).map { batch -> buildJsonObject { put("trips", JsonArray(batch)) } } +
+            (patches.map { "rows" to it } + purchaseFacts.map { "purchases" to it }).chunked(100).map { batch -> buildJsonObject {
                 batch.groupBy({ it.first }, { it.second }).forEach { (kind, values) -> put(kind, JsonArray(values)) }
-            }).also { require(it.outcome == Outcome.APPLIED) }
-        }
-        for (pref in archive.preferences) items.savePreference(pref)
-        for (alias in archive.aliases) require(items.saveAlias(alias))
+            } }
+        if (chunks.isNotEmpty()) replica.submitAll(scope, "import", chunks).forEach { require(it.outcome == Outcome.APPLIED) }
+        items.savePreferences(archive.preferences)
+        // One alias intent carries every pair: each expects the list's alias revision, so a second would be stale.
+        if (archive.aliases.isNotEmpty()) require(replica.submitTo(scope, "alias", buildJsonObject {
+            put("expected", replica.projection(scope).aliasRevision?.let(::JsonPrimitive) ?: JsonNull)
+            put("delta", JsonObject(archive.aliases.associate { it.fromKey to JsonPrimitive(it.toKey) }))
+        }).outcome == Outcome.APPLIED)
     }
 
     private fun purchase(item: ItemEntity, trip: TripEntity, aliases: Map<String, String>): PurchaseEntity {

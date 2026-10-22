@@ -1,6 +1,7 @@
 package io.theficos.usuals.di
 
 import io.theficos.usuals.data.local.ItemRepository
+import io.theficos.usuals.data.local.NewItem
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.parse.ParsedItem
@@ -29,9 +30,9 @@ class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
      * know that. So the id and position the view model invented are dropped
      * here on purpose, and the repository's answer is authoritative.
      */
-    override suspend fun add(items: List<Item>) = repository.transaction {
-        for (item in items) {
-            repository.add(
+    override suspend fun add(items: List<Item>) {
+        repository.addAll(items.map { item ->
+            NewItem(
                 parsed = ParsedItem(name = item.name, quantity = item.quantity, note = item.note),
                 addedBy = item.addedBy,
                 gtin = item.gtin,
@@ -39,7 +40,7 @@ class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
                 fromSuggestion = item.fromSuggestion,
                 store = item.store,
             )
-        }
+        })
     }
 
     override suspend fun setChecked(id: ItemId, checked: Boolean) =

@@ -57,6 +57,23 @@ class RepositorySmartStoreTest {
         assertThat(tools.state.value.portable.favorites).containsExactly(favorite)
     }
 
+    @Test fun `rebuying a long trip adds each new key once, after the open rows, keeping gtin and store`() = runTest {
+        val scope = items.currentListId()
+        items.add(ParsedItem("milk"))
+        val code = Gtin.parse("4006381333931")!!
+        val rows = (1..150).map { io.theficos.usuals.ui.shopping.SavedShoppingItem("old-$it", "item $it") } +
+            listOf(io.theficos.usuals.ui.shopping.SavedShoppingItem("old-milk", "milk", 2.0, "LITRE"),
+                io.theficos.usuals.ui.shopping.SavedShoppingItem("again", "item 1"),
+                io.theficos.usuals.ui.shopping.SavedShoppingItem("scanned", "soap", gtin = code.value, store = "Bonpreu"))
+        assertThat(smart.addAgain(rows, scope)).isEqualTo(151)
+        val list = items.items()
+        assertThat(list.map { it.name }).isEqualTo(listOf("milk") + (1..150).map { "item $it" } + "soap")
+        assertThat(list.map { it.position }).isInStrictOrder()
+        assertThat(list.first().quantity).isNull()
+        assertThat(list.last().gtin).isEqualTo(code)
+        assertThat(list.last().store).isEqualTo("Bonpreu")
+    }
+
     @Test fun `rebuy is idempotent keeps quantities and refuses a stale list scope`() = runTest {
         val scope = items.currentListId()
         val milk = items.add(ParsedItem("milk", Quantity(1.0, MeasureUnit.LITRE)))

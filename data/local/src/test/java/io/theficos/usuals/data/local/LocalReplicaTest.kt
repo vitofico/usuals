@@ -138,7 +138,7 @@ class LocalReplicaTest {
         val before = items.items()
         now += 21 * 86_400_000L
         val close = history.finish()!!
-        items.addRepeat("milk", "Milk", now)
+        items.addRepeats(listOf("milk" to "Milk"), now)
         assertThat(items.items().single().id).isNotEqualTo(milk)
         db.close(); db = open(); items = ItemRepository(db, clock = { now }); history = HistoryRepository(db, items, clock = { now })
         assertThat(history.undo(close.trip.id)).isTrue()

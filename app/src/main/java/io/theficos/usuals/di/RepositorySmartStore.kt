@@ -2,6 +2,7 @@ package io.theficos.usuals.di
 
 import io.theficos.usuals.data.local.HistoryRepository
 import io.theficos.usuals.data.local.ItemRepository
+import io.theficos.usuals.data.local.NewItem
 import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.ItemIdentity
 import io.theficos.usuals.parse.Normalizer
@@ -29,17 +30,13 @@ class RepositorySmartStore(
             val facts = history.snapshot()
             val aliases = facts.aliases.associate { it.fromKey to it.toKey }
             val active = items.items().filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toMutableSet()
-            var added = 0
-            for (row in rows) {
+            val fresh = rows.mapNotNull { row ->
                 row.validate()
                 val gtin = row.gtin?.let(Gtin::parse)
                 val key = ItemIdentity.key(row.name, Normalizer.normalize(row.name), gtin, aliases)
-                if (active.add(key)) {
-                    items.add(ParsedItem(row.name, row.quantity), gtin = gtin, store = row.store)
-                    added++
-                }
+                if (active.add(key)) NewItem(ParsedItem(row.name, row.quantity), gtin = gtin, store = row.store) else null
             }
-            added
+            items.addAll(fresh).size
         }
     }
 
@@ -127,12 +124,8 @@ class RepositorySmartStore(
         maintenance.withLock { items.transaction { addRepeats(now) } }
     }
 
-    private suspend fun addRepeats(now: Long) {
-        val facts = history.snapshot()
-        for (candidate in repeats.due(now, facts, items.items())) {
-            items.addRepeat(candidate.key, candidate.name, now)
-        }
-    }
+    private suspend fun addRepeats(now: Long) =
+        items.addRepeats(repeats.due(now, history.snapshot(), items.items()).map { it.key to it.name }, now)
 
     override suspend fun finish(onlyIds: Set<ItemId>?) = finishPinned(onlyIds, null)
     override suspend fun finishVersions(versions: List<ItemVersion>, onlyIds: Set<ItemId>?) = finishPinned(onlyIds, versions)
