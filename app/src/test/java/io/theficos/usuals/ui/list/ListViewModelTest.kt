@@ -278,16 +278,14 @@ class ListViewModelTest {
     }
 
     @Test
-    fun a_scanned_barcode_lands_as_an_item_that_carries_it() = runTest(main.dispatcher) {
+    fun a_scanned_barcode_adds_nothing_without_a_scan_store_to_name_it() = runTest(main.dispatcher) {
         val store = FakeItemStore()
         val vm = viewModel(store)
-        val gtin = requireNotNull(Gtin.parse("8480000123459"))
 
-        vm.onScanned(gtin)
+        vm.onScanned(requireNotNull(Gtin.parse("8480000123459")))
 
-        val added = store.current.single()
-        assertThat(added.gtin).isEqualTo(gtin)
-        assertThat(added.rawText).isEqualTo(gtin.value)
+        assertThat(store.current).isEmpty()
+        assertThat(vm.state.value.scanNames).isEmpty()
     }
 
     // Checking off, and taking off ----------------------------------------

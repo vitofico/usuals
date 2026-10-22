@@ -11,6 +11,7 @@ import io.theficos.usuals.ui.recipe.*
 import io.theficos.usuals.ui.scan.ScanStore
 import io.theficos.usuals.ui.scan.ScanNameOffer
 import io.theficos.usuals.ui.scan.ScanNameProblem
+import io.theficos.usuals.ui.scan.ScanResult
 import io.theficos.usuals.recipe.IngredientReason
 import io.theficos.usuals.recipe.RecipeProblem
 import io.theficos.usuals.model.FinishedTrip
@@ -87,7 +88,6 @@ class ListViewModel(
     private data class ScreenState(
         val checkedExpanded: Boolean = false,
         val capture: CaptureState = CaptureState.Idle,
-        val scanMerge: io.theficos.usuals.ui.scan.ScanMerge? = null,
         val productInfo: io.theficos.usuals.ui.product.ProductInfoState? = null,
         val editingId: ItemId? = null,
         val editingSnapshot: ListRow? = null,
@@ -100,7 +100,9 @@ class ListViewModel(
         val repeatOffer: RepeatOffer? = null,
         val recipe: RecipeUiState? = null,
         val scanNames: List<ScanNameOffer> = emptyList(),
-        val lastScanId: ItemId? = null,
+        /** Scanned barcodes whose lookup has not answered yet. */
+        val scanLookups: Set<Gtin> = emptySet(),
+        val lastScan: ScanResult? = null,
         val selectedStore: String? = null,
         /** Read from settings when the screen opens, so the menu entry follows a change made in Settings. */
         val basketAvailable: Boolean = false,
@@ -117,7 +119,6 @@ class ListViewModel(
     private val mergeQueue = ArrayDeque<MergeReview>()
     private var productJob: Job? = null
     private var scanNameGeneration = 0
-    private val skippedScanNames = mutableSetOf<ItemId>()
 
     /**
      * Shared eagerly rather than while-subscribed, on purpose. It is one local
@@ -204,7 +205,6 @@ class ListViewModel(
             recipeJob?.cancel()
             basketJob?.cancel()
             scanNameGeneration++
-            skippedScanNames.clear()
             mergeQueue.clear()
             screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, basketAvailable = screen.value.basketAvailable, busy = true)
             try { change() }
@@ -325,44 +325,34 @@ class ListViewModel(
     }
 
     fun onStoreFilter(store: String?) { screen.update { it.copy(selectedStore = store) } }
-    fun onSkipScanName(id: ItemId) { skippedScanNames += id; screen.update { it.copy(scanNames = it.scanNames.filterNot { offer -> offer.id == id }) } }
-    fun onSkipScanNames() { scanNameGeneration++; screen.update { it.copy(scanNames = emptyList()) } }
-    fun onRetryScanName(id: ItemId) {
-        val offer = screen.value.scanNames.firstOrNull { it.id == id } ?: return
-        screen.update { it.copy(scanNames = it.scanNames.filterNot { offer -> offer.id == id }) }
-        queueScanName(id, offer.gtin, scanNameGeneration)
+    fun onSkipScanName(gtin: Gtin) {
+        screen.update { it.copy(scanNames = it.scanNames.filterNot { offer -> offer.gtin == gtin }, lastScan = ScanResult(gtin, null)) }
     }
-    fun onConfirmScanName(id: ItemId, name: String) {
-        val offer = screen.value.scanNames.firstOrNull { it.id == id } ?: return
+    fun onSkipScanNames() {
+        scanNameGeneration++
+        screen.update { state -> state.copy(scanNames = emptyList(), scanLookups = emptySet(),
+            lastScan = state.scanNames.firstOrNull()?.let { ScanResult(it.gtin, null) } ?: state.lastScan) }
+    }
+    fun onRetryScanName(gtin: Gtin) {
+        if (screen.value.scanNames.none { it.gtin == gtin }) return
+        screen.update { it.copy(scanNames = it.scanNames.filterNot { offer -> offer.gtin == gtin }) }
+        queueScanName(gtin, scanNameGeneration)
+    }
+    fun onConfirmScanName(gtin: Gtin, name: String) {
+        val offer = screen.value.scanNames.firstOrNull { it.gtin == gtin } ?: return
         val scans = scanStore ?: return
-        if (screen.value.busy) return
+        if (screen.value.busy || !name.any(Char::isLetter)) return
         screen.update { it.copy(busy = true) }
         viewModelScope.launch {
             try {
-                val merge = scans.mergePreview(offer, name)
-                if (merge != null) screen.update { it.copy(busy = false, scanMerge = merge) }
-                else {
-                    val saved = scans.confirm(offer, name)
-                    screen.update { it.copy(busy = false, historyError = !saved, scanNames = if (saved) it.scanNames.filterNot { offer -> offer.id == id } else it.scanNames) }
-                }
+                scans.add(offer, name)
+                screen.update { it.copy(busy = false, scanNames = it.scanNames.filterNot { pending -> pending.gtin == gtin },
+                    lastScan = ScanResult(gtin, name.trim())) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { screen.update { it.copy(busy = false, historyError = true) } }
         }
     }
 
-    fun onScanMerge(accept: Boolean) {
-        val review = screen.value.scanMerge ?: return
-        if (!accept) { screen.update { it.copy(scanMerge = null) }; return }
-        viewModelScope.launch {
-            screen.update { it.copy(busy = true) }
-            try {
-                val saved = scanStore?.merge(review) == true
-                screen.update { it.copy(busy = false, scanMerge = null, historyError = !saved,
-                    scanNames = if (saved) it.scanNames.filterNot { offer -> offer.id == review.source.id } else it.scanNames) }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { screen.update { it.copy(busy = false, scanMerge = null, historyError = true) } }
-        }
-    }
     private var recipeJob: Job? = null
 
     fun onOpenRecipe(url: String = "") {
@@ -463,7 +453,7 @@ class ListViewModel(
 
     private fun refreshOffers(rows: List<Item>, facts: HistorySnapshot) {
         val current = screen.value
-        if (current.busy || current.prompt != null || current.editingId != null || current.mergeReview != null || current.repeatOffer != null || current.recipe != null || current.scanNames.any { offer -> rows.any { it.id == offer.id } }) return
+        if (current.busy || current.prompt != null || current.editingId != null || current.mergeReview != null || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
         val offer = smartStore.repeatOffers(rows, facts).firstOrNull { claimPrompt("repeat_offer:${it.key}", "v1") }
         if (offer != null) screen.update { it.copy(repeatOffer = offer) }
     }
@@ -537,7 +527,7 @@ class ListViewModel(
 
     private fun refreshPrompts(rows: List<Item>, history: HistorySnapshot) {
         if (screen.value.busy || screen.value.prompt != null || screen.value.editingId != null ||
-            screen.value.mergeReview != null || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.any { offer -> rows.any { it.id == offer.id } }) return
+            screen.value.mergeReview != null || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.isNotEmpty()) return
         val purchasedIds = history.purchases.map { it.id }.toSet()
         val current = rows.filterNot { it.id in purchasedIds }
         val stale = current.filter { it.checked && it.checkedAt?.let { at -> at <= clock() - 12 * 60 * 60 * 1000L } == true }
@@ -757,48 +747,27 @@ class ListViewModel(
     /**
      * A barcode came back from the scanner.
      *
-     * A barcode does not carry a name a person can read, so the row shows the
-     * digits and the item carries the GTIN. Renaming the row later keeps the
-     * barcode.
+     * Nothing is added yet. The barcode is looked up, or named from an earlier
+     * confirmation, and the person confirms a name before the row exists. A
+     * barcode alone is never a row: digits are not something to shop for.
      */
     fun onScanned(gtin: Gtin) {
-        val scans = scanStore
-        if (scans != null) {
-            val generation = scanNameGeneration
-            viewModelScope.launch {
-                try {
-                    val id = scans.add(gtin)
-                    screen.update { it.copy(lastScanId = id) }
-                    skippedScanNames.remove(id)
-                    queueScanName(id, gtin, generation)
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { screen.update { it.copy(historyError = true) } }
-            }
-            return
-        }
-        viewModelScope.launch {
-            val now = clock()
-            val item = ParsedItem(name = gtin.value).toItem(
-                id = newItemId(),
-                rawText = gtin.value,
-                position = nextPosition(),
-                gtin = gtin,
-                clock = { now },
-            )
-            store.add(listOf(item))
-        }
+        val state = screen.value
+        if (gtin in state.scanLookups || state.scanNames.any { it.gtin == gtin }) return
+        queueScanName(gtin, scanNameGeneration)
     }
 
-    private fun queueScanName(id: ItemId, gtin: Gtin, generation: Int) {
+    private fun queueScanName(gtin: Gtin, generation: Int) {
         val scans = scanStore ?: return
+        screen.update { it.copy(scanLookups = it.scanLookups + gtin) }
         viewModelScope.launch {
-            val offer = try { scans.lookup(id, gtin) }
+            val offer = try { scans.lookup(gtin) }
                 catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { ScanNameOffer(id, gtin, null, null, false, ScanNameProblem.UNAVAILABLE) }
-                ?: return@launch
-            if (generation != scanNameGeneration || id in skippedScanNames) return@launch
-            screen.update { state -> if (state.scanNames.any { it.id == offer.id }) state
-                else state.copy(scanNames = state.scanNames + offer, prompt = null, repeatOffer = null) }
+                catch (_: Exception) { ScanNameOffer(gtin, null, null, false, ScanNameProblem.UNAVAILABLE) }
+            if (generation != scanNameGeneration) return@launch
+            screen.update { state -> state.copy(scanLookups = state.scanLookups - gtin,
+                scanNames = if (state.scanNames.any { it.gtin == gtin }) state.scanNames else state.scanNames + offer,
+                prompt = null, repeatOffer = null) }
         }
     }
 
@@ -930,11 +899,11 @@ class ListViewModel(
         basketAvailable = screen.basketAvailable,
         basket = screen.basket,
         mergeReview = screen.mergeReview,
-        scanMerge = screen.scanMerge,
         repeatOffer = screen.repeatOffer,
         recipe = screen.recipe,
-        scanNames = screen.scanNames.filter { offer -> listed.ordered.any { it.id == offer.id } },
-        lastScannedItem = listed.ordered.firstOrNull { it.id == screen.lastScanId },
+        scanNames = screen.scanNames,
+        scanPending = screen.scanLookups + screen.scanNames.map { it.gtin },
+        lastScan = screen.lastScan,
         checkedExpanded = screen.checkedExpanded,
         finishedTrip = screen.finishedTrip?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
         prompt = screen.prompt,

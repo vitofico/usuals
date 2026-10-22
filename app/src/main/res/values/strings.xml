@@ -48,7 +48,7 @@
     <string name="scan_title">Scan</string>
     <string name="scan_back">Back</string>
     <string name="scan_intro">Scan a package</string>
-    <string name="scan_guidance">Hold the barcode inside the frame. The camera pauses when it is read.</string>
+    <string name="scan_guidance">Hold the barcode inside the frame, a hand\'s width away. Tap to focus, pinch to zoom. The camera pauses when it reads a code.</string>
     <string name="scan_permission_rationale">Reading a barcode needs the camera. It is used on this screen only, and no image is stored.</string>
     <string name="scan_permission_grant">Use the camera</string>
     <string name="scan_permission_denied">No camera. Type the code instead, it works just as well.</string>

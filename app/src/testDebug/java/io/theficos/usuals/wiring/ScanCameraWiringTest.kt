@@ -7,8 +7,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,6 +26,7 @@ import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.ui.scan.BarcodeCamera
 import io.theficos.usuals.ui.scan.LocalBarcodeCamera
 import io.theficos.usuals.ui.scan.NoBarcodeCamera
+import io.theficos.usuals.ui.scan.ScanResult
 import io.theficos.usuals.ui.scan.ScanScreen
 import io.theficos.usuals.ui.theme.UsualsTheme
 import org.junit.Rule
@@ -142,16 +148,37 @@ class ScanCameraWiringTest {
         compose.onNodeWithText("Scan next item").performScrollTo().performClick()
         compose.runOnIdle { oldCallback(OTHER) }
         assertThat(scanned).hasSize(1)
-        compose.runOnIdle { read(EAN) }
-        compose.onNodeWithText("Barcode $EAN is already scanned in this session. No extra item was added.").assertExists()
-        assertThat(scanned).hasSize(1)
-        compose.onNodeWithText("Scan next item").performScrollTo().performClick()
         compose.runOnIdle { read(OTHER) }
         assertThat(scanned.map { it.value }).containsExactly(EAN, OTHER).inOrder()
     }
 
     @Test
-    fun rotation_preserves_the_pause_and_duplicate_guard() {
+    fun the_camera_stays_paused_until_the_scan_is_confirmed_or_declined() {
+        grantCamera()
+        var pending by mutableStateOf(emptySet<String>())
+        var last by mutableStateOf<ScanResult?>(null)
+        compose.setContent {
+            UsualsTheme {
+                CompositionLocalProvider(LocalBarcodeCamera provides FakeCamera(EAN)) {
+                    ScanScreen(onScanned = { pending = setOf(it.value) }, onBack = {}, pendingCodes = pending, lastScan = last)
+                }
+            }
+        }
+        compose.onNodeWithText(FakeCamera.TRIGGER).performScrollTo().performClick()
+        compose.onNodeWithText("Checking barcode $EAN. Confirm its name to add it.").assertExists()
+        compose.onNodeWithText("Scan next item").assertIsNotEnabled()
+
+        pending = emptySet()
+        last = ScanResult(Gtin.parse(EAN)!!, null)
+        compose.onNodeWithText("Barcode $EAN was not added. The camera is paused.").assertExists()
+
+        last = ScanResult(Gtin.parse(EAN)!!, "Milk")
+        compose.onNodeWithText("Added Milk. The camera is paused.").assertExists()
+        compose.onNodeWithText("Scan next item").assertIsEnabled()
+    }
+
+    @Test
+    fun rotation_preserves_the_pause() {
         grantCamera()
         val restoration = StateRestorationTester(compose)
         val scanned = mutableListOf<Gtin>()
@@ -165,9 +192,10 @@ class ScanCameraWiringTest {
         compose.onNodeWithText(FakeCamera.TRIGGER).performScrollTo().performClick()
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText(FakeCamera.TRIGGER).assertDoesNotExist()
+        assertThat(scanned.map { it.value }).containsExactly(EAN)
         compose.onNodeWithText("Scan next item").performScrollTo().performClick()
         compose.onNodeWithText(FakeCamera.TRIGGER).performScrollTo().performClick()
-        assertThat(scanned.map { it.value }).containsExactly(EAN)
+        assertThat(scanned.map { it.value }).containsExactly(EAN, EAN)
     }
 
     @Test

@@ -11,60 +11,66 @@ import org.junit.Test
 
 class RapidScanTest {
     @get:Rule val main = MainDispatcherRule()
+    private val milk = Gtin.parse("4006381333931")!!
+    private val cocoa = Gtin.parse("3017620422003")!!
+
     @Test fun `enabling names retries only the lookup and skipping ignores a late retry`() = runTest(main.dispatcher) {
         val store = FakeItemStore()
-        var added = 0
         var enabled = false
         var delayed = false
         val gate = CompletableDeferred<Unit>()
-        val id = ItemId("scan")
         val scans = object : ScanStore {
-            override suspend fun add(gtin: Gtin): ItemId {
-                added++
-                store.add(listOf(Item(id, gtin.value, gtin.value, gtin.value, gtin = gtin, createdAt = 0, updatedAt = 0)))
-                return id
-            }
-            override suspend fun lookup(id: ItemId, gtin: Gtin): ScanNameOffer {
+            override suspend fun lookup(gtin: Gtin): ScanNameOffer {
                 if (delayed) gate.await()
-                return ScanNameOffer(id, gtin, if (enabled) "milk" else null, null, enabled,
+                return ScanNameOffer(gtin, if (enabled) "milk" else null, null, enabled,
                     if (enabled) null else ScanNameProblem.LOOKUP_DISABLED)
             }
-            override suspend fun confirm(offer: ScanNameOffer, name: String) = true
+            override suspend fun add(offer: ScanNameOffer, name: String): ItemId = error("nothing is confirmed here")
         }
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans, compute = main.dispatcher)
-        vm.onScanned(Gtin.parse("4006381333931")!!)
+        vm.onScanned(milk)
         assertThat(vm.state.value.scanNames.single().problem).isEqualTo(ScanNameProblem.LOOKUP_DISABLED)
         enabled = true
-        vm.onRetryScanName(id)
+        vm.onRetryScanName(milk)
         assertThat(vm.state.value.scanNames.single().name).isEqualTo("milk")
-        assertThat(added).isEqualTo(1)
         delayed = true
-        vm.onRetryScanName(id)
+        vm.onRetryScanName(milk)
         assertThat(vm.state.value.scanNames).isEmpty()
+        assertThat(vm.state.value.scanPending).containsExactly(milk)
         vm.onSkipScanNames()
         gate.complete(Unit)
         assertThat(vm.state.value.scanNames).isEmpty()
-        assertThat(added).isEqualTo(1)
+        assertThat(vm.state.value.scanPending).isEmpty()
+        assertThat(store.current).isEmpty()
     }
-    @Test fun `rapid scan rows are visible while naming waits and skip all ignores late offers`() = runTest(main.dispatcher) {
+
+    @Test fun `rapid scans ask once per barcode and add only what is confirmed`() = runTest(main.dispatcher) {
         val store = FakeItemStore()
-        val gate = CompletableDeferred<Unit>()
-        var count = 0
+        var lookups = 0
+        val confirmed = mutableListOf<Pair<Gtin, String>>()
         val scans = object : ScanStore {
-            override suspend fun add(gtin: Gtin): ItemId {
-                val id = ItemId("scan-${++count}")
-                store.add(listOf(Item(id, gtin.value, gtin.value, gtin.value, gtin = gtin, createdAt = 0, updatedAt = 0)))
-                return id
+            override suspend fun lookup(gtin: Gtin): ScanNameOffer { lookups++; return ScanNameOffer(gtin, null, null, false) }
+            override suspend fun add(offer: ScanNameOffer, name: String): ItemId {
+                confirmed += offer.gtin to name
+                return ItemId("scan")
             }
-            override suspend fun lookup(id: ItemId, gtin: Gtin): ScanNameOffer { if (id.value.substringAfterLast('-').toInt() > 2) gate.await(); return ScanNameOffer(id, gtin, null, null, false) }
-            override suspend fun confirm(offer: ScanNameOffer, name: String) = true
         }
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans, compute = main.dispatcher)
-        repeat(10) { vm.onScanned(Gtin.parse("4006381333931")!!) }
-        assertThat(vm.state.value.pending).hasSize(10)
-        assertThat(vm.state.value.scanNames).hasSize(2)
-        vm.onSkipScanNames()
-        gate.complete(Unit)
+        repeat(10) { vm.onScanned(milk) }
+        vm.onScanned(cocoa)
+        assertThat(lookups).isEqualTo(2)
+        assertThat(vm.state.value.scanNames.map { it.gtin }).containsExactly(milk, cocoa).inOrder()
+        assertThat(store.current).isEmpty()
+
+        vm.onConfirmScanName(milk, milk.value)
+        assertThat(confirmed).isEmpty()
+        vm.onConfirmScanName(milk, " milk ")
+        assertThat(confirmed).containsExactly(milk to " milk ")
+        assertThat(vm.state.value.lastScan).isEqualTo(ScanResult(milk, "milk"))
+
+        vm.onSkipScanName(cocoa)
+        assertThat(vm.state.value.lastScan).isEqualTo(ScanResult(cocoa, null))
         assertThat(vm.state.value.scanNames).isEmpty()
+        assertThat(confirmed).hasSize(1)
     }
 }

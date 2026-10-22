@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Size
 import android.view.ViewOutlineProvider
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview as CameraXPreview
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -18,7 +20,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -124,6 +132,7 @@ private fun CameraPreviewSurface(
     // first one would send codes to a closure that no longer does anything.
     val latestOnCode = rememberUpdatedState(onCode)
     val latestOnFailure = rememberUpdatedState(onFailure)
+    var camera by remember { mutableStateOf<Camera?>(null) }
 
     val previewView = remember(context) {
         PreviewView(context).apply {
@@ -156,19 +165,49 @@ private fun CameraPreviewSurface(
                             latestOnCode.value(code)
                         }
                     }
-                    // Three failures, one answer: no back camera (false), a
+                    // Three failures, one answer: no back camera (null), a
                     // provider that never arrived, or a bind the device
                     // refused (both caught above).
-                    if (!started.getOrDefault(false)) latestOnFailure.value()
+                    camera = started.getOrNull()
+                    if (camera == null) latestOnFailure.value()
                 }
             },
             ContextCompat.getMainExecutor(context),
         )
 
-        onDispose { session.close() }
+        onDispose {
+            camera = null
+            session.close()
+        }
     }
 
-    AndroidView(factory = { previewView }, modifier = modifier)
+    // A small label held close is out of focus range and a curved one glares,
+    // so the person can tap to focus and pinch to zoom. Taps and pinches only:
+    // a one-finger drag still scrolls the screen around the preview.
+    AndroidView(factory = { previewView }, modifier = modifier
+        .pointerInput(previewView) { detectTapGestures { camera?.focusAt(previewView, it) } }
+        .pointerInput(previewView) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                do {
+                    val event = awaitPointerEvent()
+                    if (event.changes.count { it.pressed } > 1) {
+                        camera?.zoomBy(event.calculateZoom())
+                        event.changes.forEach { it.consume() }
+                    }
+                } while (event.changes.any { it.pressed })
+            }
+        })
+}
+
+private fun Camera.focusAt(view: PreviewView, at: Offset) {
+    val point = view.meteringPointFactory.createPoint(at.x, at.y)
+    cameraControl.startFocusAndMetering(FocusMeteringAction.Builder(point).build())
+}
+
+private fun Camera.zoomBy(factor: Float) {
+    val zoom = cameraInfo.zoomState.value ?: return
+    cameraControl.setZoomRatio((zoom.zoomRatio * factor).coerceIn(zoom.minZoomRatio, zoom.maxZoomRatio))
 }
 
 /**
@@ -199,20 +238,20 @@ private class CameraSession(private val main: Executor, private val qrAccept: ((
     /**
      * Bind the preview and the analyser to [owner].
      *
-     * @return true when the camera is running, false when this phone has no
-     *   back camera to bind to. Anything the device refuses outright is thrown
-     *   and caught by the caller, which treats it the same way.
+     * @return the running camera, or null when this phone has no back camera
+     *   to bind to. Anything the device refuses outright is thrown and caught
+     *   by the caller, which treats it the same way.
      */
     fun bind(
         provider: ProcessCameraProvider,
         owner: LifecycleOwner,
         view: PreviewView,
         onCode: (String) -> Unit,
-    ): Boolean {
+    ): Camera? {
         // The back camera specifically. A barcode is read off a carton held in
         // front of the phone, and offering the selfie camera instead would be
         // a preview that technically works and cannot do the job.
-        if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) return false
+        if (!provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) return null
         this.provider = provider
 
         val preview = CameraXPreview.Builder().build()
@@ -236,12 +275,11 @@ private class CameraSession(private val main: Executor, private val qrAccept: ((
             // alternative strategy blocks the camera until the decoder catches
             // up, which shows as a preview that freezes.
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .apply {
-                // A pairing QR shown on another screen needs about three pixels
-                // per module; the 640x480 default gives two at arm's length.
-                if (qrAccept != null) setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(
-                    ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)).build())
-            }
+            // A pairing QR shown on another screen, or the narrow bars of a
+            // small or curved label, need about three pixels per module; the
+            // 640x480 default gives one or two.
+            .setResolutionSelector(ResolutionSelector.Builder().setResolutionStrategy(
+                ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)).build())
             .build()
             .apply { setAnalyzer(analysis, analyzer) }
 
@@ -249,8 +287,13 @@ private class CameraSession(private val main: Executor, private val qrAccept: ((
         // what makes a rebind after a configuration change idempotent rather
         // than a use case that is already bound somewhere else.
         provider.unbindAll()
-        provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
-        return true
+        val camera = provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis)
+        // Most phones cannot focus closer than about ten centimetres, which is
+        // where a small label has to be held to fill the frame. Starting at 2x
+        // lets it be held further back, in focus, and still be read. A QR on
+        // another screen is large already.
+        if (qrAccept == null) camera.cameraControl.setZoomRatio(INITIAL_ZOOM.coerceAtMost(camera.cameraInfo.zoomState.value?.maxZoomRatio ?: INITIAL_ZOOM))
+        return camera
     }
 
     /**
@@ -265,5 +308,9 @@ private class CameraSession(private val main: Executor, private val qrAccept: ((
         runCatching { provider?.unbindAll() }
         provider = null
         analysis.shutdown()
+    }
+
+    private companion object {
+        const val INITIAL_ZOOM = 2f
     }
 }

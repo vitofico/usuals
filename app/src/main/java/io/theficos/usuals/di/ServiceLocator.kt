@@ -207,7 +207,7 @@ object ServiceLocator {
     val rowFacts: io.theficos.usuals.ui.product.RowFactsSource by resettable { RepositoryRowFacts(qualityCache, settingsStore.scanLookup, rowFactsStore) }
     val barcodeCategories: BarcodeCategories by resettable { BarcodeCategories(categoryClassifier) }
     val scanStore: ScanStore by resettable {
-        RepositoryScanStore(itemRepository, historyRepository, smartStore, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)
+        RepositoryScanStore(itemRepository, historyRepository, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)
     }
     val themePreferences: ThemePreferences by resettable { ThemePreferences(context) }
     val tutorialPreferences: TutorialPreferences by resettable { TutorialPreferences(context) }

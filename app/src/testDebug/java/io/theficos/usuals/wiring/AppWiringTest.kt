@@ -262,24 +262,17 @@ class AppWiringTest {
     }
 
     @Test
-    fun a_scan_offers_its_name_without_leaving_the_scanner_and_enable_retries_without_another_add() {
+    fun a_scan_asks_to_add_its_product_without_leaving_the_scanner_and_enable_retries_the_lookup() {
         val store = FakeItemStore()
-        var added = 0
         var confirmed: String? = null
         ServiceLocator.settingsStore.setScanLookupEnabled(false)
         val scans = object : ScanStore {
-            override suspend fun add(gtin: Gtin): ItemId {
-                added++
-                val id = ItemId("scan")
-                store.add(listOf(Item(id, gtin.value, gtin.value, gtin.value, gtin = gtin, createdAt = 0, updatedAt = 0)))
-                return id
-            }
-            override suspend fun lookup(id: ItemId, gtin: Gtin): ScanNameOffer {
+            override suspend fun lookup(gtin: Gtin): ScanNameOffer {
                 val enabled = ServiceLocator.settingsStore.scanLookupEnabled()
-                return ScanNameOffer(id, gtin, if (enabled) "Test milk" else null, null, enabled,
+                return ScanNameOffer(gtin, if (enabled) "Test milk" else null, null, enabled,
                     if (enabled) null else ScanNameProblem.LOOKUP_DISABLED)
             }
-            override suspend fun confirm(offer: ScanNameOffer, name: String): Boolean { confirmed = name; return true }
+            override suspend fun add(offer: ScanNameOffer, name: String): ItemId { confirmed = name; return ItemId("scan") }
         }
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans)
         compose.setContent {
@@ -301,14 +294,17 @@ class AppWiringTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Test milk").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Use this product name?").assertExists()
+        compose.onNodeWithText("Add this product?").assertExists()
         compose.onNodeWithText("Test milk").assertExists()
         assertThat(currentRoute()).isEqualTo(Routes.SCAN)
-        assertThat(added).isEqualTo(1)
-        compose.onNodeWithText("Use name").assertIsEnabled()
+        assertThat(confirmed).isNull()
+        compose.onNodeWithText("Add to list").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertThat(confirmed).isEqualTo("Test milk")
-        compose.onNodeWithText("Scan next item").assertExists()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Added Test milk. The camera is paused.").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Scan next item").assertIsEnabled()
     }
 
     @Test

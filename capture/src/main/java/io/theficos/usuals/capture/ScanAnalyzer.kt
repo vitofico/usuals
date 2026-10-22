@@ -31,6 +31,7 @@ class ScanAnalyzer(
 
     private var candidate: Gtin? = null
     private var matchingFrames = 0
+    private var missedFrames = 0
 
     override fun analyze(image: ImageProxy) {
         try {
@@ -73,15 +74,26 @@ class ScanAnalyzer(
         pixelStride: Int,
     ) {
         val gtin = decoder.decode(plane, width, height, rowStride, pixelStride)
-        if (gtin == null || gtin != candidate) {
+        if (gtin == null) {
+            // A small or curved barcode is a marginal read that succeeds in
+            // some frames only. Misses between agreeing reads keep the count;
+            // only a sustained gap means the product has left the frame.
+            if (++missedFrames >= FORGET_AFTER_MISSES) {
+                candidate = null
+                matchingFrames = 0
+            }
+            return
+        }
+        missedFrames = 0
+        if (gtin != candidate) {
             candidate = gtin
-            matchingFrames = if (gtin == null) 0 else 1
+            matchingFrames = 1
         } else {
             matchingFrames = (matchingFrames + 1).coerceAtMost(REQUIRED_MATCHING_FRAMES)
         }
         // Motion can produce a wrong code with a valid checksum in one frame.
-        // Only repeated agreement may insert an item or change the debounce.
-        if (gtin != null && matchingFrames == REQUIRED_MATCHING_FRAMES && debounce.accept(gtin)) {
+        // Only repeated agreement, with no other code between, may report it.
+        if (matchingFrames == REQUIRED_MATCHING_FRAMES && debounce.accept(gtin)) {
             onScanned(gtin)
         }
     }
@@ -90,10 +102,13 @@ class ScanAnalyzer(
     fun reset() {
         candidate = null
         matchingFrames = 0
+        missedFrames = 0
         debounce.reset()
     }
 
     private companion object {
         const val REQUIRED_MATCHING_FRAMES = 3
+        /** About half a second of frames. */
+        const val FORGET_AFTER_MISSES = 15
     }
 }

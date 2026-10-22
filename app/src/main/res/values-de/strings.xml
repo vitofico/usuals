@@ -29,7 +29,7 @@
     <string name="scan_title">Scannen</string>
     <string name="scan_back">Zurück</string>
     <string name="scan_intro">Scanne eine Verpackung</string>
-    <string name="scan_guidance">Halte den Barcode in den Rahmen. Die Kamera pausiert, sobald er gelesen wurde.</string>
+    <string name="scan_guidance">Halte den Barcode in den Rahmen, etwa eine Handbreit entfernt. Tippen zum Scharfstellen, mit zwei Fingern zoomen. Die Kamera pausiert, sobald sie einen Code liest.</string>
     <string name="scan_permission_rationale">Zum Lesen eines Barcodes wird die Kamera benötigt. Sie wird nur auf diesem Bildschirm verwendet und speichert keine Bilder.</string>
     <string name="scan_permission_grant">Kamera verwenden</string>
     <string name="scan_permission_denied">Kein Kamerazugriff. Gib stattdessen den Code ein, das funktioniert genauso.</string>

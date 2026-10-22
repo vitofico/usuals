@@ -68,12 +68,29 @@ class ScanAnalyzerTest {
         assertThat(scanned.map { it.value }).containsExactly(LECHE)
     }
 
+    private fun ScanAnalyzer.miss(frame: LuminanceFrame) =
+        onFrame(ByteBuffer.wrap(ByteArray(frame.width * frame.height)), frame.width, frame.height, frame.width, 1)
+
     @Test
-    fun `a no-read interrupts a partial confirmation`() {
+    fun `a marginal read that misses between frames still confirms`() {
+        val subject = analyzer()
+        val frame = Ean13Fixture.frame(LECHE)
+        subject.feed(frame)
+        repeat(3) { subject.miss(frame) }
+        subject.feed(frame)
+        subject.miss(frame)
+        assertThat(scanned).isEmpty()
+
+        subject.feed(frame)
+        assertThat(scanned.map { it.value }).containsExactly(LECHE)
+    }
+
+    @Test
+    fun `a sustained gap forgets a partial confirmation`() {
         val subject = analyzer()
         val frame = Ean13Fixture.frame(LECHE)
         repeat(2) { subject.feed(frame) }
-        subject.onFrame(ByteBuffer.wrap(ByteArray(64)), frame.width, frame.height, frame.width, 1)
+        repeat(15) { subject.miss(frame) }
         repeat(2) { subject.feed(frame) }
         assertThat(scanned).isEmpty()
 

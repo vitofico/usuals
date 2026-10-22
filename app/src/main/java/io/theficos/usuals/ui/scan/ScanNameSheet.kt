@@ -20,8 +20,8 @@ import io.theficos.usuals.ui.list.categoryLabel
 @Composable
 fun ScanNameSheet(offer: ScanNameOffer, remaining: Int, busy: Boolean, onConfirm: (String) -> Unit, onSkip: () -> Unit, onSkipAll: () -> Unit,
     onEnableLookup: (() -> Unit)? = null, onRetry: (() -> Unit)? = null) {
-    var name by rememberSaveable(offer.id.value, offer.name) { mutableStateOf(offer.name.orEmpty()) }
-    val scroll = key(offer.id, offer.name, offer.problem) { rememberScrollState() }
+    var name by rememberSaveable(offer.gtin.value, offer.name) { mutableStateOf(offer.name.orEmpty()) }
+    val scroll = key(offer.gtin, offer.name, offer.problem) { rememberScrollState() }
     val uri = LocalUriHandler.current
     ModalBottomSheet(onDismissRequest = { if (!busy) onSkip() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(scroll).padding(24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {

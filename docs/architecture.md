@@ -131,14 +131,19 @@ extractor, ingredient parser, review planner, recipe port and persistent budget.
 
 Confirmed scan names update the GTIN alias and use Open Food Facts category
 tags unless a manual override exists. The product name and category tags stay
-in the local quality cache, outside shopping-data exports. Names are never
-applied without confirmation. Each camera read pauses capture until Scan next
-item is chosen, and the screen accepts each canonical barcode once per session,
-including after rotation. Rows insert independently of queued reads; lookup
-controls and name offers are available in the scanner. Missing names distinguish
-opt-out, absent records, connection failures and store-specific codes. Confirmed
-aliases supply names on later scans after Finish or removal, without a network
-request.
+in the local quality cache, outside shopping-data exports. A scan adds no row
+until the person confirms a name, so a barcode is never a row by itself, and a
+confirmed name that matches an open row joins it. Each camera read pauses
+capture until Scan next item is chosen, including after rotation. Reads queue
+one confirmation per barcode; lookup controls and name offers are available in
+the scanner. Missing names distinguish opt-out, absent records, connection
+failures and store-specific codes. Confirmed aliases supply names on later scans
+after Finish or removal, without a network request.
+
+The analyzer reads 1280x720 frames at 2x zoom, so small and curved labels can be
+held in focus, and confirms a code after three agreeing reads with no other code
+between them. Misses in between are tolerated for about half a second. The
+preview takes taps to focus and pinches to zoom.
 
 Optional store tags are saved with rows and filter the list while shopping.
 Finish still closes every checked row, regardless of the current filter. The

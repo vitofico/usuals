@@ -153,7 +153,6 @@ data class ListActions(
     val onCheckedChange: (ItemId, Boolean) -> Unit = { _, _ -> },
     val onToggleCheckedSection: () -> Unit = {},
     val onEditItem: (ItemId) -> Unit = {},
-    val onScanMerge: (Boolean) -> Unit = {},
     val onEditRow: ((ListRow) -> Unit)? = null,
     val onCheckedRow: ((ListRow, Boolean) -> Unit)? = null,
     val onRemoveRow: ((ListRow) -> Unit)? = null,
@@ -164,8 +163,8 @@ data class ListActions(
     val onRefreshProduct: () -> Unit = {},
     val onSaveEdit: (ItemEdit) -> Unit = {},
     val onStoreFilter: (String?) -> Unit = {},
-    val onConfirmScanName: (ItemId, String) -> Unit = { _, _ -> },
-    val onSkipScanName: (ItemId) -> Unit = {},
+    val onConfirmScanName: (io.theficos.usuals.model.Gtin, String) -> Unit = { _, _ -> },
+    val onSkipScanName: (io.theficos.usuals.model.Gtin) -> Unit = {},
     val onSkipScanNames: () -> Unit = {},
     val onOpenRecipe: () -> Unit = {},
     val onRecipeUrl: (String) -> Unit = {},
@@ -309,7 +308,6 @@ fun ListScreen(
             onCheckedChange = vm::onCheckedChange,
             onToggleCheckedSection = vm::onToggleCheckedSection,
             onEditItem = vm::onEditItem,
-            onScanMerge = vm::onScanMerge,
             onEditRow = vm::onEditRow, onCheckedRow = { row, checked ->
                 if (haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                 vm.onCheckedRow(row, checked)
@@ -414,9 +412,9 @@ fun ListContent(
         actions.onRecipeSource, actions.onRecipeMarkdown, actions.onReadRecipeMarkdown, actions.onRecipeMarkdownFile,
         actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure,
         state.personal.emojiQuantities, actions.onEmojiQuantities) }
-    if (state.productInfo == null && state.recipe == null && state.editing == null && state.mergeReview == null && state.scanMerge == null) state.scanNames.firstOrNull()?.let {
-        ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.id, name) },
-            { actions.onSkipScanName(it.id) }, actions.onSkipScanNames)
+    if (state.productInfo == null && state.recipe == null && state.editing == null && state.mergeReview == null) state.scanNames.firstOrNull()?.let {
+        ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.gtin, name) },
+            { actions.onSkipScanName(it.gtin) }, actions.onSkipScanNames)
     }
     SmartAssistanceDialogs(state, actions)
     ListHistoryDialogs(state, actions)
