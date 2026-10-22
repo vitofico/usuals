@@ -2,6 +2,7 @@ package io.theficos.usuals.di
 
 import io.theficos.usuals.data.local.HistoryRepository
 import io.theficos.usuals.data.local.ItemRepository
+import io.theficos.usuals.data.local.NewItem
 import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.ItemIdentity
 import io.theficos.usuals.parse.Normalizer
@@ -29,17 +30,13 @@ class RepositorySmartStore(
             val facts = history.snapshot()
             val aliases = facts.aliases.associate { it.fromKey to it.toKey }
             val active = items.items().filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toMutableSet()
-            var added = 0
-            for (row in rows) {
+            val fresh = rows.mapNotNull { row ->
                 row.validate()
                 val gtin = row.gtin?.let(Gtin::parse)
                 val key = ItemIdentity.key(row.name, Normalizer.normalize(row.name), gtin, aliases)
-                if (active.add(key)) {
-                    items.add(ParsedItem(row.name, row.quantity), gtin = gtin, store = row.store)
-                    added++
-                }
+                if (active.add(key)) NewItem(ParsedItem(row.name, row.quantity), gtin = gtin, store = row.store) else null
             }
-            added
+            items.addAll(fresh).size
         }
     }
 
@@ -108,18 +105,25 @@ class RepositorySmartStore(
     override fun present(items: List<Item>, history: HistorySnapshot): Map<ItemId, ItemPresentation> {
         val aliases = history.aliases.associate { it.fromKey to it.toKey }
         val preferences = ItemIdentity.preferences(history.preferences, aliases)
+        // Grouped once for the whole list: a per-row scan of history is items x purchases.
+        val bought by lazy { history.purchases.groupBy { ItemIdentity.purchaseKey(it, aliases) } }
         return items.associate { item ->
             val key = ItemIdentity.key(item, aliases)
             val pref = preferences[key]
             item.id to ItemPresentation(categories.classify(item.name, pref?.category),
                 Category.entries.firstOrNull { it.name == pref?.category }, pref?.repeatEveryDays,
-                if (item.quantity == null) quantities.hint(key, history) else null)
+                if (item.quantity == null) quantities.hint(bought[key].orEmpty()) else null)
         }
     }
 
+    /** The last history's memories: every keystroke looks them up against the same snapshot. */
+    @Volatile private var remembered: Pair<HistorySnapshot, List<ItemMemory>>? = null
+
     override fun autocomplete(query: String, history: HistorySnapshot, active: List<Item>): List<ItemMemory> {
         val aliases = history.aliases.associate { it.fromKey to it.toKey }
-        return ranker.autocomplete(query, history, active.filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toSet())
+        val memories = remembered?.takeIf { it.first === history }?.second
+            ?: ranker.memories(history).also { remembered = history to it }
+        return ranker.autocomplete(query, memories, active.filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toSet())
     }
 
     override suspend fun maintainRepeats(now: Long, observed: List<Item>, history: HistorySnapshot) {
@@ -127,12 +131,8 @@ class RepositorySmartStore(
         maintenance.withLock { items.transaction { addRepeats(now) } }
     }
 
-    private suspend fun addRepeats(now: Long) {
-        val facts = history.snapshot()
-        for (candidate in repeats.due(now, facts, items.items())) {
-            items.addRepeat(candidate.key, candidate.name, now)
-        }
-    }
+    private suspend fun addRepeats(now: Long) =
+        items.addRepeats(repeats.due(now, history.snapshot(), items.items()).map { it.key to it.name }, now)
 
     override suspend fun finish(onlyIds: Set<ItemId>?) = finishPinned(onlyIds, null)
     override suspend fun finishVersions(versions: List<ItemVersion>, onlyIds: Set<ItemId>?) = finishPinned(onlyIds, versions)

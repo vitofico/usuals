@@ -9,6 +9,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 
 /**
@@ -18,20 +19,21 @@ import kotlinx.coroutines.flow.*
  */
 class LocalReplica(private val database: UsualsDatabase, private val reducer: Reducer = Reducer(NORMALIZER_VERSION), private val newId: () -> String = { UUID.randomUUID().toString() }) {
     private val json = Json { encodeDefaults = true }
-    fun observeStatus(scope: String): Flow<ReplicaStatus> = combine(database.syncDao().observePending(scope), database.syncDao().observeOptimistic(scope), database.syncDao().observeDismissals(scope)) { pending, saved, dismissed ->
-        val state = decode(saved)
-        val owned = pending.map { it.intentId }.toSet()
-        val rejected = state?.rejected.orEmpty().mapValues { (id, code) ->
-            Conflict(pending.firstOrNull { it.intentId == id }?.let { json.decodeFromString<Intent>(it.command).payload } ?: JsonObject(emptyMap()), JsonObject(emptyMap()), code)
-        }
-        ReplicaStatus(pending.count { !it.acknowledged && it.intentId !in dismissed }, (state?.conflicts.orEmpty() + rejected).filterKeys { it in owned && it !in dismissed }.map { (id, conflict) ->
-            val original = pending.firstOrNull { it.intentId == id }?.let { json.decodeFromString<Intent>(it.command) }
+    /** The stored list is decoded only when its text changes; an outbox change reads just the commands of the conflicts shown. */
+    fun observeStatus(scope: String): Flow<ReplicaStatus> = combine(database.syncDao().observeOutbox(scope), database.syncDao().observeOptimistic(scope).distinctUntilChanged().map { decode(it) },
+        database.syncDao().observeDismissals(scope)) { outbox, state, dismissed ->
+        val owned = outbox.map { it.intentId }.toSet()
+        val shown = (state?.conflicts.orEmpty().keys + state?.rejected.orEmpty().keys).filter { it in owned && it !in dismissed }
+        val commands = if (shown.isEmpty()) emptyMap() else database.syncDao().intents(scope, shown).associate { it.intentId to json.decodeFromString<Intent>(it.command) }
+        val rejected = state?.rejected.orEmpty().mapValues { (id, code) -> Conflict(commands[id]?.payload ?: JsonObject(emptyMap()), JsonObject(emptyMap()), code) }
+        ReplicaStatus(outbox.count { !it.acknowledged && it.intentId !in dismissed }, (state?.conflicts.orEmpty() + rejected).filterKeys { it in owned && it !in dismissed }.map { (id, conflict) ->
+            val original = commands[id]
             val target = if (original?.kind == "alias") null else original?.payload?.string("target")?.let { state?.redirects?.get(it) ?: it } ?:
                 state?.rows?.values?.firstOrNull { it.facts.string("name") == conflict.current.string("name") }?.id
             ReplicaConflict(id, target, conflict.current.scalarValues(),
                 ((if (original?.kind == "alias") conflict.incoming["delta"] as? JsonObject else conflict.incoming["facts"] as? JsonObject) ?: conflict.incoming).scalarValues(), original?.kind.orEmpty())
         })
-    }
+    }.flowOn(Dispatchers.Default)
     suspend fun dismissConflict(id: String) = database.withTransaction {
         val scope = database.listDao().selected()
         val dao = database.syncDao()
@@ -46,13 +48,17 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
 
     suspend fun submit(kind: String, makePayload: suspend (Projection, String) -> JsonObject): Reduction = database.withTransaction {
         val scope = database.listDao().selected()
-        submitTo(scope, kind, makePayload(projection(scope), scope))
+        val saved = stored(scope, optimistic = true)
+        val before = saved ?: seed(scope)
+        submitAll(scope, kind, listOf(makePayload(before, scope)), saved, before).single()
     }
     suspend fun submitTo(scope: String, kind: String, payload: JsonObject): Reduction = submitAll(scope, kind, listOf(payload)).single()
     /** Several intents of one kind, each sent on its own, but the stored list is read and rewritten once. */
     suspend fun submitAll(scope: String, kind: String, payloads: List<JsonObject>): List<Reduction> = database.withTransaction {
         val saved = stored(scope, optimistic = true)
-        val before = saved ?: seed(scope)
+        submitAll(scope, kind, payloads, saved, saved ?: seed(scope))
+    }
+    private suspend fun submitAll(scope: String, kind: String, payloads: List<JsonObject>, saved: Projection?, before: Projection): List<Reduction> {
         val synced = database.listDao().find(scope)?.synced == true
         var after = before
         val results = payloads.map { payload ->
@@ -68,7 +74,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         save(scope, optimistic = true, encoded)
         // A synced list's confirmed copy changes only with a server answer, and both copies are stored together.
         if (!synced) save(scope, optimistic = false, encoded) else if (saved == null) save(scope, optimistic = false, json.encodeToString(before))
-        results
+        return results
     }
     suspend fun rename(scope: String, name: String): Reduction = database.withTransaction {
         require(name.isNotBlank() && name.length <= 100)
@@ -113,7 +119,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         val dao = database.syncDao()
         val dismissed = dao.dismissals(list).toSet()
         val accepted = stored(list, optimistic = false)?.seen.orEmpty()
-        dao.pending(list).asSequence().filter { !it.acknowledged && it.intentId !in dismissed }
+        dao.unacknowledged(list).asSequence().filter { it.intentId !in dismissed }
             .map { json.decodeFromString<Intent>(it.command) }
             .filter { accepted[it.id] == null || accepted[it.id] == it }.take(limit).toList()
     }
@@ -199,27 +205,32 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
             saveBoth(server.id, json.encodeToString(server.projection))
             return
         }
+        val updated = existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false,
+            archived = server.archived, archivedByOwner = server.archivedByOwner)
+        // The feed returns a list this phone just pushed at the seq already stored and rebased; only member names change without a new seq.
+        if (!force && existing.created && server.seq == existing.seq && database.syncDao().hasProjection(server.id)) { if (updated != existing) lists.update(updated); return }
         val saved = stored(server.id, optimistic = true)
         val before = saved ?: seed(server.id)
         val newer = force || !existing.created || server.seq >= existing.seq
         val confirmed = if (newer) server.projection else stored(server.id, optimistic = false) ?: before
-        if (newer) lists.update(existing.copy(synced = true, created = true, seq = server.seq, role = server.role, owner = owner, members = members, stale = false,
-            archived = server.archived, archivedByOwner = server.archivedByOwner))
+        if (newer) lists.update(updated)
         val optimistic = rebase(server.id, confirmed)
         materialize(server.id, before, optimistic)
         if (newer || saved == null) save(server.id, optimistic = false, json.encodeToString(confirmed))
         save(server.id, optimistic = true, json.encodeToString(optimistic))
+        // Settled intents leave the outbox, except those a conflict still shows; the newest stay as far back as the server remembers.
+        database.syncDao().prune(server.id, listOf(confirmed, optimistic).flatMap { it.conflicts.keys + it.rejected.keys }.toSet(), Reducer.RESEND_HORIZON)
     }
     private suspend fun rebase(scope: String, confirmed: Projection): Projection {
         val dao = database.syncDao()
         val dismissed = dao.dismissals(scope).toSet()
         var optimistic = confirmed
-        for (command in dao.pending(scope)) {
+        for (command in dao.unacknowledged(scope)) {
             val source = json.decodeFromString<Intent>(command.command)
             val accepted = confirmed.seen[command.intentId]
             if (accepted == source) {
-                if (!command.acknowledged) dao.update(command.copy(acknowledged = true))
-            } else if (!command.acknowledged && command.intentId !in dismissed) {
+                dao.update(command.copy(acknowledged = true))
+            } else if (command.intentId !in dismissed) {
                 if (accepted != null) {
                     val target = source.payload.string("target")
                     optimistic = optimistic.copy(conflicts = optimistic.conflicts + (source.id to Conflict(source.payload,
@@ -245,8 +256,9 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         if (database.listDao().find(scope)?.synced == true) return@withTransaction 0
         val gone = database.historyDao().allItems(scope).filter { it.deletedAt?.let { at -> at < cutoff } == true }.map { it.id }.toSet()
         val count = database.itemDao().reapTombstones(cutoff, scope)
-        stored(scope, optimistic = true)?.let { state ->
-            saveBoth(scope, json.encodeToString(state.copy(rows = state.rows - (gone - state.occurrences.values.toSet()))))
+        if (gone.isNotEmpty()) stored(scope, optimistic = true)?.let { state ->
+            val rows = state.rows - (gone - state.occurrences.values.toSet())
+            if (rows.size < state.rows.size) saveBoth(scope, json.encodeToString(state.copy(rows = rows)))
         }
         count
     }
@@ -262,7 +274,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         save(scope, optimistic = false, encoded); save(scope, optimistic = true, encoded)
     }
     /** A blank local list nothing was ever added to, like the one a fresh install or signing out starts with. */
-    suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && projection(list.id) == Projection()
+    suspend fun unused(list: ListEntity) = !list.synced && list.name.isBlank() && !database.syncDao().hasProjection(list.id) && seed(list.id) == Projection()
     private suspend fun seed(scope: String): Projection {
         val history = database.historyDao()
         val aliases = history.aliases(scope).associate { it.fromKey to it.toKey }

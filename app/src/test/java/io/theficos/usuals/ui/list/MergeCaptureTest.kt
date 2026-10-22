@@ -15,7 +15,7 @@ class MergeCaptureTest {
             override fun similar(name: String, history: HistorySnapshot, active: List<Item>) = ItemMemory("milk", "milk", 3, 0)
         }
         val store = FakeItemStore()
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), smartStore = smart)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), smartStore = smart, compute = main.dispatcher)
         vm.onCaptureStart()
         vm.onDraftChange("1 l whole milk")
         vm.onDraftSubmit()

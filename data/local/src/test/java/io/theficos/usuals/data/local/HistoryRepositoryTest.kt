@@ -214,4 +214,44 @@ class HistoryRepositoryTest {
         assertThat(history.snapshot().aliases).containsExactly(ItemAlias("a", "b"))
     }
 
+    @Test fun `a long backup restores in a few rewrites and reimport is still idempotent`() = runTest {
+        items.addAll((1..250).map { NewItem(ParsedItem("item $it")) })
+        items.items().take(120).forEach { items.setChecked(it.id, true) }
+        history.finish()
+        history.savePreference(ItemPreference("item 200", "PANTRY", repeatEveryDays = 7, muted = true))
+        history.savePreference(ItemPreference("item 201", "DAIRY"))
+        history.saveAlias(ItemAlias("article 200", "item 200"))
+        history.saveAlias(ItemAlias("article 201", "item 201"))
+        val exported = history.exportJson()
+        val second = database()
+        try {
+            val secondItems = ItemRepository(second, { now }, ::id)
+            val secondHistory = HistoryRepository(second, secondItems, { now }, ::id)
+            val rewrites = second.projectionRewrites()
+            secondHistory.importJson(exported)
+            // One for the import chunks, one for the preferences and one for the aliases, not one per row.
+            assertThat(rewrites()).isEqualTo(3)
+            secondHistory.importJson(exported)
+            assertThat(secondHistory.snapshot()).isEqualTo(history.snapshot())
+            assertThat(secondItems.items()).isEqualTo(items.items())
+        } finally { second.close() }
+    }
+
+    @Test fun `due repeats are added together in one rewrite and only once`() = runTest {
+        val names = listOf("milk", "bread", "eggs")
+        for (name in names) {
+            items.setChecked(items.add(ParsedItem(name)), true)
+            history.savePreference(ItemPreference(name, repeatEveryDays = 7))
+        }
+        history.finish()
+        now += 8 * 86_400_000L
+        val rewrites = database.projectionRewrites()
+        items.addRepeats(names.map { it to it } + ("unknown" to "unknown"), now)
+        assertThat(rewrites()).isEqualTo(1)
+        assertThat(items.items().map { it.name }).containsExactlyElementsIn(names).inOrder()
+        assertThat(items.items().map { it.position }).isInStrictOrder()
+        items.addRepeats(names.map { it to it }, now)
+        assertThat(rewrites()).isEqualTo(1)
+        assertThat(items.items()).hasSize(3)
+    }
 }

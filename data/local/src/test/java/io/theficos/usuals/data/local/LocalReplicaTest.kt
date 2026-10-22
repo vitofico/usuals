@@ -79,6 +79,32 @@ class LocalReplicaTest {
             .containsExactly("category", "repeatEveryDays")
         db.close()
     }
+    @Test fun reapingNothingLeavesTheStoredListUntouched() = runTest {
+        val db = memory()
+        var now = 10L
+        val items = ItemRepository(db, clock = { now })
+        val milk = items.add(ParsedItem("Milk")); items.add(ParsedItem("Bread"))
+        items.delete(milk)
+        db.markStored(LOCAL_LIST_ID)
+        assertThat(items.reap()).isEqualTo(0)
+        assertThat(db.storedUnchanged(LOCAL_LIST_ID)).isTrue()
+        now += ItemRepository.FORTNIGHT_MILLIS + 1
+        assertThat(items.reap()).isEqualTo(1)
+        assertThat(db.storedUnchanged(LOCAL_LIST_ID)).isFalse()
+        assertThat(LocalReplica(db).projection(LOCAL_LIST_ID).rows).doesNotContainKey(milk.value)
+        db.close()
+    }
+    @Test fun aListWithAStoredCopyIsNotUnusedAndIsNotDecodedToTellSo() = runTest {
+        val db = memory()
+        val replica = LocalReplica(db)
+        val blank = ListEntity("blank", "")
+        db.listDao().insert(blank)
+        assertThat(replica.unused(blank)).isTrue()
+        // Unreadable text proves the answer comes from the stored parts existing.
+        db.syncDao().insertProjection(listOf(ProjectionPartEntity("blank", true, 0, "not json")))
+        assertThat(replica.unused(blank)).isFalse()
+        db.close()
+    }
     @Test fun formatOneBackwardsImportAndServerListArchiveBecomesIndependentLocalScope() = runTest {
         val db = memory()
         val items = ItemRepository(db)
@@ -138,7 +164,7 @@ class LocalReplicaTest {
         val before = items.items()
         now += 21 * 86_400_000L
         val close = history.finish()!!
-        items.addRepeat("milk", "Milk", now)
+        items.addRepeats(listOf("milk" to "Milk"), now)
         assertThat(items.items().single().id).isNotEqualTo(milk)
         db.close(); db = open(); items = ItemRepository(db, clock = { now }); history = HistoryRepository(db, items, clock = { now })
         assertThat(history.undo(close.trip.id)).isTrue()

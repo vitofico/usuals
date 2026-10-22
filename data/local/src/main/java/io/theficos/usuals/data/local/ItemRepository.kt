@@ -36,23 +36,29 @@ class ItemRepository(
     suspend fun find(id: ItemId): Item? = dao.find(id.value, listId())?.toItem()
 
     suspend fun add(parsed: ParsedItem, addedBy: MemberId? = null, gtin: Gtin? = null,
-        rawText: String = parsed.name, fromSuggestion: Boolean = false, store: String? = null): ItemId = database.withTransaction {
-        val proposed = newId()
+        rawText: String = parsed.name, fromSuggestion: Boolean = false, store: String? = null): ItemId =
+        addAll(listOf(NewItem(parsed, addedBy, gtin, rawText, fromSuggestion, store))).single()
+    /** Each row is its own capture for sync, merging into an open row of its key, but the list is rewritten once. */
+    suspend fun addAll(rows: List<NewItem>): List<ItemId> = database.withTransaction {
+        if (rows.isEmpty()) return@withTransaction emptyList()
         val now = clock()
         val scope = listId()
         val aliases = database.historyDao().aliases(scope).associate { it.fromKey to it.toKey }
-        val row = ItemEntity(proposed, rawText, parsed.name.trim(), Normalizer.normalize(parsed.name),
-            parsed.quantity?.amount, parsed.quantity?.unit?.name, parsed.note, gtin?.value,
-            fromSuggestion = fromSuggestion, store = store, position = nextPosition(), addedBy = addedBy?.value,
-            createdAt = now, updatedAt = now, listId = scope)
-        val result = replica.submitTo(scope, "capture", JsonObject(row.facts(aliases) + ("proposedId" to JsonPrimitive(proposed))))
-        val winner = result.projection.redirects[proposed] ?: proposed
-        // An incompatible amount remains a visible conflict beside the existing row.
-        val kept = if (result.outcome == Outcome.CONFLICT) result.projection.rows.values.firstOrNull {
-            !it.archived && it.facts.string("key") == row.facts(aliases).string("key")
-        }?.id else winner
-        require(result.outcome in setOf(Outcome.APPLIED, Outcome.MERGED, Outcome.CONFLICT))
-        ItemId(requireNotNull(kept))
+        val first = nextPosition()
+        val facts = rows.mapIndexed { index, new -> val parsed = new.parsed; val proposed = newId()
+            proposed to ItemEntity(proposed, new.rawText, parsed.name.trim(), Normalizer.normalize(parsed.name),
+                parsed.quantity?.amount, parsed.quantity?.unit?.name, parsed.note, new.gtin?.value,
+                fromSuggestion = new.fromSuggestion, store = new.store, position = first + index * POSITION_STEP, addedBy = new.addedBy?.value,
+                createdAt = now, updatedAt = now, listId = scope).facts(aliases)
+        }
+        val results = replica.submitAll(scope, "capture", facts.map { (proposed, row) -> JsonObject(row + ("proposedId" to JsonPrimitive(proposed))) })
+        facts.zip(results) { (proposed, row), result ->
+            require(result.outcome in setOf(Outcome.APPLIED, Outcome.MERGED, Outcome.CONFLICT))
+            // An incompatible amount remains a visible conflict beside the existing row.
+            ItemId(requireNotNull(if (result.outcome == Outcome.CONFLICT) result.projection.rows.values.firstOrNull {
+                !it.archived && it.facts.string("key") == row.string("key")
+            }?.id else result.projection.redirects[proposed] ?: proposed))
+        }
     }
     /**
      * Adds up to [IMPORT_BATCH] new rows, ticked or not, as one change. Capturing them one by one rewrites
@@ -77,32 +83,26 @@ class ItemRepository(
         require(result.outcome == Outcome.APPLIED)
         entities.map { ItemId(it.id) }
     }
-    suspend fun addRepeat(key: String, name: String, asOf: Long): ItemId? = database.withTransaction {
-        var proposed: String? = null
+    /** Adds each due repeat, [due] being distinct keys and names, as its own intent; the list is rewritten once. */
+    suspend fun addRepeats(due: List<Pair<String, String>>, asOf: Long) = database.withTransaction {
         val scope = listId()
-        val initial = replica.projection(scope)
-        val initialRule = initial.rules[key] ?: return@withTransaction null
-        val initialRevision = initialRule.getValue("revision").jsonPrimitive.content
-        val initialPurchase = initial.purchases.values.filter { it.string("key") == key }
-            .sortedWith(compareByDescending<JsonObject> { it.getValue("boughtAt").jsonPrimitive.long }.thenBy { it.getValue("id").jsonPrimitive.content }).firstOrNull()
-        val next = nextRepeatCycle(initial, scope, key, initialRevision, initialPurchase?.string("id") ?: initialRevision) ?: return@withTransaction null
-        val result = replica.submit("repeat") { state, _ ->
-            val rule = state.rules[key]
-            if (rule == null) return@submit buildJsonObject { }
-            val revision = rule.getValue("revision").jsonPrimitive.content
-            val purchase = state.purchases.values.filter { it.string("key") == key }.sortedWith(compareByDescending<JsonObject> { it.getValue("boughtAt").jsonPrimitive.long }.thenBy { it.getValue("id").jsonPrimitive.content }).firstOrNull()
-            val enabling = purchase?.get("id")?.jsonPrimitive?.content ?: revision
-            proposed = newId()
+        val state = replica.projection(scope)
+        var position = nextPosition()
+        val payloads = due.mapNotNull { (key, name) ->
+            val revision = state.rules[key]?.getValue("revision")?.jsonPrimitive?.content ?: return@mapNotNull null
+            val enabling = state.purchases.values.filter { it.string("key") == key }
+                .sortedWith(compareByDescending<JsonObject> { it.getValue("boughtAt").jsonPrimitive.long }.thenBy { it.getValue("id").jsonPrimitive.content })
+                .firstOrNull()?.string("id") ?: revision
+            val next = nextRepeatCycle(state, scope, key, revision, enabling) ?: return@mapNotNull null
             buildJsonObject {
-                put("proposedId", proposed!!); put("key", key); put("name", name); put("ruleRevision", revision)
+                put("proposedId", newId()); put("key", key); put("name", name); put("ruleRevision", revision)
                 put("enablingPurchase", enabling); put("asOf", asOf)
                 put("occurrence", next.first)
                 next.second?.let { cycle -> put("cycle", buildJsonObject { put("previous", cycle.previous); put("deletion", cycle.deletion); put("finish", cycle.finish) }) }
-                put("position", nextPosition()); put("createdAt", asOf); put("updatedAt", asOf)
-            }
+                put("position", position); put("createdAt", asOf); put("updatedAt", asOf)
+            }.also { position += POSITION_STEP }
         }
-        if (result.outcome !in setOf(Outcome.APPLIED, Outcome.NO_OP)) return@withTransaction null
-        proposed?.let { ItemId(result.projection.redirects[it] ?: it) }
+        if (payloads.isNotEmpty()) replica.submitAll(scope, "repeat", payloads)
     }
     suspend fun setChecked(id: ItemId, checked: Boolean, version: ItemVersion? = null) {
         if (version != null) require(version.id == id.value && version.list == listId())
@@ -163,20 +163,27 @@ class ItemRepository(
         }
         saved
     }
-    internal suspend fun savePreference(value: ItemPreferenceEntity, version: ItemVersion? = null) = database.withTransaction {
-        if (version != null) require(version.list == value.listId)
-        val current = database.historyDao().preferences(value.listId).firstOrNull { it.key == value.key }
-        if (current?.category != value.category || current?.repeatEveryDays != value.repeatEveryDays || (current == null && (value.category != null || value.repeatEveryDays != null))) {
-            replica.submitTo(value.listId, "preference", buildJsonObject {
-                val state = replica.projection(value.listId)
+    internal suspend fun savePreference(value: ItemPreferenceEntity, version: ItemVersion? = null) = savePreferences(listOf(value), version)
+    /** Each changed preference, [values] being distinct keys of one list, is its own intent; the list is rewritten once. */
+    internal suspend fun savePreferences(values: List<ItemPreferenceEntity>, version: ItemVersion? = null) = database.withTransaction {
+        val scope = values.firstOrNull()?.listId ?: return@withTransaction
+        require(values.all { it.listId == scope } && values.distinctBy { it.key }.size == values.size)
+        if (version != null) require(version.list == scope)
+        val stored = database.historyDao().preferences(scope).associateBy { it.key }
+        val state = replica.projection(scope)
+        val payloads = values.mapNotNull { value ->
+            val current = stored[value.key]
+            if (current?.category == value.category && current?.repeatEveryDays == value.repeatEveryDays && (current != null || (value.category == null && value.repeatEveryDays == null))) return@mapNotNull null
+            buildJsonObject {
                 put("key", value.key); put("expected", if (version != null) version.preferences[value.key]?.let(::JsonPrimitive) ?: JsonNull else state.preferences[value.key]?.get("revision") ?: JsonNull)
                 put("changes", buildJsonObject {
                     if (current == null || current.category != value.category) put("category", value.category?.let(::JsonPrimitive) ?: JsonNull)
                     if (current == null || current.repeatEveryDays != value.repeatEveryDays) put("repeatEveryDays", value.repeatEveryDays?.let(::JsonPrimitive) ?: JsonNull)
                 })
-            })
+            }
         }
-        database.historyDao().saveLocalPreferences(listOf(LocalPreferenceEntity(value.listId, value.key, value.muted, value.snoozedUntil)))
+        if (payloads.isNotEmpty()) replica.submitAll(scope, "preference", payloads)
+        database.historyDao().saveLocalPreferences(values.map { LocalPreferenceEntity(scope, it.key, it.muted, it.snoozedUntil) })
     }
     internal suspend fun saveAlias(value: ItemAliasEntity, version: ListVersion? = null): Boolean = database.withTransaction {
         if (version != null) require(version.list == value.listId)
@@ -235,3 +242,7 @@ class ItemRepository(
 
     }
 }
+
+/** One row to capture, as [ItemRepository.add] takes it. */
+data class NewItem(val parsed: ParsedItem, val addedBy: MemberId? = null, val gtin: Gtin? = null,
+    val rawText: String = parsed.name, val fromSuggestion: Boolean = false, val store: String? = null)

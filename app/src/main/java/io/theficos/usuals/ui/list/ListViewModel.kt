@@ -23,6 +23,7 @@ import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemVersion
 import io.theficos.usuals.model.ItemId
+import io.theficos.usuals.model.ShoppingSnapshot
 import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.parse.UtteranceParser
 import io.theficos.usuals.parse.toItem
@@ -33,6 +34,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,6 +73,8 @@ class ListViewModel(
     val reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
     val shoppingTools: io.theficos.usuals.ui.shopping.ShoppingToolsStore = io.theficos.usuals.ui.shopping.ShoppingToolsStore(),
     private val background: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
+    /** Where rows are worked out from the list and its history. Tests pass their main dispatcher. */
+    private val compute: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default,
 ) : ViewModel() {
 
     /** State the screen owns rather than the database: what is open, what is being said. */
@@ -110,18 +116,34 @@ class ListViewModel(
      * and it means a rotation or a trip to settings comes back to a drawn list
      * instead of one empty frame.
      */
-    private val shopping = historyStore.shopping(store.items()).stateIn(viewModelScope, SharingStarted.Eagerly, io.theficos.usuals.model.ShoppingSnapshot())
+    private val shopping = historyStore.shopping(store.items()).stateIn(viewModelScope, SharingStarted.Eagerly, ShoppingSnapshot())
 
     private val directory = directoryStore.observe().stateIn(viewModelScope, SharingStarted.Eagerly, ListDirectory())
 
+    /**
+     * Rows and suggestions, worked out off the main thread from the list, its
+     * history and the store filter. A keystroke changes none of those, so typing
+     * on a long list never waits for history to be scanned.
+     */
+    private val listed = combine(shopping, shoppingTools.state, screen.map { it.selectedStore }.distinctUntilChanged(), ::list)
+        .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
+
+    private val matches = combine(listed, screen.map { (it.capture as? CaptureState.Typing)?.draft.orEmpty() }.distinctUntilChanged()) { listed, draft ->
+        if (draft.isBlank()) emptyList()
+        else smartStore.autocomplete(parser.parse(draft).lastOrNull()?.name ?: draft, listed.snapshot.history, listed.ordered)
+    }.flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * Assembled on the main thread from [screen] directly. The capture field
+     * shows the draft from here, and a draft that came back from another thread
+     * would drop characters and move the cursor.
+     */
     val state: StateFlow<ListUiState> =
-        combine(shopping, screen, shoppingTools.state) { snapshot, screenState, personal ->
-            project(snapshot.items, screenState, snapshot.history, personal, snapshot.listId) to snapshot.listId
-        }.combine(directory) { (state, scope), lists ->
+        combine(listed, matches, screen, directory) { listed, matches, screenState, lists ->
             val name = lists.lists.firstOrNull { it.id == lists.selected }?.name?.ifBlank { null }
-            if (directoryStore !== NoListDirectory && lists.selected.isNotEmpty() && scope != lists.selected) {
+            if (directoryStore !== NoListDirectory && lists.selected.isNotEmpty() && listed.snapshot.listId != lists.selected) {
                 ListUiState(directory = lists, header = ListHeader(name = name), busy = true)
-            } else state.copy(directory = lists, header = state.header.copy(name = name))
+            } else project(listed, matches, screenState).let { it.copy(directory = lists, header = it.header.copy(name = name)) }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, ListUiState())
 
     init {
@@ -797,48 +819,57 @@ class ListViewModel(
 
     // Projection ---------------------------------------------------------
 
-    private fun project(all: List<Item>, screen: ScreenState, facts: HistorySnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, scope: String): ListUiState {
+    private class Listed(
+        val snapshot: ShoppingSnapshot = ShoppingSnapshot(),
+        val ordered: List<Item> = emptyList(),
+        val presentation: Map<ItemId, ItemPresentation> = emptyMap(),
+        val rows: ListUiState = ListUiState(),
+    )
+
+    private fun list(snapshot: ShoppingSnapshot, personal: io.theficos.usuals.ui.shopping.ShoppingPreferences, selectedStore: String?): Listed {
+        val facts = snapshot.history
         // Position first, then the timestamp, then the id: two items dropped at
         // the same position by two phones still land in the same order on both.
-        val ordered = all.sortedWith(
+        val ordered = snapshot.items.sortedWith(
             compareBy({ it.position }, { it.createdAt }, { it.id.value }),
         )
         val stores = ordered.mapNotNull { it.store }.distinct().sorted()
-        val filter = screen.selectedStore?.takeIf { it in stores }
+        val filter = selectedStore?.takeIf { it in stores }
         val visible = if (filter == null) ordered else ordered.filter { it.store == filter }
         val presentation = smartStore.present(ordered, facts)
-        val typing = screen.capture as? CaptureState.Typing
-        val query = typing?.draft?.let { parser.parse(it).lastOrNull()?.name ?: it }.orEmpty()
-        val saved = personal.deferred[scope]
+        val saved = personal.deferred[snapshot.listId]
         val deferred = saved?.rows.orEmpty().takeUnless { saved != null && facts.trips.any { it.id !in saved.trips } }.orEmpty()
         fun isDeferred(item: Item) = !item.checked && deferred[item.id.value] == (item.version?.lifecycle ?: item.createdAt.toString())
-        return ListUiState(
-            productInfo = screen.productInfo,
+        return Listed(snapshot, ordered, presentation, ListUiState(
             personal = personal,
             deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id]) },
             suggestions = smartStore.suggestions(clock(), facts, ordered),
-            mergeReview = screen.mergeReview,
-            scanMerge = screen.scanMerge,
-            repeatOffer = screen.repeatOffer,
-            recipe = screen.recipe,
             stores = stores, selectedStore = filter,
-            scanNames = screen.scanNames.filter { offer -> ordered.any { it.id == offer.id } },
-            lastScannedItem = ordered.firstOrNull { it.id == screen.lastScanId },
             // Everything on the list, bought or not. It is the size of the
             // shop, which is what the number is being read for.
             header = ListHeader(itemCount = visible.size),
             pending = visible.filterNot { it.checked || isDeferred(it) }.map { toRow(it, presentation[it.id]) },
             checked = visible.filter { it.checked }.map { toRow(it, presentation[it.id]) },
-            checkedExpanded = screen.checkedExpanded,
-            finishedTrip = screen.finishedTrip?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || facts.trips.any { trip -> trip.id == it.trip.id } },
-            prompt = screen.prompt,
-            busy = screen.busy,
-            historyError = screen.historyError,
-            capture = screen.capture,
-            editing = if (screen.editingId == null) null else screen.editingSnapshot ?: ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, presentation[it.id]) },
-            autocomplete = smartStore.autocomplete(query, facts, ordered),
-        )
+        ))
     }
+
+    private fun project(listed: Listed, matches: List<ItemMemory>, screen: ScreenState): ListUiState = listed.rows.copy(
+        productInfo = screen.productInfo,
+        mergeReview = screen.mergeReview,
+        scanMerge = screen.scanMerge,
+        repeatOffer = screen.repeatOffer,
+        recipe = screen.recipe,
+        scanNames = screen.scanNames.filter { offer -> listed.ordered.any { it.id == offer.id } },
+        lastScannedItem = listed.ordered.firstOrNull { it.id == screen.lastScanId },
+        checkedExpanded = screen.checkedExpanded,
+        finishedTrip = screen.finishedTrip?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
+        prompt = screen.prompt,
+        busy = screen.busy,
+        historyError = screen.historyError,
+        capture = screen.capture,
+        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id]) },
+        autocomplete = matches,
+    )
 
     private fun toRow(item: Item, presentation: ItemPresentation?) = ListRow(
         id = item.id,

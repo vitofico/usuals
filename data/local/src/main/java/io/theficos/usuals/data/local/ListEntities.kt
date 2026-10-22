@@ -44,6 +44,7 @@ internal fun String.projectionParts(): List<String> = buildList {
 /** An acknowledged intent is no longer pending; it stays so its conflict can still be reviewed. */
 @Entity(tableName = "sync_outbox", primaryKeys = ["listId", "intentId"], indices = [Index("listId", "ordinal", unique = true)])
 data class OutboxEntity(val listId: String, val intentId: String, val ordinal: Long, val command: String, val acknowledged: Boolean = false)
+data class OutboxState(val intentId: String, val acknowledged: Boolean)
 /** The account's change feed position. [resetting] spans the pages of one reset. */
 @Entity(tableName = "sync_feed")
 data class FeedEntity(@PrimaryKey val singleton: Int = 1, val cursor: String? = null, val resetting: Boolean = false)

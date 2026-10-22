@@ -24,20 +24,29 @@ interface SyncDao {
     @Transaction
     @Query("SELECT text FROM sync_projection WHERE listId = :listId AND optimistic = 1 ORDER BY part")
     fun observeOptimistic(listId: String): Flow<List<String>>
+    @Query("SELECT EXISTS(SELECT 1 FROM sync_projection WHERE listId = :listId AND optimistic = 1)")
+    suspend fun hasProjection(listId: String): Boolean
     @Query("DELETE FROM sync_projection WHERE listId = :listId AND optimistic = :optimistic")
     suspend fun clearProjection(listId: String, optimistic: Boolean)
     @Insert
     suspend fun insertProjection(parts: List<ProjectionPartEntity>)
     @Query("SELECT * FROM sync_outbox WHERE listId = :listId ORDER BY ordinal")
     suspend fun pending(listId: String): List<OutboxEntity>
-    @Query("SELECT * FROM sync_outbox WHERE listId = :listId ORDER BY ordinal")
-    fun observePending(listId: String): Flow<List<OutboxEntity>>
+    @Query("SELECT * FROM sync_outbox WHERE listId = :listId AND acknowledged = 0 ORDER BY ordinal")
+    suspend fun unacknowledged(listId: String): List<OutboxEntity>
+    @Query("SELECT intentId, acknowledged FROM sync_outbox WHERE listId = :listId")
+    fun observeOutbox(listId: String): Flow<List<OutboxState>>
+    @Query("SELECT * FROM sync_outbox WHERE listId = :listId AND intentId IN (:ids)")
+    suspend fun intents(listId: String, ids: Collection<String>): List<OutboxEntity>
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun enqueue(intent: OutboxEntity)
     @Update
     suspend fun update(intent: OutboxEntity)
     @Query("UPDATE sync_outbox SET acknowledged = 1 WHERE listId = :listId AND intentId IN (:ids)")
     suspend fun acknowledge(listId: String, ids: Collection<String>)
+    /** Acknowledged rows older than the newest [horizon] ordinals, except [keep]. */
+    @Query("DELETE FROM sync_outbox WHERE listId = :listId AND acknowledged = 1 AND intentId NOT IN (:keep) AND ordinal <= (SELECT MAX(ordinal) FROM sync_outbox WHERE listId = :listId) - :horizon")
+    suspend fun prune(listId: String, keep: Collection<String>, horizon: Int)
     @Query("SELECT COALESCE(MAX(ordinal), 0) + 1 FROM sync_outbox WHERE listId = :listId")
     suspend fun nextOrdinal(listId: String): Long
 

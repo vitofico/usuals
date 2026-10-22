@@ -43,4 +43,36 @@ class AssistanceTest {
         val spanish = history.copy(purchases = history.purchases.map { it.copy(key = "leche", name = "leche") })
         assertThat(matcher.find("leche entera", spanish, emptyList())!!.key).isEqualTo("leche")
     }
+
+    @Test fun `hints from history grouped once match a per item scan`() {
+        // The scan every row used to run, kept here as the reference.
+        fun scanned(key: String, history: HistorySnapshot): Quantity? {
+            val aliases = history.aliases.associate { it.fromKey to it.toKey }
+            val recent = history.purchases.filter { io.theficos.usuals.parse.ItemIdentity.purchaseKey(it, aliases) == key }
+                .sortedWith(compareByDescending<Purchase> { it.boughtAt }.thenBy { it.id.value }).take(5)
+            val counts = recent.mapNotNull { it.quantity }.groupingBy { it }.eachCount()
+            return recent.mapNotNull { it.quantity }.distinct().filter { (counts[it] ?: 0) >= 2 }
+                .sortedByDescending { counts[it] }.firstOrNull()
+        }
+        val gtin = requireNotNull(Gtin.parse("4006381333931"))
+        val names = listOf("milk", "oat milk", "bread", "eggs", "4006381333931")
+        val quantities = listOf(null, Quantity.pieces(1), Quantity.pieces(2), Quantity(1.0, MeasureUnit.LITRE))
+        val purchases = (0 until 200).map { i ->
+            val name = names[i % names.size]
+            Purchase(ItemId("p$i"), "t${i / 7}", name, name, quantities[(i * 7 + i / 3) % quantities.size],
+                gtin = gtin.takeIf { name == gtin.value }, boughtAt = (i % 13) * day,
+                normalizerVersion = if (i % 11 == 0) 0 else NORMALIZER_VERSION)
+        }
+        val history = HistorySnapshot(purchases = purchases,
+            aliases = listOf(ItemAlias("oat milk", "milk"), ItemAlias("gtin:${gtin.value}", "eggs")))
+        val aliases = history.aliases.associate { it.fromKey to it.toKey }
+        val grouped = purchases.groupBy { io.theficos.usuals.parse.ItemIdentity.purchaseKey(it, aliases) }
+        val hints = QuantityHints()
+        val keys = names + listOf("gtin:${gtin.value}", "missing")
+        assertThat(keys.mapNotNull { scanned(it, history) }).isNotEmpty()
+        for (key in keys) {
+            assertThat(hints.hint(grouped[key].orEmpty())).isEqualTo(scanned(key, history))
+            assertThat(hints.hint(key, history)).isEqualTo(scanned(key, history))
+        }
+    }
 }

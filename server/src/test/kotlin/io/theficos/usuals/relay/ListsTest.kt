@@ -140,6 +140,10 @@ class ListsTest {
         assertThat(seq(large)).isEqualTo(before)
         val oversized = client.send(HttpMethod.Put, "/api/lists/${uuid()}", alice, Wire.json.encodeToString(CreateList.serializer(), CreateList(big(filler + 128))))
         assertThat(oversized.status).isEqualTo(HttpStatusCode.PayloadTooLarge)
+        // A client's snapshot has its facts replayed through the reducer, unlike a list the server reduced itself.
+        val dangling = Projection(purchases = mapOf("p" to buildJsonObject { put("id", "p"); put("tripId", "missing") }))
+        val refused = client.send(HttpMethod.Put, "/api/lists/${uuid()}", alice, Wire.json.encodeToString(CreateList.serializer(), CreateList(dangling)))
+        assertThat(refused.status).isEqualTo(HttpStatusCode.BadRequest)
     }
 
     @Test fun aListRemembersTheLastThousandIntentsForResends() = http {

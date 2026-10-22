@@ -385,4 +385,20 @@ class ItemRepositoryTest {
         }
     }
 
+    @Test
+    fun `addAll captures each row as add does, merging with open rows, in one rewrite`() = runTest {
+        val leche = repo.add(ParsedItem("Leche", Quantity(1.0, MeasureUnit.LITRE)))
+        val rewrites = db.projectionRewrites()
+        val ids = repo.addAll(listOf(NewItem(ParsedItem("Tomates")), NewItem(ParsedItem("leche", Quantity(2.0, MeasureUnit.LITRE))),
+            NewItem(ParsedItem("Pan"), marta, store = "Forn"), NewItem(ParsedItem("tomate"))))
+        assertThat(rewrites()).isEqualTo(1)
+        assertThat(ids[1]).isEqualTo(leche)
+        assertThat(ids[3]).isEqualTo(ids[0])
+        assertThat(names()).containsExactly("Leche", "Tomates", "Pan").inOrder()
+        assertThat(repo.find(leche)!!.quantity).isEqualTo(Quantity(3.0, MeasureUnit.LITRE))
+        assertThat(repo.find(ids[2])!!.store).isEqualTo("Forn")
+        assertThat(repo.find(ids[2])!!.addedBy).isEqualTo(marta)
+        assertThat(repo.addAll(emptyList())).isEmpty()
+        assertThat(rewrites()).isEqualTo(1)
+    }
 }

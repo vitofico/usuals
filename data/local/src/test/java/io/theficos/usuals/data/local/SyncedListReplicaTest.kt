@@ -393,6 +393,50 @@ class SyncedListReplicaTest {
         assertThat(ItemRepository(db).items().single().name).isEqualTo("Milk")
         db.close(); context.deleteDatabase(name)
     }
+    @Test fun aSettledIntentIsNeverReadAgain() = runTest {
+        val db = memory(); synced(db)
+        val replica = LocalReplica(db)
+        // Unreadable text proves a server answer skips acknowledged rows before decoding them.
+        db.syncDao().enqueue(OutboxEntity(LOCAL_LIST_ID, "settled", 1, "not json", acknowledged = true))
+        ItemRepository(db, replica = replica).add(ParsedItem("Milk"))
+        val milk = replica.pendingIntents(LOCAL_LIST_ID, 100).single()
+        replica.accept(server(Reducer(NORMALIZER_VERSION).apply(Projection(), milk).projection, 1))
+        assertThat(replica.pendingIntents(LOCAL_LIST_ID, 100)).isEmpty()
+        assertThat(db.syncDao().unacknowledged(LOCAL_LIST_ID)).isEmpty()
+        assertThat(replica.observeStatus(LOCAL_LIST_ID).first().pending).isEqualTo(0)
+        db.close()
+    }
+    @Test fun settledIntentsBeyondTheResendHorizonArePrunedUnlessAConflictNamesThem() = runTest {
+        val db = memory(); synced(db)
+        val replica = LocalReplica(db, newId = { "rename" })
+        replica.rename(LOCAL_LIST_ID, "Kitchen")
+        val horizon = Reducer.RESEND_HORIZON
+        for (ordinal in 2L..horizon + 6L) db.syncDao().enqueue(OutboxEntity(LOCAL_LIST_ID, "settled-$ordinal", ordinal, "{}", acknowledged = true))
+        val empty = JsonObject(emptyMap())
+        replica.accept(server(Projection(conflicts = mapOf("settled-2" to Conflict(empty, empty, "conflict")), rejected = mapOf("settled-3" to "invalid")), 1))
+        val kept = db.syncDao().pending(LOCAL_LIST_ID).map { it.intentId }
+        assertThat(kept).containsAtLeast("rename", "settled-2", "settled-3", "settled-7", "settled-${horizon + 6}")
+        assertThat(kept).containsNoneOf("settled-4", "settled-5", "settled-6")
+        assertThat(kept).hasSize(horizon + 3)
+        db.close()
+    }
+    @Test fun theFeedReturningAPushedListAtTheSameSeqRewritesNothing() = runTest {
+        val db = memory(); synced(db)
+        val replica = LocalReplica(db)
+        ItemRepository(db, replica = replica).add(ParsedItem("Milk"))
+        val milk = replica.pendingIntents(LOCAL_LIST_ID, 100).single()
+        val pushed = server(Reducer(NORMALIZER_VERSION).apply(Projection(), milk).projection, 1)
+        replica.accept(pushed, listOf(milk.id))
+        db.markStored(LOCAL_LIST_ID)
+        // A member's new display name reaches the list without a new seq.
+        replica.applyPage(page("1", listOf(pushed.copy(members = listOf(io.theficos.usuals.sync.Member("me", "Me again", "owner"))))))
+        assertThat(db.storedUnchanged(LOCAL_LIST_ID)).isTrue()
+        assertThat(db.listDao().find(LOCAL_LIST_ID)!!.members).contains("Me again")
+        replica.applyPage(page("2", listOf(pushed.copy(seq = 2))))
+        assertThat(db.storedUnchanged(LOCAL_LIST_ID)).isFalse()
+        assertThat(ItemRepository(db, replica = replica).items().single().name).isEqualTo("Milk")
+        db.close()
+    }
     @Test fun aPartNeverEndsInsideACharacter() = runTest {
         val db = memory()
         // Every surrogate pair starts at an odd index, so the first cut lands inside one unless it moves.
@@ -406,6 +450,14 @@ class SyncedListReplicaTest {
         db.close()
     }
 }
+
+/** Prefixes both stored copies with whitespace, which decodes the same but disappears when a copy is rewritten. */
+internal suspend fun UsualsDatabase.markStored(list: String) = listOf(false, true).forEach { optimistic ->
+    val text = " " + syncDao().projection(list, optimistic).joinToString("")
+    syncDao().clearProjection(list, optimistic)
+    syncDao().insertProjection(text.projectionParts().mapIndexed { part, value -> ProjectionPartEntity(list, optimistic, part, value) })
+}
+internal suspend fun UsualsDatabase.storedUnchanged(list: String) = listOf(false, true).all { syncDao().projection(list, it).first().startsWith(" ") }
 
 /**
  * A list of about 1.6 KB per past purchase, few enough that the reducer keeps them all. The long multi-byte names put
