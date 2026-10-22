@@ -42,6 +42,7 @@ object UsualsViewModelFactories {
                 directoryStore = ServiceLocator.listDirectory,
                 shoppingTools = ServiceLocator.shoppingTools,
                 reminders = ServiceLocator.reminders,
+                basket = ServiceLocator.basketSource,
             )
         }
     }
@@ -53,7 +54,7 @@ object UsualsViewModelFactories {
         initializer<ShareViewModel> { ShareViewModel(list, ServiceLocator.shareStore) }
     }
     fun history(): ViewModelProvider.Factory = viewModelFactory {
-        initializer<HistoryViewModel> { HistoryViewModel(ServiceLocator.historyStore) }
+        initializer<HistoryViewModel> { HistoryViewModel(ServiceLocator.historyStore, basket = ServiceLocator.basketSource) }
     }
 
     /**

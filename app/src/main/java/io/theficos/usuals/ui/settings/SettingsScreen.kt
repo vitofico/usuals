@@ -129,7 +129,7 @@ fun SettingsScreen(
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (selected) {
                     "appearance" -> AppearanceSection(palette, onPaletteChange)
-                    "privacy" -> PrivacySection(state, vm::setScanLookup)
+                    "privacy" -> PrivacySection(state, vm::setScanLookup, vm::setBasketOverview)
                     else -> {
                         TextButton(onClick = { panel = null; onOpenTutorial() }) { Text(stringResource(R.string.tutorial_replay)) }
                         AboutSection(state)
@@ -314,7 +314,7 @@ private fun ModelProbeReport(probe: ProbeState<ModelCapabilities>, modelName: St
  * warning that gets skimmed the day it matters.
  */
 @Composable
-private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Unit) {
+private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Unit, onBasketOverview: (Boolean) -> Unit) {
     var details by rememberSaveable { mutableStateOf(false) }
     Section(stringResource(R.string.settings_privacy_title), collapsible = false) {
         Row(Modifier.fillMaxWidth().toggleable(state.settings.scanLookupEnabled, role = Role.Switch, onValueChange = onScanLookup), verticalAlignment = Alignment.CenterVertically) {
@@ -322,6 +322,14 @@ private fun PrivacySection(state: SettingsUiState, onScanLookup: (Boolean) -> Un
             Switch(checked = state.settings.scanLookupEnabled, onCheckedChange = null)
         }
         Quiet(stringResource(R.string.scan_lookup_hint))
+        // It reads product details lookups saved, so it is offered only beside a lookup that is on.
+        if (state.settings.scanLookupEnabled) {
+            Row(Modifier.fillMaxWidth().toggleable(state.settings.basketOverviewEnabled, role = Role.Switch, onValueChange = onBasketOverview), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.basket_title), modifier = Modifier.weight(1f))
+                Switch(checked = state.settings.basketOverviewEnabled, onCheckedChange = null)
+            }
+            Quiet(stringResource(R.string.basket_setting_hint))
+        }
         TextButton(onClick = { details = !details }) {
             Text(stringResource(if (details) R.string.settings_privacy_hide else R.string.settings_privacy_details))
             Icon(if (details) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)

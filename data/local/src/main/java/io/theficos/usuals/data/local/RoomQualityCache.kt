@@ -43,6 +43,15 @@ class RoomQualityCache(
 
     override suspend fun get(gtin: Gtin): CachedQuality? = dao.find(gtin.value)?.toCached()
 
+    /**
+     * Every stored answer for [gtins] in one query per chunk, for screens that
+     * need a whole list's facts at once. Chunked because SQLite caps the number
+     * of bound parameters in one statement.
+     */
+    suspend fun getAll(gtins: Collection<Gtin>): Map<Gtin, CachedQuality> =
+        gtins.map { it.value }.distinct().chunked(MAX_BOUND).flatMap { dao.findAll(it) }
+            .mapNotNull { it.toCached() }.associateBy { it.gtin }
+
     override suspend fun put(outcome: QualityLookup, atEpochMillis: Long) {
         // The gate is [QualityLookup.cacheable] rather than a check on the
         // type, so that the rule reads the same here, in the in-memory cache,
@@ -80,6 +89,11 @@ class RoomQualityCache(
 
     /** Records [outcome] as learned now. Same rules, including the one about failures. */
     suspend fun put(outcome: QualityLookup) = put(outcome, clock())
+
+    private companion object {
+        // Below SQLite's oldest default limit of 999 variables.
+        const val MAX_BOUND = 500
+    }
 
     private fun row(
         gtin: Gtin,

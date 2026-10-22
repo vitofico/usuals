@@ -78,4 +78,30 @@ class HistoryViewModelTest {
         vm.importJson("invalid")
         assertThat(vm.state.value.notice).isEqualTo(HistoryNotice.INVALID_FILE)
     }
+
+    @Test fun `a past trip shows its basket overview only while the overview is on`() = runTest(main.dispatcher) {
+        val milk = io.theficos.usuals.model.Gtin.parse("4006381333931")!!
+        var enabled = false
+        val basket = io.theficos.usuals.ui.basket.BasketSource(
+            io.theficos.usuals.smart.CategoryClassifier(io.theficos.usuals.parse.InputLanguages.available),
+            { gtins -> gtins.associateWith { io.theficos.usuals.enrich.CachedQuality(it,
+                io.theficos.usuals.enrich.ProductQuality(novaGroup = io.theficos.usuals.enrich.NovaGroup.UNPROCESSED), false, 0) } },
+            enabled = { enabled })
+        val store = FakeHistoryStore()
+        fun purchase(id: String, name: String, gtin: io.theficos.usuals.model.Gtin? = null) = io.theficos.usuals.model.Purchase(
+            io.theficos.usuals.model.ItemId(id), "trip", io.theficos.usuals.parse.Normalizer.normalize(name), name, gtin = gtin, boughtAt = 1)
+        store.data.value = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)),
+            purchases = listOf(purchase("a", "milk", milk), purchase("b", "bananas"), purchase("c", "soap")))
+
+        assertThat(HistoryViewModel(store, basket = basket).state.value.baskets).isEmpty()
+
+        enabled = true
+        val overview = HistoryViewModel(store, basket = basket).state.value.baskets.getValue("trip")
+        assertThat(overview.foodItems).isEqualTo(2)
+        assertThat(overview.notFood).isEqualTo(1)
+        assertThat(overview.processing.unprocessed).isEqualTo(2)
+        assertThat(overview.processing.freshProduce).isEqualTo(1)
+        // Two known items are too few to describe.
+        assertThat(overview.processing.enough).isFalse()
+    }
 }

@@ -76,6 +76,7 @@ class ListViewModel(
     private val background: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
     /** Where rows are worked out from the list and its history. Tests pass their main dispatcher. */
     private val compute: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default,
+    private val basket: io.theficos.usuals.ui.basket.BasketSource? = null,
 ) : ViewModel() {
 
     /** State the screen owns rather than the database: what is open, what is being said. */
@@ -97,6 +98,9 @@ class ListViewModel(
         val scanNames: List<ScanNameOffer> = emptyList(),
         val lastScanId: ItemId? = null,
         val selectedStore: String? = null,
+        /** Read from settings when the screen opens, so the menu entry follows a change made in Settings. */
+        val basketAvailable: Boolean = false,
+        val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
         /**
          * Set once dictation has been refused or has failed. The design says
          * not to re-prompt after a denial, so this latches for the lifetime of
@@ -105,7 +109,7 @@ class ListViewModel(
         val speechBlocked: Boolean = false,
     )
 
-    private val screen = MutableStateFlow(ScreenState())
+    private val screen = MutableStateFlow(ScreenState(basketAvailable = basket?.enabled() == true))
     private val mergeQueue = ArrayDeque<MergeReview>()
     private var productJob: Job? = null
     private var scanNameGeneration = 0
@@ -177,10 +181,11 @@ class ListViewModel(
         viewModelScope.launch {
             productJob?.cancel()
             recipeJob?.cancel()
+            basketJob?.cancel()
             scanNameGeneration++
             skippedScanNames.clear()
             mergeQueue.clear()
-            screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, busy = true)
+            screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, basketAvailable = screen.value.basketAvailable, busy = true)
             try { change() }
             catch (_: Exception) { screen.update { it.copy(historyError = true) } }
             finally { screen.update { it.copy(busy = false) } }
@@ -194,6 +199,8 @@ class ListViewModel(
     }
 
     fun onOpened() {
+        val available = basket?.enabled() == true
+        screen.update { it.copy(basketAvailable = available, basket = it.basket.takeIf { available }) }
         refreshPrompts(shopping.value.items, shopping.value.history)
         refreshOffers(shopping.value.items, shopping.value.history)
         viewModelScope.launch { maintainRepeats(shopping.value.items, shopping.value.history) }
@@ -224,6 +231,29 @@ class ListViewModel(
     fun onDismissProduct() {
         productJob?.cancel()
         screen.update { it.copy(productInfo = null) }
+    }
+
+    private var basketJob: Job? = null
+
+    /** Opens the overview for the whole list, read once from details already on the phone. */
+    fun onBasketOverview() {
+        val source = basket ?: return
+        if (!source.enabled()) { screen.update { it.copy(basketAvailable = false, basket = null) }; return }
+        val snapshot = shopping.value
+        basketJob?.cancel()
+        screen.update { it.copy(basket = io.theficos.usuals.ui.basket.BasketSheetState(), editingId = null) }
+        basketJob = viewModelScope.launch {
+            try {
+                val overview = source.forList(snapshot.items, snapshot.history)
+                screen.update { it.copy(basket = it.basket?.copy(overview = overview)) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(basket = null, historyError = true) } }
+        }
+    }
+
+    fun onDismissBasket() {
+        basketJob?.cancel()
+        screen.update { it.copy(basket = null) }
     }
 
     fun onRefreshProduct() { if (screen.value.productInfo?.loading == false) loadProduct(refresh = true) }
@@ -858,6 +888,8 @@ class ListViewModel(
 
     private fun project(listed: Listed, matches: List<ItemMemory>, screen: ScreenState): ListUiState = listed.rows.copy(
         productInfo = screen.productInfo,
+        basketAvailable = screen.basketAvailable,
+        basket = screen.basket,
         mergeReview = screen.mergeReview,
         scanMerge = screen.scanMerge,
         repeatOffer = screen.repeatOffer,

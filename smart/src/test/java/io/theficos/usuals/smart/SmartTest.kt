@@ -35,6 +35,17 @@ class SmartTest {
         assertThat(classifier.classify("unknown item")).isEqualTo(Category.OTHER)
     }
 
+    @Test fun `only a whole produce seed name is fresh produce`() {
+        val classifier = CategoryClassifier(InputLanguages.available)
+        for (name in listOf("tomates", "Manzanas", "bananas", "karotten", "patate")) {
+            assertThat(classifier.isProduceName(name)).isTrue()
+        }
+        // Each of these files under Produce through one of its words.
+        for (name in listOf("salsa de tomate", "tomato sauce", "zumo de naranja", "milk")) {
+            assertThat(classifier.isProduceName(name)).isFalse()
+        }
+    }
+
     @Test fun `category vocabulary for another input language is only pack data`() {
         val pack = InputLanguage.read("category.DAIRY=latte,formaggio\n".reader())
         assertThat(CategoryClassifier(listOf(pack)).classify("latte")).isEqualTo(Category.DAIRY)

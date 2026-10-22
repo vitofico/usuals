@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="basket_title">Panoramica del carrello</string>
+    <string name="basket_source">Calcolata su questo telefono dai dati dei prodotti già salvati qui. Non viene cercato nulla di nuovo.</string>
+    <string name="basket_processing_title">Lavorazione</string>
+    <string name="basket_ultra_none">Nessuno dei prodotti noti è ultra-processato.</string>
+    <string name="basket_ultra_under_one">Meno di 1 prodotto noto su 10 è ultra-processato.</string>
+    <plurals name="basket_ultra_about">
+        <item quantity="one">Circa %1$d prodotto noto su 10 è ultra-processato.</item>
+        <item quantity="other">Circa %1$d prodotti noti su 10 sono ultra-processati.</item>
+        <item quantity="many">Circa %1$d prodotti noti su 10 sono ultra-processati.</item>
+    </plurals>
+    <string name="basket_ultra_over_nine">Più di 9 prodotti noti su 10 sono ultra-processati.</string>
+    <string name="basket_ultra_all">Tutti i prodotti noti sono ultra-processati.</string>
+    <string name="basket_bucket_unprocessed">Non trasformati o minimamente trasformati: %1$d</string>
+    <string name="basket_bucket_processed">Trasformati: %1$d</string>
+    <string name="basket_bucket_ultra">Ultra-processati: %1$d</string>
+    <string name="basket_food_coverage">Basato su %1$d di %2$d prodotti alimentari.</string>
+    <string name="basket_fresh_produce">Frutta e verdura fresche contate come non trasformate.</string>
+    <string name="basket_nutri_title">Nutri-Score</string>
+    <string name="basket_nutri_grade">%1$s %2$d</string>
+    <string name="basket_nutri_coverage">Noto per %1$d di %2$d prodotti a cui si applica.</string>
+    <string name="basket_nutri_note">Il Nutri-Score confronta prodotti dello stesso tipo. Non è un punteggio dell\'intero carrello.</string>
+    <string name="basket_not_enough">Non ci sono ancora abbastanza dati sui prodotti.</string>
+    <string name="basket_grow_hint">La copertura cresce scansionando: scansiona un prodotto una volta e Usuals lo ricorderà nelle liste successive.</string>
+    <plurals name="basket_not_food">
+        <item quantity="one">%1$d articolo non alimentare non conteggiato.</item>
+        <item quantity="other">%1$d articoli non alimentari non conteggiati.</item>
+        <item quantity="many">%1$d articoli non alimentari non conteggiati.</item>
+    </plurals>
+    <string name="basket_setting_hint">Disattivata per impostazione predefinita. Aggiunge un riepilogo di quanto è trasformato il cibo di una lista o di una spesa passata, dai dati dei prodotti già salvati su questo telefono. Non viene inviato nulla di nuovo.</string>
+</resources>
