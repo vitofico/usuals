@@ -12,6 +12,7 @@ import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.Purchase
 import io.theficos.usuals.parse.LocalUtteranceParser
 import io.theficos.usuals.parse.Normalizer
+import io.theficos.usuals.smart.AllergenMatch
 import io.theficos.usuals.ui.history.FakeHistoryStore
 import io.theficos.usuals.ui.product.ProductInfoStore
 import io.theficos.usuals.ui.product.RowFactsChoices
@@ -106,6 +107,36 @@ class RowFactsListTest {
         val facts = FakeRowFacts()
         facts.cache.value = mapOf(milk to ProductQuality(nutriScore = NutriScore.A, productType = ProductType.BEAUTY))
         assertThat(vm(facts).grades()["milk"]).isNull()
+    }
+
+    @Test fun `avoided allergens flag rows by their own or remembered barcode, unknown and none listed stay quiet`() = runTest(main.dispatcher) {
+        val facts = FakeRowFacts()
+        facts.choices.value = RowFactsChoices(showGrades = false, avoid = setOf("en:milk", "en:nuts"))
+        facts.cache.value = mapOf(
+            milk to ProductQuality(allergens = listOf("en:milk")),
+            pesto to ProductQuality(allergens = listOf("en:milk"), traces = listOf("en:nuts")),
+            beer to ProductQuality(allergens = null),
+        )
+        val vm = vm(facts)
+        val rows = vm.state.value.pending.associate { it.rawName to it.allergens }
+        assertThat(rows["milk"]).isEqualTo(AllergenMatch(contains = listOf("en:milk"), allergensStated = true))
+        assertThat(rows["pesto"]).isEqualTo(AllergenMatch(listOf("en:milk"), listOf("en:nuts"), allergensStated = true))
+        assertThat(rows["beer"]).isNull()
+        assertThat(rows["bread"]).isNull()
+        facts.cache.value = mapOf(milk to ProductQuality(allergens = emptyList()))
+        assertThat(vm.state.value.pending.single { it.rawName == "milk" }.allergens).isNull()
+        facts.lookupEnabled.value = false
+        facts.cache.value = mapOf(milk to ProductQuality(allergens = listOf("en:milk")))
+        assertThat(vm.state.value.pending.single { it.rawName == "milk" }.allergens).isNull()
+        assertThat(refreshes).isEqualTo(0)
+    }
+
+    @Test fun `the product sheet knows what this phone avoids`() = runTest(main.dispatcher) {
+        val facts = FakeRowFacts()
+        facts.choices.value = RowFactsChoices(avoid = setOf("en:milk"))
+        val vm = vm(facts)
+        vm.onProductInfo(vm.state.value.pending.single { it.rawName == "milk" })
+        assertThat(vm.state.value.productInfo!!.avoid).containsExactly("en:milk")
     }
 
     @Test fun `opening the sheet from a chip uses the remembered barcode`() = runTest(main.dispatcher) {

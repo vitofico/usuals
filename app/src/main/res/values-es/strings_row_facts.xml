@@ -2,4 +2,11 @@
 <resources>
     <string name="row_facts_grades">Mostrar calificaciones en la lista</string>
     <string name="row_facts_grades_hint">Las filas muestran el Nutri-Score ya guardado en este teléfono para su producto. La lista nunca consulta nada.</string>
+    <string name="row_facts_allergens">Alérgenos a señalar</string>
+    <string name="row_facts_allergens_hint">Las filas cuyo producto guardado indique alguno de estos lo avisan. Tu selección se queda en este teléfono: nunca se sincroniza, comparte, exporta ni copia.</string>
+    <string name="row_facts_allergens_caution">Open Food Facts es colaborativa y puede estar incompleta. Una fila sin aviso no es una garantía: comprueba siempre el envase.</string>
+    <string name="row_facts_allergens_unstated">Alérgenos no indicados, comprueba el envase.</string>
+    <string name="row_allergen_contains">Contiene %1$s</string>
+    <string name="row_allergen_may_contain">Puede contener %1$s</string>
+    <string name="row_allergen_both">Contiene %1$s. Puede contener %2$s</string>
 </resources>

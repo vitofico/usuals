@@ -32,6 +32,25 @@ class ProductInfoSheetTest {
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         assertThat(settings).isTrue()
     }
+    @Test fun `with an avoid list, unstated allergens say to check the packaging and the disclaimer stays`() {
+        val quality = ProductQuality(productName = "Cocoa")
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Cocoa", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true, avoid = setOf("en:milk")),
+            {}, {}, {},
+        ) } }
+        compose.onNodeWithText("Allergens not stated, check the packaging.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Community-contributed data may be incomplete", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onAllNodes(hasText("safe", substring = true, ignoreCase = true)).assertCountEquals(0)
+    }
+    @Test fun `avoided allergens and traces are named in the lines that list them`() {
+        val quality = ProductQuality(productName = "Pesto", allergens = listOf("en:milk", "en:nuts"), traces = listOf("en:peanuts"))
+        compose.setContent { UsualsTheme { ProductInfoSheet(
+            ProductInfoState(gtin, "Pesto", CachedQuality(gtin, quality, false, 123), loading = false, lookupEnabled = true, avoid = setOf("en:milk", "en:peanuts")),
+            {}, {}, {},
+        ) } }
+        compose.onNodeWithText("Allergens: milk, tree nuts").assertExists()
+        compose.onNodeWithText("May contain traces of: peanuts").assertExists()
+    }
     @Test fun `a non-food product says so instead of listing food facts as not stated`() {
         val quality = ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true, productName = "Hand cream")
         compose.setContent { UsualsTheme { ProductInfoSheet(

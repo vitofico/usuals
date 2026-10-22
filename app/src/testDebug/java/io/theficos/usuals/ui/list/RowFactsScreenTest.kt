@@ -10,6 +10,8 @@ import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.ItemId
+import io.theficos.usuals.smart.AllergenMatch
+import androidx.compose.ui.test.onNodeWithText
 import io.theficos.usuals.ui.theme.UsualsTheme
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +22,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /** Product facts as a row draws them. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], qualifiers = "en")
+// Tall enough that every row of the list is composed.
+@Config(sdk = [33], qualifiers = "en-w411dp-h891dp")
 class RowFactsScreenTest {
     @get:Rule val compose = createComposeRule()
 
@@ -43,6 +46,21 @@ class RowFactsScreenTest {
         assertThat(checks).isEqualTo(0)
         // The bare row draws no chip at all, not even an unknown one.
         compose.onAllNodesWithContentDescription("Nutri-Score", substring = true).assertCountEquals(1)
+    }
+
+    @Test fun `avoided allergens are named under the row in the reader's words`() {
+        compose.setContent {
+            UsualsTheme {
+                ListContent(ListUiState(pending = listOf(
+                    ListRow(ItemId("a"), "Milk", gtin = milk, allergens = AllergenMatch(contains = listOf("en:milk"))),
+                    ListRow(ItemId("b"), "Biscuits", allergens = AllergenMatch(mayContain = listOf("en:nuts"))),
+                    ListRow(ItemId("c"), "Pesto", allergens = AllergenMatch(listOf("en:milk"), listOf("en:nuts"))),
+                )), ListActions())
+            }
+        }
+        compose.onNodeWithText("Contains milk").assertExists()
+        compose.onNodeWithText("May contain tree nuts").assertExists()
+        compose.onNodeWithText("Contains milk. May contain tree nuts").assertExists()
     }
 
     @Test fun `a checked row keeps its chip`() {

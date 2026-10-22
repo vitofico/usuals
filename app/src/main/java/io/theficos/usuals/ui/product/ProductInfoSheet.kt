@@ -15,7 +15,8 @@ import io.theficos.usuals.R
 import io.theficos.usuals.enrich.*
 import io.theficos.usuals.ui.QualityAttribution
 import io.theficos.usuals.ui.ScorePanel
-import io.theficos.usuals.ui.allergenList
+import io.theficos.usuals.ui.highlightedAllergens
+import androidx.compose.ui.text.AnnotatedString
 import java.text.DateFormat
 import java.util.Date
 
@@ -56,15 +57,16 @@ fun ProductInfoSheet(state: ProductInfoState, onRefresh: () -> Unit, onSettings:
             if (state.result == null && state.cached?.confirmedMissing == true) Text(stringResource(R.string.product_not_found))
             if (quality != null && quality.productType != ProductType.FOOD) Text(stringResource(R.string.product_not_food))
             if (quality != null && quality.productType == ProductType.FOOD) {
-                ScorePanel(quality)
+                ScorePanel(quality, avoid = state.avoid)
                 HorizontalDivider()
                 Text(stringResource(R.string.product_ingredients), style = MaterialTheme.typography.titleMedium)
                 Text(quality.ingredients ?: stringResource(R.string.product_ingredients_unknown))
-                Text(stringResource(when {
-                    quality.traces == null -> R.string.product_traces_unknown
-                    quality.traces?.isEmpty() == true -> R.string.product_traces_empty
-                    else -> R.string.product_traces
-                }, allergenList(quality.traces.orEmpty())))
+                val traces = quality.traces
+                Text(when {
+                    traces == null -> AnnotatedString(stringResource(R.string.product_traces_unknown))
+                    traces.isEmpty() -> AnnotatedString(stringResource(R.string.product_traces_empty))
+                    else -> highlightedAllergens(R.string.product_traces, traces, state.avoid)
+                })
                 Text(stringResource(R.string.product_check_package), style = MaterialTheme.typography.bodySmall)
             }
             quality?.sourceModifiedAtEpochSeconds?.let { seconds ->

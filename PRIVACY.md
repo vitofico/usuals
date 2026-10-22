@@ -26,6 +26,9 @@ without microphone access. Optional shopping reminders use local notifications.
   it names (Open Beauty Facts, Open Products Facts or Open Pet Food Facts, run by
   the same organisation) for a product name. Your IP address is visible to
   those services. Product data is cached locally and its source is credited.
+  List rows show grades and allergen flags only from that local cache and never
+  request anything. The allergens you choose to flag stay on that phone: they are
+  never synced, shared, exported or included in a backup or device transfer.
 - Sharing a recipe URL fetches that page directly from your device. The website
   sees the URL and connection metadata. Structured recipe parsing is local.
 - Model assistance is optional and disabled by default. An explicit model action

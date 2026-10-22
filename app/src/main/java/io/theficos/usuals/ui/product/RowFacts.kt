@@ -12,12 +12,17 @@ import kotlinx.serialization.json.Json
 
 /**
  * This phone's own choices about product facts on list rows. They describe one
- * person, so they never sync to a shared list or leave the phone.
+ * person, and [avoid] is health data, so they never sync to a shared list, go
+ * into an export or leave the phone in a backup.
  */
 @Serializable
-data class RowFactsChoices(val showGrades: Boolean = true) {
+data class RowFactsChoices(
+    val showGrades: Boolean = true,
+    /** Open Food Facts allergen tags (`en:milk`) this person wants flagged. */
+    val avoid: Set<String> = emptySet(),
+) {
     /** True when rows need anything from the product cache at all. */
-    val active: Boolean get() = showGrades
+    val active: Boolean get() = showGrades || avoid.isNotEmpty()
 }
 
 /** [RowFactsChoices] kept as one JSON value, the way `ShoppingToolsStore` keeps its own. */
@@ -34,6 +39,7 @@ class RowFactsStore(read: () -> String? = { null }, private val write: (String) 
     }
 
     fun showGrades(enabled: Boolean) = change { it.copy(showGrades = enabled) }
+    fun avoid(tag: String, avoided: Boolean) = change { it.copy(avoid = if (avoided) it.avoid + tag else it.avoid - tag) }
 }
 
 /**

@@ -70,3 +70,14 @@ internal enum class GradeShade(val fill: Color, val glyph: Color) {
     STEP_5(Color(0xFFC9361A), Color(0xFFFFFFFF)),
     STEP_6(Color(0xFF9E2A1B), Color(0xFFFFFFFF)),
 }
+
+/**
+ * Amber for allergen flags. Like the grade shades it marks a fact about a
+ * product, so it stays the same under every palette; both values keep 4.5:1 on
+ * every palette's backgrounds and surfaces, and the words, not the hue, carry
+ * the warning.
+ */
+private val CautionLight = Color(0xFF7A4B00)
+private val CautionDark = Color(0xFFF2BE5C)
+
+internal fun cautionColor(darkTheme: Boolean): Color = if (darkTheme) CautionDark else CautionLight

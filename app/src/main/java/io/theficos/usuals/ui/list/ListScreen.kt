@@ -43,6 +43,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
 import io.theficos.usuals.ui.theme.categoryAccent
 import io.theficos.usuals.ui.NutriScoreChip
+import io.theficos.usuals.ui.allergenList
+import io.theficos.usuals.ui.theme.cautionColor
+import io.theficos.usuals.smart.AllergenMatch
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -750,6 +753,7 @@ private fun ItemRow(
                 textDecoration = if (row.checked) TextDecoration.LineThrough else TextDecoration.None,
                 color = if (row.checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             )
+            row.allergens?.let { AllergenLine(it, row.checked) }
             row.store?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary) }
             row.note?.let { note ->
                 Text(
@@ -782,6 +786,24 @@ private fun ItemRow(
                 Text(hint, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+}
+
+/** "Contains milk" under the name, in amber with an icon, so it reads as a warning without relying on colour. */
+@Composable
+private fun AllergenLine(match: AllergenMatch, checked: Boolean) {
+    val contains = allergenList(match.contains)
+    val traces = allergenList(match.mayContain)
+    val text = when {
+        match.mayContain.isEmpty() -> stringResource(R.string.row_allergen_contains, contains)
+        match.contains.isEmpty() -> stringResource(R.string.row_allergen_may_contain, traces)
+        else -> stringResource(R.string.row_allergen_both, contains, traces)
+    }
+    // A bought row is dimmed like its name; the warning mattered before it went in the trolley.
+    val color = if (checked) MaterialTheme.colorScheme.onSurfaceVariant else cautionColor(MaterialTheme.colorScheme.background.luminance() < 0.5f)
+    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.WarningAmber, null, tint = color, modifier = Modifier.padding(end = 4.dp).size(14.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, color = color)
     }
 }
 

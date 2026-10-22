@@ -238,7 +238,8 @@ class ListViewModel(
         val reader = productInfoStore ?: return
         productJob?.cancel()
         screen.update { it.copy(editingId = null, editingSnapshot = null,
-            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled(), provenance = row.provenance)) }
+            productInfo = io.theficos.usuals.ui.product.ProductInfoState(gtin, row.name, lookupEnabled = reader.enabled(), provenance = row.provenance,
+                avoid = factChoices.value?.avoid.orEmpty())) }
         loadProduct(refresh = false)
     }
 
@@ -859,7 +860,8 @@ class ListViewModel(
         fun ListRow.annotated(): ListRow {
             // A sister-database record has no grade to show, whatever its fields say.
             val quality = productGtin?.let(facts::get)?.takeIf { it.productType == io.theficos.usuals.enrich.ProductType.FOOD } ?: return this
-            return copy(grade = quality.nutriScore.takeIf { choices.showGrades })
+            return copy(grade = quality.nutriScore.takeIf { choices.showGrades },
+                allergens = io.theficos.usuals.smart.AllergenAvoidance.match(quality.allergens, quality.traces, choices.avoid).takeIf { it.flagged })
         }
         return withRows(rows.copy(pending = rows.pending.map { it.annotated() }, checked = rows.checked.map { it.annotated() },
             deferred = rows.deferred.map { it.annotated() }))

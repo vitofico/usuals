@@ -118,6 +118,10 @@ fun SettingsScreen(
                 SectionCard {
                     TextButton(onClick = { panel = "appearance" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.appearance_title)) }
                     TextButton(onClick = { panel = "privacy" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_privacy_title)) }
+                    // Flags come only from what lookup saved, so the list hides with it.
+                    if (state.settings.scanLookupEnabled && rowFacts != null) {
+                        TextButton(onClick = { panel = "allergens" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.row_facts_allergens)) }
+                    }
                     TextButton(onClick = { panel = "help" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_help)) }
                 }
             }
@@ -126,10 +130,12 @@ fun SettingsScreen(
     }
     panel?.let { selected ->
         AlertDialog(onDismissRequest = { panel = null },
-            title = { Text(stringResource(when (selected) { "appearance" -> R.string.appearance_title; "privacy" -> R.string.settings_privacy_title; else -> R.string.settings_help })) },
+            title = { Text(stringResource(when (selected) { "appearance" -> R.string.appearance_title; "privacy" -> R.string.settings_privacy_title
+                "allergens" -> R.string.row_facts_allergens; else -> R.string.settings_help })) },
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (selected) {
                     "appearance" -> AppearanceSection(palette, onPaletteChange)
+                    "allergens" -> rowFacts?.let { AllergensSection(it) }
                     "privacy" -> {
                         PrivacySection(state, vm::setScanLookup)
                         if (state.settings.scanLookupEnabled && rowFacts != null) RowFactsSection(rowFacts)
@@ -364,6 +370,27 @@ private fun RowFactsSection(store: io.theficos.usuals.ui.product.RowFactsStore) 
         Switch(checked = choices.showGrades, onCheckedChange = null)
     }
     Quiet(stringResource(R.string.row_facts_grades_hint))
+}
+
+/**
+ * The allergens this phone flags on list rows. Health data, so it is stored
+ * only on this phone; the copy says so, and says that no flag is no promise.
+ */
+@Composable
+private fun AllergensSection(store: io.theficos.usuals.ui.product.RowFactsStore) {
+    val choices by store.state.collectAsState()
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    Quiet(stringResource(R.string.row_facts_allergens_hint))
+    io.theficos.usuals.ui.AVOIDABLE_ALLERGENS.forEach { tag ->
+        val avoided = tag in choices.avoid
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(avoided, role = Role.Checkbox) { store.avoid(tag, it) },
+            verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Checkbox(checked = avoided, onCheckedChange = null)
+            Spacer(Modifier.width(8.dp))
+            Text(io.theficos.usuals.ui.allergenName(tag).replaceFirstChar { it.titlecase(locale) }, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+    Text(stringResource(R.string.row_facts_allergens_caution), style = MaterialTheme.typography.bodyMedium)
 }
 
 // Presupuesto ---------------------------------------------------------------
