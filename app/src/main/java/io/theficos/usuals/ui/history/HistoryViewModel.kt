@@ -45,7 +45,8 @@ class HistoryViewModel(
         selected.value = Selection(current.scope, if (id in ids) ids - id else ids + id)
     }
     fun selectTrip(id: String) {
-        selected.value = Selection(state.value.scope, state.value.history.purchases.filter { it.tripId == id && matchesHistory(it.name, query.value) }.map { it.id.value }.toSet())
+        val matches = historyMatcher(query.value)
+        selected.value = Selection(state.value.scope, state.value.history.purchases.filter { it.tripId == id && matches(it.name) }.map { it.id.value }.toSet())
     }
     fun rebuy() {
         val snapshot = state.value
@@ -105,8 +106,14 @@ class HistoryViewModel(
     }
 }
 
-internal fun matchesHistory(name: String, query: String): Boolean {
-    fun folded(value: String) = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
-    return folded(name).contains(folded(query.trim()))
+private val MARKS = Regex("\\p{M}+")
+
+private fun folded(value: String) = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+    .replace(MARKS, "").lowercase(java.util.Locale.ROOT)
+
+/** Folds the query once: a search runs over every purchase on each keystroke. */
+internal fun historyMatcher(query: String): (String) -> Boolean {
+    val wanted = folded(query.trim())
+    if (wanted.isEmpty()) return { true }
+    return { name -> folded(name).contains(wanted) }
 }

@@ -1,5 +1,6 @@
 package io.theficos.usuals.ui.list
 
+import androidx.compose.runtime.Immutable
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.Suggestion
@@ -59,7 +60,12 @@ data class ListHeader(
     val itemCount: Int = 0,
 )
 
-/** One line on the list, already reduced to what the row draws. */
+/**
+ * One line on the list, already reduced to what the row draws. Immutable so a
+ * row whose values did not change skips recomposition: its model types come
+ * from a module Compose cannot see into.
+ */
+@Immutable
 data class ListRow(
     val id: ItemId,
     val name: String,

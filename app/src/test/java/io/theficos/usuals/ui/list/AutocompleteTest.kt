@@ -16,7 +16,7 @@ class AutocompleteTest {
             override fun autocomplete(query: String, history: HistorySnapshot, active: List<Item>) = listOf(memory)
         }
         val store = FakeItemStore()
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), smartStore = smart)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), smartStore = smart, compute = main.dispatcher)
         vm.onSpeechUnavailable()
         vm.onDraftChange("bread, 1 l mi")
         vm.onAutocomplete(memory)

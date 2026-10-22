@@ -15,10 +15,14 @@ class HistoryRanker {
         }.sortedBy { it.key }
     }
 
-    fun autocomplete(query: String, history: HistorySnapshot, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> {
+    fun autocomplete(query: String, history: HistorySnapshot, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> =
+        autocomplete(query, memories(history), excluded, limit)
+
+    /** Takes [memories] already grouped, so a caller can reuse one grouping of history across keystrokes. */
+    fun autocomplete(query: String, memories: List<ItemMemory>, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> {
         val key = Normalizer.normalize(query)
         if (key.isBlank()) return emptyList()
-        return memories(history).filter { it.key !in excluded &&
+        return memories.filter { it.key !in excluded &&
             (it.key.contains(key) || Normalizer.normalize(it.name).contains(key)) }
             .sortedWith(compareByDescending<ItemMemory> { it.key.startsWith(key) }
                 .thenByDescending { it.purchaseCount }.thenByDescending { it.lastBoughtAt }.thenBy { it.key })

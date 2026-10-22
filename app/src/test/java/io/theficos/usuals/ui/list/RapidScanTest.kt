@@ -31,7 +31,7 @@ class RapidScanTest {
             }
             override suspend fun confirm(offer: ScanNameOffer, name: String) = true
         }
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans, compute = main.dispatcher)
         vm.onScanned(Gtin.parse("4006381333931")!!)
         assertThat(vm.state.value.scanNames.single().problem).isEqualTo(ScanNameProblem.LOOKUP_DISABLED)
         enabled = true
@@ -59,7 +59,7 @@ class RapidScanTest {
             override suspend fun lookup(id: ItemId, gtin: Gtin): ScanNameOffer { if (id.value.substringAfterLast('-').toInt() > 2) gate.await(); return ScanNameOffer(id, gtin, null, null, false) }
             override suspend fun confirm(offer: ScanNameOffer, name: String) = true
         }
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), scanStore = scans, compute = main.dispatcher)
         repeat(10) { vm.onScanned(Gtin.parse("4006381333931")!!) }
         assertThat(vm.state.value.pending).hasSize(10)
         assertThat(vm.state.value.scanNames).hasSize(2)

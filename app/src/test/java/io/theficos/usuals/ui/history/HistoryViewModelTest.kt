@@ -45,8 +45,11 @@ class HistoryViewModelTest {
     }
 
     @Test fun `history search and trip selection match trimmed accents`() = runTest(main.dispatcher) {
-        assertThat(matchesHistory("Café au lait", "  cafe ")).isTrue()
-        assertThat(matchesHistory("Milk", "bread")).isFalse()
+        val cafe = historyMatcher("  cafe ")
+        assertThat(cafe("Café au lait")).isTrue()
+        assertThat(cafe("Milk")).isFalse()
+        assertThat(historyMatcher("Ñ")("piña")).isTrue()
+        assertThat(historyMatcher("  ")("anything")).isTrue()
         val store = FakeHistoryStore()
         store.data.value = io.theficos.usuals.model.HistorySnapshot(
             trips = listOf(io.theficos.usuals.model.Trip("past", 1)),

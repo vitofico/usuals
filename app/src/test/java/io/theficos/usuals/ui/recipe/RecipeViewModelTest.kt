@@ -28,7 +28,7 @@ class RecipeViewModelTest {
             }
             override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onSharedText("leche, huevos y pan")
         assertThat(proposals.map { it.name }).containsExactly("leche", "huevos", "pan").inOrder()
         vm.onReadRecipeMarkdown()
@@ -54,7 +54,7 @@ class RecipeViewModelTest {
             override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
         }
         val store = FakeItemStore()
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onOpenRecipe()
         assertThat(vm.state.value.recipe!!.source).isEqualTo(RecipeSource.MARKDOWN)
         for (note in listOf("milk\neggs", "# Shopping\n- [milk](https://example.invalid)",
@@ -83,7 +83,7 @@ class RecipeViewModelTest {
             override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
         }
         val store = FakeItemStore()
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onSharedText("https://example.org/recipe")
         assertThat(store.current).isEmpty()
         assertThat(vm.state.value.recipe!!.selected).containsExactly(0)
@@ -102,7 +102,7 @@ class RecipeViewModelTest {
             override suspend fun markdown(text: String, emojiQuantities: Boolean) = RecipeLoad.Review("", null, null, listOf(row))
             override suspend fun add(rows: List<IngredientReview>) { release.await(); added = rows }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onSharedText("[x] onion\n[ ] leeks")
         vm.onAddRecipe()
         assertThat(vm.state.value.recipe).isNull()
@@ -116,7 +116,7 @@ class RecipeViewModelTest {
             override suspend fun markdown(text: String, emojiQuantities: Boolean): RecipeLoad { choices += emojiQuantities; return RecipeLoad.Review("", null, null, emptyList()) }
         }
         val tools = ShoppingToolsStore()
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, shoppingTools = tools, background = main.dispatcher)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, shoppingTools = tools, background = main.dispatcher, compute = main.dispatcher)
         vm.onOpenRecipe(); vm.onRecipeMarkdown("- Beer 🍺🍺"); vm.onReadRecipeMarkdown()
         vm.onEmojiQuantities(true)
         assertThat(choices).containsExactly(false, true).inOrder()
@@ -133,7 +133,7 @@ class RecipeViewModelTest {
             } else RecipeLoad.Review(url, "Next recipe", null, emptyList())
         }
         val items = FakeItemStore()
-        val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onOpenRecipe("https://example.org/slow")
         assertThat(vm.state.value.recipe!!.busy).isTrue()
         vm.onDismissRecipe()
@@ -153,7 +153,7 @@ class RecipeViewModelTest {
             override suspend fun photo(image: io.theficos.usuals.llm.ModelImage): RecipeLoad { calls++; return RecipeLoad.Review("", null, null, listOf(row), true) }
             override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onOpenRecipe(); vm.onRecipeSource(RecipeSource.PHOTO); vm.onRecipePhoto("content://test/photo")
         assertThat(vm.state.value.recipe!!.result).isInstanceOf(RecipeLoad.Photo::class.java)
         assertThat(calls).isEqualTo(0); assertThat(added).isEmpty()

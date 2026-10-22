@@ -15,7 +15,7 @@ class StoreFilterTest {
             Item(ItemId("a"), "milk", "milk", "milk", store = "market", createdAt = 0, updatedAt = 0),
             Item(ItemId("b"), "bread", "bread", "bread", store = "bakery", createdAt = 0, updatedAt = 0),
         ))
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false))
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), compute = main.dispatcher)
         vm.onStoreFilter("market")
         assertThat(vm.state.value.pending.map { it.name }).containsExactly("Milk")
         assertThat(vm.state.value.stores).containsExactly("bakery", "market").inOrder()
