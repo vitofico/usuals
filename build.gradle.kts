@@ -45,17 +45,17 @@ plugins {
 // on the two that vanished. Separate configurations are separate resolutions.
 val robolectricSdkApi26: Configuration by configurations.creating
 val robolectricSdkApi33: Configuration by configurations.creating
-val robolectricSdkApi34: Configuration by configurations.creating
+val robolectricSdkApi36: Configuration by configurations.creating
 
 dependencies {
     robolectricSdkApi26(libs.robolectric.android.all.api26)
     robolectricSdkApi33(libs.robolectric.android.all.api33)
-    robolectricSdkApi34(libs.robolectric.android.all.api34)
+    robolectricSdkApi36(libs.robolectric.android.all.api36)
 }
 
 val stageRobolectricSdk by tasks.registering(Sync::class) {
     description = "Puts the android-all jars where Robolectric can find them offline."
-    from(robolectricSdkApi26, robolectricSdkApi33, robolectricSdkApi34)
+    from(robolectricSdkApi26, robolectricSdkApi33, robolectricSdkApi36)
     into(layout.buildDirectory.dir("robolectric-sdks"))
 }
 

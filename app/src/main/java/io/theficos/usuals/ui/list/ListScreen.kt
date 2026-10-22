@@ -67,6 +67,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -413,7 +414,8 @@ fun ListContent(
     BackHandler(enabled = typing != null) { actions.onDraftDismiss() }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // The window draws behind the system bars and the keyboard, so the list keeps clear of all three.
+        Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
           Column(modifier = Modifier.weight(1f).closesDraft(typing != null, actions.onDraftDismiss)) {
             ListHeaderBar(
                 header = state.header,
