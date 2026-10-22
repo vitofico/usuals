@@ -1,5 +1,14 @@
 # Changelog
 
+## Background import, ticked items, faster clearing
+
+- Importing a long note no longer freezes the app. The import sheet closes as
+  soon as you tap Add, and the items are written in batches in the background.
+- Items ticked in the note arrive ticked in Usuals.
+- Repeated emoji as a quantity (`Beer 🍺🍺🍺` adds 3 beers) is now a switch on
+  the import screen, off by default. When off, emoji stay in the item name.
+- Removing all items, or several selected ones, is fast on a long list.
+
 ## Long notes import
 
 - Importing a note takes up to 500 items, up from 150, so a long Keep list comes

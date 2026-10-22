@@ -1,1 +1,1 @@
-Der Import nimmt jetzt Notizen mit bis zu 500 Artikeln an, eine lange Google-Keep-Liste kommt also vollständig an. Ist eine Notiz trotzdem zu lang, sagt der Importbildschirm das oben statt unter der Tastatur.
+Der Import einer langen Notiz friert die App nicht mehr ein: Das Blatt schließt sofort und die Artikel kommen im Hintergrund dazu. Abgehakte Artikel einer Notiz kommen abgehakt an. Wiederholte Emoji als Menge sind jetzt ein Schalter, standardmäßig aus, die Emoji bleiben also im Namen. Alles entfernen geht auch bei langen Listen schnell.

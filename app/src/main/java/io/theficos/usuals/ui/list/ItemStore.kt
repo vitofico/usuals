@@ -35,4 +35,6 @@ interface ItemStore {
     suspend fun setChecked(id: ItemId, checked: Boolean, version: io.theficos.usuals.model.ItemVersion?) = setChecked(id, checked)
     suspend fun remove(id: ItemId, version: io.theficos.usuals.model.ItemVersion?) = remove(id)
     suspend fun remove(id: ItemId)
+    /** Removes many rows in one write, so emptying a long list does not rewrite it once per row. */
+    suspend fun removeAll(rows: List<Pair<ItemId, io.theficos.usuals.model.ItemVersion?>>) = rows.forEach { (id, version) -> remove(id, version) }
 }

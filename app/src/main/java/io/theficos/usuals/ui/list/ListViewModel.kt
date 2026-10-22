@@ -303,7 +303,8 @@ class ListViewModel(
         screen.update { it.copy(recipe = it.recipe?.copy(source = source, result = null, selected = emptySet())) }
     }
     fun onRecipeMarkdown(text: String) { screen.update { it.copy(recipe = it.recipe?.copy(markdown = text.take(30_001), result = null, selected = emptySet())) } }
-    fun onReadRecipeMarkdown() {
+    fun onReadRecipeMarkdown() = readRecipeMarkdown(emojiQuantities())
+    private fun readRecipeMarkdown(emojiQuantities: Boolean) {
         val draft = screen.value.recipe ?: return
         val text = draft.markdown
         runRecipe {
@@ -311,11 +312,19 @@ class ListViewModel(
                 !Regex("[#\\[\\]`*_<>]|^(?:[-+•◦]\\s|[0-9]+[.)]\\s|[☐☑☒])").containsMatchIn(text.trim())
             if (draft.fromShare && plain && text.length <= io.theficos.usuals.recipe.MarkdownIngredients.MAX_TEXT) {
                 val parsed = parser.parse(text)
-                if (parsed.size > 1) recipeStore.review(parsed) else recipeStore.markdown(text)
-            } else recipeStore.markdown(text)
+                if (parsed.size > 1) recipeStore.review(parsed) else recipeStore.markdown(text, emojiQuantities)
+            } else recipeStore.markdown(text, emojiQuantities)
         }
     }
-    fun onRecipeMarkdownFile(uri: String) { if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.MARKDOWN) runRecipe { recipeStore.markdownFile(uri) } }
+    fun onRecipeMarkdownFile(uri: String) { if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.MARKDOWN) runRecipe { recipeStore.markdownFile(uri, emojiQuantities()) } }
+    private fun emojiQuantities() = shoppingTools.state.value.emojiQuantities
+    /** A note already read is read again, so the review shows the names the new choice gives. */
+    fun onEmojiQuantities(enabled: Boolean) {
+        updateShoppingTools { it.emojiQuantities(enabled) }
+        val draft = screen.value.recipe ?: return
+        if (draft.result != null && draft.markdown.isNotBlank()) readRecipeMarkdown(enabled)
+        else screen.update { it.copy(recipe = it.recipe?.copy(result = null, selected = emptySet())) }
+    }
     fun onRecipePhoto(uri: String) {
         if (screen.value.recipe?.source == io.theficos.usuals.ui.recipe.RecipeSource.PHOTO) runRecipe { recipeStore.photoPreview(uri) }
         else recipeStore.releaseCamera(uri)
@@ -359,13 +368,13 @@ class ListViewModel(
         val current = screen.value.recipe ?: return
         val review = current.result as? RecipeLoad.Review ?: return
         if (current.busy || current.selected.isEmpty()) return
-        screen.update { it.copy(recipe = current.copy(busy = true)) }
-        recipeJob = viewModelScope.launch {
-            try {
-                recipeStore.add(review.rows.filterIndexed { index, _ -> index in current.selected }.map { it.item })
-                screen.update { it.copy(recipe = null) }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { screen.update { it.copy(recipe = current.copy(busy = false), historyError = true) } }
+        val rows = review.rows.filterIndexed { index, _ -> index in current.selected }
+        // The sheet closes at once and rows appear batch by batch; closing or reopening the sheet does not stop it.
+        screen.update { it.copy(recipe = null) }
+        viewModelScope.launch {
+            try { recipeStore.add(rows) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(historyError = true) } }
         }
     }
 
@@ -512,14 +521,14 @@ class ListViewModel(
 
     fun onRemoveItems(ids: Set<ItemId>) {
         onDismissPrompt()
-        viewModelScope.launch { ids.forEach { store.remove(it) } }
+        viewModelScope.launch { store.removeAll(ids.map { it to null }) }
     }
 
     /** Empties the list. Purchase history stays, so the usuals are still suggested. */
     fun onClearItems() {
         val rows = shopping.value.items
         screen.update { it.copy(editingId = null) }
-        viewModelScope.launch { rows.forEach { store.remove(it.id, it.version) } }
+        viewModelScope.launch { store.removeAll(rows.map { it.id to it.version }) }
     }
 
     private var listening: Job? = null

@@ -48,4 +48,5 @@ class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
     override suspend fun setChecked(id: ItemId, checked: Boolean, version: io.theficos.usuals.model.ItemVersion?) = repository.setChecked(id, checked, version)
     override suspend fun remove(id: ItemId, version: io.theficos.usuals.model.ItemVersion?) = repository.delete(id, version)
     override suspend fun remove(id: ItemId) = repository.delete(id)
+    override suspend fun removeAll(rows: List<Pair<ItemId, io.theficos.usuals.model.ItemVersion?>>) = repository.deleteAll(rows)
 }

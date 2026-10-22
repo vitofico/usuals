@@ -64,6 +64,12 @@ class RecipeTest {
         assertThat(rows.single { it.key == "cebolla" }.item.quantity).isEqualTo(Quantity.pieces(3))
     }
 
+    @Test fun `a merged ingredient is ticked only when every source line was ticked`() {
+        val planner = IngredientReviewPlanner(IngredientLineParser(), emptyList())
+        val rows = planner.plan(listOf("milk", "2 cebolla", "1 cebolla", "eggs", "eggs"), HistorySnapshot(), emptyList(), 0, checked = setOf(0, 1, 3, 4))
+        assertThat(rows.map { it.checked }).containsExactly(true, false, true).inOrder()
+    }
+
     @Test fun `cancelling a recipe before headers closes its HTTP call`() = runTest {
         MockWebServer().use { server ->
             server.start()

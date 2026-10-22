@@ -43,8 +43,26 @@ class RepositoryRecipeStoreTest {
             assertThat(items.items()).isEmpty()
             assertThat(store.review(List(MarkdownIngredients.MAX_ITEMS + 1) { ParsedItem("milk") }))
                 .isEqualTo(RecipeLoad.Failed(importProblem = ImportProblem.TOO_LARGE))
-            store.add(review.rows.take(2).map { it.item })
+            store.add(review.rows.take(2))
             assertThat(items.items().map { it.name }).containsExactly("milk", "eggs")
+        } finally { db.close() }
+    }
+    @Test fun `a long note with ticked rows is added in batches and keeps them ticked`() = runTest {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), UsualsDatabase::class.java)
+            .allowMainThreadQueries().setQueryExecutor { it.run() }.setTransactionExecutor { it.run() }.build()
+        try {
+            val items = ItemRepository(db)
+            val history = HistoryRepository(db, items)
+            val store = RepositoryRecipeStore(RecipeFetcher(RecipeJsonLd()), IngredientReviewPlanner(IngredientLineParser(), emptyList()),
+                items, history, { error("Copied lists never need a model") }, ModelBudget(1))
+            items.add(ParsedItem("Item 1"))
+            val note = (1..250).joinToString("\n") { if (it % 5 == 0) "[x] Item $it" else "[ ] Item $it" }
+            val review = store.markdown(note) as RecipeLoad.Review
+            assertThat(review.rows.count { it.checked }).isEqualTo(50)
+            store.add(review.rows)
+            val stored = items.items()
+            assertThat(stored).hasSize(250)
+            assertThat(stored.filter { it.checked }.map { it.name }).containsExactlyElementsIn((5..250 step 5).map { "Item $it" }).inOrder()
         } finally { db.close() }
     }
     @Test fun `structured reads bypass the model and confirmed add rechecks duplicate identities`() = runTest {
@@ -73,7 +91,7 @@ class RepositoryRecipeStoreTest {
             assertThat(calls).isEqualTo(0)
             assertThat(server.requestCount).isEqualTo(1)
             items.add(ParsedItem("onion", Quantity.pieces(1)))
-            store.add(review.rows.map { it.item })
+            store.add(review.rows)
             assertThat(items.items().single { it.name == "onion" }.quantity).isEqualTo(Quantity.pieces(1))
             val parsed = store.model(server.url("/prose").toString(), "one carrot") as RecipeLoad.Review
             assertThat(parsed.viaModel).isTrue()
@@ -116,7 +134,7 @@ class RepositoryRecipeStoreTest {
             budget.changeCeiling(4); reachable = false
             assertThat(store.photo(image)).isEqualTo(RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONNECTED))
             assertThat(photos).isEqualTo(1)
-            store.add(review.rows.map { it.item })
+            store.add(review.rows)
             assertThat(items.items().single().name).isEqualTo("tomatoes")
         } finally { db.close() }
     }

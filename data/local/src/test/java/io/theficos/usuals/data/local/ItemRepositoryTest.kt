@@ -88,6 +88,20 @@ class ItemRepositoryTest {
     }
 
     @Test
+    fun `a batch lands as one change, after the list, keeping ticked rows ticked`() = runTest {
+        repo.add(ParsedItem("Pan"))
+        val ids = repo.addBatch(listOf(ParsedItem("Alici", Quantity.pieces(2), note = "sott'olio") to true, ParsedItem("Latte") to false))
+
+        assertThat(ids).hasSize(2)
+        assertThat(names()).containsExactly("Pan", "Alici", "Latte").inOrder()
+        assertThat(visible().map { it.checked }).containsExactly(false, true, false).inOrder()
+        assertThat(visible()[1].checkedAt).isEqualTo(now)
+        assertThat(visible()[1].quantity).isEqualTo(Quantity.pieces(2))
+        assertThat(visible()[1].note).isEqualTo("sott'olio")
+        assertThat(repo.addBatch(emptyList())).isEmpty()
+    }
+
+    @Test
     fun `case and accents fold onto one row`() = runTest {
         repo.add(ParsedItem("Leche entera"))
         repo.add(ParsedItem("leche ENTERA"))
@@ -213,6 +227,20 @@ class ItemRepositoryTest {
         val tombstone = db.itemDao().find(id.value)
         assertThat(tombstone).isNotNull()
         assertThat(tombstone!!.deletedAt).isEqualTo(now)
+    }
+
+    @Test
+    fun `emptying the list tombstones every row in one write and skips rows already gone`() = runTest {
+        val ids = (1..150).map { repo.add(ParsedItem("Item $it")) }
+        repo.delete(ids.first())
+        now += 5_000
+
+        repo.deleteAll(ids.map { it to null })
+
+        assertThat(names()).isEmpty()
+        assertThat(db.itemDao().find(ids.last().value)!!.deletedAt).isEqualTo(now)
+        assertThat(db.itemDao().find(ids.first().value)!!.deletedAt).isLessThan(now)
+        assertThat(repo.add(ParsedItem("Item 2"))).isNotEqualTo(ids[1])
     }
 
     @Test

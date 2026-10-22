@@ -9,7 +9,7 @@ class MarkdownIngredients {
     private val ingredients = InputLanguages.available.flatMap { it.ingredientHeadings }.map(::headingKey).toSet()
     private val ignored = InputLanguages.available.flatMap { it.ignoredRecipeHeadings }.map(::headingKey).toSet()
 
-    fun read(text: String): RecipeDocument {
+    fun read(text: String, emojiQuantities: Boolean = false): RecipeDocument {
         require(text.length <= MAX_TEXT)
         val source = visibleLines(text.removePrefix("\uFEFF").replace('\u2028', '\n').replace('\u2029', '\n'))
         val recipe = source.any { heading(it)?.second?.let(::headingKey) in ingredients }
@@ -18,6 +18,7 @@ class MarkdownIngredients {
         var ignoredDepth: Int? = null
         var accept = !recipe
         val lines = mutableListOf<String>()
+        val checked = mutableSetOf<Int>()
         source.forEach { raw ->
             val line = raw.trim()
             val heading = heading(line)
@@ -36,11 +37,14 @@ class MarkdownIngredients {
             }
             if (!accept || line.isBlank() || line.startsWith('>') || RULE.matches(line)) return@forEach
             val entry = entry(line) ?: line
-            val content = counted(clean(CHECKBOX.replaceFirst(entry, "")))
-            if (content.isNotBlank() && !URL.matches(content)) lines += content
+            val content = clean(CHECKBOX.replaceFirst(entry, "")).let { if (emojiQuantities) counted(it) else it }
+            if (content.isNotBlank() && !URL.matches(content)) {
+                if (CHECKED.containsMatchIn(entry)) checked += lines.size
+                lines += content
+            }
             require(lines.size <= MAX_ITEMS)
         }
-        return RecipeDocument(title, lines, null, emptyList())
+        return RecipeDocument(title, lines, null, emptyList(), checked)
     }
 
     private fun visibleLines(text: String): List<String> {
@@ -92,6 +96,7 @@ class MarkdownIngredients {
         private val RULE = Regex("^(?:-{3,}|\\*{3,}|_{3,})$")
         private val BULLET = Regex("^(?:[-+*•◦]|[0-9]+[.)])\\s+(.+)$")
         private val CHECKBOX = Regex("^(?:\\[[ xX]]|[☐☑☒])\\s*")
+        private val CHECKED = Regex("^(?:\\[[xX]]|[☑☒])\\s*")
         private val IMAGE = Regex("!\\[[^]]*]\\([^)]*\\)")
         private val LINK = Regex("\\[([^]]+)]\\([^)]*\\)")
         private const val PICTOGRAPH = "[\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{2B00}-\\x{2BFF}]"

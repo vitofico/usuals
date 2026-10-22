@@ -172,6 +172,7 @@ data class ListActions(
     val onCreateRecipePhoto: () -> String? = { null },
     val onReleaseRecipePhoto: (String) -> Unit = {},
     val onRecipeFileFailure: () -> Unit = {},
+    val onEmojiQuantities: (Boolean) -> Unit = {},
     val onRecipeToggle: (Int) -> Unit = {},
     val onAddRecipe: () -> Unit = {},
     val onDismissRecipe: () -> Unit = {},
@@ -325,6 +326,7 @@ fun ListScreen(
             onCreateRecipePhoto = vm::createRecipePhoto,
             onReleaseRecipePhoto = vm::releaseRecipePhoto,
             onRecipeFileFailure = vm::onRecipeFileFailure,
+            onEmojiQuantities = vm::onEmojiQuantities,
             onRecipeToggle = vm::onRecipeToggle,
             onAddRecipe = vm::onAddRecipe,
             onDismissRecipe = vm::onDismissRecipe,
@@ -397,7 +399,8 @@ fun ListContent(
     state.recipe?.let { RecipeImportSheet(it, actions.onRecipeUrl, actions.onReadRecipe, actions.onRecipeModel,
         actions.onRecipeToggle, actions.onAddRecipe, actions.onDismissRecipe,
         actions.onRecipeSource, actions.onRecipeMarkdown, actions.onReadRecipeMarkdown, actions.onRecipeMarkdownFile,
-        actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure) }
+        actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure,
+        state.personal.emojiQuantities, actions.onEmojiQuantities) }
     if (state.productInfo == null && state.recipe == null && state.editing == null && state.mergeReview == null && state.scanMerge == null) state.scanNames.firstOrNull()?.let {
         ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.id, name) },
             { actions.onSkipScanName(it.id) }, actions.onSkipScanNames)

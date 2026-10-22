@@ -56,6 +56,8 @@ data class ShoppingPreferences(
     val mode: Boolean = false,
     val keepAwake: Boolean = false,
     val haptics: Boolean = false,
+    /** Note import reads "Beer 🍺🍺🍺" as 3 beers; off, the emoji stay in the name. */
+    val emojiQuantities: Boolean = false,
     val portable: PortableShoppingPreferences = PortableShoppingPreferences(),
     val deferred: Map<String, DeferredShoppingRows> = emptyMap(),
 )
@@ -83,6 +85,7 @@ class ShoppingToolsStore(
     fun mode(enabled: Boolean) = change { it.copy(mode = enabled) }
     fun keepAwake(enabled: Boolean) = change { it.copy(keepAwake = enabled) }
     fun haptics(enabled: Boolean) = change { it.copy(haptics = enabled) }
+    fun emojiQuantities(enabled: Boolean) = change { it.copy(emojiQuantities = enabled) }
     fun pin(item: SavedShoppingItem) = change {
         if (it.portable.favorites.any { old -> old.id == item.id }) it
         else it.copy(portable = it.portable.copy(favorites = it.portable.favorites + item))
