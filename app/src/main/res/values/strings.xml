@@ -20,7 +20,6 @@
     <string name="open_settings">Settings</string>
 
     <!-- The list itself -->
-    <string name="list_empty_instruction">Hold the bar and say what you need.</string>
     <plurals name="list_checked_count">
         <item quantity="one">%1$d checked off</item>
         <item quantity="other">%1$d checked off</item>
@@ -35,14 +34,12 @@
     <!-- Capture band -->
     <string name="capture_hint">Hold to speak</string>
     <string name="capture_listening">Listening</string>
-    <string name="capture_band">Capture bar, hold to speak</string>
     <string name="capture_write_hint">Type what you need</string>
     <string name="capture_add">Add</string>
     <string name="capture_speech_unavailable">Dictation is not available on this phone, type what you need.</string>
     <string name="capture_scan">Scan a barcode</string>
 
-    <string name="capture_type">Type items</string>
-    <string name="list_empty_title">Ready for your next shop</string>
+    <string name="capture_type">Add items</string>
 
     <!-- Scan screen -->
     <string name="scan_title">Scan</string>

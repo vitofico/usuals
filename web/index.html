@@ -33,30 +33,19 @@
             <span class="nav-icon">○</span
             ><span data-i18n="account">Account</span>
           </button>
-          <button type="button" class="nav-button" id="tutorial">
-            <span class="nav-icon" aria-hidden="true">?</span><span data-i18n="tutorialReplay">Guided tour</span>
-          </button>
         </nav>
         <div class="rail-bottom">
-          <span class="status-dot"></span
-          ><span data-i18n="serverHeld">Kept on your server</span
-          ><button id="appearance" class="text-button" type="button"
-            aria-label="Appearance" data-i18n-label="appearance">◐</button><button
-            id="language"
-            class="text-button"
-            type="button"
-            aria-label="Language"
-            data-i18n-label="language"
-          >
-            EN
-          </button>
+          <button id="preferences" class="nav-button preferences-button" type="button"
+            aria-haspopup="dialog" data-i18n="quietPreferences">Preferences</button>
+          <p class="server-note"><span class="status-dot" aria-hidden="true"></span>
+            <span data-i18n="serverHeld">Kept on your server</span></p>
         </div>
       </aside>
       <main id="main" tabindex="-1">
         <header class="topbar">
           <span id="section-label" class="eyebrow"></span>
           <div class="top-actions">
-            <span id="sync-status" class="sync-status" role="status"></span>
+            <span id="sync-status" class="sync-status" data-sync-status role="status"></span>
           </div>
         </header>
         <div id="notice" class="notice" role="status" hidden></div>

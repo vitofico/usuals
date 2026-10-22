@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quiet_list_empty_title">Add your first item</string>
+    <string name="quiet_list_empty_help">Type below, hold to speak, or scan a barcode.</string>
+    <string name="quiet_list_store_filter">Store: %1$s</string>
+    <string name="quiet_list_import">Import recipe or list</string>
+    <plurals name="quiet_list_suggestions">
+        <item quantity="one">Suggestions (%1$d)</item>
+        <item quantity="other">Suggestions (%1$d)</item>
+    </plurals>
+    <plurals name="quiet_list_archived">
+        <item quantity="one">Archived (%1$d)</item>
+        <item quantity="other">Archived (%1$d)</item>
+    </plurals>
+    <string name="quiet_list_manage">Manage list</string>
+    <string name="quiet_list_options">List options</string>
+</resources>

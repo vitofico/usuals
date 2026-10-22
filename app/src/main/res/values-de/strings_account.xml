@@ -7,7 +7,6 @@
     <string name="account_scan">QR-Code der Web-App scannen</string>
     <string name="account_camera_help">Erlaube die Kamera, um den Code zu scannen, oder melde dich unten im Browser an.</string>
     <string name="account_allow_camera">Kamera erlauben</string>
-    <string name="account_browser_title">Kein Computer zur Hand?</string>
     <string name="account_browser_help">Gib die Adresse deines Servers ein und melde dich im Browser dieses Telefons an.</string>
     <string name="account_server">Serveradresse</string>
     <string name="account_offer_title">Mit %1$s verbinden?</string>

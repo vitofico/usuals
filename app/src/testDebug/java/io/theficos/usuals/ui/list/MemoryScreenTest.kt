@@ -10,6 +10,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -82,6 +84,8 @@ class MemoryScreenTest {
                     ListActions(onSuggestion = { _, selected -> choice = selected }))
             }
         }
+        compose.onNodeWithText("Suggestions (1)").performClick()
+        compose.onNodeWithContentDescription("Suggestion options for milk").performClick()
         compose.onNodeWithContentDescription("Don’t suggest milk again").performClick()
         compose.onNodeWithText("Stop suggesting milk?").assertIsDisplayed()
         assertThat(choice).isNull()
@@ -89,7 +93,7 @@ class MemoryScreenTest {
         assertThat(choice).isEqualTo(SuggestionChoice.NEVER)
     }
 
-    @Test fun proactive_actions_wrap_without_clipping_on_a_narrow_card() {
+    @Test fun proactive_actions_stay_reachable_in_a_narrow_card() {
         val choices = mutableListOf<SuggestionChoice>()
         compose.setContent {
             UsualsTheme {
@@ -98,8 +102,11 @@ class MemoryScreenTest {
                 }
             }
         }
+        compose.onNodeWithText("Suggestions (1)").performClick()
         compose.onNodeWithContentDescription("Add milk").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Suggestion options for milk").assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Not now milk").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Suggestion options for milk").performClick()
         compose.onNodeWithContentDescription("Don’t suggest milk again").assertIsDisplayed().performClick()
         assertThat(choices).containsExactly(SuggestionChoice.ADD, SuggestionChoice.NOT_NOW, SuggestionChoice.NEVER).inOrder()
     }
@@ -129,10 +136,14 @@ class MemoryScreenTest {
                     onAdd = { added++; alreadyAdded = setOf(it.id) }, onDismiss = {}, alreadyAdded = alreadyAdded)
             }
         }
+        compose.onNodeWithText("Save your regular items here. Add them to any list when you need them.").assertIsDisplayed()
+        compose.onNodeWithContentDescription("About favourites").performClick()
         compose.onNodeWithText("Save items here to add them to any list again, with their quantity and store. You choose when to add them. Items already open are skipped.").assertIsDisplayed()
+        compose.onAllNodesWithText("Close").onLast().performClick()
         compose.onNodeWithContentDescription("Add favourite milk to this list").assertIsDisplayed().performClick()
         assertThat(added).isEqualTo(1)
         compose.onNodeWithContentDescription("milk is already on this list").assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Options for favourite milk").performClick()
         compose.onNodeWithContentDescription("Remove milk from favourites").assertIsDisplayed().performClick()
         assertThat(tools.state.value.portable.favorites).isEmpty()
         compose.onNodeWithContentDescription("Remove milk from favourites").assertDoesNotExist()

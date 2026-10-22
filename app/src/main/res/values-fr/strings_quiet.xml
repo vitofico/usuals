@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quiet_account_browser">Se connecter sans code QR</string>
+    <string name="quiet_scan_lookup">Recherche de produits en ligne</string>
+</resources>

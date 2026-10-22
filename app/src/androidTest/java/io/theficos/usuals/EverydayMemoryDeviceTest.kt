@@ -1,6 +1,7 @@
 package io.theficos.usuals
 
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.*
@@ -90,7 +91,7 @@ class EverydayMemoryDeviceTest {
 
             fun screenshot(name: String) {
                 compose.waitForIdle()
-                val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+                val bitmap = compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
                 try {
                     File(context.cacheDir, name).outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
                 } finally { bitmap.recycle() }
@@ -102,6 +103,7 @@ class EverydayMemoryDeviceTest {
             }
             fun openTransfer() {
                 editMilk()
+                compose.onNodeWithText(context.getString(R.string.quiet_item_actions)).performScrollTo().performClick()
                 compose.onNodeWithText(context.getString(R.string.transfer_action)).performScrollTo().performClick()
                 compose.waitUntil(10_000) { vm.state.value.transfer?.row?.id == milk }
                 compose.onNodeWithText("QA weekend").performScrollTo().performClick()
@@ -116,11 +118,12 @@ class EverydayMemoryDeviceTest {
             compose.waitUntil(10_000) { tools.state.value.portable.favorites.size == 1 && vm.state.value.favoritesOnList.isNotEmpty() }
             compose.runOnUiThread { vm.onDismissEdit() }
             compose.waitUntil(10_000) { vm.state.value.editing == null }
-            compose.onNodeWithText(context.getString(R.string.memory_favorites_tools)).performClick()
+            compose.onNodeWithContentDescription(context.getString(R.string.list_more)).performClick()
+            compose.onNodeWithText(context.getString(R.string.shopping_favorites)).performClick()
             compose.onNodeWithContentDescription(context.getString(R.string.memory_favorite_on_list, "milk"))
                 .performScrollTo().assertIsNotEnabled()
             screenshot("everyday-memory-favourites.png")
-            compose.onNodeWithText(context.getString(R.string.shopping_close)).performScrollTo().performClick()
+            compose.onNodeWithText(context.getString(R.string.shopping_close)).assertIsDisplayed().performClick()
             compose.waitForIdle()
 
             openTransfer()

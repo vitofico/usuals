@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="memory_favorites_tools">Favoriten und Hilfen</string>
     <string name="memory_favorites_help">Speichere hier Artikel, um sie mit Menge und Geschäft erneut zu einer beliebigen Liste hinzuzufügen. Du entscheidest, wann sie hinzugefügt werden. Bereits offene Artikel werden übersprungen.</string>
     <string name="memory_on_list">Auf der Liste</string>
     <string name="memory_favorite_on_list">%1$s ist bereits auf dieser Liste</string>

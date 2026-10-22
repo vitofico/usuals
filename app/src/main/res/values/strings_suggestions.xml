@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestions_title">Remember these?</string>
     <string name="suggestion_repeat">Your repeat rule is due</string>
     <string name="suggestion_interval">Usually due around now</string>
     <string name="suggestion_staple">Bought in at least half your recent shops</string>

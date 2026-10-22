@@ -12,13 +12,16 @@ and this browser show the same lists because they read the same account.
 ## Lists
 
 Sign in with a local account or the configured OIDC provider and your lists
-appear. Pick a list from the menu at the top of the paper, or choose **New list**.
+appear. The selected list is the page heading. Select its name and chevron to switch lists or create a **New list**.
 
 - Type in **What do we need?** to add an item. Tick it when it is in the basket;
-  **Finish shopping** moves picked-up items into the list's history, with
+  **Picked up** expands the items already in your basket.
+  **Finish shopping** moves them into the list's history, with
   **Undo** while the notice is showing.
-- **···** next to an item edits or deletes it. **···** next to the list holds
-  **Share**, **Rename list**, **Import list or recipe**, **Archive list** and
+- **···** next to an item opens its name and quantity. **Details** holds its
+  note and store; **More item actions** holds removal, with a confirmation.
+  **List options** holds
+  **Share**, **New list**, **Rename list**, **Import list or recipe**, **Archive list** and
   either **Delete list** (the owner) or **Leave list** (anyone else).
 - **Archive list** moves a list out of the menu at the top of the paper into
   **Archived** below it, where **Restore** brings it back. The owner archives it
@@ -62,8 +65,9 @@ A phone can also sign in without a computer at hand: it opens this site with
 
 ## Account and AI
 
-**Account** also holds the password change for local accounts, **AI assistance**,
-**Sign out** and the list of active browser sessions. Administrators get
+**Account** shows **Connect a phone** first. Named sections below it hold
+**AI assistance**, **Password and sign out**, and **Active sessions**. Password
+changes are available for local accounts. Administrators get
 **People** for account management. **AI assistance** shows the server-selected
 provider; its optional **Advanced** section contains model details and personal
 provider or key controls. See the [connection guide](../docs/server-connection.md)
@@ -72,7 +76,7 @@ and [provider guide](../docs/providers.md).
 ## Guided tour
 
 A three-step tour (welcome, your list, sharing) opens on the first visit to this
-browser. **Skip tour** closes it, and **Guided tour** in the navigation reopens
+browser. **Skip tour** closes it, and **Preferences > Guided tour** reopens
 it. Completion is remembered in this browser's local storage, so the tour may
 appear again if that storage is cleared.
 
@@ -92,7 +96,7 @@ cancellation and failures stop the stream.
 
 ## Appearance and languages
 
-Use **Appearance** in the sidebar for Plum, Grove or Tide. The choice is local
+Use **Preferences > Appearance** for Plum, Grove or Tide. The choice is local
 to this browser and follows system light or dark mode.
 
 English is the default. Copy `locales/en.json` to another `locales/xx.json` and

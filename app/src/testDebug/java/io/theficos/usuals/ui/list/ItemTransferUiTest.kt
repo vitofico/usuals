@@ -46,7 +46,8 @@ class ItemTransferUiTest {
         compose.setContent { UsualsTheme {
             EditItemSheet(row, false, {}, {}, {}, onTransfer = {})
         } }
-        compose.onNodeWithText("Move or copy to another list").assertIsEnabled()
+        compose.onNodeWithText("More actions").performScrollTo().performClick()
+        compose.onNodeWithText("Move or copy to another list").performScrollTo().assertIsEnabled()
         compose.onNode(hasSetTextAction() and hasText("Milk")).performTextReplacement("Oat milk")
         compose.onNodeWithText("Move or copy to another list").assertIsNotEnabled()
         compose.onNodeWithText("Save your changes before moving or copying this item.").assertExists()
@@ -56,7 +57,9 @@ class ItemTransferUiTest {
         compose.setContent { UsualsTheme {
             EditItemSheet(row, false, {}, {}, {}, onTransfer = {})
         } }
+        compose.onNodeWithText("Details").performClick()
         compose.onNodeWithText("Repeat every (days)").performScrollTo().performTextReplacement("999999999999999")
+        compose.onNodeWithText("More actions").performScrollTo().performClick()
         compose.onNodeWithText("Move or copy to another list").performScrollTo().assertIsNotEnabled()
     }
 
@@ -65,7 +68,8 @@ class ItemTransferUiTest {
         compose.setContent { UsualsTheme {
             EditItemSheet(row.copy(quantity = Quantity(1.2345, MeasureUnit.LITRE)), false, {}, {}, {}, onTransfer = { transferred = true })
         } }
-        compose.onNodeWithText("Move or copy to another list").assertIsEnabled().performClick()
+        compose.onNodeWithText("More actions").performScrollTo().performClick()
+        compose.onNodeWithText("Move or copy to another list").performScrollTo().assertIsEnabled().performClick()
         assertThat(transferred).isTrue()
     }
 }

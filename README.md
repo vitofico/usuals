@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/assets/android-list.png"><img src="docs/assets/android-list.png" alt="Android shopping list: groceries grouped by category, quantities, store filters and voice capture" width="42%"></a>
+  <a href="docs/assets/android-list.png"><img src="docs/assets/android-list.png" alt="Android shopping list: groceries grouped by category, quantities and clearly labelled capture actions" width="42%"></a>
   &nbsp;&nbsp;&nbsp;
   <a href="docs/assets/android-product.png"><img src="docs/assets/android-product.png" alt="Product details: a real Open Food Facts lookup with ingredients, nutrition grades, declared allergens and source attribution" width="42%"></a>
 </p>
@@ -51,8 +51,8 @@ The web editor offers the same choices from its Appearance control.
 | **Move through the shop** | Use a focused shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
-On Android, **Favourites** in **Shopping tools** are personal shortcuts for items
-you want to add again. Save an item from its editor, then tap it in Favourites
+On Android, **Favourites** in the list's **More options** menu are personal
+shortcuts for items you want to add again. Save an item from its editor, then tap it in Favourites
 when you need it. Items already on the current list are marked. Favourites do
 not add items automatically.
 
@@ -61,7 +61,7 @@ history. Use a suggestion's menu and **Don't suggest again** to hide it from
 typing suggestions and the suggestion cards on this phone. You can still add the item yourself.
 If it has a repeat rule, Usuals asks before stopping that rule too.
 
-Open an item's editor to **Move or copy to another list**. Choose an active list
+Open an item's editor, then **More actions > Move or copy to another list**. Choose an active list
 and whether to keep the original. The new row is unchecked and keeps its item
 details. Moving between account lists confirms the destination first; if the
 connection or either list changes, the original stays available.

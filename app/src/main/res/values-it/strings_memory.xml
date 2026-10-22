@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="memory_favorites_tools">Preferiti e strumenti</string>
     <string name="memory_favorites_help">Salva qui gli articoli per aggiungerli di nuovo a qualsiasi lista, con quantità e negozio. Scegli tu quando aggiungerli. Quelli già da comprare vengono saltati.</string>
     <string name="memory_on_list">In lista</string>
     <string name="memory_favorite_on_list">%1$s è già in questa lista</string>

@@ -1,5 +1,19 @@
 # Changelog
 
+## A calmer shopping list
+
+- Android opens with the list name, groceries and a clearly labelled Add items
+  action. List tools share one menu, suggestions open when needed, and a single
+  store selector replaces the row of filters.
+- Item editing starts with name and quantity. Extra details and actions unfold
+  separately; Save and Cancel stay visible. Favourites are compact rows, and
+  history puts purchases before data-management tools.
+- The browser puts the selected list first, simplifies navigation and account
+  setup, and gives everyday controls larger touch targets. Dialog actions stay
+  reachable, with clear keyboard focus and wrapping long names.
+- The three palettes and every existing function remain available. Labels and
+  layouts work across all five languages, narrow screens and large text.
+
 ## Reuse everyday items
 
 - Favourites explain how to save an item and add it again from Shopping tools.

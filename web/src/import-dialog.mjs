@@ -12,7 +12,7 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const model = server ? new ServerModel({ csrf: server.csrf, valid }) : new ImageModel({ origins, challenge: visionChallenge });
   const error = el("p", { class: "dialog-error", role: "alert" }), status = el("p", { class: "helper", role: "status" });
   const root = el("div", { class: "import-dialog" });
-  const markdown = el("textarea", { id: "import-markdown", class: "field", rows: 7, maxlength: 30001, spellcheck: false });
+  const markdown = el("textarea", { id: "import-markdown", class: "field", rows: 5, maxlength: 30001, spellcheck: false });
   const markdownFile = el("input", { id: "import-markdown-file", type: "file", accept: ".md,.markdown,.txt,text/markdown,text/plain" });
   const photoFile = el("input", { id: "import-photo-file", type: "file", accept: "image/jpeg,image/png" });
   const preview = el("img", { class: "import-preview", alt: t("importPhotoPreview"), hidden: true });
@@ -24,9 +24,10 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const cancel = button(t("cancel"), closeDialog);
   const review = el("section", { hidden: true }), reviewList = el("ul", { class: "import-review" });
   const reviewHeading = el("h3", { tabindex: -1 }, t("importReviewTitle"));
+  const reviewHelp = el("p", { class: "helper" });
   const textPane = el("section", { hidden: true }), recipeText = el("textarea", { class: "field", rows: 8, maxlength: 30000, "aria-label": t("importRecipeText") });
   const markdownPane = el("section"), photoPane = el("section", { hidden: true });
-  const controls = el("div", { class: "button-row", role: "group", "aria-label": t("importSource") });
+  const controls = el("div", { class: "source-choices", role: "group", "aria-label": t("importSource") });
   const sources = server ? ["markdown", "photo", "text"] : ["markdown", "photo"];
   const sourceButtons = sources.map(source => button(t(source === "markdown" ? "importMarkdown" : source === "photo" ? "importPhoto" : "importRecipeText"), () => {
     stopCamera(); mode = source; update();
@@ -47,9 +48,10 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   }
   function update() {
     const reviewing = rows.length > 0 || !review.hidden;
+    reviewHelp.textContent = t(mode === "markdown" ? "importMarkdownReviewHelp" : "importReviewHelp");
     controls.hidden = reviewing; markdownPane.hidden = reviewing || mode !== "markdown"; photoPane.hidden = reviewing || mode !== "photo";
     textPane.hidden = reviewing || mode !== "text";
-    sourceButtons.forEach((node, i) => { node.className = sources[i] === mode ? "primary" : "secondary"; node.setAttribute("aria-pressed", String(sources[i] === mode)); });
+    sourceButtons.forEach((node, i) => { node.className = `source-choice${sources[i] === mode ? " active" : ""}`; node.setAttribute("aria-pressed", String(sources[i] === mode)); });
     root.querySelectorAll("input, textarea, button").forEach(node => { node.disabled = busy; });
     cancel.disabled = committing;
     photoFile.disabled = busy || (!server && !model.status.verified);
@@ -57,6 +59,7 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     capture.disabled = busy || !cameraReady;
     readPhoto.disabled = busy || !image || (server ? !model.status.configured : !model.status.verified);
     if (readText) readText.disabled = busy || !model.status.configured || !recipeText.value.trim();
+    back.hidden = !reviewing; add.hidden = !reviewing;
     add.disabled = busy || !selected.size;
     add.textContent = t("importAdd", { count: selected.size });
     reviewList.querySelectorAll("input[data-existing]").forEach(node => { node.disabled = true; });
@@ -85,7 +88,8 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
         onchange: () => { if (checkbox.checked) selected.add(index); else selected.delete(index); update(); } });
       return el("li", {}, el("label", { class: "check-row" }, checkbox, el("span", {}, el("strong", {}, row.name),
         row.quantity === null ? null : el("span", { class: "helper" }, t("quantityLabel", { amount: row.quantity, unit: t(row.unit) })),
-        el("span", { class: "helper" }, row.original), row.existing ? el("span", { class: "helper" }, t("importAlreadyOnList")) : null)));
+        row.original.trim() === row.name.trim() ? null : el("span", { class: "helper" }, row.original),
+        row.existing ? el("span", { class: "helper" }, t("importAlreadyOnList")) : null)));
     }));
     empty.hidden = rows.length > 0; review.hidden = false; stopCamera(); update();
     reviewHeading.focus({ preventScroll: true }); dialog.scrollTop = 0;
@@ -130,7 +134,9 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const capture = button(t("importCapturePhoto"), () => run(() => { try { showPhoto(camera.capture()); } finally { stopCamera(); } })); capture.hidden = true;
   const readPhoto = button(t("importReadPhoto"), () => run(async () => { if (server && !model.status.verified) await model.check(); const proposed = await model.read(image); if (current()) await showReview(proposed); }), "primary");
   markdownPane.append(el("p", {}, t("importMarkdownHelp")), el("label", { class: "label", for: markdown.id }, t("importMarkdownText")), markdown,
-    el("label", { class: "label", for: markdownFile.id }, t("importMarkdownFile")), markdownFile, button(t("importReview"), () => run(readMarkdown), "primary"));
+    el("details", { class: "file-disclosure" }, el("summary", {}, t("importMarkdownFile")),
+      el("label", { class: "visually-hidden", for: markdownFile.id }, t("importMarkdownFile")), markdownFile),
+    button(t("importReview"), () => run(readMarkdown), "primary"));
   photoPane.append(el("p", {}, t("importPhotoHelp")), modelSection, status,
     el("label", { class: "label", for: photoFile.id }, t("importChoosePhoto")), photoFile, startCamera, video, capture, preview, readPhoto);
   const empty = el("p", {}, t("importEmpty"));
@@ -149,12 +155,12 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
       if (current()) { closeDialog(); await finished(); }
     } finally { committing = false; }
   }), "primary");
-  review.append(reviewHeading, el("p", { class: "helper" }, t("importReviewHelp")), reviewList, empty, el("div", { class: "button-row" }, back, add));
+  review.append(reviewHeading, reviewHelp, reviewList, empty);
   const readText = server ? button(t("importRecipeText"), () => run(async () => { await showReview(await model.text(recipeText.value)); }), "primary") : null;
   recipeText.addEventListener("input", update);
   if (server) textPane.append(el("p", {}, t("importRecipeTextHelp")), textServerDescription,
     el("details", {}, el("summary", {}, t("serverAiDetails")), textServerDetails), recipeText, readText);
-  root.append(el("h2", {}, t("importTitle")), controls, markdownPane, photoPane, textPane, review, error, el("div", { class: "button-row" }, cancel));
+  root.append(el("h2", {}, t("importTitle")), controls, markdownPane, photoPane, textPane, review, error, el("div", { class: "button-row" }, cancel, back, add));
   const guard = event => { if (committing) { event.preventDefault(); event.stopImmediatePropagation(); } };
   dialog.addEventListener("cancel", guard, true);
   openDialog(root, () => {

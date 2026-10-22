@@ -7,7 +7,6 @@
     <string name="account_scan">Scansiona il QR dell’app web</string>
     <string name="account_camera_help">Consenti la fotocamera per scansionare il codice, oppure accedi dal browser qui sotto.</string>
     <string name="account_allow_camera">Consenti fotocamera</string>
-    <string name="account_browser_title">Nessun computer a portata di mano?</string>
     <string name="account_browser_help">Inserisci l’indirizzo del tuo server e accedi dal browser di questo telefono.</string>
     <string name="account_server">Indirizzo del server</string>
     <string name="account_offer_title">Collegarsi a %1$s?</string>

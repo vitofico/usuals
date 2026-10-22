@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestions_title">Vous y avez pensé ?</string>
     <string name="suggestion_repeat">Votre répétition est arrivée à échéance</string>
     <string name="suggestion_interval">Habituellement nécessaire en ce moment</string>
     <string name="suggestion_staple">Acheté lors d’au moins la moitié de vos dernières courses</string>

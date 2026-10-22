@@ -7,7 +7,6 @@
         <item quantity="many">%1$d articles</item>
     </plurals>
     <string name="open_settings">Paramètres</string>
-    <string name="list_empty_instruction">Maintenez la barre et dites ce qu’il vous faut.</string>
     <plurals name="list_checked_count">
         <item quantity="one">%1$d coché</item>
         <item quantity="other">%1$d cochés</item>
@@ -21,13 +20,11 @@
     <string name="item_quantity_pieces">×%1$s</string>
     <string name="capture_hint">Maintenez pour parler</string>
     <string name="capture_listening">À l’écoute</string>
-    <string name="capture_band">Barre de saisie, maintenez pour parler</string>
     <string name="capture_write_hint">Saisissez ce qu’il vous faut</string>
     <string name="capture_add">Ajouter</string>
     <string name="capture_speech_unavailable">La dictée n’est pas disponible sur ce téléphone. Saisissez ce qu’il vous faut.</string>
     <string name="capture_scan">Scanner un code-barres</string>
-    <string name="capture_type">Saisir des articles</string>
-    <string name="list_empty_title">Prêt pour vos prochaines courses</string>
+    <string name="capture_type">Ajouter des articles</string>
     <string name="scan_title">Scanner</string>
     <string name="scan_back">Retour</string>
     <string name="scan_intro">Scannez un emballage</string>

@@ -9,6 +9,7 @@ import { qrMatrix } from "./qr.mjs";
 import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "./connect.mjs";
 import { importDialog } from "./import-dialog.mjs";
 import { forgetLegacyVault } from "./legacy.mjs";
+import { DialogFocus, DialogCancellation } from "./dialog-focus.mjs";
 
 forgetLegacyVault();
 const ticketPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -118,7 +119,10 @@ async function act(action, { rerender = true } = {}) {
 }
 function setSync(state) {
   syncState = state;
-  $("sync-status").textContent = account && state ? t(state) : "";
+  for (const node of document.querySelectorAll("[data-sync-status]")) {
+    node.textContent = account && state ? t(state) : "";
+    node.dataset.syncState = state;
+  }
 }
 function startLists() {
   store = new ListStore();
@@ -153,21 +157,39 @@ const signedOut = () => leaveAccount("unauthenticated").catch(() => {});
 function title(main, subtitle, extra = null) {
   return el("section", { class: "hero" }, el("div", {}, el("h1", {}, t(main)), paragraph(subtitle)), extra);
 }
-function openDialog(content, cleanup = null, refresh = null) {
-  closeDialog();
+const dialogFocus = new DialogFocus(), dialogCancellation = new DialogCancellation();
+function openDialog(content, cleanup = null, refresh = null, cancel = null) {
+  dialogFocus.remember({ nested: $("dialog").open, activeElement: document.activeElement });
+  closeDialog(false);
   dialogCleanup = cleanup;
   dialogRefresh = refresh;
-  $("dialog").classList.toggle("pairing", content.classList.contains("pair-device"));
+  dialogCancellation.set(cancel);
+  const dialog = $("dialog"), heading = content.querySelector("h2");
+  dialog.classList.toggle("pairing", content.classList.contains("pair-device"));
+  dialog.removeAttribute("aria-labelledby");
+  dialog.removeAttribute("aria-label");
+  if (heading) {
+    heading.id ||= "dialog-heading";
+    dialog.setAttribute("aria-labelledby", heading.id);
+  } else dialog.setAttribute("aria-label", t("quietDialogTitle"));
+  const actions = content.querySelector(":scope > .button-row");
+  actions?.classList.add("dialog-actions");
   $("dialog-content").replaceChildren(content);
-  $("dialog").showModal();
+  dialog.showModal();
+  dialog.scrollTop = 0;
 }
-function closeDialog() {
+function closeDialog(restoreFocus = true) {
   const cleanup = dialogCleanup;
   dialogCleanup = null;
   dialogRefresh = null;
+  dialogCancellation.clear();
   cleanup?.();
   $("dialog").close();
   $("dialog-content").replaceChildren();
+  if (restoreFocus) {
+    const fallback = screen === "lists" && captureInput.isConnected ? captureInput : document.querySelector(".nav-button.active");
+    dialogFocus.restore(fallback);
+  }
 }
 function finishTutorial() {
   tutorialSeen = true;
@@ -200,13 +222,15 @@ function tutorialDialog() {
           }, "primary")),
       ),
     );
+    $("dialog").setAttribute("aria-labelledby", "tutorial-heading");
+    $("dialog").removeAttribute("aria-label");
     $("tutorial-heading").focus();
   }
   openDialog(el("div"), () => { tutorialActive = false; });
   tutorialActive = true;
   draw();
 }
-function messageDialog(head, description, confirm, values = {}) {
+function messageDialog(head, description, confirm, values = {}, cancel = closeDialog) {
   openDialog(el("form", {
     onsubmit: (event) => {
       event.preventDefault();
@@ -217,8 +241,8 @@ function messageDialog(head, description, confirm, values = {}) {
   el("h2", {}, t(head, values)),
   paragraph(description, "lede", values),
   el("div", { class: "button-row" },
-    button(t("cancel"), closeDialog),
-    el("button", { type: "submit", class: "primary" }, t("confirm")))));
+    button(t("cancel"), cancel),
+    el("button", { type: "submit", class: "primary" }, t("confirm")))), null, null, cancel);
 }
 async function localeLoad(language) {
   const response = await fetch(`/locales/${language}.json`, { credentials: "same-origin", cache: "no-store", redirect: "error" });
@@ -230,8 +254,15 @@ async function localeLoad(language) {
   for (const n of document.querySelectorAll("[data-i18n]")) n.textContent = t(n.dataset.i18n);
   for (const n of document.querySelectorAll("[data-i18n-label]")) n.setAttribute("aria-label", t(n.dataset.i18nLabel));
   $("navigation").setAttribute("aria-label", t("navigation"));
-  $("language").setAttribute("aria-label", t("language"));
-  $("language").textContent = language.toUpperCase();
+}
+function preferencesDialog() {
+  openDialog(el("div", {}, el("h2", {}, t("quietPreferences")),
+    el("div", { class: "menu-actions" },
+      button(t("appearance"), appearanceDialog),
+      button(`${t("language")} · ${locale.toUpperCase()}`, languageDialog),
+      button(t("tutorialReplay"), tutorialDialog)),
+    paragraph("serverHeld", "helper"),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
 }
 async function languageDialog() {
   const own = generation;
@@ -308,8 +339,13 @@ async function render() {
   const own = generation;
   screen = null;
   setSync(syncState);
+  $("main").dataset.view = view;
   $("section-label").textContent = t(view === "admin" ? "admin" : view === "account" ? "account" : "lists");
-  for (const n of document.querySelectorAll("[data-view]")) n.classList.toggle("active", n.dataset.view === view);
+  for (const n of document.querySelectorAll(".nav-button[data-view]")) {
+    n.classList.toggle("active", n.dataset.view === view);
+    if (n.dataset.view === view) n.setAttribute("aria-current", "page");
+    else n.removeAttribute("aria-current");
+  }
   let adminButton = document.querySelector('[data-view="admin"]');
   if (account?.user.admin && !adminButton) {
     adminButton = el("button", { type: "button", class: "nav-button", "data-view": "admin", "data-i18n": "admin" },
@@ -345,6 +381,7 @@ const listName = (list) => list.projection.name || t("untitledList");
 const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 1000, autocomplete: "off", required: true });
 // Whether the Archived area is open survives re-rendering too.
 let archivedOpen = false;
+const pickedOpen = new Map();
 function archivedRow(list) {
   const values = { name: listName(list) };
   return el("li", { class: "item" },
@@ -353,7 +390,7 @@ function archivedRow(list) {
     archivedAction(list) === "leave"
       ? button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(list.id, account.user.id), values),
         "danger", { "aria-label": t("leaveListName", values) })
-      : button(t("restoreList"), () => act(async () => { await lists.archive(list.id, false); selected = list.id; }),
+      : button(t("restoreList"), () => act(async () => { await lists.archive(list.id, false); selected = list.id; if ($("dialog").open) closeDialog(); }),
         "secondary", { "aria-label": t("restoreListName", values) }));
 }
 function archivedArea(archived) {
@@ -363,15 +400,18 @@ function archivedArea(archived) {
       el("summary", {}, t("archivedLists", { count: archived.length })),
       el("ul", { class: "items" }, archived.map(archivedRow))));
 }
+function listSyncLabel() {
+  return el("span", { class: "sync-status list-sync", "data-sync-status": "", "data-sync-state": syncState, role: "status" }, account && syncState ? t(syncState) : "");
+}
 function renderLists() {
   if (!store.cursor) {
-    $("content").replaceChildren(title("listTitle", "listSubtitle"), paragraph("loading"));
+    $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), paragraph("loading"));
     return;
   }
   const { active, archived, selected: shown } = arrange(store.lists.values(), selected, listName, locale);
   selected = shown;
   if (!active.length) {
-    $("content").replaceChildren(title("listTitle", "listSubtitle"), el("div", {},
+    $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), el("div", {},
       el("section", { class: "paper empty" },
         el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
         ...(archived.length ? [paragraph("allListsArchived")] : [el("h2", {}, t("firstListTitle")), paragraph("firstListText")]),
@@ -384,9 +424,6 @@ function renderLists() {
   const focused = document.activeElement === captureInput;
   captureInput.placeholder = t("addPlaceholder");
   captureInput.setAttribute("aria-label", t("addPlaceholder"));
-  const select = el("select", { class: "list-select", "aria-label": t("listLabel"),
-    onchange: (event) => { selected = event.target.value; clearNotice(); render().catch(failure); } },
-  active.map((l) => el("option", { value: l.id, ...(l.id === id ? { selected: true } : {}) }, listName(l))));
   const capture = el("form", { class: "capture", onsubmit: (event) => {
     event.preventDefault();
     const name = captureInput.value.trim();
@@ -406,34 +443,51 @@ function renderLists() {
         throw error;
       }
     });
-  } }, captureInput, el("button", { type: "submit", "aria-label": t("add") }, "+"));
+  } }, el("label", { for: captureInput.id, class: "visually-hidden" }, t("addPlaceholder")),
+    captureInput, el("button", { type: "submit", "aria-label": t("add") }, t("quietAdd")));
   const section = (key, rows, extra = null) => [
     el("div", { class: "list-section-label" }, t(key), el("span", { class: "header-actions" }, extra, el("span", {}, rows.length))),
     el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
   ];
   const people = access(list, account.user.id);
-  const paper = el("section", { class: "paper" },
-    el("div", { class: "paper-header" },
-      el("div", { class: "header-actions" }, select, button(t("newList"), newListDialog, "text-button")),
-      el("div", { class: "header-actions" },
-        button(t("share"), () => shareDialog(id)),
-        button("···", () => listMenu(id), "item-edit", { "aria-label": t("listMenu", { name: listName(list) }) }))),
+  const pickedSection = picked.length ? el("section", { class: "picked-section" },
+    el("details", { open: pickedOpen.get(id) || null, ontoggle: (event) => { pickedOpen.set(id, event.target.open); } },
+      el("summary", {}, t("quietPicked", { count: picked.length })),
+      el("ul", { class: "items" }, picked.map((r) => itemNode(id, r)))),
+    el("div", { class: "finish-actions" }, button(t("finishShopping"), () => act(() => finishShopping(id)), "secondary"))) : null;
+  const paper = el("section", { class: "paper list-paper", "aria-label": listName(list) },
     capture,
     ...(needed.length ? section("toPickUp", needed) : []),
-    ...(picked.length ? section("pickedUp", picked, button(t("finishShopping"), () => act(() => finishShopping(id)), "text-button")) : []),
+    pickedSection,
     ...(!items.length ? [el("div", { class: "empty" },
       el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
       el("h2", {}, t("emptyTitle")), paragraph("emptyText"))] : []),
     el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
-  const aside = el("aside", { class: "aside-card" },
-    el("p", { class: "eyebrow" }, t("peopleWithAccess")),
-    el("h2", {}, t(people.length > 1 ? "sharedTitle" : "justYou")),
-    el("p", {}, people.map((p) => p.you ? t("youName", { name: p.name }) : p.name).join(", ")),
-    el("p", {}, t(people.length > 1 ? "sharedText" : "privateText")));
   $("content").replaceChildren(
-    title("listTitle", "listSubtitle", el("span", { class: "pill" }, t("itemCount", { count: needed.length }))),
-    el("div", { class: "list-layout" }, el("div", {}, paper, archivedArea(archived)), aside));
+    el("section", { class: "list-heading" },
+      el("div", { class: "list-title-row" },
+        el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
+          "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
+          el("span", { class: "list-title-name" }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
+        el("button", { type: "button", class: "text-button list-options", onclick: () => listMenu(id),
+          "aria-haspopup": "dialog", "aria-label": t("quietListOptionsFor", { name: listName(list) }) },
+          el("span", { class: "list-options-label" }, t("quietListOptions")), el("span", { class: "list-options-icon", "aria-hidden": "true" }, "···"))),
+      el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: needed.length })),
+        el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")), listSyncLabel())),
+    el("div", { class: "list-layout" }, el("div", {}, paper, archivedArea(archived))));
   if (focused) captureInput.focus({ preventScroll: true });
+}
+function listPickerDialog() {
+  const { active, archived } = arrange(store.lists.values(), selected, listName, locale);
+  openDialog(el("div", {}, el("h2", {}, t("quietChooseList")),
+    el("div", { class: "list-choices" }, active.map((list) =>
+      button(listName(list), () => {
+        selected = list.id;
+        closeDialog(false); clearNotice();
+        render().then(() => dialogFocus.restore($("list-switcher"))).catch(failure);
+      }, `list-choice${list.id === selected ? " active" : ""}`, { "aria-pressed": list.id === selected }))),
+    archivedArea(archived),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog), button(t("newList"), newListDialog, "primary"))));
 }
 /** Shows what the server recorded for this change: a conflict or a rejection, in the projection's own terms. */
 function report(reply) {
@@ -474,7 +528,7 @@ function editDialog(listId, row) {
     ["PIECE", "PACK", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE"].map((k) =>
       el("option", { value: k, ...(row.facts.unit === k ? { selected: true } : {}) }, t(k))));
   const error = el("p", { class: "dialog-error", role: "alert" });
-  openDialog(el("form", { onsubmit: (event) => {
+  const form = el("form", { onsubmit: (event) => {
     event.preventDefault();
     const name = fields.name.value.trim(), amount = fields.quantity.value;
     try {
@@ -502,16 +556,16 @@ function editDialog(listId, row) {
   el("div", { class: "row-grid" },
     el("div", {}, ...field("quantity", "number")),
     el("div", {}, el("label", { class: "label", for: "edit-unit" }, t("unit")), unit)),
-  ...field("note", "text", 8000),
-  ...field("store", "text", 80),
+  el("details", { class: "edit-details", open: row.facts.note || row.facts.store ? true : null },
+    el("summary", {}, t("quietItemDetails")), ...field("note", "text", 8000), ...field("store", "text", 80)),
+  el("details", { class: "edit-actions" }, el("summary", {}, t("quietItemActions")),
+    button(t("remove"), () => messageDialog("quietRemoveItemTitle", "quietRemoveItemHelp",
+      () => change(listId, "delete", remove(row, Date.now())), { name: row.facts.name }, () => openDialog(form)), "danger")),
   error,
   el("div", { class: "button-row" },
-    button(t("remove"), () => {
-      closeDialog();
-      act(() => change(listId, "delete", remove(row, Date.now())));
-    }, "danger"),
     button(t("cancel"), closeDialog),
-    el("button", { type: "submit", class: "primary" }, t("save")))));
+    el("button", { type: "submit", class: "primary" }, t("save"))));
+  openDialog(form);
 }
 /** Moves picked-up items into the list's history as one trip, with Undo while the notice shows. */
 async function finishShopping(listId) {
@@ -533,7 +587,7 @@ function nameDialog(heading, initial, save) {
   } },
   el("h2", {}, t(heading)),
   el("label", { class: "label", for: "list-name" }, t("listName")), input,
-  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), el("button", { type: "submit", class: "primary" }, t("save")))));
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog), el("button", { type: "submit", class: "primary" }, t(heading === "newList" ? "newList" : "save")))));
   input.focus();
   input.select();
 }
@@ -547,6 +601,7 @@ function listMenu(listId) {
   openDialog(el("div", {}, el("h2", {}, listName(list)),
     el("div", { class: "menu-actions" },
       button(t("share"), () => shareDialog(listId)),
+      button(t("newList"), newListDialog),
       // A rename is guarded by the name this browser showed, so two people renaming at once see a conflict.
       button(t("renameList"), () => nameDialog("renameList", list.projection.name, (name) => change(listId, "list_name", rename(list.projection, name)))),
       button(t("importTitle"), () => { closeDialog(); openImport(listId); }),
@@ -742,21 +797,12 @@ async function serverSettingsDialog() {
 }
 async function renderAccount(own) {
   const user = account.user;
-  const card = el("section", { class: "paper" }, el("div", { class: "panel-body" },
+  const label = accountLabel(user), detail = user.username || user.email || user.subject;
+  const identity = el("section", { class: "account-identity" },
     el("p", { class: "eyebrow" }, t("signedInAs")),
-    el("div", { class: "account-row" },
-      el("div", { class: "avatar", "aria-hidden": "true" }, accountLabel(user).slice(0, 1).toUpperCase()),
-      el("div", { class: "account-info" },
-        el("div", { class: "account-name" }, accountLabel(user)),
-        el("div", { class: "account-detail" }, user.username || user.email || user.subject)),
-      user.admin ? el("span", { class: "badge" }, t("administrator")) : null),
-    el("div", { class: "button-row" },
-      ...(user.issuer === "urn:usuals:local" ? [button(t("changePassword"), passwordDialog)] : []),
-      button(t("serverAiTitle"), () => act(serverSettingsDialog, { rerender: false })),
-      button(t("signOut"), () => act(async () => {
-        await api("/auth/logout", { method: "POST", csrf: account.csrfToken, status: 204 });
-        await leaveAccount();
-      })))));
+    el("p", { class: "account-name" }, label),
+    detail && detail !== label ? el("p", { class: "account-detail" }, detail) : null,
+    user.admin ? el("span", { class: "badge" }, t("administrator")) : null);
   const load = (path, field) => api(path).then((value) => value[field]).catch((e) => {
     if (own === generation) failure(e);
     return [];
@@ -765,27 +811,39 @@ async function renderAccount(own) {
   // The person may have moved to another view while these loaded.
   if (own !== generation || !account || view !== "account") return;
   const phonesCard = el("section", { class: "paper" }, el("div", { class: "panel-body" },
-    el("h2", {}, t("connectionSessions")),
+    el("h2", {}, t("connectionAddPhone")),
     paragraph("phonesHelp", "helper"),
-    ...phones.map((phone) => personRow(t("phoneLabel", { id: phone.id.slice(-4) }), t("phoneExpiry", { date: date(phone.expiresAt) }),
-      button(t("connectionRevoke"), () => messageDialog("disconnectTitle", "disconnectText", async () => {
-        await api(`/api/connections/${phone.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: [200, 204] });
-      })))),
-    phones.length ? null : paragraph("noPhones"),
-    el("div", { class: "button-row" }, button(t("connectionAddPhone"), () => act(connectPhoneDialog, { rerender: false }), "primary"))));
-  const sessionsCard = el("section", { class: "paper" }, el("div", { class: "panel-body" },
-    el("h2", {}, t("sessions")),
-    ...sessions.map((s) => el("div", { class: "account-row" },
-      el("div", { class: "account-info" },
-        el("div", { class: "account-name" }, s.current ? t("currentSession") : t("sessionCreated", { date: date(s.createdAt) })),
-        el("div", { class: "account-detail" }, t("sessionExpiry", { date: date(s.expiresAt) }))),
-      button(t("revoke"), () => messageDialog("confirmRevoke", "confirmRevokeText", async () => {
-        await api(`/api/sessions/${s.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: 204 });
-        if (s.current) await leaveAccount();
-      })))),
-    paragraph("sessionHelp", "helper")));
+    el("div", { class: "button-row account-primary" }, button(t("connectionAddPhone"), () => act(connectPhoneDialog, { rerender: false }), "primary")),
+    el("details", { class: "account-disclosure" }, el("summary", {}, t("connectionSessions"), el("span", { class: "count" }, phones.length)),
+      ...phones.map((phone) => personRow(t("phoneLabel", { id: phone.id.slice(-4) }), t("phoneExpiry", { date: date(phone.expiresAt) }),
+        button(t("connectionRevoke"), () => messageDialog("disconnectTitle", "disconnectText", async () => {
+          await api(`/api/connections/${phone.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: [200, 204] });
+        })))),
+      phones.length ? null : paragraph("noPhones", "helper"))));
+  const sessionRows = sessions.map((session) => el("div", { class: "account-row" },
+    el("div", { class: "account-info" },
+      el("div", { class: "account-name" }, session.current ? t("currentSession") : t("sessionCreated", { date: date(session.createdAt) })),
+      el("div", { class: "account-detail" }, t("sessionExpiry", { date: date(session.expiresAt) }))),
+    button(t("revoke"), () => messageDialog("confirmRevoke", "confirmRevokeText", async () => {
+      await api(`/api/sessions/${session.id}/revoke`, { method: "POST", csrf: account.csrfToken, status: 204 });
+      if (session.current) await leaveAccount();
+    }))));
+  const settings = el("section", { class: "paper account-settings" },
+    el("details", { class: "account-disclosure" }, el("summary", {}, t("serverAiTitle")),
+      paragraph("serverAiPrivacy", "helper"),
+      button(t("quietAiSettings"), () => act(serverSettingsDialog, { rerender: false }))),
+    el("details", { class: "account-disclosure" }, el("summary", {}, t("quietSecurity")),
+      el("div", { class: "button-row" },
+        ...(user.issuer === "urn:usuals:local" ? [button(t("changePassword"), passwordDialog)] : []),
+        button(t("signOut"), () => act(async () => {
+          await api("/auth/logout", { method: "POST", csrf: account.csrfToken, status: 204 });
+          await leaveAccount();
+        })))),
+    el("details", { class: "account-disclosure" }, el("summary", {}, t("sessions"), el("span", { class: "count" }, sessions.length)),
+      ...sessionRows, paragraph("sessionHelp", "helper")));
   screen = "account";
-  $("content").replaceChildren(title("accountTitle", "accountSubtitle"), el("div", { class: "panel" }, card, phonesCard, sessionsCard));
+  $("content").replaceChildren(el("section", { class: "hero" }, el("h1", {}, t("quietAccountTitle"))),
+    el("div", { class: "panel" }, identity, phonesCard, settings));
 }
 async function renderAdmin(own, after = null, previous = []) {
   if (!account?.user.admin) {
@@ -853,11 +911,9 @@ window.addEventListener("online", () => feed?.nudge());
 $("dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
   if (tutorialActive) finishTutorial();
-  else closeDialog();
+  else dialogCancellation.invoke(closeDialog);
 });
-$("tutorial").addEventListener("click", tutorialDialog);
-$("language").addEventListener("click", languageDialog);
-$("appearance").addEventListener("click", appearanceDialog);
+$("preferences").addEventListener("click", preferencesDialog);
 (async () => {
   const inventory = await fetch("/locales.json", { credentials: "same-origin", cache: "no-store", redirect: "error" });
   requireThat(inventory.ok);
@@ -923,7 +979,7 @@ function localAuthDialog(activation = false) {
       }
     },
   },
-  el("h2", {}, t(activation ? "activateAccount" : "localTitle")),
+  el("h2", {}, t(activation ? "activateAccount" : "localSignIn")),
   paragraph(activation ? "activationText" : "localSignInText"),
   el("label", { class: "label", for: "local-username" }, t("username")),
   username,
@@ -1029,11 +1085,12 @@ function secretDialog(result) {
 function welcomeActions() {
   if (!config?.enabled) return [paragraph("ssoDisabled", "warning-box")];
   const actions = [];
-  if (config.localEnabled) {
+  if (config.localEnabled)
     actions.push(button(t("localSignIn"), () => localAuthDialog(false), "primary"));
-    actions.push(button(t("activateAccount"), () => localAuthDialog(true), "secondary"));
-  }
   if (config.oidcEnabled)
     actions.push(el("a", { class: config.localEnabled ? "secondary" : "primary", href: "/auth/login" }, t("signIn")));
+  if (config.localEnabled)
+    actions.push(el("details", { class: "auth-help" }, el("summary", {}, t("quietAccountHelp")),
+      button(t("activateAccount"), () => localAuthDialog(true), "text-button")));
   return actions;
 }

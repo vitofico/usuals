@@ -5,11 +5,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.outlined.Repeat
 import io.theficos.usuals.ui.recipe.RecipeImportSheet
 import io.theficos.usuals.ui.scan.ScanNameSheet
-import androidx.compose.material3.FilterChip
 import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.SuggestionChoice
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -29,7 +26,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +33,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.Button
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
@@ -82,6 +77,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.HorizontalDivider
@@ -108,8 +104,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -468,33 +464,31 @@ fun ListContent(
                 directory = state.directory,
                 busy = state.busy || state.capture != CaptureState.Idle,
                 actions = actions,
+                compact = typing != null,
+                onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
+                    { actions.onFinishRows?.invoke(rows, null) ?: actions.onFinishShop(null) }
+                },
             )
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = actions.onShoppingMode, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(if (state.personal.mode) R.string.shopping_stop else R.string.shopping_start))
+            if (typing == null) {
+                if (state.personal.mode) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.shopping_mode), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                    TextButton(onClick = actions.onShoppingMode) { Text(stringResource(R.string.shopping_stop)) }
                 }
-                TextButton(onClick = actions.onShoppingTools, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.memory_favorites_tools)) }
+                val usefulFilter = state.stores.size > 1 || state.selectedStore != null ||
+                    (state.stores.isNotEmpty() && (state.pending + state.checked + state.deferred).any { it.store == null })
+                if (usefulFilter) StoreFilter(state.stores, state.selectedStore, actions.onStoreFilter)
             }
-            if (state.checked.isNotEmpty()) {
-                Button(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) }, enabled = !state.busy,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
-                    Text(stringResource(R.string.finish_shop))
-                }
-            }
-
-            if (state.stores.isNotEmpty()) LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                item { FilterChip(selected = state.selectedStore == null, onClick = { actions.onStoreFilter(null) }, label = { Text(stringResource(R.string.store_all)) }) }
-                items(state.stores) { store -> FilterChip(selected = store == state.selectedStore, onClick = { actions.onStoreFilter(store) }, label = { Text(store) }) }
-            }
-            if (!state.personal.mode && typing == null) SuggestionRow(state.suggestions) { key, choice ->
+            if (!state.personal.mode && typing == null) key(state.directory.selected) { SuggestionRow(state.suggestions) { key, choice ->
                 if (choice == SuggestionChoice.NEVER && key in state.repeatSuggestionKeys) {
                     state.suggestions.firstOrNull { it.key == key }?.let { repeatToMute = PendingSuggestionMute(key, it.name) }
                 } else actions.onSuggestion(key, choice)
-            }
+            } }
             val partial = (state.capture as? CaptureState.Listening)?.partial.orEmpty()
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (state.isEmpty && partial.isBlank()) {
-                    if (state.selectedStore == null) EmptyInstruction() else Text(stringResource(R.string.store_empty), modifier = Modifier.padding(20.dp))
+                    if (typing == null) {
+                        if (state.selectedStore == null) EmptyInstruction() else Text(stringResource(R.string.store_empty), modifier = Modifier.padding(20.dp))
+                    }
                 } else {
                     ItemList(state = state, partial = partial, actions = actions)
                 }
@@ -533,44 +527,45 @@ private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier
 }
 
 @Composable
-private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
+private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(R.drawable.ic_brand_mark), null,
-                modifier = Modifier.size(26.dp))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleSmall,
-                color = colors.primary, modifier = Modifier.weight(1f).padding(start = 10.dp))
-            IconButton(onClick = actions.onOpenSettings,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = colors.onSurfaceVariant)) {
-                Icon(Icons.Outlined.Settings, stringResource(R.string.open_settings), modifier = Modifier.size(20.dp))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                NamedListPicker(header.name, directory, busy, actions, compact)
+                Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant)
             }
-        }
-        NamedListPicker(header.name, directory, busy, actions)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant, modifier = Modifier.weight(1f).padding(end = 8.dp))
-            if (!actions.shoppingMode) {
-                TextButton(onClick = actions.onOpenRecipe) { Text(stringResource(R.string.recipe_import)) }
-                IconButton(onClick = actions.onOpenHistory,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
-                }
-                IconButton(onClick = actions.onShareList, enabled = !busy,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
-                    Icon(Icons.Outlined.Share, stringResource(R.string.list_share), Modifier.size(22.dp))
-                }
-                ListMenu(header, directory, busy, actions)
-            }
+            if (!compact) ListMenu(header, directory, busy, actions, onFinish)
         }
         HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
-/** The list's few actions: share, send as text, the basket overview when it is on, rename, archive, and delete it or, for someone else's list, leave it. */
 @Composable
-private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions) {
+private fun StoreFilter(stores: List<String>, selected: String?, onSelect: (String?) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    Box(Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+        val label = stringResource(R.string.quiet_list_store_filter, selected ?: stringResource(R.string.store_all))
+        TextButton(onClick = { open = true }, modifier = Modifier.semantics { contentDescription = label }) {
+            Icon(Icons.Outlined.Storefront, null, Modifier.size(20.dp))
+            Text(label, Modifier.padding(horizontal = 8.dp))
+            Icon(Icons.Outlined.ExpandMore, null, Modifier.size(20.dp))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.store_all)) }, onClick = { open = false; onSelect(null) })
+            stores.forEach { store ->
+                DropdownMenuItem(text = { Text(store) }, onClick = { open = false; onSelect(store) })
+            }
+        }
+    }
+}
+
+/** Secondary list actions stay available without competing with capture and grocery rows. */
+@Composable
+private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, onFinish: (() -> Unit)?) {
+    var open by remember { mutableStateOf(false) }
+    var managing by remember { mutableStateOf(false) }
     // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var draft by rememberSaveable { mutableStateOf("") }
@@ -579,19 +574,33 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
     var clearing by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     Box {
-        IconButton(onClick = { open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
+        IconButton(onClick = { managing = false; open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
             Icon(Icons.Outlined.MoreVert, stringResource(R.string.list_more), Modifier.size(22.dp))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+          if (!managing) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.quiet_list_import)) }, onClick = { open = false; actions.onOpenRecipe() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.history_title)) }, onClick = { open = false; actions.onOpenHistory() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.shopping_favorites)) }, onClick = { open = false; actions.onShoppingTools() })
+            DropdownMenuItem(text = { Text(stringResource(if (actions.shoppingMode) R.string.shopping_stop else R.string.shopping_start)) }, onClick = { open = false; actions.onShoppingMode() })
+            onFinish?.let { finish -> DropdownMenuItem(text = { Text(stringResource(R.string.finish_shop)) }, onClick = { open = false; finish() }) }
+            HorizontalDivider()
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
             DropdownMenuItem(text = { Text(stringResource(R.string.share_list)) }, enabled = header.itemCount > 0, onClick = { open = false; actions.onShareText() })
             actions.onBasketOverview?.let { overview ->
                 DropdownMenuItem(text = { Text(stringResource(R.string.basket_title)) }, enabled = header.itemCount > 0, onClick = { open = false; overview() })
             }
+            HorizontalDivider()
+            DropdownMenuItem(text = { Text(stringResource(R.string.quiet_list_manage)) }, onClick = { managing = true })
+            DropdownMenuItem(text = { Text(stringResource(R.string.open_settings)) }, onClick = { open = false; actions.onOpenSettings() })
+          } else {
+            DropdownMenuItem(text = { Text(stringResource(R.string.quiet_list_options)) }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) }, onClick = { managing = false })
+            HorizontalDivider()
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_clear)) }, enabled = header.itemCount > 0, onClick = { open = false; clearing = selected?.id ?: "" })
             if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
             DropdownMenuItem(text = { Text(stringResource(if (selected?.editor == true) R.string.share_leave else R.string.list_delete)) }, onClick = { open = false; removing = selected?.id })
+          }
         }
     }
     directory.lists.firstOrNull { it.id == renaming }?.let { list ->
@@ -631,15 +640,13 @@ internal fun RemoveListDialog(list: NamedList, onDismiss: () -> Unit, actions: L
 
 @Composable
 private fun EmptyInstruction() {
-    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val compact = maxHeight < 280.dp
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(if (compact) 16.dp else 32.dp),
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            if (!compact) Image(painterResource(R.drawable.ic_brand_mark), null, modifier = Modifier.size(92.dp))
-            Text(stringResource(R.string.list_empty_title), style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = if (compact) 0.dp else 20.dp, bottom = 8.dp),
+            Text(stringResource(R.string.quiet_list_empty_title), style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Text(stringResource(R.string.list_empty_instruction), style = MaterialTheme.typography.bodyMedium,
+            Text(stringResource(R.string.quiet_list_empty_help), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
@@ -725,6 +732,12 @@ private fun ItemList(
                     expanded = state.checkedExpanded,
                     onClick = actions.onToggleCheckedSection,
                 )
+            }
+            item(key = "finish-shop") {
+                TextButton(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) },
+                    enabled = !state.busy, modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(stringResource(R.string.finish_shop))
+                }
             }
             if (state.checkedExpanded) {
                 items(state.checked, key = { "item:${it.id.value}" }) { row ->
@@ -931,7 +944,6 @@ private fun CaptureBand(capture: CaptureState, actions: ListActions, autocomplet
     val listening = capture is CaptureState.Listening
     val typing = capture as? CaptureState.Typing
     val current by rememberUpdatedState(actions)
-    val bandLabel = stringResource(R.string.capture_band)
     val hold = Modifier.pointerInput(Unit) {
         detectTapGestures(onPress = {
             current.onCaptureStart()
@@ -942,33 +954,61 @@ private fun CaptureBand(capture: CaptureState, actions: ListActions, autocomplet
     Surface(color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shape = RoundedCornerShape(22.dp), modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(10.dp)) {
+            val stacked = maxWidth < 308.dp || LocalDensity.current.fontScale > 1.3f
             if (typing != null) {
-                DraftField(typing, actions, autocomplete, Modifier.weight(1f))
-            } else {
-                IconButton(onClick = actions.onType,
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                    Icon(Icons.Outlined.Keyboard, stringResource(R.string.capture_type))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DraftField(typing, actions, autocomplete, Modifier.weight(1f))
+                    CaptureScanButton(actions.onOpenScan)
                 }
-                Row(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.primary).then(hold)
-                    .semantics { contentDescription = bandLabel }.testTag(CaptureBandTag)
-                    .heightIn(min = 52.dp).padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Mic, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(22.dp))
-                    Text(stringResource(if (listening) R.string.capture_listening else R.string.capture_hint),
-                        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(start = 8.dp))
+            } else if (stacked) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CaptureTypeButton(actions.onType, Modifier.weight(1f))
+                        CaptureScanButton(actions.onOpenScan)
+                    }
+                    CaptureVoiceButton(listening, hold, Modifier.fillMaxWidth())
                 }
-            }
-            IconButton(onClick = actions.onOpenScan,
-                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer)) {
-                Icon(Icons.Outlined.QrCodeScanner, stringResource(R.string.capture_scan))
+            } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CaptureTypeButton(actions.onType, Modifier.weight(1f))
+                CaptureVoiceButton(listening, hold, Modifier.weight(1f))
+                CaptureScanButton(actions.onOpenScan)
             }
         }
+    }
+}
+
+@Composable
+private fun CaptureTypeButton(onType: () -> Unit, modifier: Modifier) {
+    val label = stringResource(R.string.capture_type)
+    Row(modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+        .clickable(role = Role.Button, onClick = onType).semantics { contentDescription = label }
+        .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, Modifier.weight(1f).padding(start = 6.dp),
+            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun CaptureVoiceButton(listening: Boolean, hold: Modifier, modifier: Modifier) {
+    val label = stringResource(if (listening) R.string.capture_listening else R.string.capture_hint)
+    Row(modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary).then(hold)
+        .semantics { contentDescription = label }.testTag(CaptureBandTag)
+        .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.Mic, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
+        Text(label,
+            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.weight(1f).padding(start = 6.dp))
+    }
+}
+
+@Composable
+private fun CaptureScanButton(onScan: () -> Unit) {
+    IconButton(onClick = onScan, modifier = Modifier.size(48.dp),
+        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer)) {
+        Icon(Icons.Outlined.QrCodeScanner, stringResource(R.string.capture_scan))
     }
 }
 

@@ -7,7 +7,6 @@
     <string name="account_scan">Scan the QR from the web app</string>
     <string name="account_camera_help">Allow the camera to scan the code, or sign in in the browser below instead.</string>
     <string name="account_allow_camera">Allow camera</string>
-    <string name="account_browser_title">No computer at hand?</string>
     <string name="account_browser_help">Enter your server’s address and sign in in the browser on this phone.</string>
     <string name="account_server">Server address</string>
     <string name="account_offer_title">Connect to %1$s?</string>

@@ -6,6 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -13,22 +15,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
 
 @Composable
-internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Boolean, actions: ListActions) {
+internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean = false) {
     var review by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf(false) }
     var creating by rememberSaveable { mutableStateOf(false) }
+    var archivedOpen by rememberSaveable { mutableStateOf(false) }
     // Kept by id, like the list menu's dialogs: sync can change the lists while it is open.
     var leaving by rememberSaveable { mutableStateOf<String?>(null) }
     var draft by rememberSaveable { mutableStateOf("") }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     val title = selected?.let { listTitle(it) } ?: name ?: stringResource(R.string.household_fallback_name)
-    Row(Modifier.clickable(enabled = !busy && directory.lists.isNotEmpty(), onClickLabel = stringResource(R.string.lists_choose)) { open = true }
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
         .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground,
+        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
         if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose), Modifier.size(24.dp).padding(start = 4.dp))
     }
@@ -51,27 +59,35 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
             else -> R.string.sync_offline
         }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(stringResource(R.string.lists_choose)) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+    // Keeping one dialog window avoids a focus handoff when entering a new list's name.
+    if (open) AlertDialog(onDismissRequest = { open = false; creating = false },
+        title = { Text(stringResource(if (creating) R.string.lists_new else R.string.lists_choose)) },
+        text = { if (creating) {
+            OutlinedTextField(draft, { if (it.length <= 100) draft = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true)
+        } else Column(Modifier.verticalScroll(rememberScrollState())) {
             val (archived, current) = directory.lists.partition { it.archived }
             current.forEach { list ->
                 TextButton(onClick = { open = false; actions.onSelectList(list.id) }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.weight(1f)) {
-                        Text(listTitle(list), maxLines = 2)
+                        Text(listTitle(list))
                         if (list.shared) Text(stringResource(R.string.lists_shared_label),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if (list.id == directory.selected) Text(stringResource(R.string.lists_selected))
+                    if (list.id == directory.selected) Icon(Icons.Outlined.Check, stringResource(R.string.lists_selected), Modifier.size(24.dp))
                 }
             }
-            TextButton(onClick = { open = false; creating = true; draft = "" }) { Text(stringResource(R.string.lists_new)) }
-            if (archived.isNotEmpty()) Text(stringResource(R.string.lists_archived), style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp))
-            archived.forEach { list ->
+            if (archived.isNotEmpty()) {
+                val expansion = stringResource(if (archivedOpen) R.string.settings_expanded else R.string.settings_collapsed)
+                TextButton(onClick = { archivedOpen = !archivedOpen }, modifier = Modifier.fillMaxWidth().semantics { stateDescription = expansion }) {
+                    Text(pluralStringResource(R.plurals.quiet_list_archived, archived.size, archived.size), Modifier.weight(1f))
+                    Icon(if (archivedOpen) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
+                }
+            }
+            if (archivedOpen) archived.forEach { list ->
                 val ownerOnly = list.editor && list.archivedByOwner
                 Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(listTitle(list), maxLines = 2)
+                        Text(listTitle(list))
                         if (ownerOnly) Text(stringResource(R.string.lists_archived_by_owner),
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -79,11 +95,14 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
                     else TextButton(onClick = { actions.onArchiveList(list.id, false) }) { Text(stringResource(R.string.lists_restore)) }
                 }
             }
-        } }, confirmButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.history_dismiss)) } })
-    if (creating) AlertDialog(onDismissRequest = { creating = false }, title = { Text(stringResource(R.string.lists_new)) },
-        text = { OutlinedTextField(draft, { if (it.length <= 100) draft = it }, label = { Text(stringResource(R.string.lists_name)) }, singleLine = true) },
-        confirmButton = { TextButton(enabled = draft.isNotBlank(), onClick = { creating = false; actions.onCreateList(draft) }) { Text(stringResource(R.string.lists_create)) } },
-        dismissButton = { TextButton(onClick = { creating = false }) { Text(stringResource(R.string.history_dismiss)) } })
+        } },
+        confirmButton = { TextButton(enabled = !creating || draft.isNotBlank(), onClick = {
+            if (creating) { open = false; creating = false; actions.onCreateList(draft) }
+            else { creating = true; draft = "" }
+        }) { Text(stringResource(if (creating) R.string.lists_create else R.string.lists_new)) } },
+        dismissButton = { TextButton(onClick = { if (creating) creating = false else open = false }) {
+            Text(stringResource(if (creating) R.string.edit_cancel else R.string.history_dismiss))
+        } })
     directory.lists.firstOrNull { it.id == leaving }?.let { list -> RemoveListDialog(list, { leaving = null }, actions) }
 }
 

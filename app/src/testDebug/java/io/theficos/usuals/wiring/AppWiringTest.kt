@@ -184,7 +184,7 @@ class AppWiringTest {
         goTo(Routes.SETTINGS)
         compose.onNodeWithText("Test connection").assertDoesNotExist()
         compose.onNodeWithText("Your local lists work without a server or an account.").assertExists()
-        compose.onNodeWithText("Open account").performClick()
+        compose.onNodeWithText("Account").performClick()
         assertThat(currentRoute()).isEqualTo(Routes.ACCOUNT)
         compose.onNodeWithText("Scan the QR from the web app").assertExists()
         compose.onNodeWithContentDescription("Back").performClick()
@@ -228,7 +228,7 @@ class AppWiringTest {
     fun saving_a_past_shop_closes_the_sheet_and_clears_its_items() {
         launchApp()
         goTo(Routes.HISTORY)
-        compose.onNodeWithTag("history_list").performScrollToNode(hasText("Add a past shop"))
+        compose.onNodeWithContentDescription("History options").performClick()
         compose.onNodeWithText("Add a past shop").performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Shop date (YYYY-MM-DD)").performTextReplacement("2020-01-01")
         compose.onNodeWithText("Paste the items you bought").performTextInput("2 milk")
@@ -237,7 +237,7 @@ class AppWiringTest {
             compose.onAllNodesWithText("Shopping data imported.").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Save past shop").assertDoesNotExist()
-        compose.onNodeWithTag("history_list").performScrollToNode(hasText("Add a past shop"))
+        compose.onNodeWithContentDescription("History options").performClick()
         compose.onNodeWithText("Add a past shop").performSemanticsAction(SemanticsActions.OnClick) { it() }
         compose.onNodeWithText("Save past shop").assertIsNotEnabled()
     }
@@ -248,6 +248,7 @@ class AppWiringTest {
         goTo(Routes.HISTORY)
         assertThat(currentRoute()).isEqualTo(Routes.HISTORY)
         compose.onNodeWithText("History").assertIsDisplayed()
+        compose.onNodeWithContentDescription("History options").performClick()
         compose.onNodeWithText("Export data").assertIsDisplayed()
     }
 
@@ -285,8 +286,9 @@ class AppWiringTest {
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
         // The offer shows once the list re-emits the scanned item, which happens off the main thread.
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Enable product names").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Online product lookup").fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithText("Online product lookup").performClick()
         // Exercise the accessible action; popup hit targets are checked on the emulator.
         compose.onNodeWithText("Enable product names").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
