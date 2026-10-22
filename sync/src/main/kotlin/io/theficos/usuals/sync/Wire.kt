@@ -44,6 +44,8 @@ class WireTooLarge : IllegalArgumentException()
 @Serializable data class ServerInfo(val serverId: String, val receiptPublicKey: String, val protocolVersions: List<Int> = listOf(1))
 @Serializable data class DeviceKeys(val id: String, val signingPublicKey: String, val recipientPublicKey: String)
 
+private val LITERAL = Regex("(?:true|false|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)")
+
 /** Detect duplicate decoded keys before kotlinx.serialization can collapse them. */
 private class JsonShape(private val text: String, private val payload: Boolean) {
     private var at = 0
@@ -51,15 +53,22 @@ private class JsonShape(private val text: String, private val payload: Boolean) 
     fun validate() { value(0); space(); require(at == text.length) }
     private fun space() { while (at < text.length && text[at] in " \n\r\t") at++ }
     private fun take(c: Char) { space(); require(at < text.length && text[at++] == c) }
-    private fun string(): String {
-        space(); val start = at; require(at < text.length && text[at++] == '"')
+    /** Scans past a string. Its escapes are checked when the whole text is parsed after this pass. */
+    private fun string() {
+        space(); require(at < text.length && text[at++] == '"')
         while (at < text.length) {
             when (text[at++]) {
                 '\\' -> { require(at < text.length); at++ }
-                '"' -> return Wire.json.decodeFromString(text.substring(start, at))
+                '"' -> return
             }
         }
         throw IllegalArgumentException("invalid")
+    }
+    /** A key as decoded, so two spellings of one key are caught as duplicates. */
+    private fun key(): String {
+        space(); val start = at; string()
+        val raw = text.substring(start + 1, at - 1)
+        return if ('\\' in raw) Wire.json.decodeFromString(text.substring(start, at)) else raw
     }
     private fun value(depth: Int) {
         require(depth <= 32 && ++nodes <= if (payload) 1000000 else 65536); space(); require(at < text.length)
@@ -67,7 +76,7 @@ private class JsonShape(private val text: String, private val payload: Boolean) 
             '{' -> {
                 at++; space(); val keys = mutableSetOf<String>()
                 if (at < text.length && text[at] != '}') while (true) {
-                    val key = string(); require(key.length <= (if (payload) 1000 else 64) && keys.size < (if (payload) 20000 else 4096) && keys.add(key)); take(':'); value(depth + 1); space()
+                    val key = key(); require(key.length <= (if (payload) 1000 else 64) && keys.size < (if (payload) 20000 else 4096) && keys.add(key)); take(':'); value(depth + 1); space()
                     if (at >= text.length || text[at] != ',') break
                     at++
                 }
@@ -85,7 +94,7 @@ private class JsonShape(private val text: String, private val payload: Boolean) 
                 val start = at
                 while (at < text.length && text[at] !in ",]} \n\r\t") at++
                 val literal = text.substring(start, at)
-                require(at > start && (payload && literal == "null" || Regex("(?:true|false|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)").matches(literal)))
+                require(at > start && (payload && literal == "null" || LITERAL.matches(literal)))
             }
         }
     }
