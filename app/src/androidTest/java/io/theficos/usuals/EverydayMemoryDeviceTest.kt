@@ -79,6 +79,7 @@ class EverydayMemoryDeviceTest {
 
             lateinit var vm: ListViewModel
             compose.runOnUiThread {
+                compose.activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
                 vm = ListViewModel(RepositoryItemStore(items), parser, NoSpeechSource, clock = { now },
                     historyStore = RepositoryHistoryStore(history, parser, smart, tools), smartStore = smart,
                     directoryStore = RepositoryListDirectory(directory, replica), shoppingTools = tools)
@@ -164,7 +165,7 @@ class EverydayMemoryDeviceTest {
             compose.onNodeWithText(context.getString(R.string.memory_from_history)).assertExists()
             screenshot("everyday-memory-typing.png")
             compose.onNodeWithContentDescription(context.getString(R.string.memory_suggestion_options, "oats")).performClick()
-            compose.onNodeWithText(context.getString(R.string.memory_dont_suggest)).performClick()
+            compose.onAllNodesWithText(context.getString(R.string.memory_dont_suggest)).onLast().performClick()
             compose.waitUntil(15_000) { vm.state.value.autocomplete.none { it.key == oatsKey } }
             assertTrue(history.snapshot().preferences.single { it.key == oatsKey }.muted)
             assertEquals(listOf("oats"), history.snapshot().purchases.map { it.name })

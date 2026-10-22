@@ -486,7 +486,7 @@ fun ListContent(
                 item { FilterChip(selected = state.selectedStore == null, onClick = { actions.onStoreFilter(null) }, label = { Text(stringResource(R.string.store_all)) }) }
                 items(state.stores) { store -> FilterChip(selected = store == state.selectedStore, onClick = { actions.onStoreFilter(store) }, label = { Text(store) }) }
             }
-            if (!state.personal.mode) SuggestionRow(state.suggestions) { key, choice ->
+            if (!state.personal.mode && typing == null) SuggestionRow(state.suggestions) { key, choice ->
                 if (choice == SuggestionChoice.NEVER && key in state.repeatSuggestionKeys) {
                     state.suggestions.firstOrNull { it.key == key }?.let { repeatToMute = PendingSuggestionMute(key, it.name) }
                 } else actions.onSuggestion(key, choice)

@@ -31,7 +31,7 @@ fun ShoppingToolsSheet(
     onReminder: (() -> Unit)? = null,
     alreadyAdded: Set<String> = emptySet(),
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.shopping_tools), style = MaterialTheme.typography.headlineSmall)
             if (preferences.unavailable) {
@@ -39,12 +39,6 @@ fun ShoppingToolsSheet(
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.shopping_close)) }
                 return@Column
             }
-            Text(stringResource(R.string.shopping_personal_help), style = MaterialTheme.typography.bodySmall)
-            Choice(R.string.shopping_mode, preferences.mode) { enabled -> update { it.mode(enabled) } }
-            Choice(R.string.shopping_keep_awake, preferences.keepAwake) { enabled -> update { it.keepAwake(enabled) } }
-            Choice(R.string.shopping_haptics, preferences.haptics) { enabled -> update { it.haptics(enabled) } }
-            onReminder?.let { TextButton(onClick = it) { Text(stringResource(R.string.reminder_title)) } }
-            HorizontalDivider()
             Text(stringResource(R.string.shopping_favorites), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.memory_favorites_help), style = MaterialTheme.typography.bodySmall)
             if (preferences.portable.favorites.isEmpty()) Text(stringResource(R.string.shopping_no_favorites))
@@ -66,6 +60,12 @@ fun ShoppingToolsSheet(
                     }
                 }
             }
+            HorizontalDivider()
+            Text(stringResource(R.string.shopping_personal_help), style = MaterialTheme.typography.bodySmall)
+            Choice(R.string.shopping_mode, preferences.mode) { enabled -> update { it.mode(enabled) } }
+            Choice(R.string.shopping_keep_awake, preferences.keepAwake) { enabled -> update { it.keepAwake(enabled) } }
+            Choice(R.string.shopping_haptics, preferences.haptics) { enabled -> update { it.haptics(enabled) } }
+            onReminder?.let { TextButton(onClick = it) { Text(stringResource(R.string.reminder_title)) } }
             HorizontalDivider()
             Text(stringResource(R.string.shopping_aisle_order), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.shopping_aisle_for, store ?: stringResource(R.string.store_all)), style = MaterialTheme.typography.bodySmall)

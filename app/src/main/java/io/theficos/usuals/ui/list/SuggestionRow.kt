@@ -14,38 +14,42 @@ import io.theficos.usuals.R
 import io.theficos.usuals.smart.*
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun SuggestionRow(suggestions: List<Suggestion>, onChoice: (String, SuggestionChoice) -> Unit) {
     if (suggestions.isEmpty()) return
     Column {
         Text(stringResource(R.string.suggestions_title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 20.dp, top = 10.dp))
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(suggestions, key = { it.key }) { suggestion ->
-                Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-                    Column(Modifier.padding(18.dp).widthIn(min = 250.dp, max = 286.dp)) {
-                        Text(suggestion.name, style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(when (suggestion.reason) {
-                            SuggestionReason.REPEAT -> R.string.suggestion_repeat
-                            SuggestionReason.INTERVAL -> R.string.suggestion_interval
-                            SuggestionReason.STAPLE -> R.string.suggestion_staple
-                        }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row {
-                            listOf(SuggestionChoice.ADD, SuggestionChoice.NOT_NOW).forEach { choice ->
-                                val label = stringResource(if (choice == SuggestionChoice.ADD) R.string.suggestion_add else R.string.suggestion_not_now)
-                                val description = stringResource(R.string.suggestion_action, label, suggestion.name)
-                                if (choice == SuggestionChoice.ADD) {
-                                    FilledTonalButton(onClick = { onChoice(suggestion.key, choice) },
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val cardWidth = (maxWidth - 32.dp).coerceIn(0.dp, 360.dp)
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(suggestions, key = { it.key }) { suggestion ->
+                    Surface(modifier = Modifier.width(cardWidth), color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                        Column(Modifier.padding(18.dp)) {
+                            Text(suggestion.name, style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(when (suggestion.reason) {
+                                SuggestionReason.REPEAT -> R.string.suggestion_repeat
+                                SuggestionReason.INTERVAL -> R.string.suggestion_interval
+                                SuggestionReason.STAPLE -> R.string.suggestion_staple
+                            }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                SuggestionChoice.entries.forEach { choice ->
+                                    val label = stringResource(when (choice) {
+                                        SuggestionChoice.ADD -> R.string.suggestion_add
+                                        SuggestionChoice.NOT_NOW -> R.string.suggestion_not_now
+                                        SuggestionChoice.NEVER -> R.string.memory_dont_suggest
+                                    })
+                                    val description = if (choice == SuggestionChoice.NEVER) stringResource(R.string.memory_mute_item, suggestion.name)
+                                        else stringResource(R.string.suggestion_action, label, suggestion.name)
+                                    if (choice == SuggestionChoice.ADD) {
+                                        FilledTonalButton(onClick = { onChoice(suggestion.key, choice) },
+                                            modifier = Modifier.semantics { contentDescription = description }) { Text(label) }
+                                    } else TextButton(onClick = { onChoice(suggestion.key, choice) },
+                                        contentPadding = PaddingValues(horizontal = 8.dp),
                                         modifier = Modifier.semantics { contentDescription = description }) { Text(label) }
-                                } else TextButton(onClick = { onChoice(suggestion.key, choice) },
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                    modifier = Modifier.semantics { contentDescription = description }) { Text(label) }
+                                }
                             }
-                        }
-                        val muteDescription = stringResource(R.string.memory_mute_item, suggestion.name)
-                        TextButton(onClick = { onChoice(suggestion.key, SuggestionChoice.NEVER) },
-                            modifier = Modifier.semantics { contentDescription = muteDescription }) {
-                            Text(stringResource(R.string.memory_dont_suggest))
                         }
                     }
                 }

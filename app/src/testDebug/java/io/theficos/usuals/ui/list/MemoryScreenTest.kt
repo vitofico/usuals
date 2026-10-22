@@ -1,5 +1,7 @@
 package io.theficos.usuals.ui.list
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,7 +11,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.Suggestion
@@ -86,6 +89,33 @@ class MemoryScreenTest {
         assertThat(choice).isEqualTo(SuggestionChoice.NEVER)
     }
 
+    @Test fun proactive_actions_wrap_without_clipping_on_a_narrow_card() {
+        val choices = mutableListOf<SuggestionChoice>()
+        compose.setContent {
+            UsualsTheme {
+                Box(Modifier.width(280.dp)) {
+                    SuggestionRow(listOf(Suggestion("milk", "milk", SuggestionReason.STAPLE))) { _, choice -> choices += choice }
+                }
+            }
+        }
+        compose.onNodeWithContentDescription("Add milk").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Not now milk").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Don’t suggest milk again").assertIsDisplayed().performClick()
+        assertThat(choices).containsExactly(SuggestionChoice.ADD, SuggestionChoice.NOT_NOW, SuggestionChoice.NEVER).inOrder()
+    }
+
+    @Test fun typing_prioritises_history_completions_over_proactive_cards() {
+        compose.setContent {
+            UsualsTheme {
+                ListContent(ListUiState(capture = CaptureState.Typing("mi"), autocomplete = listOf(milk),
+                    suggestions = listOf(Suggestion("oats", "oats", SuggestionReason.STAPLE))), ListActions())
+            }
+        }
+        compose.onNodeWithText("From past shops").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Suggestion options for milk").assertIsDisplayed()
+        compose.onNodeWithText("Bought in at least half your recent shops").assertDoesNotExist()
+    }
+
     @Test fun favourites_explain_reuse_and_show_when_the_saved_item_is_already_open() {
         val favorite = SavedShoppingItem("saved", "milk", 2.0, "LITRE", store = "Market")
         val tools = ShoppingToolsStore().apply { pin(favorite) }
@@ -99,11 +129,11 @@ class MemoryScreenTest {
                     onAdd = { added++; alreadyAdded = setOf(it.id) }, onDismiss = {}, alreadyAdded = alreadyAdded)
             }
         }
-        compose.onNodeWithText("Save items here to add them to any list again, with their quantity and store. You choose when to add them. Items already open are skipped.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithContentDescription("Add favourite milk to this list").performScrollTo().performClick()
+        compose.onNodeWithText("Save items here to add them to any list again, with their quantity and store. You choose when to add them. Items already open are skipped.").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Add favourite milk to this list").assertIsDisplayed().performClick()
         assertThat(added).isEqualTo(1)
-        compose.onNodeWithContentDescription("milk is already on this list").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
-        compose.onNodeWithContentDescription("Remove milk from favourites").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("milk is already on this list").assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Remove milk from favourites").assertIsDisplayed().performClick()
         assertThat(tools.state.value.portable.favorites).isEmpty()
         compose.onNodeWithContentDescription("Remove milk from favourites").assertDoesNotExist()
     }
