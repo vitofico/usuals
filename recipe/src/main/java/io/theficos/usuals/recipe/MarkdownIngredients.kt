@@ -86,7 +86,7 @@ class MarkdownIngredients {
 
     companion object {
         const val MAX_TEXT = 30_000
-        const val MAX_ITEMS = 150
+        const val MAX_ITEMS = 500
         private val HEADING = Regex("^(#{1,6})\\s+(.+)$")
         private val FENCE = Regex("^(?:`{3,}|~{3,})")
         private val RULE = Regex("^(?:-{3,}|\\*{3,}|_{3,})$")

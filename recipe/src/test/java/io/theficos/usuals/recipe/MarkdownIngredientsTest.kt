@@ -94,6 +94,12 @@ class MarkdownIngredientsTest {
     @Test(expected = IllegalArgumentException::class) fun oversizedTextIsRejectedRatherThanTruncated() {
         reader.read("x".repeat(MarkdownIngredients.MAX_TEXT + 1))
     }
+    @Test fun aLongKeepListImportsWhole() {
+        val note = (1..300).joinToString("\n") { if (it % 3 == 0) "[X] Item $it 🍅🍅" else "[ ] Item $it" }
+        val lines = reader.read(note).ingredients
+        assertThat(lines).hasSize(300)
+        assertThat(lines.last()).isEqualTo("2 Item 300")
+    }
     @Test(expected = IllegalArgumentException::class) fun oversizedListsAreRejectedRatherThanPartiallyImported() {
         reader.read((0..MarkdownIngredients.MAX_ITEMS).joinToString("\n") { "- item $it" })
     }

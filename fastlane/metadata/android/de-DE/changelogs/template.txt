@@ -1,1 +1,1 @@
-Bearbeite die Notiz eines Artikels: Artikel gedrückt halten und das Feld Notiz ändern oder leeren. Notizen lassen sich weiterhin direkt eintippen, etwa Milch (laktosefrei) oder Milch für den Kuchen.
+Der Import nimmt jetzt Notizen mit bis zu 500 Artikeln an, eine lange Google-Keep-Liste kommt also vollständig an. Ist eine Notiz trotzdem zu lang, sagt der Importbildschirm das oben statt unter der Tastatur.

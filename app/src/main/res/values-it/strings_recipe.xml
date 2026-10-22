@@ -45,7 +45,7 @@
     <string name="recipe_read_photo">Leggi foto con il mio modello</string>
     <string name="recipe_no_images">Il modello non ha superato la verifica delle immagini. Scegline uno compatibile in Impostazioni. Questa foto non è stata inviata.</string>
     <string name="recipe_file_failed">Impossibile aprire il file o la fotocamera. Scegli un altro file o un’altra foto.</string>
-    <string name="recipe_file_large">Il contenuto è troppo grande. Markdown supporta 30.000 caratteri e 150 voci; le foto non devono superare 10 MB.</string>
+    <string name="recipe_file_large">Il contenuto è troppo grande. Markdown supporta 30.000 caratteri e 500 voci; le foto non devono superare 10 MB.</string>
     <string name="recipe_image_invalid">Impossibile leggere l’immagine. Scegli JPEG, PNG o un’altra foto supportata dal dispositivo.</string>
     <string name="recipe_markdown_invalid">Questo non è un file di testo UTF-8. Scegli un file Markdown o di testo.</string>
 </resources>

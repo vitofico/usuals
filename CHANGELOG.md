@@ -1,5 +1,13 @@
 # Changelog
 
+## Long notes import
+
+- Importing a note takes up to 500 items, up from 150, so a long Keep list comes
+  in whole.
+- When a note is too long, the import screen shows why at the top. The message
+  used to sit below the pasted text and the keyboard, so the import looked like
+  it did nothing.
+
 ## Edit an item's note
 
 - The edit sheet, opened by holding an item, has a **Note** field. Change the

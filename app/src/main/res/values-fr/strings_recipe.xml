@@ -45,7 +45,7 @@
     <string name="recipe_read_photo">Lire la photo avec mon modèle</string>
     <string name="recipe_no_images">Le modèle n’a pas réussi le test d’images. Choisissez un modèle compatible dans les paramètres. Cette photo n’a pas été envoyée.</string>
     <string name="recipe_file_failed">Impossible d’ouvrir ce fichier ou l’appareil photo. Choisissez un autre fichier ou une autre photo.</string>
-    <string name="recipe_file_large">Ce contenu est trop volumineux. Markdown accepte 30 000 caractères et 150 entrées ; les photos sont limitées à 10 Mo.</string>
+    <string name="recipe_file_large">Ce contenu est trop volumineux. Markdown accepte 30 000 caractères et 500 entrées ; les photos sont limitées à 10 Mo.</string>
     <string name="recipe_image_invalid">Impossible de lire cette image. Choisissez un JPEG, PNG ou une autre photo compatible avec votre appareil.</string>
     <string name="recipe_markdown_invalid">Ce fichier n’est pas un texte UTF-8. Choisissez un fichier Markdown ou texte.</string>
 </resources>

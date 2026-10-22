@@ -1,1 +1,1 @@
-Modifiez la note d’un article : appuyez longuement sur l’article et changez ou videz le champ Note. Les notes se saisissent toujours aussi directement, comme Lait (sans lactose) ou Lait pour le café.
+L’importation accepte désormais des notes jusqu’à 500 articles, donc une longue liste Google Keep arrive en entier. Si une note reste trop longue, l’écran d’importation l’indique en haut plutôt que sous le clavier.
