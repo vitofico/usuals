@@ -41,7 +41,7 @@ class ListSharingTest {
     @Test fun `sending as text opens the system chooser with a readable list snapshot`() {
         val vm = ListViewModel(FakeItemStore(listOf(
             item("milk", "milk", Quantity.pieces(2)), item("bread", "bread", checked = true),
-        )), LocalUtteranceParser(), FakeSpeechSource())
+        )), LocalUtteranceParser(), FakeSpeechSource(), compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Send as text").performClick()
@@ -55,7 +55,7 @@ class ListSharingTest {
 
     @Test fun `the share icon and the menu both open the share sheet`() {
         var opened = 0
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource())
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}, onOpenSharing = { opened++ }) } }
         compose.onNodeWithContentDescription("Share").performClick()
         compose.onNodeWithContentDescription("More options").performClick()
@@ -76,7 +76,7 @@ class ListSharingTest {
         val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
             override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Leave list").assertDoesNotExist()
@@ -107,7 +107,7 @@ class ListSharingTest {
         val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
             override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Archive").performClick()
@@ -141,7 +141,7 @@ class ListSharingTest {
         val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
             override fun observeShopping() = lists.map { ShoppingSnapshot(listId = it.selected) }
         }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = kotlinx.coroutines.Dispatchers.Main.immediate)
         compose.setContent { UsualsTheme { ListScreen(vm, {}, {}) } }
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Rename").assertExists()

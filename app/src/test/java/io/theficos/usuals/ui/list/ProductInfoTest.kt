@@ -25,7 +25,7 @@ class ProductInfoTest {
         }, { true }, { FreshnessPolicy.THIRTY_DAYS + 2 })
         val items = FakeItemStore(listOf(Item(row.id, row.name, row.name, row.name, gtin = gtin, createdAt = 0, updatedAt = 0)))
         val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(false),
-            clock = { FreshnessPolicy.THIRTY_DAYS + 2 }, productInfoStore = reader)
+            clock = { FreshnessPolicy.THIRTY_DAYS + 2 }, productInfoStore = reader, compute = main.dispatcher)
         vm.onProductInfo(row)
         val waiting = vm.state.value.productInfo!!
         assertThat(waiting.loading).isTrue()
@@ -46,7 +46,7 @@ class ProductInfoTest {
         val reader = RepositoryProductInfoStore(cache, object : ProductEnricher {
             override suspend fun lookup(gtin: Gtin): QualityLookup { calls++; gate.await(); return QualityLookup.Missing(gtin) }
         }, { true }, { 11 })
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), clock = { 11 }, productInfoStore = reader)
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), clock = { 11 }, productInfoStore = reader, compute = main.dispatcher)
         vm.onProductInfo(row)
         assertThat(vm.state.value.productInfo!!.loading).isFalse()
         assertThat(calls).isEqualTo(0)

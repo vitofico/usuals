@@ -268,12 +268,14 @@ fun ListScreen(
         }
     }
 
+    // Read when tapped, not captured as a value, so the row lambdas stay equal and unchanged rows skip recomposition.
+    val haptics by rememberUpdatedState(state.personal.mode && state.personal.haptics)
     ListContent(
         state = state,
         actions = ListActions(
             shoppingMode = state.personal.mode,
             onShoppingTools = { toolsOpen = true },
-            onShoppingMode = { vm.updateShoppingTools { it.mode(!state.personal.mode) } },
+            onShoppingMode = { vm.updateShoppingTools { it.mode(!it.state.value.mode) } },
             onPin = vm::onPin, onDefer = vm::onDefer, onRestoreDeferred = vm::onRestoreDeferred,
             onCaptureStart = {
                 val granted = ContextCompat.checkSelfPermission(
@@ -299,7 +301,7 @@ fun ListScreen(
             onEditItem = vm::onEditItem,
             onScanMerge = vm::onScanMerge,
             onEditRow = vm::onEditRow, onCheckedRow = { row, checked ->
-                if (state.personal.mode && state.personal.haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                if (haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                 vm.onCheckedRow(row, checked)
             }, onRemoveRow = vm::onRemoveRow, onHintRow = vm::onHintRow,
             onDismissEdit = vm::onDismissEdit,

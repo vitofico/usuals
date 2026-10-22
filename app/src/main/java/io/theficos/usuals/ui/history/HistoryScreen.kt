@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,7 +21,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import io.theficos.usuals.ui.components.SectionCard
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -44,6 +46,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -74,7 +82,8 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).withZone(ZoneId.systemDefault())
     }
     val purchases = remember(state.history.purchases, state.query) {
-        state.history.purchases.filter { matchesHistory(it.name, state.query) }.groupBy { it.tripId }
+        val matches = historyMatcher(state.query)
+        state.history.purchases.filter { matches(it.name) }.groupBy { it.tripId }
     }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
@@ -126,9 +135,9 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             }
         })
     }) { padding ->
+        // No spacedBy: a trip's purchases are items of their own, drawn as one card, so the gaps are explicit.
         LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("history_list").padding(padding).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 OutlinedTextField(value = state.query, onValueChange = vm::search, singleLine = true,
@@ -156,6 +165,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             }
             state.notice?.let { notice ->
                 item {
+                    Spacer(Modifier.height(12.dp))
                     Text(if (notice == HistoryNotice.REBOUGHT) stringResource(R.string.history_rebuy_done, state.added) else stringResource(when (notice) {
                         HistoryNotice.REBOUGHT -> R.string.history_rebuy_done
                         HistoryNotice.IMPORTED -> R.string.history_imported
@@ -169,22 +179,33 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                 }
             }
             item {
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = { vm.dismissNotice(); pastOpen = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.history_past_title))
                 }
             }
             if (state.history.trips.isEmpty()) {
-                item { Text(stringResource(R.string.history_empty)) }
+                item { Spacer(Modifier.height(12.dp)); Text(stringResource(R.string.history_empty)) }
             }
-            if (state.query.isNotBlank() && purchases.isEmpty()) item { Text(stringResource(R.string.history_no_results)) }
-            items(state.history.trips.filter { it.id in purchases }, key = { it.id }) { trip ->
-                SectionCard {
-                    Text(formatter.format(Instant.ofEpochMilli(trip.closedAt)), style = MaterialTheme.typography.titleMedium)
-                    val rows = purchases[trip.id].orEmpty()
-                    Text(pluralStringResource(R.plurals.history_item_count, rows.size, rows.size),
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    TextButton(onClick = { vm.selectTrip(trip.id) }) { Text(stringResource(R.string.history_select_trip)) }
-                    for (purchase in rows) {
+            if (state.query.isNotBlank() && purchases.isEmpty()) item { Spacer(Modifier.height(12.dp)); Text(stringResource(R.string.history_no_results)) }
+            val zone = ZoneId.systemDefault()
+            for (trip in state.history.trips) {
+                val rows = purchases[trip.id] ?: continue
+                val day = Instant.ofEpochMilli(trip.closedAt).atZone(zone).toLocalDate()
+                item(key = "trip:${trip.id}") {
+                    Spacer(Modifier.height(12.dp))
+                    Column(Modifier.fillMaxWidth().tripSlice(first = true, last = false).padding(start = 20.dp, end = 20.dp, top = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(formatter.format(Instant.ofEpochMilli(trip.closedAt)), style = MaterialTheme.typography.titleMedium)
+                        Text(pluralStringResource(R.plurals.history_item_count, rows.size, rows.size),
+                            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        TextButton(onClick = { vm.selectTrip(trip.id) }) { Text(stringResource(R.string.history_select_trip)) }
+                    }
+                }
+                itemsIndexed(rows, key = { _, purchase -> "purchase:${trip.id}:${purchase.id.value}" }) { index, purchase ->
+                    val last = index == rows.lastIndex
+                    Column(Modifier.fillMaxWidth().tripSlice(first = false, last = last).padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = if (last) 20.dp else 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val quantity = purchase.quantity?.let { quantityText(it) }.orEmpty()
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             androidx.compose.material3.Checkbox(checked = purchase.id.value in state.selected,
@@ -193,13 +214,36 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                             Text(stringResource(R.string.history_purchase, purchase.name, quantity).trim())
                         }
                         val bought = Instant.ofEpochMilli(purchase.boughtAt)
-                        if (bought.atZone(ZoneId.systemDefault()).toLocalDate() !=
-                            Instant.ofEpochMilli(trip.closedAt).atZone(ZoneId.systemDefault()).toLocalDate()) {
+                        if (bought.atZone(zone).toLocalDate() != day) {
                             Text(formatter.format(bought), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * One slice of a trip's card. A trip is a header and one lazy item per
+ * purchase, so the card is drawn in pieces: the whole card's outline, cut where
+ * a slice meets its neighbours.
+ */
+@Composable
+private fun Modifier.tripSlice(first: Boolean, last: Boolean): Modifier {
+    val shape = MaterialTheme.shapes.large
+    val fill = MaterialTheme.colorScheme.surface
+    val line = MaterialTheme.colorScheme.outlineVariant
+    return clipToBounds().drawBehind {
+        val stroke = 1.dp.toPx()
+        // Past the corner radius, so an open edge shows neither its corners nor its outline.
+        val overhang = size.width
+        val top = if (first) stroke / 2 else -overhang
+        val bottom = if (last) size.height - stroke / 2 else size.height + overhang
+        val outline = shape.createOutline(Size(size.width - stroke, bottom - top), layoutDirection, this)
+        translate(left = stroke / 2, top = top) {
+            drawOutline(outline, fill)
+            drawOutline(outline, line, style = Stroke(stroke))
         }
     }
 }

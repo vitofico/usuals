@@ -18,7 +18,7 @@ class ListHistoryViewModelTest {
     @get:Rule val main = MainDispatcherRule()
     private val now = 1_700_000_000_000L
     private fun vm(items: FakeItemStore, history: FakeHistoryStore, memory: InMemoryPromptMemory = InMemoryPromptMemory()) =
-        ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { now }, historyStore = history, prompts = memory)
+        ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { now }, historyStore = history, prompts = memory, compute = main.dispatcher)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test fun `buy next time is a durable local view choice and never checks or purchases the row`() = runTest(main.dispatcher) {
@@ -26,7 +26,7 @@ class ListHistoryViewModelTest {
         val history = FakeHistoryStore()
         val tools = io.theficos.usuals.ui.shopping.ShoppingToolsStore()
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(), historyStore = history,
-            shoppingTools = tools, background = main.dispatcher)
+            shoppingTools = tools, background = main.dispatcher, compute = main.dispatcher)
         vm.onDefer(vm.state.value.pending.single())
         runCurrent()
         assertThat(vm.state.value.pending).isEmpty()
@@ -128,7 +128,7 @@ class ListHistoryViewModelTest {
         val scoped = object : ScopedHistoryStore, HistoryStore by history {
             override fun observeShopping() = snapshots
         }
-        val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { now }, historyStore = scoped)
+        val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { now }, historyStore = scoped, compute = main.dispatcher)
         vm.onFinishShop()
         assertThat(vm.state.value.finishedTrip!!.trip.id).isEqualTo("trip")
         snapshots.value = snapshots.value.copy(history = HistorySnapshot(trips = listOf(Trip("accepted-elsewhere", 11_000))))

@@ -34,6 +34,7 @@ class ListViewModelTest {
         speech = speech,
         newItemId = { ItemId("item-${++minted}") },
         clock = { FIXED_CLOCK },
+        compute = main.dispatcher,
     )
 
     @Test
@@ -77,7 +78,7 @@ class ListViewModelTest {
             override suspend fun archive(id: String, archived: Boolean) { archivedLists += id to archived }
         }
         val vm = ListViewModel(store = FakeItemStore(), parser = LocalUtteranceParser(), speech = FakeSpeechSource(),
-            newItemId = { ItemId("item-${++minted}") }, clock = { FIXED_CLOCK }, directoryStore = directory)
+            newItemId = { ItemId("item-${++minted}") }, clock = { FIXED_CLOCK }, directoryStore = directory, compute = main.dispatcher)
         vm.onRenameList("mine", "Groceries")
         vm.onRemoveList("mine")
         vm.onArchiveList("mine", true)
@@ -349,6 +350,29 @@ class ListViewModelTest {
 
             assertThat(vm.state.value.editing).isNull()
         }
+
+    @Test
+    fun the_draft_reaches_the_state_while_rows_are_still_being_worked_out() = runTest(main.dispatcher) {
+        val memory = io.theficos.usuals.smart.ItemMemory("milk", "milk", 3, 1000)
+        val smart = object : SmartStore by NoSmartStore {
+            override fun autocomplete(query: String, history: io.theficos.usuals.model.HistorySnapshot, active: List<io.theficos.usuals.model.Item>) =
+                listOf(memory).filter { query.isNotBlank() }
+        }
+        val compute = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        val vm = ListViewModel(FakeItemStore(listOf(item("a", "leche"))), LocalUtteranceParser(), FakeSpeechSource(),
+            smartStore = smart, compute = compute)
+        vm.onType()
+        vm.onDraftChange("mi")
+        // The rows and the completions wait for the background dispatcher; the draft does not.
+        assertThat(vm.state.value.capture).isEqualTo(CaptureState.Typing("mi"))
+        assertThat(vm.state.value.pending).isEmpty()
+        assertThat(vm.state.value.autocomplete).isEmpty()
+        testScheduler.advanceUntilIdle()
+        assertThat(vm.state.value.pending.single().name).isEqualTo("Leche")
+        assertThat(vm.state.value.autocomplete).containsExactly(memory)
+        vm.onDraftChange("mil")
+        assertThat(vm.state.value.capture).isEqualTo(CaptureState.Typing("mil"))
+    }
 }
 
 /** An arbitrary fixed instant. Nothing in these tests reads a wall clock. */
