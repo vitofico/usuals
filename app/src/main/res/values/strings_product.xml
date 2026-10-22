@@ -21,4 +21,6 @@
     <string name="product_source_updated">Source updated: %1$s</string>
     <string name="product_not_found">No product record was found for this barcode. You can contribute missing details on Open Food Facts.</string>
     <string name="product_not_food">Not a food product. Open Food Facts does not cover it.</string>
+    <string name="product_remembered">Based on the product you scanned on %1$s</string>
+    <string name="product_remembered_undated">Based on the product you scanned for this item</string>
 </resources>

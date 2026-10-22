@@ -81,6 +81,13 @@ data class ListRow(
     val fromSuggestion: Boolean = false,
     val quantityHint: Quantity? = null,
     val store: String? = null,
+    /**
+     * The barcode Product details opens: the row's own, else the one the
+     * household's history remembers for it. Only [gtin] is ever stored, so a
+     * remembered code never reaches a purchase as if it had been scanned.
+     */
+    val productGtin: io.theficos.usuals.model.Gtin? = gtin,
+    val provenance: io.theficos.usuals.ui.product.ProductProvenance? = gtin?.let { io.theficos.usuals.ui.product.ProductProvenance.Scanned },
 )
 
 /**

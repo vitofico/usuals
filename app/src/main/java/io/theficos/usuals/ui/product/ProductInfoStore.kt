@@ -18,4 +18,12 @@ data class ProductInfoState(
     val lookupEnabled: Boolean = false,
     val stale: Boolean = false,
     val result: QualityLookup? = null,
+    val provenance: ProductProvenance? = null,
 )
+
+/** Where a row's product barcode came from, so the sheet can say when it is the household's memory rather than a scan. */
+sealed interface ProductProvenance {
+    data object Scanned : ProductProvenance
+    /** [lastBoughtAt] is null when the product was scanned and named but not bought yet. */
+    data class Remembered(val lastBoughtAt: Long?) : ProductProvenance
+}

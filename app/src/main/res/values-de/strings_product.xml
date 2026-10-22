@@ -21,4 +21,6 @@
     <string name="product_source_updated">Quelle aktualisiert: %1$s</string>
     <string name="product_not_found">Für diesen Barcode wurde kein Produkt gefunden. Du kannst fehlende Angaben auf Open Food Facts ergänzen.</string>
     <string name="product_not_food">Kein Lebensmittel. Open Food Facts erfasst dieses Produkt nicht.</string>
+    <string name="product_remembered">Basierend auf dem Produkt, das du am %1$s gescannt hast</string>
+    <string name="product_remembered_undated">Basierend auf dem Produkt, das du für diesen Eintrag gescannt hast</string>
 </resources>

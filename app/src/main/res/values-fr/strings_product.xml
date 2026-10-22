@@ -21,4 +21,6 @@
     <string name="product_source_updated">Source mise à jour : %1$s</string>
     <string name="product_not_found">Aucun produit trouvé pour ce code. Vous pouvez ajouter les informations manquantes sur Open Food Facts.</string>
     <string name="product_not_food">Ce n’est pas un produit alimentaire. Open Food Facts ne le couvre pas.</string>
+    <string name="product_remembered">D’après le produit que vous avez scanné le %1$s</string>
+    <string name="product_remembered_undated">D’après le produit que vous avez scanné pour cet article</string>
 </resources>
