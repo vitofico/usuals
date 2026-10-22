@@ -14,7 +14,8 @@ import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
 import io.theficos.usuals.enrich.*
 import io.theficos.usuals.ui.QualityAttribution
-import io.theficos.usuals.ui.QualityChip
+import io.theficos.usuals.ui.ScorePanel
+import io.theficos.usuals.ui.allergenList
 import java.text.DateFormat
 import java.util.Date
 
@@ -50,7 +51,7 @@ fun ProductInfoSheet(state: ProductInfoState, onRefresh: () -> Unit, onSettings:
             if (state.result == null && state.cached?.confirmedMissing == true) Text(stringResource(R.string.product_not_found))
             if (quality != null && quality.productType != ProductType.FOOD) Text(stringResource(R.string.product_not_food))
             if (quality != null && quality.productType == ProductType.FOOD) {
-                QualityChip(quality)
+                ScorePanel(quality)
                 HorizontalDivider()
                 Text(stringResource(R.string.product_ingredients), style = MaterialTheme.typography.titleMedium)
                 Text(quality.ingredients ?: stringResource(R.string.product_ingredients_unknown))
@@ -58,7 +59,7 @@ fun ProductInfoSheet(state: ProductInfoState, onRefresh: () -> Unit, onSettings:
                     quality.traces == null -> R.string.product_traces_unknown
                     quality.traces?.isEmpty() == true -> R.string.product_traces_empty
                     else -> R.string.product_traces
-                }, quality.traces.orEmpty().joinToString(", ") { it.substringAfterLast(':') }))
+                }, allergenList(quality.traces.orEmpty())))
                 Text(stringResource(R.string.product_check_package), style = MaterialTheme.typography.bodySmall)
             }
             quality?.sourceModifiedAtEpochSeconds?.let { seconds ->
