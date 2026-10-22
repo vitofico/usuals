@@ -1,0 +1,1 @@
+Long lists feel faster. Typing in the add field no longer stutters on a big list with a long history, and rows redraw only when they change. Rebuying a past shop, due repeats and restoring a backup each write in one pass. History shows big shops lazily and searches faster. Sync does less work on every answer from the server.
