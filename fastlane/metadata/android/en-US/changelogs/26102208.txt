@@ -1,0 +1,1 @@
+A calmer interface across Android and the web. The list and adding items come first; tools and suggestions open when you need them. Simpler item editing, compact favourites, clearer history, larger touch targets and better keyboard navigation. All five languages and three palettes retained.

@@ -1,0 +1,1 @@
+Eine ruhigere Oberfläche für Android und Web. Liste und Hinzufügen stehen im Mittelpunkt; Werkzeuge und Vorschläge öffnen sich bei Bedarf. Einfacheres Bearbeiten, kompakte Favoriten, übersichtlicher Verlauf, größere Touchflächen und bessere Tastaturbedienung. Alle fünf Sprachen und drei Farbpaletten bleiben erhalten.

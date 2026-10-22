@@ -1,0 +1,1 @@
+Una interfaz más tranquila en Android y la web. La lista y añadir productos son lo primero; las herramientas y sugerencias se abren cuando las necesitas. Edición más sencilla, favoritos compactos, historial más claro, controles táctiles más grandes y mejor navegación con teclado. Se mantienen los cinco idiomas y las tres paletas.
