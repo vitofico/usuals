@@ -15,10 +15,9 @@ import io.theficos.usuals.smart.ItemMemory
 import io.theficos.usuals.smart.Suggestion
 import io.theficos.usuals.smart.SuggestionChoice
 import io.theficos.usuals.smart.SuggestionReason
-import io.theficos.usuals.ui.shopping.PortableShoppingPreferences
 import io.theficos.usuals.ui.shopping.SavedShoppingItem
-import io.theficos.usuals.ui.shopping.ShoppingPreferences
 import io.theficos.usuals.ui.shopping.ShoppingToolsSheet
+import io.theficos.usuals.ui.shopping.ShoppingToolsStore
 import io.theficos.usuals.ui.theme.UsualsTheme
 import org.junit.Rule
 import org.junit.Test
@@ -89,18 +88,23 @@ class MemoryScreenTest {
 
     @Test fun favourites_explain_reuse_and_show_when_the_saved_item_is_already_open() {
         val favorite = SavedShoppingItem("saved", "milk", 2.0, "LITRE", store = "Market")
+        val tools = ShoppingToolsStore().apply { pin(favorite) }
+        var preferences by mutableStateOf(tools.state.value)
         var alreadyAdded by mutableStateOf(emptySet<String>())
         var added = 0
         compose.setContent {
             UsualsTheme {
-                ShoppingToolsSheet(ShoppingPreferences(portable = PortableShoppingPreferences(favorites = listOf(favorite))), null,
-                    update = {}, onAdd = { added++; alreadyAdded = setOf(it.id) }, onDismiss = {}, alreadyAdded = alreadyAdded)
+                ShoppingToolsSheet(preferences, null,
+                    update = { change -> change(tools); preferences = tools.state.value },
+                    onAdd = { added++; alreadyAdded = setOf(it.id) }, onDismiss = {}, alreadyAdded = alreadyAdded)
             }
         }
         compose.onNodeWithText("Save items here to add them to any list again, with their quantity and store. You choose when to add them. Items already open are skipped.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("Add favourite milk to this list").performScrollTo().performClick()
         assertThat(added).isEqualTo(1)
-        compose.onNodeWithContentDescription("milk is already on this list").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("Remove milk from favourites").assertIsDisplayed()
+        compose.onNodeWithContentDescription("milk is already on this list").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Remove milk from favourites").performScrollTo().assertIsDisplayed().performClick()
+        assertThat(tools.state.value.portable.favorites).isEmpty()
+        compose.onNodeWithContentDescription("Remove milk from favourites").assertDoesNotExist()
     }
 }
