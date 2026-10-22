@@ -8,6 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -115,7 +117,10 @@ fun UsualsApp(
     LaunchedEffect(accountLink) {
         if (accountLink != null) navController.navigate(Routes.ACCOUNT) { launchSingleTop = true }
     }
-    NavHost(navController = navController, startDestination = Routes.LIST) {
+    val touring = showTutorial || tutorialRequested
+    // The tour is drawn over the graph in the same window, so the screen underneath leaves the accessibility tree.
+    NavHost(navController = navController, startDestination = Routes.LIST,
+        modifier = if (touring) Modifier.clearAndSetSemantics {} else Modifier) {
 
         composable(Routes.LIST) {
             ListScreen(
@@ -198,7 +203,7 @@ fun UsualsApp(
         val vm: io.theficos.usuals.ui.share.ShareViewModel = viewModel(key = "share-$list", factory = remember(list) { shareViewModelFactory(list) })
         io.theficos.usuals.ui.share.ShareSheet(vm, onDismiss = { sharing = null }, onOpenAccount = { navController.navigate(Routes.ACCOUNT) { launchSingleTop = true } })
     }
-    if (showTutorial || tutorialRequested) {
+    if (touring) {
         io.theficos.usuals.ui.tutorial.TutorialScreen(
             onFinish = { account ->
                 tutorialRequested = false

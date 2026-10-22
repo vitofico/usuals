@@ -12,11 +12,11 @@ val appVersionCode: Int = (project.property("VERSION_CODE") as String).toInt()
 
 android {
     namespace = "io.theficos.usuals"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "io.theficos.usuals"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

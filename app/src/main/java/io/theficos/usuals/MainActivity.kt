@@ -7,12 +7,16 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.theficos.usuals.di.ServiceLocator
@@ -74,7 +78,7 @@ class MainActivity : ComponentActivity() {
             val palette by ServiceLocator.themePreferences.palette.collectAsStateWithLifecycle()
             val tutorialCompleted by ServiceLocator.tutorialPreferences.completed.collectAsStateWithLifecycle()
             UsualsTheme(palette = palette) {
-                val background = MaterialTheme.colorScheme.background.toArgb()
+                val background = MaterialTheme.colorScheme.background
                 SideEffect { syncSystemBars(background) }
                 UsualsApp(
                     palette = palette,
@@ -93,12 +97,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Legacy Android system bars sit outside Compose and need the selected palette too.
-    @Suppress("DEPRECATION")
-    private fun syncSystemBars(color: Int) {
-        window.setBackgroundDrawable(ColorDrawable(color))
-        window.statusBarColor = color
-        window.navigationBarColor = color
+    /**
+     * Draws behind the system bars on every Android version, as Android 15 and
+     * later insist on, and lets each screen pad itself by their insets.
+     *
+     * The bars are scrims in the palette's background colour. Older versions
+     * paint them; newer ones keep them transparent over the same colour. Icon
+     * contrast follows the palette rather than the system night mode, because a
+     * palette can be dark on a phone in light mode.
+     */
+    private fun syncSystemBars(background: Color) {
+        val argb = background.toArgb()
+        window.setBackgroundDrawable(ColorDrawable(argb))
+        // Android 8.0 cannot draw dark navigation icons, so a light palette gets a black bar there.
+        val style = if (background.luminance() > 0.5f) SystemBarStyle.light(argb, android.graphics.Color.BLACK) else SystemBarStyle.dark(argb)
+        enableEdgeToEdge(style, style)
     }
 
     override fun onStart() {

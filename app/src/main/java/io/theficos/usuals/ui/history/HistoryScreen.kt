@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -128,7 +130,8 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             }
         }
     }
-    Scaffold(topBar = {
+    // An edge-to-edge window no longer resizes for the keyboard, so the content pads for it.
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
         TopAppBar(title = { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.history_back))

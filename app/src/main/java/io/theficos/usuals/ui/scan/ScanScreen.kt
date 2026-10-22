@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import io.theficos.usuals.ui.components.SectionCard
 import androidx.compose.foundation.layout.Arrangement
@@ -154,6 +156,8 @@ fun ScanScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        // An edge-to-edge window no longer resizes for the keyboard, so the content pads for it.
+        contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
