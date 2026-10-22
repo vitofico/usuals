@@ -44,7 +44,8 @@ fun AccountScreen(vm: AccountViewModel, onBack: () -> Unit, link: String? = null
             vm.check()
         }
     }
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = {
+    // An edge-to-edge window no longer resizes for the keyboard, so the content pads for it.
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
         TopAppBar(title = { Text(stringResource(R.string.account_title), style = MaterialTheme.typography.headlineSmall) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.settings_back)) }
         })

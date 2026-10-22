@@ -1,5 +1,5 @@
 [versions]
-agp = "8.5.2"
+agp = "8.10.1"
 kotlin = "2.0.20"
 ksp = "2.0.20-1.0.25"
 compose-bom = "2024.09.02"
@@ -13,17 +13,17 @@ room = "2.6.1"
 work = "2.9.1"
 security-crypto = "1.1.0-alpha06"
 junit = "4.13.2"
-robolectric = "4.13"
+robolectric = "4.16.1"
 # The android-all jars Robolectric runs against, staged by the root build so it
 # never fetches them itself. One per API level the suite actually asks for:
 # 26 is the minSdk boundary in SpeechAvailabilityTest, 33 is the level pinned
-# in robolectric.properties, and 34 is targetSdk, which Robolectric loads the
+# in robolectric.properties, and 36 is targetSdk, which Robolectric loads the
 # app package with regardless of the level a test emulates. Adding a level to
-# a @Config means adding its jar here too. The -i6 suffix is Robolectric 4.13's
+# a @Config means adding its jar here too. The -i7 suffix is Robolectric 4.16's
 # instrumentation revision and moves with `robolectric`.
-robolectric-android-all-api26 = "8.0.0_r4-robolectric-r1-i6"
-robolectric-android-all-api33 = "13-robolectric-9030017-i6"
-robolectric-android-all-api34 = "14-robolectric-10818077-i6"
+robolectric-android-all-api26 = "8.0.0_r4-robolectric-r1-i7"
+robolectric-android-all-api33 = "13-robolectric-9030017-i7"
+robolectric-android-all-api36 = "16-robolectric-13921718-i7"
 turbine = "1.1.0"
 androidx-test-core = "1.6.1"
 androidx-test-runner = "1.6.2"
@@ -73,7 +73,7 @@ junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 robolectric-android-all-api26 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-all-api26" }
 robolectric-android-all-api33 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-all-api33" }
-robolectric-android-all-api34 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-all-api34" }
+robolectric-android-all-api36 = { module = "org.robolectric:android-all-instrumented", version.ref = "robolectric-android-all-api36" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }

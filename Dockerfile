@@ -8,8 +8,11 @@ FROM --platform=linux/amd64 node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f3
 FROM --platform=linux/amd64 eclipse-temurin:21-jdk-jammy@sha256:742daacb9316be4b6fc60258f6e4ac2a11882f6c597373c92290a57bfad0d2e0
 
 ARG ANDROID_CMDLINE_TOOLS_VERSION=11076708
-ARG ANDROID_PLATFORM=android-34
-ARG ANDROID_BUILD_TOOLS=34.0.0
+ARG ANDROID_PLATFORM=android-36
+# AGP 8.10 builds with 35.0.0, its minimum. scripts/sign-release and
+# scripts/check-apk-reproducibility run apksigner and aapt from 34.0.0.
+ARG ANDROID_BUILD_TOOLS=35.0.0
+ARG ANDROID_SIGNING_BUILD_TOOLS=34.0.0
 
 ENV ANDROID_SDK_ROOT=/opt/android-sdk \
     ANDROID_HOME=/opt/android-sdk \
@@ -33,7 +36,8 @@ RUN yes | sdkmanager --licenses >/dev/null \
  && sdkmanager --install \
         "platform-tools" \
         "platforms;${ANDROID_PLATFORM}" \
-        "build-tools;${ANDROID_BUILD_TOOLS}"
+        "build-tools;${ANDROID_BUILD_TOOLS}" \
+        "build-tools;${ANDROID_SIGNING_BUILD_TOOLS}"
 
 # Browser protocol tests use the same Docker entry point; no npm dependencies.
 COPY --from=web-tests /usr/local/bin/node /usr/local/bin/node
