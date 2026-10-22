@@ -245,7 +245,7 @@ private fun allergensSentence(allergens: List<String>?): String = when {
 
 private fun plainTag(tag: String): String = tag.substringAfterLast(':').trim()
 
-private fun nutriShade(grade: NutriScore): GradeShade = when (grade) {
+internal fun nutriShade(grade: NutriScore): GradeShade = when (grade) {
     NutriScore.A -> GradeShade.STEP_1
     NutriScore.B -> GradeShade.STEP_2
     NutriScore.C -> GradeShade.STEP_3

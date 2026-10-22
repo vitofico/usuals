@@ -26,13 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
+import io.theficos.usuals.ui.nutriShade
 import io.theficos.usuals.enrich.NutriScore
 
 /** The list's overview sheet. [overview] is null while the saved product details are read. */
@@ -115,13 +115,10 @@ private fun Grades(grades: GradeCounts) {
 }
 
 /**
- * Every grade colour on these surfaces, in one place so it can follow the app's
- * shared grade palette. Only stated grades are ever coloured: missing data is
- * a count in words, never a colour.
+ * The product chips' palette, so a grade reads the same here as on the sheet.
+ * Only stated grades are ever coloured: missing data is a count in words.
  */
-@Composable
-private fun basketGradeColor(grade: NutriScore): Color =
-    lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.error, grade.ordinal / (NutriScore.entries.size - 1f))
+private fun basketGradeColor(grade: NutriScore): Color = nutriShade(grade).fill
 
 @Composable
 private fun Quiet(text: String) {
