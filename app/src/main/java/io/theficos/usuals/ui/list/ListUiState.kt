@@ -36,11 +36,14 @@ data class ListUiState(
     val capture: CaptureState = CaptureState.Idle,
     /** The row being edited, if any. */
     val editing: ListRow? = null,
+    val transfer: ItemTransferRequest? = null,
+    val transferResult: io.theficos.usuals.model.ItemTransferResult? = null,
     val productInfo: io.theficos.usuals.ui.product.ProductInfoState? = null,
     /** Whether the menu offers the basket overview: its setting and Open Food Facts lookup are both on. */
     val basketAvailable: Boolean = false,
     val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
     val autocomplete: List<ItemMemory> = emptyList(),
+    val repeatSuggestionKeys: Set<String> = emptySet(),
     val suggestions: List<Suggestion> = emptyList(),
     val mergeReview: MergeReview? = null,
     val repeatOffer: RepeatOffer? = null,
@@ -52,6 +55,7 @@ data class ListUiState(
     val stores: List<String> = emptyList(),
     val selectedStore: String? = null,
     val personal: io.theficos.usuals.ui.shopping.ShoppingPreferences = io.theficos.usuals.ui.shopping.ShoppingPreferences(),
+    val favoritesOnList: Set<String> = emptySet(),
     val deferred: List<ListRow> = emptyList(),
 ) {
     /** True when the screen should show the instruction instead of a list. */
@@ -63,6 +67,8 @@ data class ListHeader(
     val name: String? = null,
     val itemCount: Int = 0,
 )
+
+data class ItemTransferRequest(val row: ListRow, val source: NamedList)
 
 /**
  * One line on the list, already reduced to what the row draws. Immutable so a

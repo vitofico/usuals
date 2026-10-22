@@ -13,6 +13,8 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
@@ -27,8 +29,9 @@ fun ShoppingToolsSheet(
     onAdd: (SavedShoppingItem) -> Unit,
     onDismiss: () -> Unit,
     onReminder: (() -> Unit)? = null,
+    alreadyAdded: Set<String> = emptySet(),
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.shopping_tools), style = MaterialTheme.typography.headlineSmall)
             if (preferences.unavailable) {
@@ -36,25 +39,33 @@ fun ShoppingToolsSheet(
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.shopping_close)) }
                 return@Column
             }
+            Text(stringResource(R.string.shopping_favorites), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.memory_favorites_help), style = MaterialTheme.typography.bodySmall)
+            if (preferences.portable.favorites.isEmpty()) Text(stringResource(R.string.shopping_no_favorites))
+            preferences.portable.favorites.forEach { favorite ->
+                val added = favorite.id in alreadyAdded
+                val addLabel = stringResource(if (added) R.string.memory_favorite_on_list else R.string.memory_favorite_add, favorite.name)
+                val removeLabel = stringResource(R.string.memory_favorite_remove, favorite.name)
+                Column(Modifier.fillMaxWidth()) {
+                    Text(favorite.name, style = MaterialTheme.typography.titleSmall)
+                    favorite.quantity?.let { Text(io.theficos.usuals.ui.list.quantityText(it), style = MaterialTheme.typography.bodySmall) }
+                    favorite.store?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { onAdd(favorite) }, enabled = !added,
+                            modifier = Modifier.semantics { contentDescription = addLabel }) {
+                            Text(stringResource(if (added) R.string.memory_on_list else R.string.capture_add))
+                        }
+                        TextButton(onClick = { update { it.unpin(favorite.id) } },
+                            modifier = Modifier.semantics { contentDescription = removeLabel }) { Text(stringResource(R.string.shopping_unpin)) }
+                    }
+                }
+            }
+            HorizontalDivider()
             Text(stringResource(R.string.shopping_personal_help), style = MaterialTheme.typography.bodySmall)
             Choice(R.string.shopping_mode, preferences.mode) { enabled -> update { it.mode(enabled) } }
             Choice(R.string.shopping_keep_awake, preferences.keepAwake) { enabled -> update { it.keepAwake(enabled) } }
             Choice(R.string.shopping_haptics, preferences.haptics) { enabled -> update { it.haptics(enabled) } }
             onReminder?.let { TextButton(onClick = it) { Text(stringResource(R.string.reminder_title)) } }
-            HorizontalDivider()
-            Text(stringResource(R.string.shopping_favorites), style = MaterialTheme.typography.titleMedium)
-            if (preferences.portable.favorites.isEmpty()) Text(stringResource(R.string.shopping_no_favorites))
-            preferences.portable.favorites.forEach { favorite ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(favorite.name)
-                        favorite.quantity?.let { Text(io.theficos.usuals.ui.list.quantityText(it), style = MaterialTheme.typography.bodySmall) }
-                        favorite.store?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                    }
-                    TextButton(onClick = { onAdd(favorite) }) { Text(stringResource(R.string.capture_add)) }
-                    TextButton(onClick = { update { it.unpin(favorite.id) } }) { Text(stringResource(R.string.shopping_unpin)) }
-                }
-            }
             HorizontalDivider()
             Text(stringResource(R.string.shopping_aisle_order), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.shopping_aisle_for, store ?: stringResource(R.string.store_all)), style = MaterialTheme.typography.bodySmall)

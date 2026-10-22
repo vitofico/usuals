@@ -28,15 +28,16 @@ import io.theficos.usuals.smart.Category
 import java.text.NumberFormat
 
 @Composable
-internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Unit, onDismiss: () -> Unit, onRemove: (ItemId) -> Unit, onPin: (() -> Unit)? = null, onDefer: (() -> Unit)? = null, pinned: Boolean = false, onProductInfo: (() -> Unit)? = null) {
+internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Unit, onDismiss: () -> Unit, onRemove: (ItemId) -> Unit, onPin: (() -> Unit)? = null, onDefer: (() -> Unit)? = null, pinned: Boolean = false, onProductInfo: (() -> Unit)? = null, onTransfer: (() -> Unit)? = null) {
     val context = LocalContext.current
     var name by rememberSaveable(row.id.value) { mutableStateOf(row.rawName) }
-    var amount by rememberSaveable(row.id.value) { mutableStateOf(row.quantity?.let {
+    val initialAmount = remember(row.quantity, context.resources.configuration.locales[0]) { row.quantity?.let {
         NumberFormat.getNumberInstance(context.resources.configuration.locales[0]).apply {
             maximumFractionDigits = 3
             isGroupingUsed = false
         }.format(it.amount)
-    }.orEmpty()) }
+    }.orEmpty() }
+    var amount by rememberSaveable(row.id.value) { mutableStateOf(initialAmount) }
     var unit by rememberSaveable(row.id.value) { mutableStateOf(row.quantity?.unit ?: MeasureUnit.PIECE) }
     var category by rememberSaveable(row.id.value) { mutableStateOf(row.categoryOverride) }
     var store by rememberSaveable(row.id.value) { mutableStateOf(row.store.orEmpty()) }
@@ -49,6 +50,9 @@ internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Un
     val days = repeat.toIntOrNull()
     val validRepeat = repeat.isBlank() || (days != null && days > 0)
     val validName = name.any { it.isLetterOrDigit() }
+    val changed = !validAmount || !validRepeat || name.trim() != row.rawName || note.trim().ifBlank { null } != row.note ||
+        amount != initialAmount || unit != (row.quantity?.unit ?: MeasureUnit.PIECE) ||
+        category != row.categoryOverride || days != row.repeatEveryDays || store.trim().ifBlank { null } != row.store
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp).imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -58,6 +62,10 @@ internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Un
                 if (!row.checked) onDefer?.let { TextButton(onClick = it) { Text(stringResource(R.string.shopping_next_time)) } }
             }
             onProductInfo?.let { TextButton(onClick = it) { Text(stringResource(R.string.product_details)) } }
+            onTransfer?.let { transfer ->
+                TextButton(onClick = transfer, enabled = !busy && !changed) { Text(stringResource(R.string.transfer_action)) }
+                if (changed) Text(stringResource(R.string.transfer_save_first), style = MaterialTheme.typography.bodySmall)
+            }
             OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
                 label = { Text(stringResource(R.string.edit_name)) }, isError = !validName,
                 supportingText = { if (!validName) Text(stringResource(R.string.edit_name_invalid)) },

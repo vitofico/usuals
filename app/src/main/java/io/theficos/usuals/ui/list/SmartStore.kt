@@ -24,6 +24,7 @@ interface SmartStore {
     suspend fun addMerged(item: Item, usual: ItemMemory, version: ListVersion?): Boolean = addMerged(item, usual)
     fun suggestions(now: Long, history: HistorySnapshot, active: List<Item>): List<Suggestion> = emptyList()
     suspend fun chooseSuggestion(key: String, choice: SuggestionChoice, now: Long) = Unit
+    suspend fun muteSuggestion(key: String, scope: String) = Unit
     fun present(items: List<Item>, history: HistorySnapshot): Map<ItemId, ItemPresentation>
     fun autocomplete(query: String, history: HistorySnapshot, active: List<Item>): List<ItemMemory>
     suspend fun maintainRepeats(now: Long, observed: List<Item>, history: HistorySnapshot)

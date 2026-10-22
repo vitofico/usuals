@@ -162,6 +162,10 @@ data class ListActions(
     val onDismissProduct: () -> Unit = {},
     val onRefreshProduct: () -> Unit = {},
     val onSaveEdit: (ItemEdit) -> Unit = {},
+    val onTransferItem: (ListRow) -> Unit = {},
+    val onConfirmTransfer: (String, Boolean) -> Unit = { _, _ -> },
+    val onDismissTransfer: () -> Unit = {},
+    val onDismissTransferResult: () -> Unit = {},
     val onStoreFilter: (String?) -> Unit = {},
     val onConfirmScanName: (io.theficos.usuals.model.Gtin, String) -> Unit = { _, _ -> },
     val onSkipScanName: (io.theficos.usuals.model.Gtin) -> Unit = {},
@@ -187,6 +191,7 @@ data class ListActions(
     val onRepeatOffer: (Boolean) -> Unit = {},
     val onSuggestion: (String, SuggestionChoice) -> Unit = { _, _ -> },
     val onAutocomplete: (ItemMemory) -> Unit = {},
+    val onMuteAutocomplete: (ItemMemory) -> Unit = {},
     val onConfirmRemove: (ItemId) -> Unit = {},
     val onOpenScan: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
@@ -246,7 +251,7 @@ fun ListScreen(
     state.basket?.let { io.theficos.usuals.ui.basket.BasketOverviewSheet(it, vm::onDismissBasket) }
     if (toolsOpen) io.theficos.usuals.ui.shopping.ShoppingToolsSheet(state.personal, state.selectedStore,
         vm::updateShoppingTools, vm::onAddFavorite, { toolsOpen = false },
-        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } })
+        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } }, alreadyAdded = state.favoritesOnList)
     var microphoneAsked by rememberSaveable { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner, vm) {
@@ -317,7 +322,12 @@ fun ListScreen(
             onDismissProduct = vm::onDismissProduct,
             onRefreshProduct = vm::onRefreshProduct,
             onSaveEdit = vm::onSaveEdit,
+            onTransferItem = vm::onTransferItem,
+            onConfirmTransfer = vm::onConfirmTransfer,
+            onDismissTransfer = vm::onDismissTransfer,
+            onDismissTransferResult = vm::onDismissTransferResult,
             onAutocomplete = vm::onAutocomplete,
+            onMuteAutocomplete = vm::onMuteAutocomplete,
             onSuggestion = vm::onSuggestion,
             onQuantityHint = vm::onQuantityHint,
             onStoreFilter = vm::onStoreFilter,
@@ -396,12 +406,40 @@ fun ListContent(
     actions: ListActions,
     modifier: Modifier = Modifier,
 ) {
+    var repeatToMute by remember(state.directory.selected) { mutableStateOf<PendingSuggestionMute?>(null) }
+    repeatToMute?.let { pending ->
+        AlertDialog(onDismissRequest = { repeatToMute = null },
+            title = { Text(stringResource(R.string.memory_stop_repeat_title, pending.name)) },
+            text = { Text(stringResource(R.string.memory_stop_repeat_help)) },
+            confirmButton = { TextButton(onClick = {
+                repeatToMute = null
+                if (pending.memory != null) actions.onMuteAutocomplete(pending.memory)
+                else actions.onSuggestion(pending.key, SuggestionChoice.NEVER)
+            }) { Text(stringResource(R.string.memory_stop_suggesting)) } },
+            dismissButton = { TextButton(onClick = { repeatToMute = null }) { Text(stringResource(R.string.edit_cancel)) } })
+    }
     state.editing?.let { row ->
         EditItemSheet(row, state.busy, actions.onSaveEdit, actions.onDismissEdit,
             onRemove = { actions.onRemoveRow?.invoke(row) ?: actions.onConfirmRemove(it) },
             onPin = { actions.onPin(row) }, onDefer = { actions.onDefer(row) },
-            pinned = state.personal.portable.favorites.any { it.name == row.rawName && it.quantity == row.quantity },
-            onProductInfo = row.productGtin?.let { { actions.onProductInfo(row) } })
+            pinned = state.personal.portable.favorites.any { it.matches(row.rawName, row.quantity, row.gtin, row.store) },
+            onProductInfo = row.productGtin?.let { { actions.onProductInfo(row) } },
+            onTransfer = row.version?.takeIf { it.list == state.directory.selected }?.let { { actions.onTransferItem(row) } })
+    }
+    state.transfer?.let { request ->
+        TransferItemDialog(request.row, request.source, state.directory, state.busy,
+            actions.onConfirmTransfer, actions.onDismissTransfer)
+    }
+    state.transferResult?.let { outcome ->
+        AlertDialog(onDismissRequest = actions.onDismissTransferResult,
+            text = { Text(stringResource(when (outcome) {
+                io.theficos.usuals.model.ItemTransferResult.COPIED -> R.string.transfer_copied
+                io.theficos.usuals.model.ItemTransferResult.MOVED -> R.string.transfer_moved
+                io.theficos.usuals.model.ItemTransferResult.SOURCE_CHANGED -> R.string.transfer_source_changed
+                io.theficos.usuals.model.ItemTransferResult.DESTINATION_UNAVAILABLE -> R.string.transfer_destination_unavailable
+                io.theficos.usuals.model.ItemTransferResult.SOURCE_KEPT -> R.string.transfer_source_kept
+            })) },
+            confirmButton = { TextButton(onClick = actions.onDismissTransferResult) { Text(stringResource(android.R.string.ok)) } })
     }
     state.productInfo?.let { info ->
         io.theficos.usuals.ui.product.ProductInfoSheet(info, actions.onRefreshProduct,
@@ -412,7 +450,7 @@ fun ListContent(
         actions.onRecipeSource, actions.onRecipeMarkdown, actions.onReadRecipeMarkdown, actions.onRecipeMarkdownFile,
         actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure,
         state.personal.emojiQuantities, actions.onEmojiQuantities) }
-    if (state.productInfo == null && state.recipe == null && state.editing == null && state.mergeReview == null) state.scanNames.firstOrNull()?.let {
+    if (state.productInfo == null && state.recipe == null && state.editing == null && state.transfer == null && state.transferResult == null && state.mergeReview == null) state.scanNames.firstOrNull()?.let {
         ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.gtin, name) },
             { actions.onSkipScanName(it.gtin) }, actions.onSkipScanNames)
     }
@@ -432,10 +470,10 @@ fun ListContent(
                 actions = actions,
             )
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = actions.onShoppingMode) {
+                TextButton(onClick = actions.onShoppingMode, modifier = Modifier.weight(1f)) {
                     Text(stringResource(if (state.personal.mode) R.string.shopping_stop else R.string.shopping_start))
                 }
-                TextButton(onClick = actions.onShoppingTools) { Text(stringResource(R.string.shopping_tools)) }
+                TextButton(onClick = actions.onShoppingTools, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.memory_favorites_tools)) }
             }
             if (state.checked.isNotEmpty()) {
                 Button(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) }, enabled = !state.busy,
@@ -448,7 +486,11 @@ fun ListContent(
                 item { FilterChip(selected = state.selectedStore == null, onClick = { actions.onStoreFilter(null) }, label = { Text(stringResource(R.string.store_all)) }) }
                 items(state.stores) { store -> FilterChip(selected = store == state.selectedStore, onClick = { actions.onStoreFilter(store) }, label = { Text(store) }) }
             }
-            if (!state.personal.mode) SuggestionRow(state.suggestions, actions.onSuggestion)
+            if (!state.personal.mode && typing == null) SuggestionRow(state.suggestions) { key, choice ->
+                if (choice == SuggestionChoice.NEVER && key in state.repeatSuggestionKeys) {
+                    state.suggestions.firstOrNull { it.key == key }?.let { repeatToMute = PendingSuggestionMute(key, it.name) }
+                } else actions.onSuggestion(key, choice)
+            }
             val partial = (state.capture as? CaptureState.Listening)?.partial.orEmpty()
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (state.isEmpty && partial.isBlank()) {
@@ -470,7 +512,10 @@ fun ListContent(
                 }
             }
           }
-            CaptureBand(capture = state.capture, actions = actions, autocomplete = state.autocomplete)
+            CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
+                if (memory.key in state.repeatSuggestionKeys) repeatToMute = PendingSuggestionMute(memory.key, memory.name, memory)
+                else actions.onMuteAutocomplete(memory)
+            }), autocomplete = state.autocomplete)
         }
     }
 }
@@ -989,15 +1034,40 @@ private fun DraftField(
             }
         }
         if (choices.isNotEmpty()) {
-            LazyRow {
+            Text(stringResource(R.string.memory_from_history), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(choices, key = { it.key }) { choice ->
-                    val label = stringResource(R.string.autocomplete_add, choice.name)
-                    TextButton(onClick = { actions.onAutocomplete(choice) },
-                        modifier = Modifier.semantics { contentDescription = label }) { Text(choice.name) }
+                    HistoryCompletion(choice, actions)
                 }
             }
         }
 
+    }
+}
+
+private data class PendingSuggestionMute(val key: String, val name: String, val memory: ItemMemory? = null)
+
+@Composable
+private fun HistoryCompletion(choice: ItemMemory, actions: ListActions) {
+    var menuOpen by remember(choice.key) { mutableStateOf(false) }
+    val addLabel = stringResource(R.string.autocomplete_add, choice.name)
+    val muteLabel = stringResource(R.string.memory_mute_item, choice.name)
+    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { actions.onAutocomplete(choice) },
+                modifier = Modifier.semantics { contentDescription = addLabel }) { Text(choice.name) }
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Outlined.MoreVert, stringResource(R.string.memory_suggestion_options, choice.name))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.memory_dont_suggest)) },
+                        modifier = Modifier.semantics { contentDescription = muteLabel },
+                        onClick = { menuOpen = false; actions.onMuteAutocomplete(choice) })
+                }
+            }
+        }
     }
 }
 

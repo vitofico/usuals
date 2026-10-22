@@ -24,11 +24,13 @@ import io.theficos.usuals.ui.history.InMemoryPromptMemory
 import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.ItemVersion
+import io.theficos.usuals.model.ItemTransferResult
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.ShoppingSnapshot
 import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.parse.UtteranceParser
 import io.theficos.usuals.parse.toItem
+import io.theficos.usuals.ui.shopping.favoritesOnList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -92,6 +95,8 @@ class ListViewModel(
         val editingId: ItemId? = null,
         val editingSnapshot: ListRow? = null,
         val editingConflictId: String? = null,
+        val transfer: ItemTransferRequest? = null,
+        val transferResult: ItemTransferResult? = null,
         val finishedTrip: FinishedTrip? = null,
         val prompt: ListPrompt? = null,
         val busy: Boolean = false,
@@ -324,6 +329,42 @@ class ListViewModel(
         }
     }
 
+    fun onTransferItem(row: ListRow) {
+        if (screen.value.busy) return
+        val version = row.version ?: return
+        val source = directory.value.lists.firstOrNull { it.id == version.list && !it.archived } ?: return
+        if (version.id != row.id.value || directory.value.selected != source.id || shopping.value.listId != source.id) return
+        screen.update { it.copy(editingId = null, editingSnapshot = null, editingConflictId = null,
+            transfer = ItemTransferRequest(row, source), transferResult = null, prompt = null) }
+    }
+
+    fun onDismissTransfer() { if (!screen.value.busy) screen.update { it.copy(transfer = null) } }
+    fun onDismissTransferResult() { screen.update { it.copy(transferResult = null) } }
+
+    fun onConfirmTransfer(destination: String, move: Boolean) {
+        if (screen.value.busy) return
+        val request = screen.value.transfer ?: return
+        val version = request.row.version ?: return
+        val result = when {
+            directory.value.selected != request.source.id || shopping.value.listId != request.source.id -> ItemTransferResult.SOURCE_CHANGED
+            transferTargets(directory.value, request.source.id).none { it.id == destination } -> ItemTransferResult.DESTINATION_UNAVAILABLE
+            else -> null
+        }
+        if (result != null) {
+            screen.update { it.copy(transfer = null, transferResult = result) }
+            return
+        }
+        screen.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            try {
+                val outcome = withContext(background) { store.transfer(version, destination, move) }
+                screen.update { it.copy(transfer = null, transferResult = outcome) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(transfer = null, transferResult = ItemTransferResult.SOURCE_KEPT) } }
+            finally { screen.update { it.copy(busy = false) } }
+        }
+    }
+
     fun onStoreFilter(store: String?) { screen.update { it.copy(selectedStore = store) } }
     fun onSkipScanName(gtin: Gtin) {
         screen.update { it.copy(scanNames = it.scanNames.filterNot { offer -> offer.gtin == gtin }, lastScan = ScanResult(gtin, null)) }
@@ -453,7 +494,7 @@ class ListViewModel(
 
     private fun refreshOffers(rows: List<Item>, facts: HistorySnapshot) {
         val current = screen.value
-        if (current.busy || current.prompt != null || current.editingId != null || current.mergeReview != null || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
+        if (current.busy || current.prompt != null || current.editingId != null || current.transfer != null || current.transferResult != null || current.mergeReview != null || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
         val offer = smartStore.repeatOffers(rows, facts).firstOrNull { claimPrompt("repeat_offer:${it.key}", "v1") }
         if (offer != null) screen.update { it.copy(repeatOffer = offer) }
     }
@@ -525,8 +566,18 @@ class ListViewModel(
         }
     }
 
+    fun onMuteAutocomplete(memory: ItemMemory) {
+        if (screen.value.capture !is CaptureState.Typing || state.value.autocomplete.none { it.key == memory.key }) return
+        val scope = shopping.value.listId
+        viewModelScope.launch {
+            try { smartStore.muteSuggestion(memory.key, scope) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(historyError = true) } }
+        }
+    }
+
     private fun refreshPrompts(rows: List<Item>, history: HistorySnapshot) {
-        if (screen.value.busy || screen.value.prompt != null || screen.value.editingId != null ||
+        if (screen.value.busy || screen.value.prompt != null || screen.value.editingId != null || screen.value.transfer != null || screen.value.transferResult != null ||
             screen.value.mergeReview != null || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.isNotEmpty()) return
         val purchasedIds = history.purchases.map { it.id }.toSet()
         val current = rows.filterNot { it.id in purchasedIds }
@@ -786,7 +837,7 @@ class ListViewModel(
     fun onPin(row: ListRow) {
         val item = shopping.value.items.firstOrNull { it.id == row.id } ?: return
         updateShoppingTools { tools ->
-            val existing = tools.state.value.portable.favorites.firstOrNull { it.name == item.name && it.quantity == item.quantity && it.gtin == item.gtin?.value }
+            val existing = tools.state.value.portable.favorites.firstOrNull { it.matches(item.name, item.quantity, item.gtin, item.store) }
             if (existing != null) tools.unpin(existing.id) else tools.pin(io.theficos.usuals.ui.shopping.SavedShoppingItem(
                 UUID.randomUUID().toString(), item.name, item.quantity?.amount, item.quantity?.unit?.name, item.gtin?.value, item.store))
         }
@@ -883,6 +934,9 @@ class ListViewModel(
         fun isDeferred(item: Item) = !item.checked && deferred[item.id.value] == (item.version?.lifecycle ?: item.createdAt.toString())
         return Listed(snapshot, ordered, presentation, memory, ListUiState(
             personal = personal,
+            favoritesOnList = personal.portable.favoritesOnList(ordered, facts),
+            repeatSuggestionKeys = io.theficos.usuals.parse.ItemIdentity.preferences(facts.preferences,
+                facts.aliases.associate { it.fromKey to it.toKey }).filterValues { it.repeatEveryDays != null && !it.muted }.keys,
             deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id], memory) },
             suggestions = smartStore.suggestions(clock(), facts, ordered),
             stores = stores, selectedStore = filter,
@@ -911,6 +965,8 @@ class ListViewModel(
         historyError = screen.historyError,
         capture = screen.capture,
         editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id], listed.memory) },
+        transfer = screen.transfer?.takeIf { it.source.id == listed.snapshot.listId },
+        transferResult = screen.transferResult,
         autocomplete = matches,
     )
 

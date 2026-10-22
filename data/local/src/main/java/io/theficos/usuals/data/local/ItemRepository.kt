@@ -228,6 +228,118 @@ class ItemRepository(
             put("deletedAt", clock()); put("updatedAt", clock())
         } })
     }
+    /**
+     * Copies a reviewed row without deduplication. Two local lists commit together. With account lists,
+     * the original stays until the server confirms the exact destination commands and both rows are
+     * revalidated. An interrupted request can leave a copy, but never a queued premature deletion.
+     */
+    suspend fun transfer(source: ItemVersion, destination: String, move: Boolean, sync: suspend () -> Unit = {}): ItemTransferResult {
+        val prepared = database.withTransaction {
+            if (!transferSourceMatches(source)) return@withTransaction PreparedTransfer(ItemTransferResult.SOURCE_CHANGED)
+            val target = database.listDao().find(destination)
+            if (destination == source.list || target == null || !target.transferWritable())
+                return@withTransaction PreparedTransfer(ItemTransferResult.DESTINATION_UNAVAILABLE)
+            val sourceList = requireNotNull(database.listDao().find(source.list))
+            val sourceState = replica.projection(source.list)
+            val original = requireNotNull(dao.find(source.id, source.list))
+            val targetState = replica.projection(destination)
+            val now = clock()
+            val id = newId()
+            require(id != source.id && id !in targetState.rows)
+            val copied = original.copy(id = id, listId = destination, checked = false, checkedAt = null,
+                fromSuggestion = false, position = (dao.maxPosition(destination) ?: 0.0) + POSITION_STEP,
+                createdAt = now, updatedAt = now, deletedAt = null)
+            val facts = copied.facts(targetState.aliases)
+            val imported = replica.submitTo(destination, "import", buildJsonObject {
+                put("rows", JsonArray(listOf(buildJsonObject {
+                    put("id", id); put("facts", facts); put("expectedLifecycle", JsonNull)
+                    put("expected", buildJsonObject { }); put("archived", false); put("deleted", false)
+                })))
+            })
+            check(imported.outcome == Outcome.APPLIED)
+            val commands = mutableListOf(requireNotNull(imported.projection.seen[imported.projection.rows.getValue(id).lifecycle]))
+            val sourceKey = ItemIdentity.resolve(requireNotNull(sourceState.rows[source.id]?.facts?.string("key")), sourceState.aliases)
+            val targetKey = requireNotNull(facts.string("key"))
+            val sourceCategory = transferPreference(sourceState, sourceKey)?.second?.string("category")
+            val (preferenceKey, targetPreference) = transferPreference(targetState, targetKey) ?: (targetKey to null)
+            // A destination's explicit category belongs to its existing items too; keep that choice.
+            val category = targetPreference?.string("category") ?: sourceCategory
+            if (category != null && targetPreference?.string("category") == null) {
+                val preference = replica.submitTo(destination, "preference", buildJsonObject {
+                    put("key", preferenceKey); put("expected", targetPreference?.get("revision") ?: JsonNull)
+                    put("changes", buildJsonObject { put("category", category) })
+                })
+                check(preference.outcome == Outcome.APPLIED)
+                commands += requireNotNull(preference.projection.seen[preference.projection.preferences.getValue(preferenceKey).string("revision")])
+            }
+            if (!move) return@withTransaction PreparedTransfer(ItemTransferResult.COPIED)
+            if (!sourceList.synced && !target.synced) {
+                deleteTransferredSource(source)
+                PreparedTransfer(ItemTransferResult.MOVED)
+            } else PreparedTransfer(receipt = TransferReceipt(destination, id, facts, targetKey, category, commands, targetState.aliases, targetState.aliasRevision))
+        }
+        prepared.result?.let { return it }
+        val receipt = requireNotNull(prepared.receipt)
+        try { sync() }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { return ItemTransferResult.SOURCE_KEPT }
+        return database.withTransaction {
+            val target = database.listDao().find(receipt.list)
+            val confirmed = replica.confirmedProjection(receipt.list)
+            val optimistic = if (target != null) replica.projection(receipt.list) else null
+            fun containsCopy(state: Projection): Boolean {
+                val row = state.rows[receipt.id] ?: return false
+                return !row.archived && receipt.id !in state.tombstones && row.facts == receipt.facts &&
+                    state.aliases == receipt.aliases && state.aliasRevision == receipt.aliasRevision &&
+                    transferPreference(state, receipt.key)?.second?.string("category") == receipt.category
+            }
+            val accepted = target != null && target.transferWritable() && target.synced && target.created && confirmed != null &&
+                receipt.commands.all { confirmed.seen[it.id] == it && it.id !in confirmed.conflicts && it.id !in confirmed.rejected } &&
+                containsCopy(confirmed) && optimistic != null && containsCopy(optimistic)
+            if (!accepted || !transferSourceMatches(source)) return@withTransaction ItemTransferResult.SOURCE_KEPT
+            deleteTransferredSource(source)
+            ItemTransferResult.MOVED
+        }
+    }
+
+    private suspend fun transferSourceMatches(source: ItemVersion): Boolean {
+        if (listId() != source.list || database.listDao().find(source.list)?.transferWritable() != true) return false
+        val state = replica.projection(source.list)
+        val row = state.rows[source.id] ?: return false
+        if (row.archived || source.id in state.tombstones || row.lifecycle != source.lifecycle || row.revisions != source.fields ||
+            state.aliasRevision != source.aliasRevision || state.aliases != source.aliases ||
+            row.facts != Json.parseToJsonElement(source.facts).jsonObject) return false
+        val key = row.facts.string("key")?.let { ItemIdentity.resolve(it, state.aliases) } ?: return false
+        val currentPreferences = state.preferences.filterKeys { ItemIdentity.resolve(it, state.aliases) == key }.mapValues { it.value.string("revision") }
+        return currentPreferences == source.preferences.filterKeys { ItemIdentity.resolve(it, state.aliases) == key }
+    }
+
+    private suspend fun deleteTransferredSource(source: ItemVersion) {
+        val state = replica.projection(source.list)
+        val key = ItemIdentity.resolve(requireNotNull(state.rows[source.id]?.facts?.string("key")), state.aliases)
+        val preferenceKey = transferPreference(state, key)?.first
+        database.historyDao().preferences(source.list).firstOrNull { it.key == preferenceKey && it.repeatEveryDays != null }?.let {
+            database.historyDao().saveLocalPreferences(listOf(LocalPreferenceEntity(source.list, it.key, it.muted, clock())))
+        }
+        val result = replica.submitTo(source.list, "delete", buildJsonObject {
+            put("target", source.id)
+            put("expected", JsonObject(source.fields.mapValues { it.value?.let(::JsonPrimitive) ?: JsonNull } +
+                ("lifecycle" to (source.lifecycle?.let(::JsonPrimitive) ?: JsonNull))))
+            put("deletedAt", clock()); put("updatedAt", clock())
+        })
+        check(result.outcome == Outcome.APPLIED)
+    }
+
+    private fun transferPreference(state: Projection, key: String): Pair<String, JsonObject>? = state.preferences.entries
+        .filter { ItemIdentity.resolve(it.key, state.aliases) == key }
+        .sortedWith(compareBy<Map.Entry<String, JsonObject>> { it.key != key }.thenBy { it.key })
+        .firstOrNull()?.let { it.key to it.value }
+
+    private fun ListEntity.transferWritable() = !archived && !stale && (!synced || role == null || role in setOf("owner", "editor"))
+    private data class PreparedTransfer(val result: ItemTransferResult? = null, val receipt: TransferReceipt? = null)
+    private data class TransferReceipt(val list: String, val id: String, val facts: JsonObject, val key: String,
+        val category: String?, val commands: List<Intent>, val aliases: Map<String, String>, val aliasRevision: String?)
+
     suspend fun reap(olderThanMillis: Long = FORTNIGHT_MILLIS): Int = replica.reap(clock() - olderThanMillis)
     suspend fun nextPosition(): Double = (dao.maxPosition(listId()) ?: 0.0) + POSITION_STEP
 

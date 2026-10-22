@@ -137,7 +137,7 @@ object ServiceLocator {
     val promptMemory: PreferencePromptMemory by resettable { PreferencePromptMemory(context) }
 
     /** What the list screen sees. See [RepositoryItemStore]. */
-    val itemStore: ItemStore by resettable { RepositoryItemStore(itemRepository) }
+    val itemStore: ItemStore by resettable { RepositoryItemStore(itemRepository) { listSync.sync(); Unit } }
 
     /** Where the endpoint, the model name and the "stays on my network" flag live. */
     val providerSettingsStore: ProviderSettingsStore by resettable {

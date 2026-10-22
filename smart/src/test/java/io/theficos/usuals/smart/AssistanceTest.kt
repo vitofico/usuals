@@ -44,6 +44,13 @@ class AssistanceTest {
         assertThat(matcher.find("leche entera", spanish, emptyList())!!.key).isEqualTo("leche")
     }
 
+    @Test fun `hidden history stops similarity suggestions while active rows still ask about duplicates`() {
+        val matcher = SimilarItems(HistoryRanker())
+        val history = HistorySnapshot(purchases = listOf(purchase(1, null)), preferences = listOf(ItemPreference("milk", muted = true)))
+        assertThat(matcher.find("whole milk", history, emptyList())).isNull()
+        assertThat(matcher.find("whole milk", history, listOf(item()))!!.key).isEqualTo("milk")
+    }
+
     @Test fun `hints from history grouped once match a per item scan`() {
         // The scan every row used to run, kept here as the reference.
         fun scanned(key: String, history: HistorySnapshot): Quantity? {

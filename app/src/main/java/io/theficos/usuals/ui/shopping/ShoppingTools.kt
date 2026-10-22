@@ -3,6 +3,10 @@ package io.theficos.usuals.ui.shopping
 import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.MeasureUnit
 import io.theficos.usuals.model.Quantity
+import io.theficos.usuals.model.Item
+import io.theficos.usuals.model.HistorySnapshot
+import io.theficos.usuals.parse.ItemIdentity
+import io.theficos.usuals.parse.Normalizer
 import io.theficos.usuals.smart.Category
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +24,8 @@ data class SavedShoppingItem(
     val store: String? = null,
 ) {
     val quantity: Quantity? get() = amount?.let { Quantity(it, MeasureUnit.valueOf(requireNotNull(unit))) }
+    fun matches(name: String, quantity: Quantity?, gtin: Gtin?, store: String?): Boolean =
+        this.name == name && this.quantity == quantity && this.gtin == gtin?.value && this.store == store
     fun validate() {
         require(id.isNotBlank() && id.length <= 100 && name.any { it.isLetterOrDigit() } && name.length <= 500)
         require((amount == null) == (unit == null))
@@ -28,6 +34,15 @@ data class SavedShoppingItem(
         gtin?.let { require(Gtin.parse(it) != null) }
         require(store == null || store.length <= 80)
     }
+}
+
+/** Mirrors add-again deduplication, including aliases and rows hidden by a store filter. */
+fun PortableShoppingPreferences.favoritesOnList(items: List<Item>, history: HistorySnapshot): Set<String> {
+    val aliases = history.aliases.associate { it.fromKey to it.toKey }
+    val present = items.filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toSet()
+    return favorites.filter { item ->
+        ItemIdentity.key(item.name, Normalizer.normalize(item.name), item.gtin?.let(Gtin::parse), aliases) in present
+    }.map { it.id }.toSet()
 }
 
 @Serializable

@@ -94,6 +94,18 @@ class SmartTest {
         assertThat(HistoryRanker().autocomplete("mi", history, setOf("milk")).single().name).isEqualTo("mint")
         assertThat(HistoryRanker().autocomplete("", history)).isEmpty()
     }
+
+    @Test fun `autocomplete hides muted aliases without hiding snoozed purchases or changing history`() {
+        val history = HistorySnapshot(purchases = listOf(
+            purchase("a", "whole milk", day), purchase("b", "mint", day), purchase("c", "millet", day),
+        ), aliases = listOf(ItemAlias("whole milk", "milk")), preferences = listOf(
+            ItemPreference("whole milk", muted = true), ItemPreference("mint", snoozedUntil = 100 * day),
+        ))
+        assertThat(HistoryRanker().autocomplete("mi", history).map { it.name }).containsExactly("millet", "mint").inOrder()
+        assertThat(HistoryRanker().memories(history).map { it.name }).contains("whole milk")
+        val canonicalOverride = history.copy(preferences = history.preferences + ItemPreference("milk"))
+        assertThat(HistoryRanker().autocomplete("milk", canonicalOverride).single().name).isEqualTo("whole milk")
+    }
     @Test fun `removing a repeat snoozes it until another shop closes`() {
         val history = HistorySnapshot(trips = listOf(Trip("first", 0)),
             purchases = listOf(purchase("milk", "milk", 0)),

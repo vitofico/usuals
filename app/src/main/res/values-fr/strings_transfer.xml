@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Déplacer ou copier un article</string>
+    <string name="transfer_action">Déplacer ou copier dans une autre liste</string>
+    <string name="transfer_from">« %1$s » dans « %2$s »</string>
+    <string name="transfer_destination">Liste de destination</string>
+    <string name="transfer_no_targets">Créez ou restaurez une autre liste pour déplacer ou copier cet article.</string>
+    <string name="transfer_move">Déplacer</string>
+    <string name="transfer_copy">Copier</string>
+    <string name="transfer_move_hint">L’original est supprimé uniquement après confirmation de la destination. Les listes d’un compte nécessitent une connexion pour terminer le déplacement.</string>
+    <string name="transfer_copy_hint">Conserver l’original dans cette liste.</string>
+    <string name="transfer_details">Ajoute un nouvel article non coché avec ses détails. La catégorie déjà choisie à destination est prioritaire. Les favoris et les répétitions restent dans leurs listes.</string>
+    <string name="transfer_move_question">Déplacer « %1$s » de « %2$s » vers « %3$s » ?</string>
+    <string name="transfer_copy_question">Copier « %1$s » de « %2$s » vers « %3$s » ?</string>
+    <string name="transfer_unnamed_list">Liste de courses</string>
+    <string name="transfer_copied">Article copié</string>
+    <string name="transfer_moved">Article déplacé</string>
+    <string name="transfer_source_changed">L’article ou la liste a changé. Rouvrez l’article pour réessayer.</string>
+    <string name="transfer_destination_unavailable">Cette destination n’est plus disponible. Choisissez une autre liste.</string>
+    <string name="transfer_source_kept">L’original a été conservé car le transfert n’a pas pu être confirmé. Une copie peut rester dans la liste de destination.</string>
+    <string name="transfer_save_first">Enregistrez vos modifications avant de déplacer ou de copier cet article.</string>
+</resources>

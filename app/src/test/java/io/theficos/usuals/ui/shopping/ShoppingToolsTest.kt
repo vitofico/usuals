@@ -4,8 +4,33 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import io.theficos.usuals.smart.Category
+import io.theficos.usuals.model.*
 
 class ShoppingToolsTest {
+    @Test fun `favourites already open follow canonical identity while checked items can be added again`() {
+        val gtin = requireNotNull(Gtin.parse("4006381333931"))
+        val preferences = PortableShoppingPreferences(favorites = listOf(
+            SavedShoppingItem("milk", "whole milk", 2.0, "LITRE", store = "Other shop"),
+            SavedShoppingItem("soap", gtin.value, gtin = gtin.value),
+            SavedShoppingItem("bread", "bread"),
+        ))
+        val rows = listOf(
+            io.theficos.usuals.ui.list.item("a", "milk", Quantity.pieces(1)).copy(store = "Market"),
+            io.theficos.usuals.ui.list.item("b", "soap").copy(gtin = gtin),
+            io.theficos.usuals.ui.list.item("c", "bread", checked = true),
+        )
+        val history = HistorySnapshot(aliases = listOf(ItemAlias("whole milk", "milk"), ItemAlias("gtin:${gtin.value}", "soap")))
+        assertThat(preferences.favoritesOnList(rows, history)).containsExactly("milk", "soap")
+    }
+
+    @Test fun `favourite templates distinguish the saved barcode quantity and shop`() {
+        val gtin = requireNotNull(Gtin.parse("4006381333931"))
+        val favorite = SavedShoppingItem("milk", "milk", 2.0, "LITRE", gtin.value, "Market")
+        assertThat(favorite.matches("milk", Quantity(2.0, MeasureUnit.LITRE), gtin, "Market")).isTrue()
+        assertThat(favorite.matches("milk", Quantity(1.0, MeasureUnit.LITRE), gtin, "Market")).isFalse()
+        assertThat(favorite.matches("milk", favorite.quantity, null, "Market")).isFalse()
+        assertThat(favorite.matches("milk", favorite.quantity, gtin, "Other shop")).isFalse()
+    }
     @Test fun `personal choices survive reload without changing household facts`() {
         var disk: String? = null
         val store = ShoppingToolsStore(write = { disk = it })

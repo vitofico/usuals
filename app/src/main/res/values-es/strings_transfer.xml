@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Mover o copiar producto</string>
+    <string name="transfer_action">Mover o copiar a otra lista</string>
+    <string name="transfer_from">«%1$s» en «%2$s»</string>
+    <string name="transfer_destination">Lista de destino</string>
+    <string name="transfer_no_targets">Crea o restaura otra lista para mover o copiar este producto.</string>
+    <string name="transfer_move">Mover</string>
+    <string name="transfer_copy">Copiar</string>
+    <string name="transfer_move_hint">El original solo se elimina tras confirmar el destino. Las listas de una cuenta necesitan conexión para completar el traslado.</string>
+    <string name="transfer_copy_hint">Conservar el original en esta lista.</string>
+    <string name="transfer_details">Añade un producto nuevo sin marcar, con sus datos. La categoría ya elegida en el destino tiene prioridad. Los favoritos y las repeticiones se quedan en sus listas.</string>
+    <string name="transfer_move_question">¿Mover «%1$s» de «%2$s» a «%3$s»?</string>
+    <string name="transfer_copy_question">¿Copiar «%1$s» de «%2$s» a «%3$s»?</string>
+    <string name="transfer_unnamed_list">Lista de la compra</string>
+    <string name="transfer_copied">Producto copiado</string>
+    <string name="transfer_moved">Producto movido</string>
+    <string name="transfer_source_changed">El producto o la lista han cambiado. Abre el producto de nuevo para intentarlo.</string>
+    <string name="transfer_destination_unavailable">El destino ya no está disponible. Elige otra lista.</string>
+    <string name="transfer_source_kept">Se ha conservado el original porque no se pudo confirmar la transferencia. Puede quedar una copia en la lista de destino.</string>
+    <string name="transfer_save_first">Guarda los cambios antes de mover o copiar este producto.</string>
+</resources>

@@ -6,6 +6,5 @@
     <string name="suggestion_staple">Bought in at least half your recent shops</string>
     <string name="suggestion_add">Add</string>
     <string name="suggestion_not_now">Not now</string>
-    <string name="suggestion_never">Never</string>
     <string name="suggestion_action">%1$s %2$s</string>
 </resources>

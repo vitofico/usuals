@@ -15,8 +15,11 @@ class HistoryRanker {
         }.sortedBy { it.key }
     }
 
-    fun autocomplete(query: String, history: HistorySnapshot, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> =
-        autocomplete(query, memories(history), excluded, limit)
+    fun autocomplete(query: String, history: HistorySnapshot, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> {
+        val aliases = history.aliases.associate { it.fromKey to it.toKey }
+        val muted = ItemIdentity.preferences(history.preferences, aliases).filterValues { it.muted }.keys
+        return autocomplete(query, memories(history), excluded + muted, limit)
+    }
 
     /** Takes [memories] already grouped, so a caller can reuse one grouping of history across keystrokes. */
     fun autocomplete(query: String, memories: List<ItemMemory>, excluded: Set<String> = emptySet(), limit: Int = 5): List<ItemMemory> {

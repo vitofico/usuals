@@ -51,6 +51,21 @@ The web editor offers the same choices from its Appearance control.
 | **Move through the shop** | Use a focused shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
+On Android, **Favourites** in **Shopping tools** are personal shortcuts for items
+you want to add again. Save an item from its editor, then tap it in Favourites
+when you need it. Items already on the current list are marked. Favourites do
+not add items automatically.
+
+As you type, Usuals offers matching names from the current list's purchase
+history. Use a suggestion's menu and **Don't suggest again** to hide it from
+typing suggestions and the suggestion cards on this phone. You can still add the item yourself.
+If it has a repeat rule, Usuals asks before stopping that rule too.
+
+Open an item's editor to **Move or copy to another list**. Choose an active list
+and whether to keep the original. The new row is unchecked and keeps its item
+details. Moving between account lists confirms the destination first; if the
+connection or either list changes, the original stays available.
+
 Only your explicit repeat rules add items automatically. Inferred interval
 predictions stay disabled until replay over real household history beats both
 baselines. Staples, purchase memory and explicit repeats work now.

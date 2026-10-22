@@ -7,10 +7,10 @@
     <string name="shopping_keep_awake">Keep screen awake while shopping</string>
     <string name="shopping_haptics">Vibrate when checking an item</string>
     <string name="shopping_personal_help">These choices stay on this device. Favourites and store layouts are included in your data exports; they are not shared with anyone.</string>
-    <string name="shopping_favorites">Pinned essentials</string>
-    <string name="shopping_pin">Pin as an essential</string>
-    <string name="shopping_unpin">Unpin</string>
-    <string name="shopping_no_favorites">Long-press an item and pin it here for quick access.</string>
+    <string name="shopping_favorites">Favourites</string>
+    <string name="shopping_pin">Add to favourites</string>
+    <string name="shopping_unpin">Remove favourite</string>
+    <string name="shopping_no_favorites">Long-press an item and add it to favourites for quick access.</string>
     <string name="shopping_aisle_order">Aisle order</string>
     <string name="shopping_aisle_for">Category order for %1$s</string>
     <string name="shopping_up">Move %1$s up</string>

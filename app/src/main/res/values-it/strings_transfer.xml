@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Sposta o copia articolo</string>
+    <string name="transfer_action">Sposta o copia in un’altra lista</string>
+    <string name="transfer_from">«%1$s» in «%2$s»</string>
+    <string name="transfer_destination">Lista di destinazione</string>
+    <string name="transfer_no_targets">Crea o ripristina un’altra lista per spostare o copiare questo articolo.</string>
+    <string name="transfer_move">Sposta</string>
+    <string name="transfer_copy">Copia</string>
+    <string name="transfer_move_hint">L’originale viene rimosso solo dopo la conferma della destinazione. Le liste di un account richiedono una connessione per completare lo spostamento.</string>
+    <string name="transfer_copy_hint">Conserva l’originale in questa lista.</string>
+    <string name="transfer_details">Aggiunge un nuovo articolo non spuntato con i suoi dettagli. La categoria già scelta nella destinazione ha la precedenza. Preferiti e ripetizioni restano nelle rispettive liste.</string>
+    <string name="transfer_move_question">Spostare «%1$s» da «%2$s» a «%3$s»?</string>
+    <string name="transfer_copy_question">Copiare «%1$s» da «%2$s» a «%3$s»?</string>
+    <string name="transfer_unnamed_list">Lista della spesa</string>
+    <string name="transfer_copied">Articolo copiato</string>
+    <string name="transfer_moved">Articolo spostato</string>
+    <string name="transfer_source_changed">L’articolo o la lista sono cambiati. Riapri l’articolo per riprovare.</string>
+    <string name="transfer_destination_unavailable">La destinazione non è più disponibile. Scegli un’altra lista.</string>
+    <string name="transfer_source_kept">L’originale è stato conservato perché il trasferimento non è stato confermato. Potrebbe rimanere una copia nella lista di destinazione.</string>
+    <string name="transfer_save_first">Salva le modifiche prima di spostare o copiare questo articolo.</string>
+</resources>

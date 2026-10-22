@@ -45,6 +45,8 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     }
     suspend fun projection(): Projection = projection(database.listDao().selected())
     suspend fun projection(scope: String): Projection = stored(scope, optimistic = true) ?: seed(scope)
+    /** A server-confirmed copy, excluding pending intents. */
+    suspend fun confirmedProjection(scope: String): Projection? = stored(scope, optimistic = false)
 
     suspend fun submit(kind: String, makePayload: suspend (Projection, String) -> JsonObject): Reduction = database.withTransaction {
         val scope = database.listDao().selected()

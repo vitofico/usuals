@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.Flow
  * in `ui/list` does, which matters while the modules are being written in
  * parallel.
  */
-class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
+class RepositoryItemStore(private val repository: ItemRepository, private val sync: suspend () -> Unit = {}) : ItemStore {
 
     override fun items(): Flow<List<Item>> = repository.observeItems()
 
@@ -42,6 +42,9 @@ class RepositoryItemStore(private val repository: ItemRepository) : ItemStore {
             )
         })
     }
+
+    override suspend fun transfer(source: io.theficos.usuals.model.ItemVersion, destination: String, move: Boolean) =
+        repository.transfer(source, destination, move, sync)
 
     override suspend fun setChecked(id: ItemId, checked: Boolean) =
         repository.setChecked(id, checked)

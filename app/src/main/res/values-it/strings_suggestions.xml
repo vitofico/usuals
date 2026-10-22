@@ -6,6 +6,5 @@
     <string name="suggestion_staple">Acquistato in almeno metà delle ultime spese</string>
     <string name="suggestion_add">Aggiungi</string>
     <string name="suggestion_not_now">Non ora</string>
-    <string name="suggestion_never">Mai</string>
     <string name="suggestion_action">%1$s %2$s</string>
 </resources>

@@ -92,7 +92,7 @@ class RepositorySmartStore(
                 val candidate = suggestions(now, facts, items.items()).firstOrNull { it.key == key }
                     ?: return@transaction
                 val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-                val pref = ItemIdentity.preferences(facts.preferences, aliases)[key]?.copy(key = key) ?: ItemPreference(key)
+                val pref = ItemIdentity.preferences(facts.preferences, aliases)[key] ?: ItemPreference(key)
                 when (choice) {
                     SuggestionChoice.ADD -> items.add(ParsedItem(candidate.name), fromSuggestion = true)
                     SuggestionChoice.NOT_NOW -> history.savePreference(pref.copy(snoozedUntil = now))
@@ -100,6 +100,20 @@ class RepositorySmartStore(
                 }
             }
         }
+    }
+
+    override suspend fun muteSuggestion(key: String, scope: String) {
+        maintenance.withLock { items.transaction {
+            require(items.currentListId() == scope)
+            val facts = history.snapshot()
+            val aliases = facts.aliases.associate { it.fromKey to it.toKey }
+            val canonical = ItemIdentity.resolve(key, aliases)
+            if (ranker.memories(facts).none { it.key == canonical }) return@transaction
+            // Keep an aliased rule's stored key so this local choice never creates a shared rule.
+            val pref = ItemIdentity.preferences(facts.preferences, aliases)[canonical]
+                ?: ItemPreference(canonical)
+            history.savePreference(pref.copy(muted = true))
+        } }
     }
 
     override fun present(items: List<Item>, history: HistorySnapshot): Map<ItemId, ItemPresentation> {
@@ -123,7 +137,8 @@ class RepositorySmartStore(
         val aliases = history.aliases.associate { it.fromKey to it.toKey }
         val memories = remembered?.takeIf { it.first === history }?.second
             ?: ranker.memories(history).also { remembered = history to it }
-        return ranker.autocomplete(query, memories, active.filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toSet())
+        val muted = ItemIdentity.preferences(history.preferences, aliases).filterValues { it.muted }.keys
+        return ranker.autocomplete(query, memories, active.filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toSet() + muted)
     }
 
     override suspend fun maintainRepeats(now: Long, observed: List<Item>, history: HistorySnapshot) {

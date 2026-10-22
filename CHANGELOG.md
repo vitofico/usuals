@@ -1,5 +1,17 @@
 # Changelog
 
+## Reuse everyday items
+
+- Favourites explain how to save an item and add it again from Shopping tools.
+  Items already on the list are marked so adding them again does not quietly
+  increase their quantity.
+- Suggestions while typing come from this list's purchase history. Choose
+  **Don't suggest again** to hide an item from both typing suggestions and the
+  suggestion cards. You can still type it yourself.
+- Move or copy an item to another active list from its edit sheet. Copies arrive
+  unchecked, with their quantity, note, store, barcode and category. Moving
+  keeps the original whenever the destination cannot be confirmed.
+
 ## Scans ask before adding
 
 - A scanned barcode no longer lands on the list as bare digits. The scanner
