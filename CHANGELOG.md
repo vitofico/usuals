@@ -1,5 +1,22 @@
 # Changelog
 
+## Long lists stay fast
+
+- Typing in the add field no longer recomputes the whole list on every key.
+  Rows and suggestions are worked out in the background, and quantity hints
+  read each item's purchases once instead of scanning the whole history per
+  item.
+- Rows on the list redraw only when they change.
+- Rebuying a past shop, adding due repeats, adding several items at once and
+  restoring a backup each rewrite the list once instead of once per item.
+- History draws a big shop row by row as you scroll, and searching it no longer
+  rebuilds its matcher for every purchase.
+- Sync skips intents the server already settled, prunes them from the outbox,
+  skips re-applying a list it just pushed, and keeps its status checks off the
+  main thread.
+- The relay server checks lists it produced itself by their size bounds only,
+  and the strict JSON check compiles its number pattern once.
+
 ## Background import, ticked items, faster clearing
 
 - Importing a long note no longer freezes the app. The import sheet closes as
