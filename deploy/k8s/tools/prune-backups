@@ -1,0 +1,22 @@
+#!/bin/sh
+# Keeps the newest USUALS_KEEP_BASES base backups and the archived WAL from the oldest kept base's start on.
+# Runs only after a fresh base has been verified; older bases and WAL are removed only once every kept base verifies.
+set -eu
+umask 077
+keep="${USUALS_KEEP_BASES:-}"
+case "$keep" in ''|*[!0-9]*|0) echo 'USUALS_KEEP_BASES must be a positive integer' >&2; exit 1;; esac
+base="${USUALS_BASE_DIRECTORY:-/backup/base}"
+wal="${USUALS_WAL_DIRECTORY:-/backup/wal}"
+# Completed bases only: staging folders and the lock start with a dot.
+bases="$(ls "$base" | grep -E '^[0-9]{8}T[0-9]{6}Z$' | sort || true)"
+count="$(printf '%s\n' "$bases" | grep -c . || true)"
+[ "$count" -gt "$keep" ] || exit 0
+kept="$(printf '%s\n' "$bases" | tail -n "$keep")"
+oldest="$(printf '%s\n' "$kept" | head -n 1)"
+start="$(sed -n 's/^START WAL LOCATION: .*(file \([0-9A-F]\{24\}\))$/\1/p' "$base/$oldest/backup_label")"
+[ -n "$start" ]
+for name in $kept; do pg_verifybackup --quiet "$base/$name"; done
+for name in $(printf '%s\n' "$bases" | head -n "$((count - keep))"); do rm -rf "${base:?}/$name"; done
+pg_archivecleanup -x .gz "$wal" "$start"
+sync
+echo "kept $keep base backups from $oldest; archived WAL from $start"

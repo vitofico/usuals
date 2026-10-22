@@ -87,9 +87,12 @@ Do not claim the target until a post-base synthetic commit is recovered from
 the encrypted off-cluster archive and its measured age is below 15 minutes.
 Borg credentials and encrypted repository configuration are operator-owned.
 
-No automatic pruning ships. Plan a 30-day recovery window after verifying
-off-site coverage: retain the oldest necessary base plus all WAL/timelines through
-the window, prune complete sets only, and test `pg_archivecleanup` dry runs before
+Pruning is off by default. Setting `USUALS_KEEP_BASES` to N on the base-backup
+CronJob turns it on: after each verified base, `prune-backups` re-verifies the
+newest N bases, then removes older bases and the archived WAL before the oldest
+kept base's start segment (`pg_archivecleanup`). Any failure removes nothing.
+Bases taken by hand count toward N. Size N to the recovery window you need after
+verifying off-site coverage, and test `pg_archivecleanup -n` dry runs before
 changing host retention. Do not delete live `pg_wal`. A WAL failure retains live
 WAL until disk fills, so disk/archiver alerts are an availability requirement.
 
