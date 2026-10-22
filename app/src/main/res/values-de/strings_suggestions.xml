@@ -6,6 +6,5 @@
     <string name="suggestion_staple">Bei mindestens der Hälfte deiner letzten Einkäufe gekauft</string>
     <string name="suggestion_add">Hinzufügen</string>
     <string name="suggestion_not_now">Jetzt nicht</string>
-    <string name="suggestion_never">Nie</string>
     <string name="suggestion_action">%1$s %2$s</string>
 </resources>

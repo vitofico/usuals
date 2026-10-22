@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Move or copy item</string>
+    <string name="transfer_action">Move or copy to another list</string>
+    <string name="transfer_from">“%1$s” in “%2$s”</string>
+    <string name="transfer_destination">Destination list</string>
+    <string name="transfer_no_targets">Create or restore another list to move or copy this item.</string>
+    <string name="transfer_move">Move</string>
+    <string name="transfer_copy">Copy</string>
+    <string name="transfer_move_hint">Remove the original only after the destination is confirmed. Account lists need a connection to complete a move.</string>
+    <string name="transfer_copy_hint">Keep the original in this list.</string>
+    <string name="transfer_details">Adds a new unchecked item with its details. An existing destination category takes priority. Favorites and repeat settings stay with their lists.</string>
+    <string name="transfer_move_question">Move “%1$s” from “%2$s” to “%3$s”?</string>
+    <string name="transfer_copy_question">Copy “%1$s” from “%2$s” to “%3$s”?</string>
+    <string name="transfer_unnamed_list">Shopping list</string>
+    <string name="transfer_copied">Item copied</string>
+    <string name="transfer_moved">Item moved</string>
+    <string name="transfer_source_changed">This item or list changed. Open the item again to try.</string>
+    <string name="transfer_destination_unavailable">This destination is no longer available. Choose another list.</string>
+    <string name="transfer_source_kept">The original was kept because the transfer could not be confirmed. A copy may remain in the destination list.</string>
+    <string name="transfer_save_first">Save your changes before moving or copying this item.</string>
+</resources>

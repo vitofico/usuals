@@ -10,7 +10,8 @@ class SimilarItems(private val ranker: HistoryRanker) {
     fun find(name: String, history: HistorySnapshot, active: List<Item>): ItemMemory? {
         val aliases = history.aliases.associate { it.fromKey to it.toKey }
         val source = ItemIdentity.resolve(Normalizer.normalize(name), aliases)
-        val memories = ranker.memories(history) + active.map {
+        val preferences = ItemIdentity.preferences(history.preferences, aliases)
+        val memories = ranker.memories(history).filter { preferences[it.key]?.muted != true } + active.map {
             ItemMemory(ItemIdentity.key(it, aliases), it.name, 0, it.updatedAt)
         }
         if (Normalizer.normalize(name) in aliases || memories.any { it.key == source }) return null

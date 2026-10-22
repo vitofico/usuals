@@ -212,6 +212,81 @@ class RepositorySmartStoreTest {
         assertThat(smart.suggestions(now, history.snapshot(), items.items()).map { it.name }).doesNotContain("bread")
     }
 
+    @Test fun `typing can mute a memory outside the six cards and manual favourite adds still work`() = runTest {
+        history.importPast((1..9).map { ParsedItem("item $it") }, now - RepeatPlanner.DAY_MILLIS)
+        val scope = items.currentListId()
+        assertThat(smart.suggestions(now, history.snapshot(), items.items()).map { it.key }).doesNotContain("item 9")
+        assertThat(smart.autocomplete("item 9", history.snapshot(), items.items()).single().key).isEqualTo("item 9")
+        smart.muteSuggestion("item 9", scope)
+        val facts = history.snapshot()
+        assertThat(facts.preferences.single().muted).isTrue()
+        assertThat(smart.autocomplete("item 9", facts, items.items())).isEmpty()
+        assertThat(facts.purchases).hasSize(9)
+        assertThat(smart.addAgain(listOf(io.theficos.usuals.ui.shopping.SavedShoppingItem("saved", "item 9")), scope)).isEqualTo(1)
+        assertThat(items.items().single().name).isEqualTo("item 9")
+        assertThat(items.items().single().fromSuggestion).isFalse()
+        assertThat(history.snapshot().preferences.single().muted).isTrue()
+    }
+
+    @Test fun `typing mute resolves barcode aliases preserves other choices and survives adapter recreation`() = runTest {
+        val gtin = requireNotNull(Gtin.parse("4006381333931"))
+        val scanned = items.add(ParsedItem(gtin.value), gtin = gtin)
+        items.setChecked(scanned, true)
+        history.finish()
+        history.saveAlias(ItemAlias("gtin:${gtin.value}", "milk"))
+        history.savePreference(ItemPreference("milk", category = "DAIRY", repeatEveryDays = 21, snoozedUntil = now))
+        smart.muteSuggestion("gtin:${gtin.value}", items.currentListId())
+        assertThat(history.snapshot().preferences.single()).isEqualTo(
+            ItemPreference("milk", category = "DAIRY", muted = true, repeatEveryDays = 21, snoozedUntil = now))
+        val reloaded = RepositorySmartStore(items, history, CategoryClassifier(InputLanguages.available), HistoryRanker(), RepeatPlanner())
+        assertThat(reloaded.autocomplete(gtin.value, history.snapshot(), emptyList())).isEmpty()
+        assertThat(reloaded.suggestions(now, history.snapshot(), emptyList())).isEmpty()
+        items.add(ParsedItem("milk"))
+        assertThat(items.items().single().name).isEqualTo("milk")
+        assertThat(history.snapshot().purchases).hasSize(1)
+    }
+
+    @Test fun `a stale typing mute cannot affect another list and unknown keys are ignored`() = runTest {
+        history.importPast(listOf(ParsedItem("milk")), now - RepeatPlanner.DAY_MILLIS)
+        val previousScope = items.currentListId()
+        smart.muteSuggestion("unseen", previousScope)
+        assertThat(history.snapshot().preferences).isEmpty()
+        smart.muteSuggestion("milk", previousScope)
+        ListRepository(db).create("Other list")
+        history.importPast(listOf(ParsedItem("milk")), now - RepeatPlanner.DAY_MILLIS)
+        assertThat(runCatching { smart.muteSuggestion("milk", previousScope) }.isFailure).isTrue()
+        assertThat(history.snapshot().preferences).isEmpty()
+        assertThat(smart.autocomplete("mi", history.snapshot(), emptyList()).single().name).isEqualTo("milk")
+    }
+
+    @Test fun `muting and snoozing aliased memories never rewrite shared preference rules or queue intents`() = runTest {
+        history.importPast(listOf(ParsedItem("milk")), now - RepeatPlanner.DAY_MILLIS)
+        history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21))
+        history.saveAlias(ItemAlias("whole milk", "milk"))
+        val scope = items.currentListId()
+        val replica = LocalReplica(db)
+        val shared = replica.projection(scope)
+        val outbox = db.syncDao().pending(scope)
+
+        smart.muteSuggestion("milk", scope)
+        assertThat(history.snapshot().preferences.single()).isEqualTo(
+            ItemPreference("whole milk", category = "DAIRY", muted = true, repeatEveryDays = 21))
+        assertThat(replica.projection(scope)).isEqualTo(shared)
+        assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)
+
+        history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21))
+        smart.chooseSuggestion("milk", SuggestionChoice.NOT_NOW, now)
+        assertThat(history.snapshot().preferences.single().snoozedUntil).isEqualTo(now)
+        assertThat(replica.projection(scope)).isEqualTo(shared)
+        assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)
+
+        history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21))
+        smart.chooseSuggestion("milk", SuggestionChoice.NEVER, now)
+        assertThat(history.snapshot().preferences.single().muted).isTrue()
+        assertThat(replica.projection(scope)).isEqualTo(shared)
+        assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)
+    }
+
     @Test fun `a two litre hint never overwrites one litre explicitly captured`() = runTest {
         repeat(2) { index -> history.importPast(listOf(ParsedItem("milk", Quantity(2.0, MeasureUnit.LITRE))), now - (index + 1) * RepeatPlanner.DAY_MILLIS) }
         val milk = items.add(ParsedItem("milk", Quantity(1.0, MeasureUnit.LITRE)))

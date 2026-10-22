@@ -31,12 +31,8 @@ internal fun SuggestionRow(suggestions: List<Suggestion>, onChoice: (String, Sug
                             SuggestionReason.STAPLE -> R.string.suggestion_staple
                         }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row {
-                            SuggestionChoice.entries.forEach { choice ->
-                                val label = stringResource(when (choice) {
-                                    SuggestionChoice.ADD -> R.string.suggestion_add
-                                    SuggestionChoice.NOT_NOW -> R.string.suggestion_not_now
-                                    SuggestionChoice.NEVER -> R.string.suggestion_never
-                                })
+                            listOf(SuggestionChoice.ADD, SuggestionChoice.NOT_NOW).forEach { choice ->
+                                val label = stringResource(if (choice == SuggestionChoice.ADD) R.string.suggestion_add else R.string.suggestion_not_now)
                                 val description = stringResource(R.string.suggestion_action, label, suggestion.name)
                                 if (choice == SuggestionChoice.ADD) {
                                     FilledTonalButton(onClick = { onChoice(suggestion.key, choice) },
@@ -45,6 +41,11 @@ internal fun SuggestionRow(suggestions: List<Suggestion>, onChoice: (String, Sug
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     modifier = Modifier.semantics { contentDescription = description }) { Text(label) }
                             }
+                        }
+                        val muteDescription = stringResource(R.string.memory_mute_item, suggestion.name)
+                        TextButton(onClick = { onChoice(suggestion.key, SuggestionChoice.NEVER) },
+                            modifier = Modifier.semantics { contentDescription = muteDescription }) {
+                            Text(stringResource(R.string.memory_dont_suggest))
                         }
                     }
                 }

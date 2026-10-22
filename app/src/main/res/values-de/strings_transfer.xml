@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transfer_title">Artikel verschieben oder kopieren</string>
+    <string name="transfer_action">In eine andere Liste verschieben oder kopieren</string>
+    <string name="transfer_from">„%1$s“ in „%2$s“</string>
+    <string name="transfer_destination">Zielliste</string>
+    <string name="transfer_no_targets">Erstelle eine andere Liste oder stelle eine wieder her, um diesen Artikel zu verschieben oder zu kopieren.</string>
+    <string name="transfer_move">Verschieben</string>
+    <string name="transfer_copy">Kopieren</string>
+    <string name="transfer_move_hint">Das Original wird erst entfernt, wenn das Ziel bestätigt ist. Kontolisten benötigen eine Verbindung, um das Verschieben abzuschließen.</string>
+    <string name="transfer_copy_hint">Das Original in dieser Liste behalten.</string>
+    <string name="transfer_details">Fügt einen neuen, nicht abgehakten Artikel mit seinen Details hinzu. Eine bereits gewählte Zielkategorie hat Vorrang. Favoriten und Wiederholungen bleiben in ihren Listen.</string>
+    <string name="transfer_move_question">„%1$s“ von „%2$s“ nach „%3$s“ verschieben?</string>
+    <string name="transfer_copy_question">„%1$s“ von „%2$s“ nach „%3$s“ kopieren?</string>
+    <string name="transfer_unnamed_list">Einkaufsliste</string>
+    <string name="transfer_copied">Artikel kopiert</string>
+    <string name="transfer_moved">Artikel verschoben</string>
+    <string name="transfer_source_changed">Der Artikel oder die Liste wurde geändert. Öffne den Artikel erneut und versuche es noch einmal.</string>
+    <string name="transfer_destination_unavailable">Dieses Ziel ist nicht mehr verfügbar. Wähle eine andere Liste.</string>
+    <string name="transfer_source_kept">Das Original wurde behalten, da die Übertragung nicht bestätigt werden konnte. In der Zielliste kann eine Kopie verbleiben.</string>
+    <string name="transfer_save_first">Speichere deine Änderungen, bevor du diesen Artikel verschiebst oder kopierst.</string>
+</resources>

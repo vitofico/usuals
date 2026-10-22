@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_favorites_tools">Favoriten und Hilfen</string>
+    <string name="memory_favorites_help">Speichere hier Artikel, um sie mit Menge und Geschäft erneut zu einer beliebigen Liste hinzuzufügen. Du entscheidest, wann sie hinzugefügt werden. Bereits offene Artikel werden übersprungen.</string>
+    <string name="memory_on_list">Auf der Liste</string>
+    <string name="memory_favorite_on_list">%1$s ist bereits auf dieser Liste</string>
+    <string name="memory_favorite_add">Favorit %1$s zu dieser Liste hinzufügen</string>
+    <string name="memory_favorite_remove">%1$s aus den Favoriten entfernen</string>
+    <string name="memory_from_history">Aus früheren Einkäufen</string>
+    <string name="memory_suggestion_options">Vorschlagsoptionen für %1$s</string>
+    <string name="memory_dont_suggest">Nicht mehr vorschlagen</string>
+    <string name="memory_mute_item">%1$s nicht mehr vorschlagen</string>
+    <string name="memory_stop_repeat_title">%1$s nicht mehr vorschlagen?</string>
+    <string name="memory_stop_repeat_help">Dadurch wird auch die automatische Wiederholungsregel auf dieser Liste und diesem Gerät angehalten. Frühere Einkäufe bleiben gespeichert. Du kannst den Artikel weiterhin eintippen oder aus den Favoriten hinzufügen.</string>
+    <string name="memory_stop_suggesting">Nicht mehr vorschlagen</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="memory_favorites_tools">Favoris et outils</string>
+    <string name="memory_favorites_help">Enregistrez des articles ici pour les ajouter à nouveau à toute liste, avec leur quantité et leur magasin. Vous choisissez quand les ajouter. Ceux qui restent déjà à acheter sont ignorés.</string>
+    <string name="memory_on_list">Dans la liste</string>
+    <string name="memory_favorite_on_list">%1$s est déjà dans cette liste</string>
+    <string name="memory_favorite_add">Ajouter le favori %1$s à cette liste</string>
+    <string name="memory_favorite_remove">Retirer %1$s des favoris</string>
+    <string name="memory_from_history">Des courses passées</string>
+    <string name="memory_suggestion_options">Options de suggestion pour %1$s</string>
+    <string name="memory_dont_suggest">Ne plus suggérer</string>
+    <string name="memory_mute_item">Ne plus suggérer %1$s</string>
+    <string name="memory_stop_repeat_title">Ne plus suggérer %1$s ?</string>
+    <string name="memory_stop_repeat_help">Cela arrête aussi sa règle de répétition automatique dans cette liste, sur cet appareil. Les achats passés restent enregistrés. Vous pouvez toujours saisir l’article ou l’ajouter depuis les favoris.</string>
+    <string name="memory_stop_suggesting">Ne plus suggérer</string>
+</resources>

@@ -30,6 +30,10 @@ interface ItemStore {
      */
     suspend fun add(items: List<Item>)
 
+    /** Transfers the exact row the person reviewed, retaining it when a move cannot be proved safe. */
+    suspend fun transfer(source: io.theficos.usuals.model.ItemVersion, destination: String, move: Boolean): io.theficos.usuals.model.ItemTransferResult =
+        io.theficos.usuals.model.ItemTransferResult.DESTINATION_UNAVAILABLE
+
     suspend fun setChecked(id: ItemId, checked: Boolean)
 
     suspend fun setChecked(id: ItemId, checked: Boolean, version: io.theficos.usuals.model.ItemVersion?) = setChecked(id, checked)
