@@ -34,7 +34,7 @@ class OidcConfig(
     val callback = "$origin/auth/callback"
     val secureCookies = URI(origin).scheme == "https"
     init {
-        require(issuer.length <= 2048 && issuer.endsWith('/')) { "invalid_oidc_issuer" }
+        require(issuer.length <= 2048) { "invalid_oidc_issuer" }
         endpoint(issuer)
         require(URI(issuer).rawQuery == null)
         require(clientId.isNotBlank() && clientId.length <= 256 && clientId.none(Char::isISOControl)) { "invalid_oidc_client" }
@@ -114,7 +114,8 @@ private class LimitedOidcBody(private val limit: Int) : HttpResponse.BodySubscri
 
 internal class OidcClient(private val config: OidcConfig, private val transport: OidcTransport = JdkOidcTransport(), private val clock: () -> Long = System::currentTimeMillis) {
     fun metadata(): OidcMetadata {
-        val document = transport.json(config.endpoint(config.issuer + ".well-known/openid-configuration"), null, null)
+        // Only the discovery URL drops the trailing slash. Account and token issuers remain exact.
+        val document = transport.json(config.endpoint(config.issuer.trimEnd('/') + "/.well-known/openid-configuration"), null, null)
         expect(document.text("issuer") == config.issuer, "identity_unavailable", 503)
         fun supports(name: String, required: String) {
             val values = document[name] as? JsonArray ?: reject("identity_unavailable", 503)

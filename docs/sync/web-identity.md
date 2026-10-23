@@ -1,8 +1,9 @@
-# Browser accounts, local credentials and Authentik
+# Browser accounts, local credentials and OIDC
 
 Browser identity is an optional control plane. Operators can enable standalone
-local accounts, Authentik OIDC, or both. Public signup stays closed. Authentik
-controls its users, password policy, MFA and application admission. Local users
+local accounts, OIDC (including Authentik and Keycloak), or both. Public signup
+stays closed by default. The identity provider controls its users, password
+policy, MFA and application admission. Local users
 are provisioned through an explicit operator action or an existing administrator.
 Android works offline without an account. An account is what lets a phone or a
 browser keep lists on the server and share them with other accounts there.
@@ -99,12 +100,22 @@ after reviewing the provider and network policy for the intended environment.
 | Variable | Meaning |
 |---|---|
 | `USUALS_OIDC_ENABLED` | Explicit `true`; default `false` |
-| `USUALS_OIDC_ISSUER` | Exact per-provider HTTPS issuer ending `/` |
+| `USUALS_OIDC_ISSUER` | Exact per-provider HTTPS issuer, with or without a trailing `/` |
 | `USUALS_OIDC_CLIENT_ID` | Confidential application client ID |
 | `USUALS_OIDC_CLIENT_SECRET_FILE` | Read-only mounted regular file, not a URL or environment secret |
 | `USUALS_OIDC_ADMIN_SUBJECTS` | Optional JSON array of immutable exact subject strings |
 | `USUALS_OIDC_ALLOWED_GROUPS` | Optional JSON array of allowed signed group names |
 | `USUALS_LOCAL_AUTH_ENABLED` | Explicit `true` enables standalone local accounts, independently of OIDC; default `false` |
+
+Copy the issuer exactly from the provider's discovery document. For example,
+an Authentik issuer can be `https://auth.example.org/application/o/usuals/`,
+while a Keycloak realm can use `https://auth.example.org/realms/usuals`.
+Only discovery URL construction removes the trailing slash before appending
+`/.well-known/openid-configuration`, following
+[OpenID Connect Discovery section 4.1](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest).
+Discovery metadata and signed tokens must still match the configured issuer
+exactly, including that slash. Changing an existing issuer changes the account
+namespace; do not add or remove a slash to migrate existing accounts.
 
 Use a dedicated confidential OAuth2/OpenID provider with per-provider issuer,
 stable subject mode, authorization code flow, S256 PKCE and an RSA signing key

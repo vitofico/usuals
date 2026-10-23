@@ -111,6 +111,33 @@ class OidcTest {
             denied { client.metadata() }
         }
     }
+    @Test fun discoverySupportsExactIssuersWithAndWithoutTrailingSlash() {
+        for ((issuer, discovery) in listOf(
+            "https://sso.example" to "https://sso.example/.well-known/openid-configuration",
+            "https://sso.example/" to "https://sso.example/.well-known/openid-configuration",
+            "https://sso.example/realms/usuals" to "https://sso.example/realms/usuals/.well-known/openid-configuration",
+            fixture.issuer to "https://sso.example/application/o/usuals/.well-known/openid-configuration",
+        )) {
+            val exact = OidcConfig(issuer, config.clientId, config.clientSecret, config.origin)
+            val requested = mutableListOf<String>()
+            var metadataIssuer = issuer
+            val transport = OidcTransport { url, form, basic ->
+                requested += url.toString()
+                if (url.path.endsWith("openid-configuration")) fixture.metadata().changed("issuer", JsonPrimitive(metadataIssuer))
+                else fixture.transport.json(url, form, basic)
+            }
+            val client = OidcClient(exact, transport) { now }
+            fixture.tokenOverride = fixture.jwt(fixture.claims().changed("iss", JsonPrimitive(issuer)))
+            assertThat(client.complete("synthetic-code", "synthetic-verifier", digest(fixture.nonce)).subject).isEqualTo(fixture.subject)
+            assertThat(requested.first()).isEqualTo(discovery)
+
+            // Discovery URL construction must never change the identity namespace or token issuer check.
+            val different = if (issuer.endsWith('/')) issuer.dropLast(1) else "$issuer/"
+            metadataIssuer = different
+            assertThat(denied { client.metadata() }.code).isEqualTo("identity_unavailable")
+            assertThat(denied { client.verify(fixture.jwt(fixture.claims().changed("iss", JsonPrimitive(different))), fixture.keys(), digest(fixture.nonce)) }.code).isEqualTo("unauthenticated")
+        }
+    }
     @Test fun configuredGroupsAreStrictSignedArraysAndEmailIsOnlyAViewOfVerifiedClaims() {
         val client = OidcClient(fixture.config(allowed = setOf("usuals-users")), fixture.transport) { now }
         assertThat(client.verify(fixture.jwt(), fixture.keys(), digest(fixture.nonce)).email).isEqualTo("member@example.invalid")
@@ -125,7 +152,7 @@ class OidcTest {
     @Test fun oidcIsExplicitlyDisabledAndConfigurationRejectsInvalidAuthority() {
         assertThat(OidcConfig.fromEnvironment(config.origin, emptyMap())).isNull()
         assertThrows(IllegalArgumentException::class.java) { OidcConfig.fromEnvironment(config.origin, mapOf("USUALS_OIDC_ENABLED" to "yes")) }
-        for (issuer in listOf("http://sso.example/", "https://user@sso.example/", "https://sso.example/path", "https://sso.example/a/../b/", "https://sso.example/?key=x")) {
+        for (issuer in listOf("http://sso.example/", "https://user@sso.example/", "https://sso.example/#fragment", "https://sso.example/a/../b/", "https://sso.example/?key=x")) {
             assertThrows(IllegalArgumentException::class.java) { OidcConfig(issuer, "client", "secret", config.origin) }
         }
     }
