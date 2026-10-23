@@ -131,7 +131,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                     val wait = (call.request.queryParameters["wait"] ?: "0").toInt().also { expect(it in 0..25) }
                     val access = admit { call.accountAccess(mutation = false) }
                     // Registered before the first read, so a change committed in between still wakes this request.
-                    val waiter = if (wait > 0) lists.waiters.register(access.user).also { operations.waiting.incrementAndGet() } else null
+                    val waiter = if (wait > 0) lists.waiters.register(access.user) else null
                     try {
                         suspend fun answer(always: Boolean) = admit {
                             val bytes = listWork.withPermit {
@@ -143,11 +143,15 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                         // Waiting holds no request slot and runs outside the 15 s limit.
                         if (!answer(waiter == null)) {
                             val started = System.nanoTime()
-                            withTimeoutOrNull(wait * 1000L) { requireNotNull(waiter).await() }
-                            call.attributes.put(idle, System.nanoTime() - started)
+                            operations.waiting.incrementAndGet()
+                            try { withTimeoutOrNull(wait * 1000L) { requireNotNull(waiter).await() } }
+                            finally {
+                                operations.waiting.decrementAndGet()
+                                call.attributes.put(idle, System.nanoTime() - started)
+                            }
                             answer(true)
                         }
-                    } finally { if (waiter != null) { lists.waiters.release(access.user, waiter); operations.waiting.decrementAndGet() } }
+                    } finally { if (waiter != null) lists.waiters.release(access.user, waiter) }
                 } }
                 // Uploads are read before taking a list-work permit, so a slow sender cannot hold one.
                 put("{id}") { run {

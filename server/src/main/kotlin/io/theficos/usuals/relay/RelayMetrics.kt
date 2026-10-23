@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 /** Aggregate operator counters only. This listener must never be routed through public ingress. */
 class RelayMetrics(private val db: Database) {
     val active = AtomicLong()
+    /** Idle feed waits only, after the initial read releases its request slot. */
     val waiting = AtomicLong()
     private val requests = AtomicLong()
     private val clientErrors = AtomicLong()

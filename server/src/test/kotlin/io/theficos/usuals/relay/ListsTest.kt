@@ -247,6 +247,28 @@ class ListsTest {
         }
     }
 
+    @Test fun aFeedRequestIsNotIdleWhileItsInitialReadStillHoldsARequestSlot() {
+        val operations = RelayMetrics(db)
+        http(operations = operations) {
+            val cursor = client.changes(bob).cursor
+            coroutineScope {
+                val waiting = database.pool.connection.use { holder ->
+                    holder.execute("LOCK TABLE list_counter IN ACCESS EXCLUSIVE MODE")
+                    val request = async { client.changes(bob, cursor, wait = 25) }
+                    try {
+                        withContext(Dispatchers.IO) { awaitBlockedBy(holder) }
+                        assertThat(operations.waiting.get()).isEqualTo(0)
+                    } finally { holder.rollback() }
+                    request
+                }
+                withTimeout(10000) { while (operations.waiting.get() < 1) delay(10) }
+                val own = client.create(bob).id
+                assertThat(withTimeout(10000) { waiting.await() }.lists.single().id).isEqualTo(own)
+                assertThat(operations.waiting.get()).isEqualTo(0)
+            }
+        }
+    }
+
     @Test fun aChangeByOneAccountWakesAnotherAccountsWaitingRequestWithoutHoldingASlot() {
         val operations = RelayMetrics(db)
         http(operations = operations) {
@@ -255,10 +277,12 @@ class ListsTest {
             val cursor = client.changes(bob).cursor
             val idle = client.changes(bob, cursor, wait = 1)
             assertThat(idle.lists).isEmpty(); assertThat(idle.cursor).isEqualTo(cursor)
+            assertThat(operations.waiting.get()).isEqualTo(0)
             val empty = client.changes(carol).cursor
             coroutineScope {
                 val bobs = (1..4).map { async { client.changes(bob, cursor, wait = 25) } }
                 val carols = (1..4).map { async { client.changes(carol, empty, wait = 25) } }
+                // Registration happens before the first read; count only requests that have released their slots.
                 withTimeout(10000) { while (operations.waiting.get() < 8) delay(10) }
                 val refused = client.send(HttpMethod.Get, "/api/lists/changes?cursor=$empty&wait=25", carol)
                 assertThat(refused.status.value).isEqualTo(429); assertThat(code(refused.bodyAsText())).isEqualTo("rate_limited")
