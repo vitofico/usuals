@@ -10,14 +10,6 @@ import io.theficos.usuals.R
 
 @Composable
 internal fun SmartAssistanceDialogs(state: ListUiState, actions: ListActions) {
-    state.mergeReview?.let { review ->
-        AlertDialog(onDismissRequest = { if (!state.busy) actions.onMergeChoice(false) },
-            title = { Text(stringResource(R.string.merge_title)) },
-            text = { Text(stringResource(R.string.merge_question, review.incoming.name, review.usual.name, stringResource(R.string.app_name))) },
-            confirmButton = { TextButton(enabled = !state.busy, onClick = { actions.onMergeChoice(true) }) { Text(stringResource(R.string.merge_yes)) } },
-            dismissButton = { TextButton(enabled = !state.busy, onClick = { actions.onMergeChoice(false) }) { Text(stringResource(R.string.merge_no)) } },
-        )
-    }
     state.repeatOffer?.let { offer ->
         AlertDialog(onDismissRequest = { if (!state.busy) actions.onRepeatOffer(false) },
             title = { Text(stringResource(R.string.repeat_offer_title)) },

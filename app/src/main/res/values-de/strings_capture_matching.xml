@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="capture_matches_title">Deine üblichen Artikel?</string>
+    <string name="capture_matches_help">Deine Artikel sind bereits gespeichert. Wähle die Namen aus, die du verwenden möchtest. Bestätigte Entscheidungen werden gespeichert.</string>
+    <string name="capture_match_use">„%1$s“ verwenden</string>
+    <string name="capture_matches_apply">Auswahl anwenden</string>
+    <string name="capture_matches_keep">Namen behalten</string>
+    <string name="capture_matches_done">Fertig</string>
+    <string name="capture_matched_automatically">Automatisch „%1$s“ zugeordnet</string>
+    <string name="capture_match_undo">Zuordnung rückgängig</string>
+    <string name="capture_matches_changed">Einige Artikel haben sich geändert oder lassen sich nicht ohne Detailverlust zusammenführen. Deine gespeicherten Artikel wurden beibehalten.</string>
+    <string name="settings_capture_title">Artikeleingabe</string>
+    <string name="settings_automatic_matching">Wahrscheinliche Treffer automatisch verwenden</string>
+    <string name="settings_automatic_matching_help">Standardmäßig deaktiviert. Korrigiert nur eindeutige Tippfehler, ohne Artikeldetails zu entfernen. Andere Treffer werden zur Prüfung vorgeschlagen.</string>
+</resources>

@@ -40,6 +40,8 @@ object UsualsViewModelFactories {
                 productInfoStore = ServiceLocator.productInfoStore,
                 rowFacts = ServiceLocator.rowFacts,
                 prompts = ServiceLocator.promptMemory,
+                captureMatchMemory = ServiceLocator.captureMatchMemory,
+                automaticMatching = ServiceLocator.settingsStore::automaticMatchingEnabled,
                 directoryStore = ServiceLocator.listDirectory,
                 shoppingTools = ServiceLocator.shoppingTools,
                 reminders = ServiceLocator.reminders,

@@ -1,5 +1,14 @@
 # Changelog
 
+## Capture name matching
+
+- Save dictated and typed items immediately, with inline suggestions reviewed
+  together as a batch. Remember confirmed names and explicitly declined matches.
+- Offer optional automatic matching, off by default, for unambiguous typos with
+  inline Undo. Keep item qualifiers, quantities, units and notes.
+- Preserve originals when a review is stale or quantities cannot be combined.
+  Include complete interface copy in English, Spanish, Italian, French and German.
+
 ## A calmer shopping list
 
 - Android opens with the list name, groceries and a clearly labelled Add items

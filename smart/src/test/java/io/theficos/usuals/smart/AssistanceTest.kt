@@ -36,19 +36,19 @@ class AssistanceTest {
     @Test fun `similarity only proposes unknown names and honors confirmed aliases`() {
         val matcher = SimilarItems(HistoryRanker())
         val history = HistorySnapshot(purchases = listOf(purchase(1, null)))
-        assertThat(matcher.find("whole milk", history, emptyList())!!.key).isEqualTo("milk")
-        assertThat(matcher.find("milk", history, emptyList())).isNull()
-        assertThat(matcher.find("bread", history, emptyList())).isNull()
-        assertThat(matcher.find("whole milk", history.copy(aliases = listOf(ItemAlias("whole milk", "milk"))), emptyList())).isNull()
+        assertThat(matcher.candidates("milkk", history, emptyList()).single().item.key).isEqualTo("milk")
+        assertThat(matcher.candidates("milk", history, emptyList())).isEmpty()
+        assertThat(matcher.candidates("bread", history, emptyList())).isEmpty()
+        assertThat(matcher.candidates("milkk", history.copy(aliases = listOf(ItemAlias("milkk", "milk"))), emptyList())).isEmpty()
         val spanish = history.copy(purchases = history.purchases.map { it.copy(key = "leche", name = "leche") })
-        assertThat(matcher.find("leche entera", spanish, emptyList())!!.key).isEqualTo("leche")
+        assertThat(matcher.candidates("lechee", spanish, emptyList()).single().item.key).isEqualTo("leche")
     }
 
     @Test fun `hidden history stops similarity suggestions while active rows still ask about duplicates`() {
         val matcher = SimilarItems(HistoryRanker())
         val history = HistorySnapshot(purchases = listOf(purchase(1, null)), preferences = listOf(ItemPreference("milk", muted = true)))
-        assertThat(matcher.find("whole milk", history, emptyList())).isNull()
-        assertThat(matcher.find("whole milk", history, listOf(item()))!!.key).isEqualTo("milk")
+        assertThat(matcher.candidates("milkk", history, emptyList())).isEmpty()
+        assertThat(matcher.candidates("milkk", history, listOf(item())).single().item.key).isEqualTo("milk")
     }
 
     @Test fun `hints from history grouped once match a per item scan`() {
@@ -82,4 +82,32 @@ class AssistanceTest {
             assertThat(hints.hint(key, history)).isEqualTo(scanned(key, history))
         }
     }
+    private fun memories(vararg names: String) = HistorySnapshot(purchases = names.mapIndexed { index, name ->
+        Purchase(ItemId("name-$index"), "trip-$index", name, name, boughtAt = index.toLong())
+    })
+
+    @Test fun `matching never adds or removes qualifiers or changes numeric details`() {
+        val matcher = SimilarItems(HistoryRanker())
+        val history = memories("milk", "whole milk", "oat milk", "gluten free bread", "milk 2", "leche")
+        for (name in listOf("almond milk", "milk 3", "bread", "leche entera", "semi skimmed milk"))
+            assertThat(matcher.candidates(name, history, emptyList())).isEmpty()
+        assertThat(matcher.candidates("whole milkk", history, emptyList()).single().item.name).isEqualTo("whole milk")
+    }
+
+    @Test fun `automatic matching only permits an unambiguous transposition or doubled letter`() {
+        val matcher = SimilarItems(HistoryRanker())
+        assertThat(matcher.candidates("bananna", memories("banana"), emptyList()).single().automatic).isTrue()
+        assertThat(matcher.candidates("yogrut", memories("yogurt"), emptyList()).single().automatic).isTrue()
+        assertThat(matcher.candidates("silk", memories("milk"), emptyList()).single().automatic).isFalse()
+        assertThat(matcher.candidates("breaad", memories("bread", "breard"), emptyList()).map { it.automatic }).containsExactly(false, false)
+        assertThat(matcher.candidates("banana", memories("banana"), emptyList())).isEmpty()
+    }
+
+    @Test fun `confirmed names correct spelling without stripping details from older aliases`() {
+        val matcher = SimilarItems(HistoryRanker())
+        val history = memories("milk", "banana").copy(aliases = listOf(ItemAlias("whole milk", "milk"), ItemAlias("bananna", "banana")))
+        assertThat(matcher.confirmedName("bananna", history, emptyList())).isEqualTo("banana")
+        assertThat(matcher.confirmedName("whole milk", history, emptyList())).isNull()
+    }
+
 }

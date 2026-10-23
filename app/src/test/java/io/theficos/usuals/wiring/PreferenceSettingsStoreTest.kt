@@ -34,6 +34,7 @@ class PreferenceSettingsStoreTest {
                     model = "qwen3.8:27b-mlx",
                 ),
                 dailyCallCeiling = 12,
+                automaticMatchingEnabled = true,
             ),
         )
 
@@ -43,6 +44,7 @@ class PreferenceSettingsStoreTest {
         assertThat(reopened.provider.kind).isEqualTo(ProviderKind.OLLAMA)
         assertThat(reopened.provider.model).isEqualTo("qwen3.8:27b-mlx")
         assertThat(reopened.dailyCallCeiling).isEqualTo(12)
+        assertThat(reopened.automaticMatchingEnabled).isTrue()
     }
 
     @Test
@@ -66,4 +68,23 @@ class PreferenceSettingsStoreTest {
         assertThat(store.basketOverviewEnabled()).isTrue()
         assertThat(PreferenceSettingsStore(context).load().basketOverviewEnabled).isTrue()
     }
+    @Test fun automatic_matching_opt_out_survives_an_older_pending_save() = runTest {
+        val store = PreferenceSettingsStore(context)
+        val old = AppSettings(automaticMatchingEnabled = true)
+        store.save(old)
+        store.setAutomaticMatchingEnabled(false)
+        store.save(old)
+        assertThat(store.automaticMatchingEnabled()).isFalse()
+        assertThat(PreferenceSettingsStore(context).load().automaticMatchingEnabled).isFalse()
+    }
+
+    @Test fun declined_capture_matches_survive_restart_and_stay_scoped_to_the_list() {
+        val first = io.theficos.usuals.di.PreferenceCaptureMatchMemory(context)
+        first.decline("groceries", "bananna", "banana")
+        val reopened = io.theficos.usuals.di.PreferenceCaptureMatchMemory(context)
+        assertThat(reopened.declined("groceries", "bananna", "banana")).isTrue()
+        assertThat(reopened.declined("another-list", "bananna", "banana")).isFalse()
+        assertThat(reopened.declined("groceries", "bananna", "bandana")).isFalse()
+    }
+
 }

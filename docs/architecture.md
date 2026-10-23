@@ -100,11 +100,26 @@ After two logged suggested purchases and a third accepted row, Usuals offers
 an explicit repeat interval based on those dates. Only confirmation saves a
 rule. Dismissed offers are remembered locally to avoid repeated questions.
 
-Unknown similar capture names wait for a choice before insertion. Confirmation
-writes the alias and adds the explicitly requested amount in one transaction.
-Keeping names separate adds the original request and remembers the declined
-question locally. The database stores positive aliases; later captures honor
-those decisions without another question. Normalization rules are unchanged.
+Voice and typed capture save the requested items immediately. An inline batch
+review offers up to three local name corrections per item. Selected choices
+apply together in a transaction and remember positive aliases; explicitly kept
+wording records declined pairs locally for that list. Ignoring the review or
+leaving the screen retains the original captures. Later captures reuse confirmed
+names without copying a historical quantity.
+
+Name corrections keep every word and numeric detail. Only one word may differ,
+by a single edit or adjacent transposition; frequency and recency rank otherwise
+equal candidates. Optional automatic matching starts off. It accepts only a
+single unambiguous transposition or doubled-letter correction on a word of at
+least five letters, with an inline Undo. It leaves occupied destinations for
+explicit review and does not create an alias. Automatic Undo restores the name
+only while the captured row is unchanged.
+
+Manual matching preserves amounts, units, notes and store details. Matching an
+active identity adds compatible quantities with unit conversion; incompatible
+units or conflicting details keep the originals and the review. Every batch
+checks saved row versions and aliases before writing, and rolls back all its
+choices on a stale or incompatible item. Normalization rules are unchanged.
 
 ## Recipe import
 

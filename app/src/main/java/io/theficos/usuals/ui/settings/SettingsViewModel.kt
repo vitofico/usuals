@@ -211,6 +211,11 @@ class SettingsViewModel(
 
     // Presupuesto -----------------------------------------------------------
 
+    fun setAutomaticMatching(enabled: Boolean) {
+        store.setAutomaticMatchingEnabled(enabled)
+        updateSettings { it.copy(automaticMatchingEnabled = enabled) }
+    }
+
     fun setScanLookup(enabled: Boolean) {
         store.setScanLookupEnabled(enabled)
         updateSettings { it.copy(scanLookupEnabled = enabled) }

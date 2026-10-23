@@ -13,9 +13,11 @@ A text share supports a partner without any account.
 
 Memory should help without making the list untrustworthy. Only a person's
 explicit repeat rule adds automatically. Habits offer suggestions with Add,
-Not now and Never. Amounts are hints until tapped, and similar names merge
-only after confirmation. Interval predictions stay off until real-history
-replay beats last-trip and staple baselines; the current build ships staples.
+Not now and Never. Amounts are hints until tapped, and name corrections are
+reviewed together after capture. Automatic typo matching is optional and starts
+off; quantities and item qualifiers are preserved. Interval predictions stay off
+until real-history replay beats last-trip and staple baselines; the current
+build ships staples.
 
 Recipe links become reviewed ingredients, rather than a recipe collection.
 Structured recipes are read on the device. An optional model, off by default,

@@ -18,6 +18,7 @@ data class AppSettings(
     val scanLookupEnabled: Boolean = false,
     /** Off by default, and only offered while [scanLookupEnabled] is on. */
     val basketOverviewEnabled: Boolean = false,
+    val automaticMatchingEnabled: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_DAILY_CALL_CEILING = 200

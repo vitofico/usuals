@@ -248,4 +248,41 @@ class ListScreenTest {
         // The band is still the band: no modal took the screen over.
         compose.onNodeWithText("Hold to speak").assertDoesNotExist()
     }
+    @Test fun capture_matches_are_inline_and_apply_multiple_choices_together() {
+        val first = item("banana", "bananna", Quantity.pieces(3))
+        val second = item("yogurt", "yogrut", Quantity(1.0, MeasureUnit.LITRE))
+        fun review(source: io.theficos.usuals.model.Item, name: String) = CaptureMatchReview(source,
+            listOf(io.theficos.usuals.smart.NameMatch(io.theficos.usuals.smart.ItemMemory(name, name, 3, 0), true)))
+        var state by mutableStateOf(ListUiState(captureMatches = listOf(review(first, "banana"), review(second, "yogurt"))))
+        var applied = emptyList<String>()
+        compose.setContent { UsualsTheme { ListContent(state, ListActions(
+            onCaptureMatchSelect = { id, key -> state = state.copy(captureMatches = state.captureMatches.map {
+                if (it.incoming.id == id) it.copy(selectedKey = key) else it
+            }) },
+            onApplyCaptureMatches = { applied = state.captureMatches.mapNotNull { it.selectedKey } },
+        )) } }
+        compose.onNodeWithTag(CaptureMatchesTag).assertExists()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Use “banana”"))
+        compose.onNodeWithText("Use “banana”").performClick()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("1 l"))
+        compose.onNodeWithText("1 l").assertIsDisplayed()
+        compose.onNodeWithText("Use “yogurt”").performClick()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Apply choices"))
+        compose.onNodeWithText("Apply choices").performClick()
+        assertThat(applied).containsExactly("banana", "yogurt")
+        compose.onNodeWithTag(CaptureBandTag).assertIsDisplayed()
+    }
+
+    @Test fun automatic_matches_offer_undo_inline() {
+        val original = item("banana", "bananna", Quantity.pieces(3))
+        val review = CaptureMatchReview(original, emptyList(), matched = original.copy(name = "banana"))
+        var undone: ItemId? = null
+        compose.setContent { UsualsTheme { ListContent(ListUiState(captureMatches = listOf(review)),
+            ListActions(onUndoCaptureMatch = { undone = it })) } }
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Automatically matched to “banana”"))
+        compose.onNodeWithText("Automatically matched to “banana”").assertIsDisplayed()
+        compose.onNodeWithText("Undo match").performClick()
+        assertThat(undone).isEqualTo(original.id)
+    }
+
 }

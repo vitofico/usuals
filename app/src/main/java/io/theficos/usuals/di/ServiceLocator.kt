@@ -135,6 +135,7 @@ object ServiceLocator {
     val shoppingTools by resettable { preferenceShoppingTools(context) }
     val historyStore: HistoryStore by resettable { RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools) }
     val promptMemory: PreferencePromptMemory by resettable { PreferencePromptMemory(context) }
+    val captureMatchMemory: PreferenceCaptureMatchMemory by resettable { PreferenceCaptureMatchMemory(context) }
 
     /** What the list screen sees. See [RepositoryItemStore]. */
     val itemStore: ItemStore by resettable { RepositoryItemStore(itemRepository) { listSync.sync(); Unit } }
