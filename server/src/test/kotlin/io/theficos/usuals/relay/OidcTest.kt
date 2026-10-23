@@ -166,6 +166,7 @@ class OidcTest {
         val request = OidcFixture.query(client.authorization(client.metadata(), "state", fixture.nonce, "verifier", register = true, fresh = true))
         assertThat(request["prompt"]).isEqualTo("create")
         assertThat(request["max_age"]).isEqualTo("300")
+        assertThat(OidcFixture.query(client.authorization(client.metadata(), "state", fixture.nonce, "verifier", fresh = true))["prompt"]).isEqualTo("login")
         assertThat(client.verify(fixture.jwt(), fixture.keys(), digest(fixture.nonce), fresh = true).authenticatedAt).isEqualTo(now)
         for (claims in listOf(JsonObject(fixture.claims() - "auth_time"), fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 - 301)),
             fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 + 31)), fixture.claims().changed("auth_time", JsonPrimitive("1800000000")))) {

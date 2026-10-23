@@ -137,6 +137,15 @@ assert.deepEqual(accepted.data.list.members.map(m=>m.name).sort(),[aliceEmail,bo
 const replay = await bob.api('/api/invitations/accept',{method:'POST',body:{},csrf:b.csrfToken});
 assert.equal(replay.data.list.seq,accepted.data.list.seq);
 assert.deepEqual((await bob.api('/api/lists/changes')).data.lists.map(l=>l.id),[sharedId]);
+// Switching the product account must not silently reuse the previous provider SSO identity.
+assert.equal((await alice.api('/auth/logout',{method:'POST',body:{},csrf:a.csrfToken})).status,204);
+let loginPage = await alice.follow(app+'/auth/login?fresh=true');
+assert(loginPage.html.includes('name="username"'),'Account switching must offer a login form');
+await alice.form(loginPage,{username:bobEmail,password:bobPassword});
+assert.equal((await alice.api('/api/me')).data.user.id,b.user.id);
+loginPage = await alice.follow(app+'/auth/login?fresh=true');
+await alice.form(loginPage,{username:aliceEmail,password:alicePassword});
+assert.equal((await alice.api('/api/me')).data.user.id,a.user.id);
 // The server's source of protocol versions is read below without a duplicated numeric pin.
 const root = fileURLToPath(new URL('../..',import.meta.url));
 const versions = await readFile(join(root,'core/model/src/main/java/io/theficos/usuals/model/Versions.kt'),'utf8');
@@ -146,7 +155,7 @@ const captured = await bob.api(`/api/lists/${sharedId}/intents`,{method:'POST',b
 assert.equal(captured.data.results[0].outcome,'applied');
 const seen = (await alice.api('/api/lists/changes')).data.lists.find(l=>l.id===sharedId);
 assert.equal(seen.seq,captured.data.list.seq);
-process.stdout.write('PASS: captured invitation, wrong-account rejection, new-recipient registration, explicit acceptance, replay safety and shared edits.\n');
+process.stdout.write('PASS: captured invitation, wrong-account rejection, new-recipient registration, explicit acceptance, account switching, replay safety and shared edits.\n');
 if (stack.cloud) {
   const first = await alice.api('/cloud/api/account'), second = await bob.api('/cloud/api/account');
   assert.equal(first.status,200); assert.equal(second.status,200);

@@ -136,7 +136,7 @@ internal class OidcClient(private val config: OidcConfig, private val transport:
     fun authorization(metadata: OidcMetadata, state: String, nonce: String, verifier: String, register: Boolean = false, fresh: Boolean = false): String = metadata.authorization + "?" + (linkedMapOf(
         "client_id" to config.clientId, "redirect_uri" to config.callback, "response_type" to "code", "scope" to "openid profile email",
         "state" to state, "nonce" to nonce, "code_challenge" to digestText(verifier), "code_challenge_method" to "S256",
-    ) + (if (register) mapOf("prompt" to "create") else emptyMap()) + (if (fresh) mapOf("max_age" to "300") else emptyMap())).entries.joinToString("&") { "${encodeForm(it.key)}=${encodeForm(it.value)}" }
+    ) + (if (register) mapOf("prompt" to "create") else if (fresh) mapOf("prompt" to "login") else emptyMap()) + (if (fresh) mapOf("max_age" to "300") else emptyMap())).entries.joinToString("&") { "${encodeForm(it.key)}=${encodeForm(it.value)}" }
     fun complete(code: String, verifier: String, nonceHash: ByteArray, fresh: Boolean = false): OidcIdentity {
         expect(code.isNotBlank() && code.length <= 8192 && code.none(Char::isISOControl), "unauthenticated", 401)
         val metadata = metadata()

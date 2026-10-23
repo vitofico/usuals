@@ -86,7 +86,7 @@ account mutations use the existing exact Origin and CSRF checks.
 | --- | --- |
 | `GET /auth/config` | Also reports `registrationPath?`, `emailInvitations`, `invitationOnly` |
 | `GET /auth/register` | Provider registration, with ordinary state/nonce/PKCE and browser binding |
-| `GET /auth/login?fresh=true` | Request `max_age=300` and require a valid recent signed `auth_time` |
+| `GET /auth/login?fresh=true` | Force provider login with `prompt=login`, request `max_age=300` and require a valid recent signed `auth_time`; account switching cannot reuse the previous SSO identity silently |
 | `GET /api/invitations/challenge` | Bounded 30-minute HttpOnly continuation cookie and CSRF challenge |
 | `POST /api/invitations/context` | `{token}` with that cookie, challenge CSRF and exact Origin; attaches a link without logging in or adding membership |
 | `GET /api/invitations/current` | `none`, `signin`, `ready`, `wrong_account`, `reauthenticate`, `accepted` or `unavailable`; no list content |
