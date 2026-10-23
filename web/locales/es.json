@@ -311,7 +311,7 @@
   "invitationReady": "{name} te ha invitado a Usuals.",
   "joinList": "Aceptar invitación",
   "switchAccount": "Cambiar de cuenta",
-  "invitationWrongAccount": "Esta invitación se envió a otra dirección de correo. Inicia sesión con esa dirección para continuar.",
+  "invitationWrongAccount": "Esta invitación se envió a otra dirección. Cambia de cuenta para cerrar sesión en el servicio de acceso y usar esa dirección.",
   "invitationReauthenticate": "Vuelve a iniciar sesión para confirmar tu dirección de correo actual.",
   "verifyAndContinue": "Iniciar sesión para continuar",
   "invitationUnavailable": "Invitación no disponible",
@@ -335,5 +335,6 @@
   "invitation_required": "Necesitas una invitación para unirte a este servidor.",
   "invitation_resend_later": "Espera un minuto antes de reenviar esta invitación.",
   "emailSignIn": "Iniciar sesión",
-  "emailSignInText": "Crea una lista o inicia sesión para comprar juntos."
+  "emailSignInText": "Crea una lista o inicia sesión para comprar juntos.",
+  "account_switch_unavailable": "Para usar otro correo, cierra sesión en tu proveedor de acceso o abre la invitación en otro perfil del navegador."
 }

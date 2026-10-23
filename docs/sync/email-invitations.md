@@ -69,6 +69,14 @@ passkeys and social sign-in remain provider choices.
 For Keycloak, retain the default `basic` client scope alongside `profile` and
 `email`: it supplies the required `sub` and `auth_time` protocol mappers. See
 [Keycloak's upgrade guide](https://www.keycloak.org/docs/26.5.7/upgrading/).
+Register `https://usuals.example.org/auth/login?fresh=true` as an exact allowed
+post-logout redirect URI, using your application origin. **Switch account** uses
+the discovered `end_session_endpoint` and the provider's normal logout
+confirmation before returning to a fresh login. This signs out the provider's
+current browser session as well. Ordinary **Sign out** only ends the Usuals
+session. Providers without RP-initiated logout require another browser profile
+or signing out at the provider. See the
+[Keycloak logout contract](https://www.keycloak.org/docs/latest/server_admin/).
 
 Production with unrelated users should enable `collaborators` and verified
 email invitations together. This restricts discovery; existing list ACLs remain
@@ -86,7 +94,8 @@ account mutations use the existing exact Origin and CSRF checks.
 | --- | --- |
 | `GET /auth/config` | Also reports `registrationPath?`, `emailInvitations`, `invitationOnly` |
 | `GET /auth/register` | Provider registration, with ordinary state/nonce/PKCE and browser binding |
-| `GET /auth/login?fresh=true` | Force provider login with `prompt=login`, request `max_age=300` and require a valid recent signed `auth_time`; account switching cannot reuse the previous SSO identity silently |
+| `GET /auth/login?fresh=true` | Force provider reauthentication with `prompt=login`, request `max_age=300` and require a valid recent signed `auth_time` |
+| `POST /auth/switch` | Exact Origin and session CSRF; revoke the local session and return a validated provider logout URL with a fixed fresh-login return, preserving the pending invitation |
 | `GET /api/invitations/challenge` | Bounded 30-minute HttpOnly continuation cookie and CSRF challenge |
 | `POST /api/invitations/context` | `{token}` with that cookie, challenge CSRF and exact Origin; attaches a link without logging in or adding membership |
 | `GET /api/invitations/current` | `none`, `signin`, `ready`, `wrong_account`, `reauthenticate`, `accepted` or `unavailable`; no list content |

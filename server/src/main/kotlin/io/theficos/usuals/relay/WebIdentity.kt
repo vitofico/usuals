@@ -13,6 +13,7 @@ import java.util.UUID
 @Serializable data class WebSessions(val sessions: List<WebSessionView>)
 @Serializable data class WebUsers(val users: List<WebUser>, val next: String? = null)
 @Serializable data class WebUserUpdate(val disabled: Boolean)
+@Serializable internal data class AccountSwitch(val url: String)
 internal data class WebCaller(val session: String, val user: WebUser, val csrf: String, val expires: Long, val renewed: Boolean = false,
     val authenticatedAt: Long? = null, val verifiedEmail: String? = null) {
     fun me() = WebMe(user, csrf, expires)
@@ -137,6 +138,12 @@ class WebIdentity internal constructor(
     internal fun logout(caller: WebCaller) = db.transaction { c ->
         current(c, caller)
         c.execute("UPDATE web_session SET revoked=true WHERE id=?", id(caller.session))
+    }
+    internal fun switchAccount(caller: WebCaller): AccountSwitch {
+        val provider = oidc ?: reject("account_switch_unavailable", 409)
+        val target = provider.switchAccount(provider.metadata())
+        logout(caller)
+        return AccountSwitch(target)
     }
     internal fun sessions(token: String): WebSessions = db.transaction { c ->
         val caller = caller(c, token)

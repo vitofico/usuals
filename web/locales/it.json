@@ -311,7 +311,7 @@
   "invitationReady": "{name} ti ha invitato su Usuals.",
   "joinList": "Accetta invito",
   "switchAccount": "Cambia account",
-  "invitationWrongAccount": "Questo invito è stato inviato a un altro indirizzo email. Accedi con quell'indirizzo per continuare.",
+  "invitationWrongAccount": "Questo invito è stato inviato a un altro indirizzo email. Cambia account per uscire dal servizio di accesso e usare quell'indirizzo.",
   "invitationReauthenticate": "Accedi di nuovo per confermare il tuo indirizzo email attuale.",
   "verifyAndContinue": "Accedi per continuare",
   "invitationUnavailable": "Invito non disponibile",
@@ -335,5 +335,6 @@
   "invitation_required": "È necessario un invito per partecipare a questo server.",
   "invitation_resend_later": "Attendi un minuto prima di inviare di nuovo questo invito.",
   "emailSignIn": "Accedi",
-  "emailSignInText": "Crea una lista o accedi per fare la spesa insieme."
+  "emailSignInText": "Crea una lista o accedi per fare la spesa insieme.",
+  "account_switch_unavailable": "Per usare un'altra email, esci dal provider di accesso o apri l'invito in un altro profilo del browser."
 }

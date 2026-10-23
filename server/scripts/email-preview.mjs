@@ -73,7 +73,7 @@ export async function startEmailPreview({ port = 8090, idpPort = 8091, mailPort 
       clients: [{ clientId: 'usuals-web', enabled: true, protocol: 'openid-connect', publicClient: false, secret: clientSecret,
         standardFlowEnabled: true, directAccessGrantsEnabled: false, serviceAccountsEnabled: false,
         redirectUris: [`${origin}/auth/callback`], webOrigins: [origin],
-        defaultClientScopes: ['basic','profile','email'], attributes: { 'pkce.code.challenge.method': 'S256' } }],
+        defaultClientScopes: ['basic','profile','email'], attributes: { 'pkce.code.challenge.method': 'S256', 'post.logout.redirect.uris': `${origin}/auth/login?fresh=true` } }],
       users: [{ id: operatorId, username: 'operator@example.test', email: 'operator@example.test', emailVerified: true,
         firstName: 'Local', lastName: 'Operator', enabled: true, credentials: [{ type: 'password', value: operatorPassword, temporary: false }] }],
     };

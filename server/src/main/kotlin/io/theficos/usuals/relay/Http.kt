@@ -259,6 +259,12 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 call.privateResponse(); webIdentity.logout(call.webCaller(webIdentity))
                 call.webCookie(webIdentity, webIdentity.sessionCookieName(), "", 0); call.respond(HttpStatusCode.NoContent)
             } }
+            post("/auth/switch") { run(identity = true) {
+                call.privateResponse()
+                val result = webIdentity.switchAccount(call.webCaller(webIdentity))
+                call.webCookie(webIdentity, webIdentity.sessionCookieName(), "", 0)
+                call.json(result)
+            } }
             post("/api/sessions/{id}/revoke") { run {
                 call.privateResponse(); webIdentity.revoke(call.webCaller(webIdentity), call.routeId("id")); call.respond(HttpStatusCode.NoContent)
             } }

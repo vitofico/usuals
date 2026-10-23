@@ -406,8 +406,8 @@ function invitationLanding() {
     notice("invitationJoined");
   });
   const switchAccount = () => act(async () => {
-    await api("/auth/logout", { method: "POST", csrf: account.csrfToken, status: 204 });
-    location.assign("/auth/login?fresh=true");
+    const result = await api("/auth/switch", { method: "POST", body: {}, csrf: account.csrfToken });
+    location.assign(result.url);
   });
   const content = [el("h1", {}, t(state === "unavailable" ? "invitationUnavailable" : "invitationTitle"))];
   if (state === "signin") content.push(paragraph("invitationIntro"), el("div", { class: "button-row" },

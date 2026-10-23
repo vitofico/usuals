@@ -125,7 +125,6 @@ const attach = async session => {
 await attach(alice);
 assert.equal((await alice.api('/api/invitations/current')).data.state,'wrong_account');
 assert.equal((await alice.api('/api/invitations/accept',{method:'POST',body:{},csrf:a.csrfToken})).status,403);
-await alice.api('/api/invitations/dismiss',{method:'POST',body:{},csrf:a.csrfToken});
 await attach(bob);
 const b = await register(bob,bobEmail,bobPassword);
 assert.equal((await bob.api('/api/lists/changes')).data.lists.length,0,'Registration must not auto-accept membership');
@@ -138,12 +137,22 @@ const replay = await bob.api('/api/invitations/accept',{method:'POST',body:{},cs
 assert.equal(replay.data.list.seq,accepted.data.list.seq);
 assert.deepEqual((await bob.api('/api/lists/changes')).data.lists.map(l=>l.id),[sharedId]);
 // Switching the product account must not silently reuse the previous provider SSO identity.
-assert.equal((await alice.api('/auth/logout',{method:'POST',body:{},csrf:a.csrfToken})).status,204);
-let loginPage = await alice.follow(app+'/auth/login?fresh=true');
-assert(loginPage.html.includes('name="username"'),'Account switching must offer a login form');
+async function switchAccount(session, csrf) {
+  assert.equal((await session.api('/auth/switch')).status,405);
+  assert.equal((await session.api('/auth/switch',{method:'POST',body:{}})).status,403);
+  const target = await session.api('/auth/switch',{method:'POST',body:{},csrf});
+  assert.equal(target.status,200);
+  assert.equal((await session.api('/api/me')).status,401,'Switching must immediately revoke the old product session');
+  let page = await session.follow(target.data.url);
+  if (page.html.includes('name="confirmLogout"')) page = await session.form(page,{confirmLogout:'yes'});
+  assert(page.html.includes('name="username"'),'Provider sign-out must lead to an account-selection login form');
+  return page;
+}
+let loginPage = await switchAccount(alice,a.csrfToken);
 await alice.form(loginPage,{username:bobEmail,password:bobPassword});
 assert.equal((await alice.api('/api/me')).data.user.id,b.user.id);
-loginPage = await alice.follow(app+'/auth/login?fresh=true');
+assert.equal((await alice.api('/api/invitations/current')).data.state,'accepted','The invitation must survive switching accounts');
+loginPage = await switchAccount(alice,(await alice.api('/api/me')).data.csrfToken);
 await alice.form(loginPage,{username:aliceEmail,password:alicePassword});
 assert.equal((await alice.api('/api/me')).data.user.id,a.user.id);
 // The server's source of protocol versions is read below without a duplicated numeric pin.

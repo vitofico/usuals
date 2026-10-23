@@ -311,7 +311,7 @@
   "invitationReady": "{name} vous a invité sur Usuals.",
   "joinList": "Accepter l'invitation",
   "switchAccount": "Changer de compte",
-  "invitationWrongAccount": "Cette invitation a été envoyée à une autre adresse e-mail. Connectez-vous avec cette adresse pour continuer.",
+  "invitationWrongAccount": "Cette invitation a été envoyée à une autre adresse e-mail. Changez de compte pour vous déconnecter du service de connexion, puis utilisez cette adresse.",
   "invitationReauthenticate": "Reconnectez-vous pour confirmer votre adresse e-mail actuelle.",
   "verifyAndContinue": "Se connecter pour continuer",
   "invitationUnavailable": "Invitation indisponible",
@@ -335,5 +335,6 @@
   "invitation_required": "Une invitation est nécessaire pour rejoindre ce serveur.",
   "invitation_resend_later": "Attendez une minute avant de renvoyer cette invitation.",
   "emailSignIn": "Se connecter",
-  "emailSignInText": "Créez une liste ou connectez-vous pour faire les courses ensemble."
+  "emailSignInText": "Créez une liste ou connectez-vous pour faire les courses ensemble.",
+  "account_switch_unavailable": "Pour utiliser une autre adresse, déconnectez-vous auprès de votre fournisseur ou ouvrez l'invitation dans un autre profil de navigateur."
 }

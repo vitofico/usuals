@@ -311,7 +311,7 @@
   "invitationReady": "{name} invited you to Usuals.",
   "joinList": "Accept invitation",
   "switchAccount": "Switch account",
-  "invitationWrongAccount": "This invitation was sent to a different email address. Sign in with that address to continue.",
+  "invitationWrongAccount": "This invitation was sent to a different email address. Switch account to sign out at the sign-in service, then use that address.",
   "invitationReauthenticate": "Please sign in again to confirm your current email address.",
   "verifyAndContinue": "Sign in to continue",
   "invitationUnavailable": "Invitation unavailable",
@@ -335,5 +335,6 @@
   "invitation_required": "An invitation is required to join this server.",
   "invitation_resend_later": "Wait a minute before resending this invitation.",
   "emailSignIn": "Sign in",
-  "emailSignInText": "Create a list or sign in to keep shopping together."
+  "emailSignInText": "Create a list or sign in to keep shopping together.",
+  "account_switch_unavailable": "To use another email, sign out at your sign-in provider or open the invitation in another browser profile."
 }

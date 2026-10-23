@@ -181,4 +181,16 @@ class OidcTest {
         assertThat(local.endpoint(local.issuer).scheme).isEqualTo("http")
         assertThrows(IllegalArgumentException::class.java) { local.endpoint("http://other.localhost/keys") }
     }
+    @Test fun accountSwitchUsesOnlyTheValidatedProviderLogoutAndFixedApplicationReturn() {
+        fixture.discoveryOverride = fixture.metadata().changed("end_session_endpoint", JsonPrimitive("https://sso.example/logout/"))
+        val client = OidcClient(config, fixture.transport) { now }
+        val url = client.switchAccount(client.metadata())
+        assertThat(url).startsWith("https://sso.example/logout/?")
+        assertThat(OidcFixture.query(url)["post_logout_redirect_uri"]).isEqualTo("https://usuals.invalid/auth/login?fresh=true")
+        assertThat(OidcFixture.query(url)).doesNotContainKey("id_token_hint")
+        fixture.discoveryOverride = fixture.metadata().changed("end_session_endpoint", JsonPrimitive("https://foreign.example/logout/"))
+        denied { client.metadata() }
+        fixture.discoveryOverride = fixture.metadata()
+        assertThat(denied { client.switchAccount(client.metadata()) }.code).isEqualTo("account_switch_unavailable")
+    }
 }

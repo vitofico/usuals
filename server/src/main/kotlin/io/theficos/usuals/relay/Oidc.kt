@@ -79,7 +79,7 @@ class OidcConfig(
 }
 
 internal data class OidcIdentity(val subject: String, val displayName: String, val email: String?, val authenticatedAt: Long? = null)
-internal data class OidcMetadata(val authorization: String, val token: String, val jwks: String)
+internal data class OidcMetadata(val authorization: String, val token: String, val jwks: String, val logout: String? = null)
 internal fun interface OidcTransport { fun json(url: URI, form: Map<String, String>?, basic: String?): JsonObject }
 
 internal class JdkOidcTransport : OidcTransport {
@@ -131,8 +131,11 @@ internal class OidcClient(private val config: OidcConfig, private val transport:
         supports("id_token_signing_alg_values_supported", "RS256")
         supports("token_endpoint_auth_methods_supported", "client_secret_basic")
         fun endpoint(name: String) = document.text(name).also { try { config.endpoint(it) } catch (_: Exception) { reject("identity_unavailable", 503) } }
-        return OidcMetadata(endpoint("authorization_endpoint"), endpoint("token_endpoint"), endpoint("jwks_uri"))
+        return OidcMetadata(endpoint("authorization_endpoint"), endpoint("token_endpoint"), endpoint("jwks_uri"),
+            if (document["end_session_endpoint"] != null) endpoint("end_session_endpoint") else null)
     }
+    fun switchAccount(metadata: OidcMetadata): String = (metadata.logout ?: reject("account_switch_unavailable", 409)) + "?" +
+        mapOf("client_id" to config.clientId, "post_logout_redirect_uri" to config.origin + "/auth/login?fresh=true").entries.joinToString("&") { "${encodeForm(it.key)}=${encodeForm(it.value)}" }
     fun authorization(metadata: OidcMetadata, state: String, nonce: String, verifier: String, register: Boolean = false, fresh: Boolean = false): String = metadata.authorization + "?" + (linkedMapOf(
         "client_id" to config.clientId, "redirect_uri" to config.callback, "response_type" to "code", "scope" to "openid profile email",
         "state" to state, "nonce" to nonce, "code_challenge" to digestText(verifier), "code_challenge_method" to "S256",
