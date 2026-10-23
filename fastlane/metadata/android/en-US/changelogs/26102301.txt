@@ -1,0 +1,1 @@
+Review suggested item names together after speaking or typing. Usuals remembers your choices and preserves quantities and item details. Optional automatic typo matching starts off and includes Undo.
