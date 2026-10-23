@@ -60,8 +60,9 @@ jobs:
       # -x test because the tests are android-ci's job. CodeQL needs the classes,
       # not a green suite, and running the suite twice would double the weekly
       # cost for no extra coverage.
+      # Extraction must observe compiler processes even when all APK inputs are unchanged.
       - name: Build for analysis
-        run: ./gradlew assembleDebug -x test --stacktrace
+        run: ./gradlew assembleDebug -x test --stacktrace --no-build-cache --rerun-tasks
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@311b4ee155dcdab395044f00946f664bd51ff173 # v4
