@@ -28,6 +28,7 @@ import io.theficos.usuals.model.ItemTransferResult
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.ShoppingSnapshot
 import io.theficos.usuals.parse.ParsedItem
+import io.theficos.usuals.parse.Normalizer
 import io.theficos.usuals.parse.UtteranceParser
 import io.theficos.usuals.parse.toItem
 import io.theficos.usuals.ui.shopping.favoritesOnList
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
 /**
@@ -81,6 +83,8 @@ class ListViewModel(
     private val directoryStore: ListDirectoryStore = NoListDirectory,
     val reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
     val shoppingTools: io.theficos.usuals.ui.shopping.ShoppingToolsStore = io.theficos.usuals.ui.shopping.ShoppingToolsStore(),
+    private val captureMatchMemory: CaptureMatchMemory = InMemoryCaptureMatchMemory(),
+    private val automaticMatching: () -> Boolean = { false },
     private val background: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO,
     /** Where rows are worked out from the list and its history. Tests pass their main dispatcher. */
     private val compute: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default,
@@ -101,7 +105,9 @@ class ListViewModel(
         val prompt: ListPrompt? = null,
         val busy: Boolean = false,
         val historyError: Boolean = false,
-        val mergeReview: MergeReview? = null,
+        val captureMatches: List<CaptureMatchReview> = emptyList(),
+        val matchingBusy: Boolean = false,
+        val matchingError: Boolean = false,
         val repeatOffer: RepeatOffer? = null,
         val recipe: RecipeUiState? = null,
         val scanNames: List<ScanNameOffer> = emptyList(),
@@ -121,7 +127,7 @@ class ListViewModel(
     )
 
     private val screen = MutableStateFlow(ScreenState(basketAvailable = basket?.enabled() == true))
-    private val mergeQueue = ArrayDeque<MergeReview>()
+    private val captureLock = kotlinx.coroutines.sync.Mutex()
     private var productJob: Job? = null
     private var scanNameGeneration = 0
 
@@ -204,13 +210,12 @@ class ListViewModel(
     /** Archives a list, or restores one from the picker's Archived section. */
     fun onArchiveList(id: String, archived: Boolean) = changeList { directoryStore.archive(id, archived) }
     private fun changeList(change: suspend () -> Unit) {
-        if (screen.value.busy || screen.value.capture != CaptureState.Idle) return
+        if (screen.value.busy || screen.value.matchingBusy || captureLock.isLocked || screen.value.capture != CaptureState.Idle) return
         viewModelScope.launch {
             productJob?.cancel()
             recipeJob?.cancel()
             basketJob?.cancel()
             scanNameGeneration++
-            mergeQueue.clear()
             screen.value = ScreenState(speechBlocked = screen.value.speechBlocked, basketAvailable = screen.value.basketAvailable, busy = true)
             try { change() }
             catch (_: Exception) { screen.update { it.copy(historyError = true) } }
@@ -494,7 +499,7 @@ class ListViewModel(
 
     private fun refreshOffers(rows: List<Item>, facts: HistorySnapshot) {
         val current = screen.value
-        if (current.busy || current.prompt != null || current.editingId != null || current.transfer != null || current.transferResult != null || current.mergeReview != null || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
+        if (current.busy || current.prompt != null || current.editingId != null || current.transfer != null || current.transferResult != null || current.captureMatches.isNotEmpty() || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
         val offer = smartStore.repeatOffers(rows, facts).firstOrNull { claimPrompt("repeat_offer:${it.key}", "v1") }
         if (offer != null) screen.update { it.copy(repeatOffer = offer) }
     }
@@ -513,32 +518,99 @@ class ListViewModel(
         }
     }
 
-    private suspend fun addCaptured(additions: List<Item>) {
-        val immediate = mutableListOf<Item>()
-        for (item in additions) {
-            val usual = smartStore.similar(item.name, shopping.value.history, shopping.value.items + immediate)
-            val question = usual != null && claimPrompt("merge:${item.normalizedName}", usual.key)
-            if (question) mergeQueue.addLast(MergeReview(item, requireNotNull(usual), shopping.value.listVersion)) else immediate += item
+    private suspend fun addCaptured(additions: List<Item>) = captureLock.withLock {
+        val snapshot = shopping.value
+        val aliases = snapshot.history.aliases.associate { it.fromKey to it.toKey }
+        val scope = snapshot.listId
+        val named = additions.map { incoming ->
+            val usual = smartStore.confirmedName(incoming.name, snapshot.history, snapshot.items)
+            if (usual == null) incoming else incoming.copy(name = usual, normalizedName = Normalizer.normalize(usual))
         }
-        if (immediate.isNotEmpty()) store.add(immediate)
-        if (screen.value.mergeReview == null && mergeQueue.isNotEmpty()) {
-            screen.update { it.copy(mergeReview = mergeQueue.first(), prompt = null, repeatOffer = null) }
+        // Persist originals first, even if matching, navigation, or the process is interrupted.
+        val captured = store.capture(named)
+        val proposed = named.map { incoming ->
+            smartStore.nameMatches(incoming.name, snapshot.history, snapshot.items)
+                .filterNot { captureMatchMemory.declined(scope, incoming.normalizedName, it.item.key) }
+        }
+        val reviews = captured.zip(proposed).mapNotNull { (incoming, matches) ->
+            if (matches.isEmpty()) null else CaptureMatchReview(incoming, matches)
+        }.distinctBy { it.incoming.id }
+        val ready = reviews.map { review ->
+            val candidate = review.candidates.singleOrNull()?.takeIf { it.automatic }
+            val occupied = candidate != null && (snapshot.items + captured).any {
+                it.id != review.incoming.id && !it.checked && io.theficos.usuals.parse.ItemIdentity.key(it, aliases) == candidate.item.key
+            }
+            if (automaticMatching() && candidate != null && !occupied) {
+                val matched = try {
+                    smartStore.matchCaptures(listOf(CaptureMatchChoice(review.incoming, candidate.item)), remember = false)?.singleOrNull()
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { null }
+                review.copy(matched = matched)
+            } else review
+        }
+        screen.update { current -> current.copy(captureMatches = current.captureMatches + ready,
+            matchingError = false, prompt = null, repeatOffer = null) }
+    }
+
+    fun onCaptureMatchSelect(id: ItemId, key: String?) {
+        if (screen.value.matchingBusy || captureLock.isLocked) return
+        screen.update { state -> state.copy(captureMatches = state.captureMatches.map {
+            if (it.incoming.id == id && it.matched == null && (key == null || it.candidates.any { candidate -> candidate.item.key == key })) it.copy(selectedKey = key) else it
+        }) }
+    }
+
+    private fun rememberDeclined(reviews: List<CaptureMatchReview>, scope: String) {
+        for (review in reviews.filter { it.matched == null }) for (candidate in review.candidates) {
+            if (candidate.item.key != review.selectedKey) captureMatchMemory.decline(scope, review.incoming.normalizedName, candidate.item.key)
         }
     }
 
-    fun onMergeChoice(accept: Boolean) {
-        val review = screen.value.mergeReview ?: return
-        if (screen.value.busy) return
-        screen.update { it.copy(busy = true) }
+    fun onKeepCaptureWording() {
+        if (screen.value.matchingBusy || captureLock.isLocked) return
+        val reviews = screen.value.captureMatches.map { it.copy(selectedKey = null) }
+        rememberDeclined(reviews, shopping.value.listId)
+        val pending = reviews.any { it.matched == null }
+        screen.update { it.copy(captureMatches = if (pending) it.captureMatches.filter { row -> row.matched != null } else emptyList(), matchingError = false) }
+    }
+
+    fun onApplyCaptureMatches() {
+        val reviews = screen.value.captureMatches
+        if (screen.value.matchingBusy || captureLock.isLocked) return
+        val choices = reviews.filter { it.matched == null }.mapNotNull { review ->
+            review.candidates.firstOrNull { it.item.key == review.selectedKey }?.let { CaptureMatchChoice(review.incoming, it.item) }
+        }
+        if (choices.isEmpty()) return
+        val scope = shopping.value.listId
+        screen.update { it.copy(matchingBusy = true, matchingError = false) }
         viewModelScope.launch {
             try {
-                if (accept) check(smartStore.addMerged(review.incoming, review.usual, review.version))
-                else store.add(listOf(review.incoming))
-                mergeQueue.removeFirst()
-                screen.update { it.copy(busy = false, mergeReview = mergeQueue.firstOrNull()) }
-                if (mergeQueue.isEmpty()) refreshPrompts(shopping.value.items, shopping.value.history)
+                val saved = captureLock.withLock { smartStore.matchCaptures(choices, remember = true) }
+                if (saved != null) {
+                    rememberDeclined(reviews, scope)
+                    screen.update { it.copy(captureMatches = it.captureMatches.filterNot { row -> row in reviews && row.matched == null }) }
+                }
+                screen.update { it.copy(matchingBusy = false, matchingError = saved == null) }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { screen.update { it.copy(busy = false, historyError = true) } }
+            catch (_: Exception) { screen.update { it.copy(matchingBusy = false, matchingError = true) } }
+        }
+    }
+
+    fun onUndoCaptureMatch(id: ItemId) {
+        if (screen.value.matchingBusy || captureLock.isLocked) return
+        val review = screen.value.captureMatches.firstOrNull { it.incoming.id == id } ?: return
+        val matched = review.matched ?: return
+        screen.update { it.copy(matchingBusy = true, matchingError = false) }
+        viewModelScope.launch {
+            try {
+                val original = ItemMemory(review.incoming.normalizedName, review.incoming.name, 0, 0)
+                val saved = captureLock.withLock { smartStore.matchCaptures(listOf(CaptureMatchChoice(matched, original)), remember = false) }
+                if (saved != null) {
+                    rememberDeclined(listOf(review.copy(matched = null)), shopping.value.listId)
+                    screen.update { it.copy(captureMatches = it.captureMatches.filterNot { row -> row.incoming.id == id }) }
+                }
+                screen.update { it.copy(matchingBusy = false, matchingError = saved == null) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(matchingBusy = false, matchingError = true) } }
         }
     }
 
@@ -578,7 +650,7 @@ class ListViewModel(
 
     private fun refreshPrompts(rows: List<Item>, history: HistorySnapshot) {
         if (screen.value.busy || screen.value.prompt != null || screen.value.editingId != null || screen.value.transfer != null || screen.value.transferResult != null ||
-            screen.value.mergeReview != null || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.isNotEmpty()) return
+            screen.value.captureMatches.isNotEmpty() || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.isNotEmpty()) return
         val purchasedIds = history.purchases.map { it.id }.toSet()
         val current = rows.filterNot { it.id in purchasedIds }
         val stale = current.filter { it.checked && it.checkedAt?.let { at -> at <= clock() - 12 * 60 * 60 * 1000L } == true }
@@ -952,7 +1024,9 @@ class ListViewModel(
         productInfo = screen.productInfo,
         basketAvailable = screen.basketAvailable,
         basket = screen.basket,
-        mergeReview = screen.mergeReview,
+        captureMatches = screen.captureMatches,
+        matchingBusy = screen.matchingBusy,
+        matchingError = screen.matchingError,
         repeatOffer = screen.repeatOffer,
         recipe = screen.recipe,
         scanNames = screen.scanNames,

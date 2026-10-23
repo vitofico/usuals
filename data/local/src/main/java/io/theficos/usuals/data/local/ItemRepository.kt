@@ -33,6 +33,68 @@ class ItemRepository(
         } }
     }
     suspend fun currentListId(): String = listId()
+
+    /** Original captures remain durable if a review is stale or any choice cannot preserve its details. */
+    suspend fun matchCaptures(choices: List<CaptureNameChoice>, remember: Boolean): List<Item>? = try {
+        database.withTransaction {
+            val scope = listId()
+            val before = versioned(scope).associateBy { it.id.value }
+            val aliases = replica.projection(scope).aliases
+            fun ensure(condition: Boolean) { if (!condition) throw CaptureMatchChanged() }
+            ensure(choices.map { it.source.id }.distinct().size == choices.size)
+            for (choice in choices) {
+                val current = before[choice.source.id] ?: throw CaptureMatchChanged()
+                ensure(choice.source.list == scope && !current.checked &&
+                    current.version?.fields == choice.source.fields && current.version?.lifecycle == choice.source.lifecycle && current.version?.facts == choice.source.facts)
+                ensure((!remember || choice.source.aliases == aliases) && ItemIdentity.resolve(choice.key, aliases) == choice.key)
+                ensure(ItemIdentity.resolve(current.normalizedName, choice.source.aliases) == ItemIdentity.resolve(current.normalizedName, aliases))
+                ensure(ItemIdentity.resolve(Normalizer.normalize(choice.name), aliases) == choice.key)
+            }
+            val ids = choices.map { choice ->
+                val rows = versioned(scope)
+                val source = rows.first { it.id.value == choice.source.id }
+                val target = rows.firstOrNull { it.id != source.id && !it.checked && ItemIdentity.key(it, aliases) == choice.key }
+                if (target == null) {
+                    val delta = if (remember) mapOf(source.normalizedName to choice.key) else emptyMap()
+                    ensure(editFields(source.id, buildJsonObject {
+                        put("name", choice.name); put("key", choice.key)
+                    }, delta, source.version))
+                    source.id
+                } else {
+                    // Automatic corrections must be individually reversible without changing another row.
+                    ensure(remember)
+                    for ((a, b) in listOf(source.note to target.note, source.store to target.store, source.gtin to target.gtin))
+                        ensure(a == null || b == null || a == b)
+                    val incoming = source.quantity
+                    val existing = target.quantity
+                    val quantity = when {
+                        incoming == null -> existing
+                        existing == null -> incoming
+                        incoming.unit == existing.unit -> existing.copy(amount = existing.amount + incoming.amount)
+                        incoming.inBaseUnits() != null && existing.inBaseUnits() != null && incoming.unit.dimension == existing.unit.dimension ->
+                            existing.copy(amount = existing.amount + incoming.inBaseUnits()!! / existing.copy(amount = 1.0).inBaseUnits()!!)
+                        else -> throw CaptureMatchChanged()
+                    }
+                    ensure(quantity == null || quantity.amount.isFinite())
+                    ensure(editFields(target.id, buildJsonObject {
+                        put("quantity", quantity?.amount?.toString()?.let(::JsonPrimitive) ?: JsonNull)
+                        put("unit", quantity?.unit?.name?.let(::JsonPrimitive) ?: JsonNull)
+                        put("note", (target.note ?: source.note)?.let(::JsonPrimitive) ?: JsonNull)
+                        put("store", (target.store ?: source.store)?.let(::JsonPrimitive) ?: JsonNull)
+                        put("gtin", (target.gtin ?: source.gtin)?.value?.let(::JsonPrimitive) ?: JsonNull)
+                    }, version = target.version))
+                    val fresh = versioned(scope).associateBy { it.id }
+                    ensure(merge(requireNotNull(fresh[source.id]?.version), requireNotNull(fresh[target.id]?.version)))
+                    target.id
+                }
+            }
+            val after = versioned(scope).associateBy { it.id }
+            ids.map { requireNotNull(after[it]) }
+        }
+    } catch (_: CaptureMatchChanged) { null }
+
+    private class CaptureMatchChanged : RuntimeException()
+
     suspend fun find(id: ItemId): Item? = dao.find(id.value, listId())?.toItem()
 
     suspend fun add(parsed: ParsedItem, addedBy: MemberId? = null, gtin: Gtin? = null,

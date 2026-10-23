@@ -30,8 +30,10 @@ class RepositoryItemStore(private val repository: ItemRepository, private val sy
      * know that. So the id and position the view model invented are dropped
      * here on purpose, and the repository's answer is authoritative.
      */
-    override suspend fun add(items: List<Item>) {
-        repository.addAll(items.map { item ->
+    override suspend fun add(items: List<Item>) { capture(items) }
+
+    override suspend fun capture(items: List<Item>): List<Item> = repository.transaction {
+        val ids = repository.addAll(items.map { item ->
             NewItem(
                 parsed = ParsedItem(name = item.name, quantity = item.quantity, note = item.note),
                 addedBy = item.addedBy,
@@ -41,6 +43,8 @@ class RepositoryItemStore(private val repository: ItemRepository, private val sy
                 store = item.store,
             )
         })
+        val saved = repository.items().associateBy { it.id }
+        ids.map { requireNotNull(saved[it]) }
     }
 
     override suspend fun transfer(source: io.theficos.usuals.model.ItemVersion, destination: String, move: Boolean) =

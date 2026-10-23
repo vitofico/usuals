@@ -37,6 +37,15 @@ class PreferenceSettingsStore(
     private val mutationLock = Any()
     @Volatile private var scanLookupOverride: Boolean? = null
 
+    @Volatile private var automaticMatchingOverride: Boolean? = null
+
+    fun automaticMatchingEnabled(): Boolean = automaticMatchingOverride ?: prefs.getBoolean("automatic_matching", false)
+
+    override fun setAutomaticMatchingEnabled(enabled: Boolean) {
+        automaticMatchingOverride = enabled
+        synchronized(mutationLock) { prefs.edit().putBoolean("automatic_matching", enabled).apply() }
+    }
+
     fun scanLookupEnabled(): Boolean = scanLookupOverride ?: prefs.getBoolean("scan_lookup", false)
 
     private val scanLookupState = MutableStateFlow(scanLookupEnabled())
@@ -72,6 +81,7 @@ class PreferenceSettingsStore(
             dailyCallCeiling = dailyCallCeiling(),
             scanLookupEnabled = scanLookupEnabled(),
             basketOverviewEnabled = basketOverviewEnabled(),
+            automaticMatchingEnabled = automaticMatchingEnabled(),
         )
     }
 
@@ -88,6 +98,7 @@ class PreferenceSettingsStore(
                 .putInt(KEY_DAILY_CALL_CEILING, settings.dailyCallCeiling)
                 .putBoolean("scan_lookup", scanLookupOverride ?: settings.scanLookupEnabled)
                 .putBoolean(KEY_BASKET_OVERVIEW, basketOverviewOverride ?: settings.basketOverviewEnabled)
+                .putBoolean("automatic_matching", automaticMatchingOverride ?: settings.automaticMatchingEnabled)
                 .commit()
         }
         scanLookupState.value = scanLookupEnabled()

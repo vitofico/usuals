@@ -49,6 +49,8 @@ class FakeItemStore(
         rows.update { list -> list.map { if (it.id == id) it.copy(checked = checked) else it } }
     }
 
+    fun replace(item: Item) { rows.update { list -> list.map { if (it.id == item.id) item else it } } }
+
     override suspend fun remove(id: ItemId) {
         removed += id
         rows.update { list -> list.filterNot { it.id == id } }

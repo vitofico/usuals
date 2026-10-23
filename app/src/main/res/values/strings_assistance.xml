@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="quantity_hint_use">Use %1$s for %2$s</string>
-    <string name="merge_title">Your usual item?</string>
-    <string name="merge_question">Is “%1$s” your usual “%2$s”? If you merge them, %3$s will remember this name.</string>
-    <string name="merge_yes">Use usual item</string>
-    <string name="merge_no">Keep separate</string>
     <string name="repeat_offer_title">Make it a repeat?</string>
     <plurals name="repeat_offer_question">
         <item quantity="one">You have accepted %1$s suggestions three times. Add it automatically every %2$d day?</item>

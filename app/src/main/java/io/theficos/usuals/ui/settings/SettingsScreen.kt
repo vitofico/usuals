@@ -133,6 +133,7 @@ fun SettingsScreen(
                     }
                     SettingsLink(stringResource(R.string.settings_help), Icons.AutoMirrored.Outlined.HelpOutline) { panel = "help" }
                 }
+                CaptureMatchingSection(state, vm::setAutomaticMatching)
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -548,4 +549,16 @@ private fun WholeNumberField(label: String, value: Int, onValue: (Int) -> Unit) 
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+@Composable
+private fun CaptureMatchingSection(state: SettingsUiState, onChange: (Boolean) -> Unit) {
+    SectionCard(title = stringResource(R.string.settings_capture_title)) {
+        Row(Modifier.fillMaxWidth().toggleable(state.settings.automaticMatchingEnabled, enabled = state.loaded,
+            role = Role.Switch, onValueChange = onChange), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_automatic_matching), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Switch(checked = state.settings.automaticMatchingEnabled, onCheckedChange = null, enabled = state.loaded)
+        }
+        Text(stringResource(R.string.settings_automatic_matching_help), style = MaterialTheme.typography.bodySmall)
+    }
 }

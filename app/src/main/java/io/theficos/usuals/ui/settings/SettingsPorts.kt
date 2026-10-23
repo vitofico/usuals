@@ -21,6 +21,7 @@ interface SettingsStore {
 
     /** Immediate for the same reason: the list menu reads it when the person comes back. */
     fun setBasketOverviewEnabled(enabled: Boolean) = Unit
+    fun setAutomaticMatchingEnabled(enabled: Boolean) = Unit
 
     suspend fun load(): AppSettings
 

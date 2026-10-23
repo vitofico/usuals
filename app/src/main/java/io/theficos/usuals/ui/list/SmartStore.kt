@@ -14,14 +14,14 @@ data class ItemEdit(val id: ItemId, val name: String, val quantity: Quantity?, v
 
 interface SmartStore {
     suspend fun addAgain(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = 0
-    fun similar(name: String, history: HistorySnapshot, active: List<Item>): ItemMemory? = null
+    fun confirmedName(name: String, history: HistorySnapshot, active: List<Item>): String? = null
+    fun nameMatches(name: String, history: HistorySnapshot, active: List<Item>): List<io.theficos.usuals.smart.NameMatch> = emptyList()
     fun repeatOffers(active: List<Item>, history: HistorySnapshot): List<RepeatOffer> = emptyList()
     suspend fun setRepeat(offer: RepeatOffer) = Unit
     suspend fun applyQuantityHint(id: ItemId) = Unit
     suspend fun applyQuantityHint(id: ItemId, version: ItemVersion?) = applyQuantityHint(id)
     suspend fun acceptQuantityHint(id: ItemId, quantity: Quantity, version: ItemVersion?) = applyQuantityHint(id, version)
-    suspend fun addMerged(item: Item, usual: ItemMemory): Boolean = false
-    suspend fun addMerged(item: Item, usual: ItemMemory, version: ListVersion?): Boolean = addMerged(item, usual)
+    suspend fun matchCaptures(choices: List<CaptureMatchChoice>, remember: Boolean): List<Item>? = null
     fun suggestions(now: Long, history: HistorySnapshot, active: List<Item>): List<Suggestion> = emptyList()
     suspend fun chooseSuggestion(key: String, choice: SuggestionChoice, now: Long) = Unit
     suspend fun muteSuggestion(key: String, scope: String) = Unit

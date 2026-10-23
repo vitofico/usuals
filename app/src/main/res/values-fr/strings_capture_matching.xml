@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="capture_matches_title">Vos produits habituels ?</string>
+    <string name="capture_matches_help">Vos produits sont déjà enregistrés. Choisissez les noms à utiliser. Les choix confirmés seront mémorisés.</string>
+    <string name="capture_match_use">Utiliser « %1$s »</string>
+    <string name="capture_matches_apply">Appliquer les choix</string>
+    <string name="capture_matches_keep">Garder les noms</string>
+    <string name="capture_matches_done">Terminé</string>
+    <string name="capture_matched_automatically">Associé automatiquement à « %1$s »</string>
+    <string name="capture_match_undo">Annuler la correspondance</string>
+    <string name="capture_matches_changed">Certains produits ont changé ou ne peuvent pas être regroupés sans perdre de détails. Vos produits enregistrés ont été conservés.</string>
+    <string name="settings_capture_title">Saisie des produits</string>
+    <string name="settings_automatic_matching">Utiliser automatiquement les correspondances probables</string>
+    <string name="settings_automatic_matching_help">Désactivé par défaut. Corrige uniquement une faute de frappe sans ambiguïté en conservant les détails. Les autres correspondances restent proposées pour vérification.</string>
+</resources>

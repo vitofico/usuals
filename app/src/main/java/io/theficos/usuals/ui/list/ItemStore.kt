@@ -33,6 +33,8 @@ interface ItemStore {
     /** Transfers the exact row the person reviewed, retaining it when a move cannot be proved safe. */
     suspend fun transfer(source: io.theficos.usuals.model.ItemVersion, destination: String, move: Boolean): io.theficos.usuals.model.ItemTransferResult =
         io.theficos.usuals.model.ItemTransferResult.DESTINATION_UNAVAILABLE
+    /** Returns authoritative ids and versions after capture deduplication. */
+    suspend fun capture(items: List<Item>): List<Item> { add(items); return items }
 
     suspend fun setChecked(id: ItemId, checked: Boolean)
 

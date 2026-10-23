@@ -183,7 +183,10 @@ data class ListActions(
     val onAddRecipe: () -> Unit = {},
     val onDismissRecipe: () -> Unit = {},
     val onQuantityHint: (ItemId) -> Unit = {},
-    val onMergeChoice: (Boolean) -> Unit = {},
+    val onCaptureMatchSelect: (ItemId, String?) -> Unit = { _, _ -> },
+    val onApplyCaptureMatches: () -> Unit = {},
+    val onKeepCaptureWording: () -> Unit = {},
+    val onUndoCaptureMatch: (ItemId) -> Unit = {},
     val onRepeatOffer: (Boolean) -> Unit = {},
     val onSuggestion: (String, SuggestionChoice) -> Unit = { _, _ -> },
     val onAutocomplete: (ItemMemory) -> Unit = {},
@@ -346,7 +349,10 @@ fun ListScreen(
             onRecipeToggle = vm::onRecipeToggle,
             onAddRecipe = vm::onAddRecipe,
             onDismissRecipe = vm::onDismissRecipe,
-            onMergeChoice = vm::onMergeChoice,
+            onCaptureMatchSelect = vm::onCaptureMatchSelect,
+            onApplyCaptureMatches = vm::onApplyCaptureMatches,
+            onKeepCaptureWording = vm::onKeepCaptureWording,
+            onUndoCaptureMatch = vm::onUndoCaptureMatch,
             onRepeatOffer = vm::onRepeatOffer,
             onConfirmRemove = vm::onConfirmRemove,
             onOpenScan = onOpenScan,
@@ -446,7 +452,7 @@ fun ListContent(
         actions.onRecipeSource, actions.onRecipeMarkdown, actions.onReadRecipeMarkdown, actions.onRecipeMarkdownFile,
         actions.onRecipePhoto, actions.onCreateRecipePhoto, actions.onReleaseRecipePhoto, actions.onRecipeFileFailure,
         state.personal.emojiQuantities, actions.onEmojiQuantities) }
-    if (state.productInfo == null && state.recipe == null && state.editing == null && state.transfer == null && state.transferResult == null && state.mergeReview == null) state.scanNames.firstOrNull()?.let {
+    if (state.productInfo == null && state.recipe == null && state.editing == null && state.transfer == null && state.transferResult == null) state.scanNames.firstOrNull()?.let {
         ScanNameSheet(it, state.scanNames.size, state.busy, { name -> actions.onConfirmScanName(it.gtin, name) },
             { actions.onSkipScanName(it.gtin) }, actions.onSkipScanNames)
     }
@@ -462,7 +468,7 @@ fun ListContent(
             ListHeaderBar(
                 header = state.header,
                 directory = state.directory,
-                busy = state.busy || state.capture != CaptureState.Idle,
+                busy = state.busy || state.matchingBusy || state.capture != CaptureState.Idle,
                 actions = actions,
                 compact = typing != null,
                 onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
@@ -485,7 +491,7 @@ fun ListContent(
             } }
             val partial = (state.capture as? CaptureState.Listening)?.partial.orEmpty()
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                if (state.isEmpty && partial.isBlank()) {
+                if (state.isEmpty && partial.isBlank() && state.captureMatches.isEmpty()) {
                     if (typing == null) {
                         if (state.selectedStore == null) EmptyInstruction() else Text(stringResource(R.string.store_empty), modifier = Modifier.padding(20.dp))
                     }
@@ -691,6 +697,13 @@ private fun ItemList(
         modifier = Modifier.fillMaxSize().testTag(ShoppingListTag),
         contentPadding = PaddingValues(top = 6.dp, bottom = 18.dp),
     ) {
+        if (state.captureMatches.isNotEmpty()) {
+            item(key = "capture-match-header") { CaptureMatchHeader(state) }
+            items(state.captureMatches, key = { "capture-match:${it.incoming.id.value}" }) { review ->
+                CaptureMatchRow(review, state.matchingBusy, actions)
+            }
+            item(key = "capture-match-actions") { CaptureMatchActions(state, actions) }
+        }
         state.pending.groupBy { it.category }.toSortedMap(compareBy { state.personal.portable.categoryOrder(state.selectedStore).indexOf(it) }).forEach { (category, rows) ->
             item(key = "category:${category.name}") {
                 CategoryHeader(category, rows.size)

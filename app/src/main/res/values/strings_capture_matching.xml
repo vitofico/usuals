@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="capture_matches_title">Your usual items?</string>
+    <string name="capture_matches_help">Your items are already saved. Choose any names to use instead. Confirmed choices are remembered.</string>
+    <string name="capture_match_use">Use “%1$s”</string>
+    <string name="capture_matches_apply">Apply choices</string>
+    <string name="capture_matches_keep">Keep wording</string>
+    <string name="capture_matches_done">Done</string>
+    <string name="capture_matched_automatically">Automatically matched to “%1$s”</string>
+    <string name="capture_match_undo">Undo match</string>
+    <string name="capture_matches_changed">Some items changed or cannot be combined without losing details. Your saved items have been kept.</string>
+    <string name="settings_capture_title">Item capture</string>
+    <string name="settings_automatic_matching">Automatically use likely matches</string>
+    <string name="settings_automatic_matching_help">Off by default. Corrects only an unambiguous typo without removing item details. Other matches stay available for review.</string>
+</resources>

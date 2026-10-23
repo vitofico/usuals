@@ -45,7 +45,9 @@ data class ListUiState(
     val autocomplete: List<ItemMemory> = emptyList(),
     val repeatSuggestionKeys: Set<String> = emptySet(),
     val suggestions: List<Suggestion> = emptyList(),
-    val mergeReview: MergeReview? = null,
+    val captureMatches: List<CaptureMatchReview> = emptyList(),
+    val matchingBusy: Boolean = false,
+    val matchingError: Boolean = false,
     val repeatOffer: RepeatOffer? = null,
     val recipe: RecipeUiState? = null,
     val scanNames: List<ScanNameOffer> = emptyList(),
@@ -131,4 +133,10 @@ sealed interface ListPrompt {
     data class CarryOver(val ids: Set<ItemId>, val names: List<String>) : ListPrompt
 }
 
-data class MergeReview(val incoming: Item, val usual: ItemMemory, val version: io.theficos.usuals.model.ListVersion? = null)
+data class CaptureMatchChoice(val incoming: Item, val usual: ItemMemory)
+data class CaptureMatchReview(
+    val incoming: Item,
+    val candidates: List<io.theficos.usuals.smart.NameMatch>,
+    val selectedKey: String? = null,
+    val matched: Item? = null,
+)

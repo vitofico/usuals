@@ -299,18 +299,19 @@ class RepositorySmartStoreTest {
         assertThat(items.find(milk)!!.quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
     }
 
-    @Test fun `confirmed merge records an alias and preserves explicit quantity atomically`() = runTest {
+    @Test fun `confirmed capture match records an alias and preserves explicit quantity atomically`() = runTest {
         history.importPast(listOf(ParsedItem("milk")), now - RepeatPlanner.DAY_MILLIS)
         val milk = items.add(ParsedItem("milk", Quantity(1.0, MeasureUnit.LITRE)))
-        val usual = smart.similar("whole milk", history.snapshot(), items.items())!!
-        assertThat(history.snapshot().aliases).isEmpty()
-        val incoming = Item(ItemId("incoming"), "1 l whole milk", "whole milk", "whole milk",
-            Quantity(1.0, MeasureUnit.LITRE), createdAt = now, updatedAt = now)
-        assertThat(smart.addMerged(incoming, usual)).isTrue()
-        assertThat(history.snapshot().aliases).containsExactly(ItemAlias("whole milk", "milk"))
+        val usual = smart.nameMatches("milkk", history.snapshot(), items.items()).single().item
+        val source = items.add(ParsedItem("milkk", Quantity(500.0, MeasureUnit.MILLILITRE), "for breakfast"))
+        val captured = items.items().first { it.id == source }
+        assertThat(items.items()).hasSize(2)
+        assertThat(smart.matchCaptures(listOf(io.theficos.usuals.ui.list.CaptureMatchChoice(captured, usual)), true)).isNotNull()
+        assertThat(history.snapshot().aliases).containsExactly(ItemAlias("milkk", "milk"))
         assertThat(items.items()).hasSize(1)
-        assertThat(items.find(milk)!!.quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(smart.similar("whole milk", history.snapshot(), items.items())).isNull()
+        assertThat(items.find(milk)!!.quantity).isEqualTo(Quantity(1.5, MeasureUnit.LITRE))
+        assertThat(items.find(milk)!!.note).isEqualTo("for breakfast")
+        assertThat(smart.nameMatches("milkk", history.snapshot(), items.items())).isEmpty()
     }
 
     @Test fun `accepting an offered repeat preserves a manual category`() = runTest {
@@ -354,20 +355,67 @@ class RepositorySmartStoreTest {
         assertThat(items.items().single().quantity!!.amount).isEqualTo(5.0)
         assertThat(LocalReplica(db).observeStatus(LOCAL_LIST_ID).first().conflicts.single().incoming["quantity"]).isEqualTo("2.0")
     }
-    @Test fun `stale similarity approval keeps its literal alias request without adding to another identity`() = runTest {
+    @Test fun `stale capture match keeps the original and never changes another identity`() = runTest {
         history.importPast(listOf(ParsedItem("milk")), now - RepeatPlanner.DAY_MILLIS)
-        val usual = smart.similar("whole milk", history.snapshot(), emptyList())!!
-        val pinned = history.observeShopping().first().listVersion!!
-        assertThat(pinned.aliasRevision).isNull()
+        val usual = smart.nameMatches("milkk", history.snapshot(), emptyList()).single().item
+        val id = items.add(ParsedItem("milkk", Quantity.pieces(2)))
+        val incoming = items.items().single()
         history.saveAlias(ItemAlias("milk", "soap"))
-        val incoming = Item(ItemId("incoming"), "whole milk", "whole milk", "whole milk", createdAt = now, updatedAt = now)
-        assertThat(smart.addMerged(incoming, usual, pinned)).isFalse()
-        assertThat(items.items()).isEmpty()
+        assertThat(smart.matchCaptures(listOf(io.theficos.usuals.ui.list.CaptureMatchChoice(incoming, usual)), true)).isNull()
+        assertThat(items.find(id)!!.name).isEqualTo("milkk")
+        assertThat(items.find(id)!!.quantity).isEqualTo(Quantity.pieces(2))
         assertThat(history.snapshot().aliases).containsExactly(ItemAlias("milk", "soap"))
-        val conflict = LocalReplica(db).observeStatus(LOCAL_LIST_ID).first().conflicts.single()
-        assertThat(conflict.kind).isEqualTo("alias")
-        assertThat(conflict.incoming).containsEntry("whole milk", "milk")
-        assertThat(conflict.current).containsEntry("milk", "soap")
     }
 
+    @Test fun `an incompatible choice rolls back every match in the batch`() = runTest {
+        items.add(ParsedItem("milk", Quantity(1.0, MeasureUnit.LITRE)))
+        items.add(ParsedItem("bread", Quantity.pieces(1)))
+        val captures = RepositoryItemStore(items).capture(listOf(
+            Item(ItemId("a"), "breaad", "breaad", "breaad", Quantity.pieces(2), createdAt = now, updatedAt = now),
+            Item(ItemId("b"), "milkk", "milkk", "milkk", Quantity.pieces(3), createdAt = now, updatedAt = now),
+        ))
+        val choices = captures.map { source -> io.theficos.usuals.ui.list.CaptureMatchChoice(source,
+            ItemMemory(if (source.name == "breaad") "bread" else "milk", if (source.name == "breaad") "bread" else "milk", 0, 0)) }
+        assertThat(smart.matchCaptures(choices, true)).isNull()
+        assertThat(items.items().map { it.name }).containsExactly("milk", "bread", "breaad", "milkk")
+        assertThat(items.items().first { it.name == "bread" }.quantity).isEqualTo(Quantity.pieces(1))
+        assertThat(history.snapshot().aliases).isEmpty()
+    }
+
+    @Test fun `a batch of confirmed names keeps raw text notes and quantities and remembers both aliases`() = runTest {
+        val captures = RepositoryItemStore(items).capture(listOf(
+            Item(ItemId("a"), "2 kg bananna, 1 l yogrut", "bananna", "bananna", Quantity(2.0, MeasureUnit.KILOGRAM), "ripe", createdAt = now, updatedAt = now),
+            Item(ItemId("b"), "2 kg bananna, 1 l yogrut", "yogrut", "yogrut", Quantity(1.0, MeasureUnit.LITRE), createdAt = now, updatedAt = now),
+        ))
+        val choices = captures.zip(listOf("banana", "yogurt")).map { (source, name) ->
+            io.theficos.usuals.ui.list.CaptureMatchChoice(source, ItemMemory(name, name, 0, 0)) }
+        assertThat(smart.matchCaptures(choices, true)).isNotNull()
+        val saved = items.items()
+        assertThat(saved.map { it.name }).containsExactly("banana", "yogurt")
+        assertThat(saved.first().rawText).isEqualTo("2 kg bananna, 1 l yogrut")
+        assertThat(saved.first().note).isEqualTo("ripe")
+        assertThat(saved.map { it.quantity }).containsExactly(Quantity(2.0, MeasureUnit.KILOGRAM), Quantity(1.0, MeasureUnit.LITRE))
+        assertThat(history.snapshot().aliases).containsExactly(ItemAlias("bananna", "banana"), ItemAlias("yogrut", "yogurt"))
+    }
+
+    @Test fun `automatic correction and undo preserve the capture and do not create aliases`() = runTest {
+        items.add(ParsedItem("bananna", Quantity.pieces(3), "ripe"), rawText = "3 bananna")
+        val source = items.items().single()
+        val matched = smart.matchCaptures(listOf(io.theficos.usuals.ui.list.CaptureMatchChoice(source, ItemMemory("banana", "banana", 0, 0))), false)!!.single()
+        assertThat(history.snapshot().aliases).isEmpty()
+        assertThat(matched.quantity).isEqualTo(source.quantity)
+        assertThat(matched.rawText).isEqualTo(source.rawText)
+        assertThat(matched.note).isEqualTo("ripe")
+        assertThat(smart.matchCaptures(listOf(io.theficos.usuals.ui.list.CaptureMatchChoice(matched, ItemMemory("bananna", "bananna", 0, 0))), false)).isNotNull()
+        assertThat(items.items().single().name).isEqualTo("bananna")
+    }
+
+    @Test fun `an edit after capture cannot be overwritten by a stale review`() = runTest {
+        items.add(ParsedItem("bananna", Quantity.pieces(3)))
+        val source = items.items().single()
+        items.setQuantity(source.id, Quantity.pieces(5))
+        assertThat(smart.matchCaptures(listOf(io.theficos.usuals.ui.list.CaptureMatchChoice(source, ItemMemory("banana", "banana", 0, 0))), true)).isNull()
+        assertThat(items.items().single().quantity).isEqualTo(Quantity.pieces(5))
+        assertThat(history.snapshot().aliases).isEmpty()
+    }
 }

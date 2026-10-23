@@ -289,6 +289,9 @@ class AppWiringTest {
             compose.onAllNodesWithText("Online product lookup").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Online product lookup").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Enable product names").fetchSemanticsNodes().isNotEmpty()
+        }
         // Exercise the accessible action; popup hit targets are checked on the emulator.
         compose.onNodeWithText("Enable product names").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }

@@ -40,7 +40,8 @@ class RepositorySmartStore(
         }
     }
 
-    override fun similar(name: String, history: HistorySnapshot, active: List<Item>) = similar.find(name, history, active)
+    override fun nameMatches(name: String, history: HistorySnapshot, active: List<Item>) = similar.candidates(name, history, active)
+    override fun confirmedName(name: String, history: HistorySnapshot, active: List<Item>) = similar.confirmedName(name, history, active)
     override fun repeatOffers(active: List<Item>, history: HistorySnapshot) = offers.offers(active, history)
 
     override suspend fun setRepeat(offer: RepeatOffer) {
@@ -67,18 +68,12 @@ class RepositorySmartStore(
     override suspend fun acceptQuantityHint(id: ItemId, quantity: Quantity, version: ItemVersion?) = maintenance.withLock {
         items.setQuantity(id, quantity, version)
     }
-    override suspend fun addMerged(item: Item, usual: ItemMemory) = addMerged(item, usual, null)
-    override suspend fun addMerged(item: Item, usual: ItemMemory, version: ListVersion?): Boolean = maintenance.withLock {
-        items.transaction {
-            val facts = history.snapshot()
-            val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-            val from = Normalizer.normalize(item.name)
-            val to = if (version != null) usual.key else ItemIdentity.resolve(usual.key, aliases)
-            if (from != to && !history.saveAlias(ItemAlias(from, to), version)) return@transaction false
-            items.add(ParsedItem(usual.name, item.quantity, item.note), item.addedBy, item.gtin,
-                item.rawText, item.fromSuggestion, item.store)
-            true
+    override suspend fun matchCaptures(choices: List<CaptureMatchChoice>, remember: Boolean): List<Item>? = maintenance.withLock {
+        val requests = choices.map { choice ->
+            val version = choice.incoming.version ?: return@withLock null
+            io.theficos.usuals.data.local.CaptureNameChoice(version, choice.usual.key, choice.usual.name)
         }
+        items.matchCaptures(requests, remember)
     }
 
     // No setting enables intervals: rollout requires reviewed real-history replay evidence.
