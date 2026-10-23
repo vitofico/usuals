@@ -172,6 +172,8 @@ request errors/duration buckets, active and waiting requests, JDBC pool occupanc
 heap and aggregate database and list storage. No account, list or IP labels and
 no list contents. Backups/WAL/off-site freshness and node memory/disk need host
 monitoring.
+`usuals_requests_waiting` counts only idle feed waits after their initial read
+has released its request slot, excluding initial reads and wake-up responses.
 
 Eight ordinary requests run at a time, without an unbounded wait queue. Building
 list responses is limited to two at a time. A change-feed request that is waiting
