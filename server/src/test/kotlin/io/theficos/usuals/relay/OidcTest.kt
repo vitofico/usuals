@@ -16,6 +16,9 @@ internal class OidcFixture(val now: () -> Long) {
     val issuer = "https://sso.example/application/o/usuals/"
     var subject = "member-subject"
     var nonce = "synthetic-nonce"
+    var email = "member@example.invalid"
+    var verifiedEmail = true
+    var authenticationTime: Long? = null
     var groups: JsonElement = buildJsonArray { add("usuals-users") }
     var discoveryOverride: JsonObject? = null
     var tokenOverride: String? = null
@@ -25,7 +28,8 @@ internal class OidcFixture(val now: () -> Long) {
     fun config(admins: Set<String> = setOf("admin-subject"), allowed: Set<String> = emptySet()) = OidcConfig(issuer, "usuals-web", "synthetic-client-secret", "https://usuals.invalid", admins, allowed)
     fun claims() = buildJsonObject {
         put("iss", issuer); put("sub", subject); put("aud", "usuals-web"); put("iat", now() / 1000); put("exp", now() / 1000 + 300)
-        put("nonce", nonce); put("name", "Synthetic Member"); put("email", "member@example.invalid"); put("email_verified", true); put("groups", groups)
+        put("nonce", nonce); put("name", "Synthetic Member"); put("email", email); put("email_verified", verifiedEmail); put("groups", groups)
+        put("auth_time", authenticationTime ?: now() / 1000)
     }
     fun jwt(claims: JsonObject = claims(), header: JsonObject = buildJsonObject { put("alg", "RS256"); put("kid", "fixture-key") }): String {
         val content = encode(header.toString().toByteArray()) + "." + encode(claims.toString().toByteArray())
@@ -148,6 +152,7 @@ class OidcTest {
         fixture.groups = buildJsonArray { add("usuals-users") }
         val unverified = fixture.claims().changed("email_verified", JsonPrimitive(false))
         assertThat(client.verify(fixture.jwt(unverified), fixture.keys(), digest(fixture.nonce)).email).isNull()
+        assertThat(client.verify(fixture.jwt(fixture.claims().changed("email_verified", JsonPrimitive("true"))), fixture.keys(), digest(fixture.nonce)).email).isNull()
     }
     @Test fun oidcIsExplicitlyDisabledAndConfigurationRejectsInvalidAuthority() {
         assertThat(OidcConfig.fromEnvironment(config.origin, emptyMap())).isNull()
@@ -155,5 +160,24 @@ class OidcTest {
         for (issuer in listOf("http://sso.example/", "https://user@sso.example/", "https://sso.example/#fragment", "https://sso.example/a/../b/", "https://sso.example/?key=x")) {
             assertThrows(IllegalArgumentException::class.java) { OidcConfig(issuer, "client", "secret", config.origin) }
         }
+    }
+    @Test fun registrationAndFreshAuthenticationUseStandardParametersAndValidateAuthTime() {
+        val client = OidcClient(config, fixture.transport) { now }
+        val request = OidcFixture.query(client.authorization(client.metadata(), "state", fixture.nonce, "verifier", register = true, fresh = true))
+        assertThat(request["prompt"]).isEqualTo("create")
+        assertThat(request["max_age"]).isEqualTo("300")
+        assertThat(client.verify(fixture.jwt(), fixture.keys(), digest(fixture.nonce), fresh = true).authenticatedAt).isEqualTo(now)
+        for (claims in listOf(JsonObject(fixture.claims() - "auth_time"), fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 - 301)),
+            fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 + 31)), fixture.claims().changed("auth_time", JsonPrimitive("1800000000")))) {
+            denied { client.verify(fixture.jwt(claims), fixture.keys(), digest(fixture.nonce), fresh = true) }
+        }
+    }
+    @Test fun plaintextOidcRequiresExplicitLoopbackDevelopmentAtBothBoundaries() {
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.localhost/realms/usuals", "client", "secret", config.origin, localHttp = true) }
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.example.org/realms/usuals", "client", "secret", "http://localhost:8080", localHttp = true) }
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.localhost/realms/usuals", "client", "secret", "http://localhost:8080") }
+        val local = OidcConfig("http://id.localhost/realms/usuals", "client", "secret", "http://localhost:8080", localHttp = true)
+        assertThat(local.endpoint(local.issuer).scheme).isEqualTo("http")
+        assertThrows(IllegalArgumentException::class.java) { local.endpoint("http://other.localhost/keys") }
     }
 }

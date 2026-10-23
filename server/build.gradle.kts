@@ -20,6 +20,7 @@ dependencies {
     implementation("io.ktor:ktor-server-compression-jvm:${libs.versions.ktor.get()}")
     implementation(libs.relay.pgjdbc)
     implementation(libs.relay.hikari)
+    implementation(libs.relay.mail)
     testImplementation(libs.relay.ktor.test)
     testImplementation(project(":core:parse"))
     testImplementation(libs.junit)

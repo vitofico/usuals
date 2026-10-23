@@ -13,6 +13,11 @@ Run the real PostgreSQL integration suite, the browser unit tests and build the 
 server/scripts/test-local
 ```
 
+For real email registration and list invitations with local captured email, run
+`node server/scripts/email-preview.mjs`. See the
+[email onboarding guide](../docs/sync/email-invitations.md) for the complete
+registration, invitation, beta-admission and local test workflow.
+
 The helper creates a disposable PostgreSQL container on a private Docker network,
 with an in-memory disk and temporary credentials. It invokes
 `scripts/dgradle -p server test webTest installDist --no-watch-fs`; `webTest` runs

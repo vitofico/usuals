@@ -10,7 +10,7 @@ import javax.sql.DataSource
 
 class Database(val source: DataSource) {
     private fun migrations() = listOf("001_relay.sql", "002_web_identity.sql", "003_local_identity.sql", "004_web_household.sql", "005_connection_ai.sql", "006_pairing_v2.sql", "007_connection_offer.sql",
-        "008_server_lists.sql").mapIndexed { index, name ->
+        "008_server_lists.sql", "009_email_invitation.sql").mapIndexed { index, name ->
         (index + 1) to checkNotNull(javaClass.getResourceAsStream("/db/$name")).use { it.readBytes() }
     }
     fun <T> transaction(block: (Connection) -> T): T = source.connection.use { c ->
@@ -45,7 +45,7 @@ class Database(val source: DataSource) {
         val existing = c.query("SELECT server_id,fence FROM relay_meta WHERE singleton=1") { Unit }
         if (existing.isEmpty()) {
             val tables = listOf("list", "list_member", "rate_bucket", "web_user", "web_login", "web_session", "local_credential", "local_login",
-                "connection_ticket", "connection_offer", "native_session", "ai_preference", "ai_usage", "ai_vision_check")
+                "connection_ticket", "connection_offer", "native_session", "ai_preference", "ai_usage", "ai_vision_check", "email_invitation", "invitation_context")
             val occupied = tables.joinToString(" OR ") { "EXISTS(SELECT 1 FROM $it)" }
             check(c.query("SELECT $occupied") { it.getBoolean(1) }.single().not()) { "missing_restore_metadata" }
             c.execute("INSERT INTO relay_meta VALUES (1,?,?)", Wire.decode(serverId, 32), fence)
@@ -60,6 +60,8 @@ class Database(val source: DataSource) {
             c.execute("DELETE FROM connection_ticket")
             c.execute("DELETE FROM ai_vision_check")
             c.execute("DELETE FROM web_login")
+            c.execute("DELETE FROM invitation_context")
+            c.execute("UPDATE email_invitation SET state='revoked',mail_cipher=NULL,delivery='cancelled' WHERE state='pending'")
             c.execute("DELETE FROM local_login")
             c.execute("UPDATE local_credential SET password_hash=NULL,salt=NULL,setup_hash=NULL,setup_expires=NULL")
             c.execute("UPDATE relay_meta SET fence=? WHERE singleton=1", fence)

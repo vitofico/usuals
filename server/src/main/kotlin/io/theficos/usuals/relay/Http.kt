@@ -179,17 +179,65 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 } }
             }
             get("/api/people") { run { call.privateResponse(); call.json(lists.people(call.accountAccess(mutation = false), call.request.queryParameters["q"] ?: "")) } }
+            webIdentity.invitations?.let { invitations ->
+                get("/api/invitations/challenge") { run(identity = true) {
+                    call.privateResponse()
+                    val start = invitations.challenge(ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))
+                    call.webCookie(webIdentity, webIdentity.invitationCookieName(), start.token, 1800)
+                    call.json(start.result)
+                } }
+                post("/api/invitations/context") { run(identity = true) {
+                    call.privateResponse()
+                    invitations.attach(call.request.cookies[webIdentity.invitationCookieName()] ?: "", call.request.headers[HttpHeaders.Origin], call.request.headers["X-CSRF-Token"], call.identityBody(1024))
+                    call.respond(HttpStatusCode.NoContent)
+                } }
+                get("/api/invitations/current") { run {
+                    call.privateResponse()
+                    val caller = try { call.reader(webIdentity) } catch (e: RelayError) { if (e.status in setOf(401, 403)) null else throw e }
+                    call.json(invitations.preview(call.request.cookies[webIdentity.invitationCookieName()], caller) { c -> caller?.let { webIdentity.current(c, it) } })
+                } }
+                post("/api/invitations/accept") { run {
+                    call.privateResponse(); val caller = call.webCaller(webIdentity)
+                    call.listed(InvitationAccepted.serializer()) { invitations.accept(call.request.cookies[webIdentity.invitationCookieName()], caller, lists) { webIdentity.current(it, caller) } }
+                } }
+                post("/api/invitations/dismiss") { run {
+                    call.privateResponse()
+                    expect(call.request.headers[HttpHeaders.Origin] == webIdentity.config.origin, "forbidden", 403)
+                    call.webCookie(webIdentity, webIdentity.invitationCookieName(), "", 0)
+                    call.respond(HttpStatusCode.NoContent)
+                } }
+                for (admin in listOf(false, true)) route(if (admin) "/api/admin/invitations" else "/api/lists/{id}/invitations") {
+                    get { run {
+                        call.privateResponse(); val caller = call.reader(webIdentity)
+                        call.json(invitations.page(caller, if (admin) null else call.routeId("id")) { webIdentity.current(it, caller) })
+                    } }
+                    post { run {
+                        call.privateResponse(); val caller = call.webCaller(webIdentity); val request = call.identityBody<SendInvitation>(1024)
+                        call.json(invitations.send(caller, if (admin) null else call.routeId("id"), request) { webIdentity.current(it, caller) }, HttpStatusCode.Created)
+                    } }
+                    post("{invitationId}/resend") { run {
+                        call.privateResponse(); val caller = call.webCaller(webIdentity)
+                        call.json(invitations.change(caller, if (admin) null else call.routeId("id"), call.routeId("invitationId"), true) { webIdentity.current(it, caller) })
+                    } }
+                    delete("{invitationId}") { run {
+                        call.privateResponse(); val caller = call.webCaller(webIdentity)
+                        call.json(invitations.change(caller, if (admin) null else call.routeId("id"), call.routeId("invitationId"), false) { webIdentity.current(it, caller) })
+                    } }
+                }
+            }
         }
         // The household relay is gone; older apps read this and ask their user to update.
         for (path in listOf("/v1/households", "/v1/invites", "/v1/join-requests", "/v1/lists", "/v1/devices", "/v1/changes", "/v1/account/households", "/api/households", "/api/devices/link")) {
             route("$path/{...}") { handle { call.respondText("{\"code\":\"upgrade_required\"}", ContentType.Application.Json, HttpStatusCode.UpgradeRequired) } }
         }
 
-        get("/auth/config") { run { call.privateResponse(); call.json(WebAuthConfig(webIdentity != null, if (webIdentity?.config?.oidc != null) "/auth/login" else null, webIdentity?.config?.oidc != null, webIdentity?.config?.localEnabled == true)) } }
+        get("/auth/config") { run { call.privateResponse(); call.json(WebAuthConfig(webIdentity != null, if (webIdentity?.config?.oidc != null) "/auth/login" else null, webIdentity?.config?.oidc != null, webIdentity?.config?.localEnabled == true,
+            if (webIdentity?.config?.oidc?.registrationEnabled == true) "/auth/register" else null, webIdentity?.invitations != null, webIdentity?.config?.invitationOnly == true)) } }
         if (webIdentity != null) {
-            get("/auth/login") { run(identity = true) {
+            for (register in listOf(false, true)) get(if (register) "/auth/register" else "/auth/login") { run(identity = true) {
                 call.privateResponse()
-                val start = webIdentity.begin(ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))
+                val start = webIdentity.begin(ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()), register,
+                    call.request.queryParameters["fresh"] == "true", call.request.cookies[webIdentity.invitationCookieName()])
                 call.webCookie(webIdentity, webIdentity.loginCookieName(), start.browserToken, 300)
                 call.respondRedirect(start.location)
             } }
@@ -258,6 +306,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
 private fun WebIdentity.sessionCookieName() = if (config.secureCookies) "__Host-usuals-session" else "usuals-session"
 private fun WebIdentity.loginCookieName() = if (config.secureCookies) "__Host-usuals-login" else "usuals-login"
 private fun WebIdentity.localCookieName() = if (config.secureCookies) "__Host-usuals-local-login" else "usuals-local-login"
+private fun WebIdentity.invitationCookieName() = if (config.secureCookies) "__Host-usuals-invitation" else "usuals-invitation"
 private fun ApplicationCall.webToken(identity: WebIdentity) = request.cookies[identity.sessionCookieName()] ?: reject("unauthenticated", 401)
 private fun ApplicationCall.webCaller(identity: WebIdentity) = session(identity, identity.csrf(webToken(identity), request.headers[HttpHeaders.Origin], request.headers["X-CSRF-Token"]))
 private fun ApplicationCall.reader(identity: WebIdentity) = session(identity, identity.reader(webToken(identity)))

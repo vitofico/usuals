@@ -30,6 +30,8 @@ class OidcConfig(
     val origin: String,
     val adminSubjects: Set<String> = emptySet(),
     val allowedGroups: Set<String> = emptySet(),
+    val registrationEnabled: Boolean = false,
+    val localHttp: Boolean = false,
 ) {
     val callback = "$origin/auth/callback"
     val secureCookies = URI(origin).scheme == "https"
@@ -40,12 +42,14 @@ class OidcConfig(
         require(clientId.isNotBlank() && clientId.length <= 256 && clientId.none(Char::isISOControl)) { "invalid_oidc_client" }
         require(clientSecret.isNotBlank() && clientSecret.length <= 8192 && clientSecret.none(Char::isISOControl)) { "invalid_oidc_secret" }
         require(origin == canonicalOrigin(origin, !secureCookies)) { "invalid_oidc_origin" }
+        require(!localHttp || !secureCookies) { "invalid_oidc_local_http" }
         require(adminSubjects.size <= 100 && adminSubjects.all { it.isNotBlank() && it.length <= 255 && it.none(Char::isISOControl) }) { "invalid_oidc_admins" }
         require(allowedGroups.size <= 100 && allowedGroups.all { it.isNotBlank() && it.length <= 255 && it.none(Char::isISOControl) }) { "invalid_oidc_groups" }
     }
     fun endpoint(value: String): URI {
         val url = URI(value)
-        require(value.length <= 2048 && url.scheme == "https" && !url.host.isNullOrBlank() && url.userInfo == null && url.fragment == null && url.rawQuery == null) { "invalid_oidc_endpoint" }
+        val loopback = url.host in setOf("localhost", "127.0.0.1", "[::1]") || url.host?.endsWith(".localhost") == true
+        require(value.length <= 2048 && (url.scheme == "https" || localHttp && !secureCookies && url.scheme == "http" && loopback) && !url.host.isNullOrBlank() && url.userInfo == null && url.fragment == null && url.rawQuery == null) { "invalid_oidc_endpoint" }
         require(url.normalize() == url && !value.contains('\\')) { "invalid_oidc_endpoint" }
         val expected = URI(issuer)
         require(url.host == expected.host && url.port == expected.port) { "invalid_oidc_endpoint" }
@@ -57,6 +61,7 @@ class OidcConfig(
             require(enabled in setOf("true", "false")) { "invalid_oidc_enabled" }
             if (enabled == "false") return null
             fun required(name: String) = requireNotNull(environment[name]) { "missing_config:$name" }
+            fun flag(name: String): Boolean = (environment[name] ?: "false").also { require(it in setOf("true", "false")) }.toBoolean()
             fun values(name: String): Set<String> {
                 val raw = environment[name] ?: return emptySet()
                 require(raw.length <= 32768) { "invalid_oidc_set" }
@@ -68,12 +73,12 @@ class OidcConfig(
             val path = Path.of(required("USUALS_OIDC_CLIENT_SECRET_FILE"))
             require(Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path) && Files.size(path) in 1..8193) { "invalid_oidc_secret_file" }
             return OidcConfig(required("USUALS_OIDC_ISSUER"), required("USUALS_OIDC_CLIENT_ID"), Files.readString(path).trim(), origin,
-                values("USUALS_OIDC_ADMIN_SUBJECTS"), values("USUALS_OIDC_ALLOWED_GROUPS"))
+                values("USUALS_OIDC_ADMIN_SUBJECTS"), values("USUALS_OIDC_ALLOWED_GROUPS"), flag("USUALS_OIDC_REGISTRATION_ENABLED"), flag("USUALS_OIDC_LOCAL_HTTP"))
         }
     }
 }
 
-internal data class OidcIdentity(val subject: String, val displayName: String, val email: String?)
+internal data class OidcIdentity(val subject: String, val displayName: String, val email: String?, val authenticatedAt: Long? = null)
 internal data class OidcMetadata(val authorization: String, val token: String, val jwks: String)
 internal fun interface OidcTransport { fun json(url: URI, form: Map<String, String>?, basic: String?): JsonObject }
 
@@ -128,11 +133,11 @@ internal class OidcClient(private val config: OidcConfig, private val transport:
         fun endpoint(name: String) = document.text(name).also { try { config.endpoint(it) } catch (_: Exception) { reject("identity_unavailable", 503) } }
         return OidcMetadata(endpoint("authorization_endpoint"), endpoint("token_endpoint"), endpoint("jwks_uri"))
     }
-    fun authorization(metadata: OidcMetadata, state: String, nonce: String, verifier: String): String = metadata.authorization + "?" + linkedMapOf(
+    fun authorization(metadata: OidcMetadata, state: String, nonce: String, verifier: String, register: Boolean = false, fresh: Boolean = false): String = metadata.authorization + "?" + (linkedMapOf(
         "client_id" to config.clientId, "redirect_uri" to config.callback, "response_type" to "code", "scope" to "openid profile email",
         "state" to state, "nonce" to nonce, "code_challenge" to digestText(verifier), "code_challenge_method" to "S256",
-    ).entries.joinToString("&") { "${encodeForm(it.key)}=${encodeForm(it.value)}" }
-    fun complete(code: String, verifier: String, nonceHash: ByteArray): OidcIdentity {
+    ) + (if (register) mapOf("prompt" to "create") else emptyMap()) + (if (fresh) mapOf("max_age" to "300") else emptyMap())).entries.joinToString("&") { "${encodeForm(it.key)}=${encodeForm(it.value)}" }
+    fun complete(code: String, verifier: String, nonceHash: ByteArray, fresh: Boolean = false): OidcIdentity {
         expect(code.isNotBlank() && code.length <= 8192 && code.none(Char::isISOControl), "unauthenticated", 401)
         val metadata = metadata()
         val basic = Base64.getEncoder().encodeToString("${encodeForm(config.clientId)}:${encodeForm(config.clientSecret)}".toByteArray())
@@ -141,9 +146,9 @@ internal class OidcClient(private val config: OidcConfig, private val transport:
         val compact = token.text("id_token")
         expect(compact.length <= 32768, "unauthenticated", 401)
         val keys = transport.json(config.endpoint(metadata.jwks), null, null)
-        return verify(compact, keys, nonceHash)
+        return verify(compact, keys, nonceHash, fresh)
     }
-    internal fun verify(compact: String, keys: JsonObject, nonceHash: ByteArray): OidcIdentity = try {
+    internal fun verify(compact: String, keys: JsonObject, nonceHash: ByteArray, fresh: Boolean = false): OidcIdentity = try {
         val parts = compact.split('.')
         expect(parts.size == 3 && compact.length <= 32768, "unauthenticated", 401)
         val header = strictObject(decodePart(parts[0]))
@@ -183,8 +188,10 @@ internal class OidcClient(private val config: OidcConfig, private val transport:
         val name = (claims["name"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
             ?.takeIf { it.isNotBlank() && it.length <= 200 && it.none(Char::isISOControl) } ?: ""
         val email = (claims["email"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
-            ?.takeIf { it.length <= 320 && it.none(Char::isISOControl) && (claims["email_verified"] as? JsonPrimitive)?.booleanOrNull == true }
-        OidcIdentity(subject, name, email)
+            ?.takeIf { it.length <= 320 && it.none(Char::isISOControl) && (claims["email_verified"] as? JsonPrimitive)?.takeUnless(JsonPrimitive::isString)?.booleanOrNull == true }
+        val authenticated = claims["auth_time"]?.let { claims.number("auth_time").also { time -> expect(time > 0 && time <= now + 30, "unauthenticated", 401) } }
+        if (fresh) expect(authenticated != null && authenticated >= now - 300, "reauthentication_required", 401)
+        OidcIdentity(subject, name, email, authenticated?.times(1000))
     } catch (error: Exception) {
         if (error is RelayError) throw error
         reject("unauthenticated", 401)

@@ -30,7 +30,7 @@ class RelayIntegrationTest {
         val file = directory.resolve("fence"); val original = uuid()
         java.nio.file.Files.writeString(file, original)
         try {
-            db.transaction { c -> c.execute("INSERT INTO schema_migration VALUES (9,'future')") }
+            db.transaction { c -> c.execute("INSERT INTO schema_migration SELECT max(version)+1,'future' FROM schema_migration") }
             assertThat(assertThrows(IllegalStateException::class.java) { db.checkSchema() }.message).isEqualTo("migration_mismatch")
             assertThrows(IllegalStateException::class.java) { RestoreFence.apply(db, identity.serverId, file) }
             assertThat(java.nio.file.Files.readString(file)).isEqualTo(original)

@@ -40,6 +40,7 @@ relay-kotlin = "2.3.21"
 ktor = "3.6.0"
 pgjdbc = "42.7.14"
 hikari = "7.1.0"
+angus-mail = "2.0.5"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version = "1.13.1" }
@@ -95,6 +96,7 @@ relay-ktor-statuspages = { module = "io.ktor:ktor-server-status-pages-jvm", vers
 relay-ktor-test = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
 relay-pgjdbc = { module = "org.postgresql:postgresql", version.ref = "pgjdbc" }
 relay-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+relay-mail = { module = "org.eclipse.angus:jakarta.mail", version.ref = "angus-mail" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

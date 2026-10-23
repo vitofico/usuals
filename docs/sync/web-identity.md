@@ -8,6 +8,11 @@ are provisioned through an explicit operator action or an existing administrator
 Android works offline without an account. An account is what lets a phone or a
 browser keep lists on the server and share them with other accounts there.
 
+Operators can opt in to provider registration and recipient-verified email
+invitations. The [email onboarding guide](email-invitations.md) documents signup,
+invitation-only admission, directory privacy, SMTP and a complete local preview.
+Passwords and email verification continue to belong to the identity provider.
+
 The backend implements confidential authorization code flow with S256 PKCE.
 Discovery, exchange and JWKS retrieval happen server-side. The browser receives
 an opaque HttpOnly session cookie, never an IdP access token, refresh token or
