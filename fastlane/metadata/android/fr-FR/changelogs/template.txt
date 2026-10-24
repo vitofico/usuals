@@ -1,1 +1,1 @@
-Vérifiez ensemble les noms suggérés après la dictée ou la saisie. Usuals mémorise vos choix et conserve les quantités et les détails. La correction automatique facultative est désactivée par défaut et peut être annulée.
+Ouvrez l’historique depuis l’icône d’horloge de la liste. Vérifiez ensemble les noms suggérés après la dictée ou la saisie. Usuals mémorise vos choix et conserve les quantités et les détails. La correction automatique facultative est désactivée par défaut et peut être annulée.
