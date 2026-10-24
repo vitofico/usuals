@@ -542,7 +542,13 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                 Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant)
             }
-            if (!compact) ListMenu(header, directory, busy, actions, onFinish)
+            if (!compact) {
+                IconButton(onClick = actions.onOpenHistory, enabled = !busy,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
+                    Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
+                }
+                ListMenu(header, directory, busy, actions, onFinish)
+            }
         }
         HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }

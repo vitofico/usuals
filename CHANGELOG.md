@@ -1,5 +1,9 @@
 # Changelog
 
+## History shortcut
+
+- Open purchase history directly from the clock icon on the main shopping list.
+
 ## Capture name matching
 
 - Save dictated and typed items immediately, with inline suggestions reviewed
