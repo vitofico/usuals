@@ -57,6 +57,20 @@ class QuietListScreenTest {
         compose.onNodeWithText("oats").assertDoesNotExist()
     }
 
+    @Test fun picker_dialog_survives_switching_heading_style() {
+        val compact = mutableStateOf(false)
+        val directory = ListDirectory("home", listOf(NamedList("home", "Groceries", false)))
+        compose.setContent { UsualsTheme { NamedListPicker("Groceries", directory, false, ListActions(), compact.value) } }
+        compose.onNodeWithText("Groceries").performClick()
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.runOnIdle { compact.value = true }
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.runOnIdle { compact.value = false }
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.onNodeWithText("Dismiss").performClick()
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+    }
+
     @Test fun typing_keeps_capture_and_memory_visible_without_unrelated_controls() {
         compose.setContent { UsualsTheme {
             ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),

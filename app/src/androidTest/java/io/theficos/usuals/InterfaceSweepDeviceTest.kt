@@ -118,14 +118,22 @@ class InterfaceSweepDeviceTest {
     }
 
     @Test fun dailyIdentityKeepsShoppingReachableAtLargeText() {
+        val shopping = mutableStateOf(false)
         show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
-            ListContent(longList.copy(personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true))
+            ListContent(longList.copy(personal = ShoppingPreferences(mode = shopping.value)),
+                ListActions(shoppingMode = shopping.value, onShoppingMode = { shopping.value = !shopping.value }))
         }
-        compose.onNodeWithText("Shopping mode").assertIsDisplayed()
-        compose.onNodeWithContentDescription("History").assertIsDisplayed()
-        record("identity-shopping-large-dark")
-        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
-        compose.onNodeWithText("Milk").assertIsDisplayed()
+        repeat(2) { round ->
+            compose.onNodeWithContentDescription("More options").performClick()
+            compose.onNodeWithText("Start shopping").performScrollTo().performClick()
+            compose.onNodeWithText("Shopping mode").assertIsDisplayed()
+            compose.onNodeWithContentDescription("History").assertIsDisplayed()
+            record(if (round == 0) "identity-shopping-large-dark" else "identity-shopping-large-dark-second-entry")
+            compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+            compose.onNodeWithText("Milk").assertIsDisplayed()
+            compose.onNodeWithText("Leave shopping mode").performClick()
+            compose.onNodeWithText("Shopping mode").assertDoesNotExist()
+        }
     }
 
     @Test fun dailyIdentityKeepsSyncWarningsReachable() {

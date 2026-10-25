@@ -34,13 +34,16 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
     var draft by rememberSaveable { mutableStateOf("") }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     val title = selected?.let { listTitle(it) } ?: name ?: stringResource(R.string.household_fallback_name)
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    // A fresh row prevents the previous display style from retaining a clipped draw layer at large text.
+    key(compact) {
+      Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
         .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
         .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).background(MaterialTheme.colorScheme.primaryContainer))
         if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose),
             Modifier.background(MaterialTheme.colorScheme.primaryContainer).size(24.dp).padding(start = 4.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+      }
     }
     if (directory.pending > 0) Text(androidx.compose.ui.res.pluralStringResource(R.plurals.lists_pending, directory.pending, directory.pending),
         modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
