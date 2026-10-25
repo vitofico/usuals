@@ -54,7 +54,8 @@ export async function startEmailPreview({ port = 8090, idpPort = 8091, mailPort 
   };
   try {
     process.stdout.write(`Building the standard server through scripts/dgradle. Log: ${logPath}\n`);
-    await run(['scripts/dgradle', '-p', 'server', 'testClasses', 'installDist', '--no-watch-fs']);
+    const gradleHome = process.env.USUALS_GRADLE_USER_HOME;
+    await run(['scripts/dgradle', ...(gradleHome ? ['-g', gradleHome] : []), '-p', 'server', 'testClasses', 'installDist', '--no-watch-fs']);
     const image = `usuals-email-preview:${key}`;
     await run(['docker', 'build', '--platform', 'linux/amd64', '-f', 'server/Dockerfile', '-t', image, 'server/build/install/usuals-relay']);
     await run(['docker', 'network', 'create', network]); networkCreated = true;
