@@ -28,6 +28,7 @@ import io.theficos.usuals.ui.scan.*
 import io.theficos.usuals.ui.settings.*
 import io.theficos.usuals.ui.shopping.*
 import io.theficos.usuals.ui.theme.UsualsTheme
+import io.theficos.usuals.ui.theme.AppPalette
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -57,7 +58,7 @@ class InterfaceSweepDeviceTest {
         checked = listOf(ListRow(ItemId("eggs"), "Eggs", checked = true), ListRow(ItemId("coffee"), "Coffee", checked = true)),
         reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("yoghurt", "Yoghurt", 0, 2, 2), io.theficos.usuals.smart.ReviewCandidate("bananas", "Bananas", 0, 2, 2)))
 
-    private fun show(dark: Boolean = false, narrowLarge: Boolean = false, content: @Composable () -> Unit) {
+    private fun show(dark: Boolean = false, narrowLarge: Boolean = false, palette: AppPalette = AppPalette.PLUM, fontScale: Float = 1.6f, content: @Composable () -> Unit) {
         compose.runOnUiThread {
             compose.activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             compose.activity.setContent {
@@ -65,12 +66,68 @@ class InterfaceSweepDeviceTest {
                 val width = LocalConfiguration.current.screenWidthDp
                 CompositionLocalProvider(LocalDensity provides Density(
                     base.density * if (narrowLarge) width / 320f else 1f,
-                    if (narrowLarge) 1.6f else 1f)) {
-                    UsualsTheme(darkTheme = dark) { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() } }
+                    if (narrowLarge) fontScale else 1f)) {
+                    UsualsTheme(darkTheme = dark, palette = palette) { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() } }
                 }
             }
         }
         compose.waitForIdle()
+    }
+
+    @Test fun dailyIdentityKeepsListActionsAndRowsReachableAcrossPalettes() {
+        for (palette in AppPalette.entries) for (dark in listOf(false, true)) {
+            var history = false
+            show(dark = dark, palette = palette) {
+                ListContent(populated, ListActions(onOpenHistory = { history = true }))
+            }
+            compose.onNodeWithText("Groceries").assertIsDisplayed()
+            compose.onNodeWithText("Milk").assertIsDisplayed()
+            compose.onNodeWithContentDescription("History").assertIsDisplayed()
+                .assertTouchWidthIsEqualTo(48.dp).assertTouchHeightIsEqualTo(48.dp).performClick()
+            check(history)
+            compose.onNodeWithContentDescription("More options").assertIsDisplayed()
+                .assertTouchWidthIsEqualTo(48.dp).assertTouchHeightIsEqualTo(48.dp)
+            record("identity-${palette.name.lowercase()}-${if (dark) "dark" else "light"}")
+        }
+    }
+
+    @Test fun dailyIdentityKeepsLongPickerAndSyncWarningsReachable() {
+        val longList = populated.copy(directory = directory.copy(lists = listOf(
+            NamedList("groceries", "Weekend groceries with friends", false))))
+        show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
+            ListContent(longList, ListActions())
+        }
+        compose.onNodeWithText("Weekend groceries with friends").assertIsDisplayed().performClick()
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.onNodeWithText("Dismiss").performClick()
+        compose.onNodeWithContentDescription("History").assertIsDisplayed()
+        compose.onNodeWithContentDescription("More options").assertIsDisplayed()
+        record("identity-large-dark")
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+        compose.onNodeWithText("Milk").assertIsDisplayed()
+        show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
+            ListContent(longList.copy(capture = CaptureState.Typing("mi"),
+                autocomplete = listOf(ItemMemory("milk", "Milk", 4, 1_000))), ListActions())
+        }
+        compose.onNodeWithTag(DraftFieldTag).assertIsDisplayed()
+        compose.onNodeWithText("From past shops").assertIsDisplayed()
+        record("identity-typing-large-dark")
+        show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
+            ListContent(longList.copy(personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true))
+        }
+        compose.onNodeWithText("Shopping mode").assertIsDisplayed()
+        compose.onNodeWithContentDescription("History").assertIsDisplayed()
+        record("identity-shopping-large-dark")
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+        compose.onNodeWithText("Milk").assertIsDisplayed()
+        show(palette = AppPalette.TIDE) {
+            ListContent(populated.copy(directory = directory.copy(pending = 2, status = SyncStatus.OFFLINE)), ListActions())
+        }
+        compose.onNodeWithText("2 changes waiting to sync").assertIsDisplayed()
+        compose.onNodeWithText("Not synced yet. Changes are sent when the server can be reached.").assertIsDisplayed()
+        record("identity-sync-warning")
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+        compose.onNodeWithText("Milk").assertIsDisplayed()
     }
     private fun record(name: String, target: SemanticsMatcher = isRoot()) {
         compose.waitForIdle()

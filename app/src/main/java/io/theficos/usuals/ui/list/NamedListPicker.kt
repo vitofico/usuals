@@ -1,6 +1,7 @@
 package io.theficos.usuals.ui.list
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,13 +37,15 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
         .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
         .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose), Modifier.size(24.dp).padding(start = 4.dp))
+        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).background(MaterialTheme.colorScheme.primaryContainer))
+        if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose),
+            Modifier.background(MaterialTheme.colorScheme.primaryContainer).size(24.dp).padding(start = 4.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
     }
     if (directory.pending > 0) Text(androidx.compose.ui.res.pluralStringResource(R.plurals.lists_pending, directory.pending, directory.pending),
+        modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    if (directory.conflicts.isNotEmpty()) TextButton(onClick = { review = true }, contentPadding = PaddingValues(0.dp)) {
+    if (directory.conflicts.isNotEmpty()) TextButton(onClick = { review = true }, modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer), contentPadding = PaddingValues(0.dp)) {
         Text(androidx.compose.ui.res.pluralStringResource(R.plurals.lists_conflicts, directory.conflicts.size, directory.conflicts.size))
     }
     if (review) directory.conflicts.firstOrNull()?.let { conflict ->
@@ -52,12 +55,13 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
     }
     when (directory.status) {
         null, SyncStatus.SYNCED -> Unit
-        SyncStatus.SIGN_IN -> TextButton(onClick = actions.onOpenAccount, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.sync_sign_in)) }
+        SyncStatus.SIGN_IN -> TextButton(onClick = actions.onOpenAccount, modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.sync_sign_in)) }
         else -> Text(stringResource(when (directory.status) {
             SyncStatus.UPGRADE -> R.string.sync_upgrade
             SyncStatus.CAPACITY -> R.string.sync_capacity
             else -> R.string.sync_offline
-        }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }), modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     // Keeping one dialog window avoids a focus handoff when entering a new list's name.
     if (open) AlertDialog(onDismissRequest = { open = false; creating = false },

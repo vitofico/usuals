@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.IconButtonDefaults
@@ -482,7 +483,8 @@ fun ListContent(
                 directory = state.directory,
                 busy = state.busy || state.matchingBusy || state.capture != CaptureState.Idle,
                 actions = actions,
-                compact = typing != null,
+                compact = typing != null || state.personal.mode,
+                hideActions = typing != null,
                 onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
                     { actions.onFinishRows?.invoke(rows, null) ?: actions.onFinishShop(null) }
                 },
@@ -543,24 +545,35 @@ private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier
 }
 
 @Composable
-private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, onFinish: (() -> Unit)?) {
+private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, hideActions: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+        .clip(RoundedCornerShape(20.dp)).background(colors.primaryContainer)) {
+        Box(Modifier.matchParentSize()) {
+            io.theficos.usuals.ui.theme.BrandCollage(Modifier.align(Alignment.CenterEnd)
+                .offset(x = 34.dp, y = (-8).dp)
+                .size(width = if (compact) 210.dp else 260.dp, height = if (compact) 146.dp else 181.dp))
+        }
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()
+            .heightIn(min = if (compact) 72.dp else 80.dp)
+            .padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 6.dp)) {
             Column(Modifier.weight(1f)) {
                 NamedListPicker(header.name, directory, busy, actions, compact)
-                Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant)
+                Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount),
+                    modifier = Modifier.background(colors.primaryContainer).padding(end = 4.dp),
+                    style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer)
             }
-            if (!compact) {
+            if (!hideActions) {
                 IconButton(onClick = actions.onOpenHistory, enabled = !busy,
+                    modifier = Modifier.background(colors.surface, CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
-                ListMenu(header, directory, busy, actions, onFinish)
+                Box(Modifier.background(colors.surface, CircleShape)) {
+                    ListMenu(header, directory, busy, actions, onFinish)
+                }
             }
         }
-        HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

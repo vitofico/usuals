@@ -25,14 +25,18 @@ exports the canonical SVG to Android, the README cover and the store icon; its
 `--check` mode detects drift. Authentik references the same SVG served by the web
 app. The store's PNG is a render of that artwork, not a separate design.
 
-## First-run tour
+## Collage and first-run tour
 
 The colour collage is the decorative motif. `web/assets/collage.svg` holds its
 four shapes; `scripts/sync-brand-assets` exports matching browser masks and
 Android vectors. Each layer takes a semantic colour from the selected palette,
 including dark appearance. The logo and launcher keep their canonical artwork.
-The collage belongs in welcome, tutorial and empty-list screens, with a smaller
-crop in the browser sidebar. Populated grocery rows remain clear.
+The collage appears in the daily selected-list header as well as welcome,
+tutorial and empty-list screens, with a smaller crop in the browser sidebar.
+The daily header uses a close crop on a palette container: the actual list name,
+picker and controls remain its foreground. Text has opaque container backing and
+icon controls have paper surfaces, so artwork never determines their contrast.
+The canonical shapes stay unchanged. Populated grocery rows remain clear.
 
 `web/assets/theme.css` owns the browser palette definitions. The shopping client
 and Usuals Cloud load those same definitions and `collage.css`. Cloud reads the
@@ -95,9 +99,13 @@ category, including supporting text on tinted containers.
   font. Grocery names remain 16 sp, with 14 sp supporting text and 12 sp metadata.
   Serif headings use regular weight; controls use semibold instead of heavy bold.
 - Give the actual list name the header, with its picker and one labelled
-  options menu. Keep the item count quiet and preserve every sync warning.
-  History, favourites, import and sharing stay in the menu; list management
-  has its own group. Avoid separate brand, actions and tools bars above the list.
+  options menu. Its integrated collage band is about 88 dp at normal text size;
+  typing and shopping use a smaller crop and title to keep content space useful.
+  Allow the band to grow for system text scaling and sync warnings. Keep the
+  item count quiet, the one-tap History shortcut available, and every sync warning.
+  History is also in the menu alongside favourites, import and sharing; list
+  management has its own group. Avoid separate brand, actions and tools bars
+  above the list.
 - Suggestions start as a counted disclosure. Each suggestion has one Add
   action; Not now and Don't suggest again live in its named options menu.
   Show one store selector when filtering is useful. While typing, keep the
@@ -133,8 +141,11 @@ hierarchy while retaining semantic controls and visible focus states.
 
 ## Browser hierarchy
 
-The selected list is the page title. A quiet Change list action opens list
-selection; List options contains the remaining list actions. The capture field
+The selected list is the page title. Its palette container carries a cropped
+collage on desktop and mobile, with no separate artwork or actions band. The
+artwork is decorative and does not receive focus or intercept pointer input.
+A quiet Change list action opens list selection; List options contains the
+remaining list actions. The capture field
 and its labelled Add button are the clear next step. Picked-up rows have a
 counted disclosure and Finish shopping remains reachable without expanding it.
 
