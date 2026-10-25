@@ -662,9 +662,14 @@ internal fun RemoveListDialog(list: NamedList, onDismiss: () -> Unit, actions: L
 
 @Composable
 private fun EmptyInstruction() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val artworkHeight = (maxHeight - 160.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale)
+            .coerceIn(0.dp, 156.dp)
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
+            if (artworkHeight >= 96.dp) {
+                io.theficos.usuals.ui.theme.BrandCollage(Modifier.size(width = 240.dp, height = artworkHeight).padding(bottom = 16.dp))
+            }
             Text(stringResource(R.string.quiet_list_empty_title), style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 8.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)

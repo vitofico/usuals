@@ -65,6 +65,25 @@ cover, count = re.subn(r'<!-- brand-mark:start -->.*?<!-- brand-mark:end -->', f
 if count != 1:
     sys.exit('Missing unique README brand-mark export markers')
 outputs['docs/assets/readme-cover.svg'] = cover.encode()
+collage = ET.parse(ROOT / 'web/assets/collage.svg').getroot()
+if collage.get('viewBox') != '-230 -160 460 320':
+    sys.exit('Expected the approved 460 by 320 collage canvas')
+if [part.get('id') for part in collage] != ['secondary', 'tertiary', 'paper', 'primary']:
+    sys.exit('Expected four semantic collage layers')
+for part in collage:
+    role, geometry = part.get('id'), part.get('d')
+    outputs[f'web/assets/collage-{role}.svg'] = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-230 -160 460 320">'
+        f'<path fill="white" d="{geometry}"/></svg>\n').encode()
+    outputs[f'app/src/main/res/drawable/brand_collage_{role}.xml'] = f'''<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from web/assets/collage.svg by scripts/sync-brand-assets. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="460dp" android:height="320dp" android:viewportWidth="460" android:viewportHeight="320">
+    <group android:translateX="230" android:translateY="160">
+        <path android:pathData="{geometry}" android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>
+'''.encode()
 renderer = shutil.which('rsvg-convert')
 if renderer is None:
     sys.exit('Install librsvg (rsvg-convert) to export the store icon')

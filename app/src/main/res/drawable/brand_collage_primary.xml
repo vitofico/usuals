@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from web/assets/collage.svg by scripts/sync-brand-assets. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="460dp" android:height="320dp" android:viewportWidth="460" android:viewportHeight="320">
+    <group android:translateX="230" android:translateY="160">
+        <path android:pathData="M49 13C87-11 116 11 148 48C174 79 210 99 186 126C169 149 121 113 92 89C64 68 14 36 49 13Z" android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

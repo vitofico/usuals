@@ -10,8 +10,11 @@ import { connectLink, connectAppLink, parseConnectLink, connectionCode } from ".
 import { importDialog } from "./import-dialog.mjs";
 import { forgetLegacyVault } from "./legacy.mjs";
 import { DialogFocus, DialogCancellation } from "./dialog-focus.mjs";
+import { invitationToken, InvitationsApi } from "./invitations.mjs";
 
 forgetLegacyVault();
+let pendingInvitationToken = invitationToken(location), invitation = null;
+if (location.pathname === "/join") history.replaceState(null, "", "/join");
 const ticketPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // A phone without a signed-in computer nearby opens /?connect=<ticket>; the ticket waits in this tab through sign-in.
 let pendingConnectionId = null, connectionDone = false;
@@ -63,6 +66,7 @@ let availableLocales = ["en"],
   lists = null,
   feed = null,
   syncState = "";
+const invitations = new InvitationsApi({ transport: api, csrf: () => account?.csrfToken });
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
   for (const [name, replacement] of Object.entries(values))
@@ -86,6 +90,8 @@ function el(tag, attributes = {}, ...children) {
 const button = (label, action, kind = "secondary", attributes = {}) =>
   el("button", { type: "button", class: kind, onclick: action, ...attributes }, label);
 const paragraph = (key, kind = "lede", values = {}) => el("p", { class: kind }, t(key, values));
+const brandCollage = (kind = "") => el("div", { class: `brand-collage ${kind}`, "aria-hidden": "true" },
+  ...["secondary", "tertiary", "paper", "primary"].map((role) => el("span", { class: `collage-${role}` })));
 /** `action` is an optional [label, handler] pair, such as Undo. */
 function notice(key, error = false, values = {}, action = null) {
   const node = $("notice");
@@ -146,6 +152,7 @@ async function leaveAccount(message = null) {
   uiScope = new RunScope();
   store = lists = feed = selected = null;
   account = null;
+  if (invitation && invitation.state !== "none") invitation = { state: "signin" };
   busy = false;
   view = "list";
   closeDialog();
@@ -210,7 +217,7 @@ function tutorialDialog() {
         el("p", { class: "eyebrow" }, t("tutorialStep", { current: page + 1, total: steps.length })),
         el("progress", { class: "tutorial-progress", max: steps.length, value: page + 1,
           "aria-label": t("tutorialStep", { current: page + 1, total: steps.length }) }),
-        el("div", { class: "tutorial-art", "aria-hidden": "true" }, symbols[page]),
+        page === 0 ? brandCollage("tutorial-collage") : el("div", { class: "tutorial-art", "aria-hidden": "true" }, symbols[page]),
         el("h2", { id: "tutorial-heading", tabindex: -1 }, t(`tutorial${steps[page]}Title`)),
         paragraph(`tutorial${steps[page]}Body`),
         paragraph(`tutorial${steps[page]}Hint`, "helper"),
@@ -322,6 +329,16 @@ async function loadAccount() {
   }
   if (own !== generation) return;
   account = me;
+  if (config.emailInvitations) {
+    try {
+      if (pendingInvitationToken) { await invitations.capture(pendingInvitationToken); pendingInvitationToken = null; }
+      invitation = await invitations.current();
+      if (location.pathname === "/join" && invitation.state === "none") invitation = { state: "unavailable" };
+    } catch (error) {
+      if (error?.code === "invitation_unavailable") { invitation = { state: "unavailable" }; pendingInvitationToken = null; }
+      else throw error;
+    }
+  }
   if (account && !feed) startLists();
   await render();
 }
@@ -332,8 +349,8 @@ function welcome() {
       el("h1", {}, t("welcomeTitle")),
       paragraph("welcomeText"),
       el("div", { class: "welcome-actions" }, ...welcomeActions()),
-      paragraph(config?.localEnabled ? "localSignInText" : "signInText", "helper")),
-    el("div", { class: "welcome-art", "aria-hidden": "true" }));
+      paragraph(config?.emailInvitations ? "emailSignInText" : config?.localEnabled ? "localSignInText" : "signInText", "helper")),
+    brandCollage("welcome-art"));
 }
 async function render() {
   const own = generation;
@@ -363,6 +380,10 @@ async function render() {
     $("content").replaceChildren(connectLanding());
     return;
   }
+  if (invitation && invitation.state !== "none") {
+    $("content").replaceChildren(invitationLanding());
+    return;
+  }
   if (!account) {
     $("content").replaceChildren(welcome());
     return;
@@ -377,6 +398,36 @@ async function render() {
   renderLists();
 }
 const listName = (list) => list.projection.name || t("untitledList");
+function invitationLanding() {
+  const state = invitation.state;
+  const dismiss = async () => { await invitations.dismiss(); invitation = null; history.replaceState(null, "", "/"); };
+  const join = () => act(async () => {
+    const result = await invitations.accept();
+    if (result.list) { store.put(result.list); selected = result.list.id; }
+    await dismiss(); finishTutorial();
+    notice("invitationJoined");
+  });
+  const switchAccount = () => act(async () => {
+    const result = await api("/auth/switch", { method: "POST", body: {}, csrf: account.csrfToken });
+    location.assign(result.url);
+  });
+  const content = [el("h1", {}, t(state === "unavailable" ? "invitationUnavailable" : "invitationTitle"))];
+  if (state === "signin") content.push(paragraph("invitationIntro"), el("div", { class: "button-row" },
+    config.registrationPath ? el("a", { class: "primary", href: config.registrationPath }, t("createAccountToJoin")) : null,
+    el("a", { class: config.registrationPath ? "secondary" : "primary", href: "/auth/login?fresh=true" }, t("emailSignIn"))));
+  else if (state === "ready") content.push(paragraph("invitationReady", "lede", { name: invitation.inviter || t("inviteSomeone") }),
+    button(t("joinList"), join, "primary"));
+  else if (state === "wrong_account") content.push(paragraph("invitationWrongAccount"), button(t("switchAccount"), switchAccount, "primary"));
+  else if (state === "reauthenticate") content.push(paragraph("invitationReauthenticate"),
+    el("a", { class: "primary", href: "/auth/login?fresh=true" }, t("verifyAndContinue")));
+  else if (state === "accepted") content.push(button(t("openInvitationList"), () => act(async () => {
+    if (invitation.listId) selected = invitation.listId;
+    await dismiss(); finishTutorial();
+  }), "primary"));
+  else content.push(paragraph("invitationUnavailableText"));
+  content.push(el("div", { class: "button-row" }, button(t("backToLists"), () => act(dismiss), "text-button")));
+  return el("section", { class: "paper account-settings" }, ...content);
+}
 // The capture field survives re-rendering, so a change arriving from the phone never eats what is being typed.
 const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 1000, autocomplete: "off", required: true });
 // Whether the Archived area is open survives re-rendering too.
@@ -413,7 +464,7 @@ function renderLists() {
   if (!active.length) {
     $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), el("div", {},
       el("section", { class: "paper empty" },
-        el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+        brandCollage("empty-collage"),
         ...(archived.length ? [paragraph("allListsArchived")] : [el("h2", {}, t("firstListTitle")), paragraph("firstListText")]),
         button(t("newList"), newListDialog, "primary")),
       archivedArea(archived)));
@@ -460,7 +511,7 @@ function renderLists() {
     ...(needed.length ? section("toPickUp", needed) : []),
     pickedSection,
     ...(!items.length ? [el("div", { class: "empty" },
-      el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+      brandCollage("empty-collage"),
       el("h2", {}, t("emptyTitle")), paragraph("emptyText"))] : []),
     el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
   $("content").replaceChildren(
@@ -632,6 +683,7 @@ function personRow(name, detail, action) {
 }
 /** People with access, and a search over this server's accounts: picking someone shares the list at once. */
 function shareDialog(listId) {
+  if (config.emailInvitations) return emailSharingDialog(listId);
   let found = [], searched = null, lookups = 0, timer = null;
   const heading = el("h2", {}), members = el("div", {}), results = el("div", { "aria-live": "polite" });
   const error = el("p", { class: "dialog-error", role: "alert" });
@@ -686,6 +738,63 @@ function shareDialog(listId) {
   draw();
   lookup();
   search.focus();
+}
+/** Pending mail is separate from membership. The list feed remains the authority for people with access. */
+function emailSharingDialog(listId = null) {
+  let pending = [], closed = false, loading = false;
+  const heading = el("h2", {}), members = el("div", {}), rows = el("div", { "aria-live": "polite" });
+  const error = el("p", { class: "dialog-error", role: "alert" });
+  const email = el("input", { id: "invite-email", class: "field", type: "email", autocomplete: "email", maxlength: 254, required: true });
+  const submit = el("button", { type: "submit", class: "primary" }, t("sendInvitation"));
+  async function refresh() {
+    if (closed || loading) return;
+    loading = true;
+    try {
+      const next = await invitations.list(listId);
+      if (JSON.stringify(next) !== JSON.stringify(pending)) { pending = next; if (!closed) draw(); }
+    }
+    catch (e) { if (!closed) error.textContent = t(dictionary[e?.code] ? e.code : "serverUnavailable"); }
+    finally { loading = false; }
+  }
+  const run = (action) => act(async () => {
+    error.textContent = "";
+    try { await action(); await refresh(); }
+    catch (e) { if (e?.code === "unauthenticated") throw e; error.textContent = t(dictionary[e?.code] ? e.code : "serverUnavailable"); }
+  }, { rerender: false });
+  function draw() {
+    if (closed) return;
+    const list = listId ? store?.lists.get(listId) : null;
+    if (listId && !list) { closeDialog(); return; }
+    heading.textContent = list ? t("shareTitle", { name: listName(list) }) : t("invitePeopleTitle");
+    members.replaceChildren(...(list ? access(list, account.user.id).map((m) => personRow(m.you ? t("youName", { name: m.name }) : m.name, t(m.role),
+      m.action === "remove" ? button(t("shareRemove"), () => run(() => lists.removeMember(listId, m.id)))
+        : m.action === "leave" ? button(t("leaveList"), () => run(async () => { await lists.leave(listId, m.id); closeDialog(); render(); }), "danger") : null)) : []));
+    rows.replaceChildren(...pending.filter((p) => !["accepted", "revoked"].includes(p.state)).map((p) => {
+      const seconds = Math.max(0, Math.ceil((p.resendAt - Date.now()) / 1000));
+      const manageable = p.senderId === account.user.id || list?.role === "owner";
+      return personRow(p.email, t(p.state === "expired" ? "inviteExpired" : p.delivery === "failed" ? "inviteDeliveryFailed" : p.delivery === "sent" ? "inviteDeliverySent" : "inviteDeliveryQueued"),
+        manageable ? el("div", { class: "button-row" },
+          p.state === "pending" ? button(seconds ? t("inviteResendIn", { seconds }) : t("resendInvitation"), () => run(() => invitations.resend(listId, p.id)), "secondary", { disabled: seconds ? true : null, "data-resend-at": p.resendAt }) : null,
+          button(t("cancelInvitation"), () => run(() => invitations.cancel(listId, p.id)), "text-button")) : null);
+    }));
+  }
+  const form = el("form", { onsubmit: async (event) => {
+    event.preventDefault(); submit.disabled = true;
+    try { await run(async () => { await invitations.send(listId, email.value, locale); email.value = ""; notice("invitationSent"); }); }
+    finally { submit.disabled = false; }
+  } }, el("label", { class: "label", for: "invite-email" }, t("emailAddress")), email,
+    el("div", { class: "button-row" }, submit));
+  const timer = setInterval(() => {
+    for (const node of rows.querySelectorAll("[data-resend-at]")) {
+      const seconds = Math.max(0, Math.ceil((Number(node.dataset.resendAt) - Date.now()) / 1000));
+      node.textContent = seconds ? t("inviteResendIn", { seconds }) : t("resendInvitation"); node.disabled = seconds > 0;
+    }
+  }, 1000), poll = setInterval(refresh, 5000);
+  openDialog(el("div", {}, heading, listId ? el("p", { class: "label" }, t("peopleWithAccess")) : null, members,
+    paragraph(listId ? "inviteHelp" : "inviteBetaHelp", "helper"), form, rows, error,
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))),
+  () => { closed = true; clearInterval(timer); clearInterval(poll); }, draw);
+  draw(); refresh(); email.focus();
 }
 const date = (n) => Number.isFinite(n)
   ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(n)
@@ -891,6 +1000,7 @@ async function renderAdmin(own, after = null, previous = []) {
     title("adminTitle", "adminSubtitle"),
     el("div", { class: "panel" },
       paragraph("adminHelp", "warning-box"),
+      ...(config?.emailInvitations ? [el("div", { class: "button-row" }, button(t("invitePeopleTitle"), () => emailSharingDialog(), "primary"))] : []),
       ...(config?.localEnabled ? [el("div", { class: "button-row" }, button(t("createLocalUser"), localUserDialog, "primary"))] : []),
       el("section", { class: "paper" }, el("div", { class: "panel-body" },
         ...rows,
@@ -930,7 +1040,7 @@ $("preferences").addEventListener("click", preferencesDialog);
   if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   $("content").replaceChildren(paragraph("loading"));
   await loadAccount();
-  if (!tutorialSeen && !pendingConnect) tutorialDialog();
+  if (!tutorialSeen && !pendingConnect && !config?.emailInvitations) tutorialDialog();
 })().catch(failure);
 
 function passwordValid(value) {
@@ -1085,10 +1195,12 @@ function secretDialog(result) {
 function welcomeActions() {
   if (!config?.enabled) return [paragraph("ssoDisabled", "warning-box")];
   const actions = [];
+  if (config.registrationPath && !config.invitationOnly)
+    actions.push(el("a", { class: "primary", href: config.registrationPath }, t("createAccount")));
   if (config.localEnabled)
     actions.push(button(t("localSignIn"), () => localAuthDialog(false), "primary"));
   if (config.oidcEnabled)
-    actions.push(el("a", { class: config.localEnabled ? "secondary" : "primary", href: "/auth/login" }, t("signIn")));
+    actions.push(el("a", { class: config.localEnabled || config.registrationPath ? "secondary" : "primary", href: "/auth/login" }, t(config.emailInvitations ? "emailSignIn" : "signIn")));
   if (config.localEnabled)
     actions.push(el("details", { class: "auth-help" }, el("summary", {}, t("quietAccountHelp")),
       button(t("activateAccount"), () => localAuthDialog(true), "text-button")));

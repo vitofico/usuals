@@ -40,14 +40,21 @@ fun main(args: Array<String>) {
         }
         val identityConfig = WebIdentityConfig.fromEnvironment(origin)
         val auth = Auth(db)
-        val webIdentity = identityConfig?.let { WebIdentity.create(it, db, auth) }
         if (args.size == 3 && args[0] in setOf("local-admin", "local-reset")) {
-            requireNotNull(webIdentity).localOperator(args[1], Path.of(args[2]), args[0] == "local-reset"); return
+            WebIdentity.create(requireNotNull(identityConfig), db, auth).localOperator(args[1], Path.of(args[2]), args[0] == "local-reset"); return
         }
         require(args.isEmpty())
         // Lists are stored encrypted: the server does not start without the key that opens them.
         val cipher = ListCipher.fromEnvironment().also { it.check(db) }
         val relay = Relay(db, identity, auth, cipher)
+        val invitations = MailConfiguration.fromEnvironment(origin)?.let { mail ->
+            require(identityConfig?.oidc != null) { "email_invitations_require_oidc" }
+            Invitations(relay, identityConfig, SmtpInvitationMailer(mail), mail)
+        }
+        require(identityConfig?.invitationOnly != true || invitations != null) { "invitation_admission_requires_email" }
+        val webIdentity = identityConfig?.let { WebIdentity(it, db, auth, invitations = invitations) }
+        invitations?.start()
+        Runtime.getRuntime().addShutdownHook(Thread { invitations?.close() })
         val ingress = TrustedIngress(System.getenv("USUALS_TRUSTED_PROXY_CIDRS")?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty())
         val operations = RelayMetrics(db)
         val browserModels = BrowserModels.fromEnvironment()

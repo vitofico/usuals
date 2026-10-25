@@ -1,0 +1,72 @@
+@font-face {
+  font-family: Manrope;
+  src: url("/assets/manrope.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+:root {
+  color-scheme: light;
+  --ground: #f8f5ef;
+  --paper: #fffdfa;
+  --ink: #302331;
+  --muted: #6e5e6b;
+  --primary: #583d53;
+  --champagne: #efe1ca;
+  --gold: #664d2d;
+  --mauve: #eedfe8;
+  --line: #e3d9dd;
+  --danger: #9a3947;
+  --on-action: #fffdfa;
+  --outline: #887887;
+  --danger-container: #f7e6e8;
+  --radius: 24px;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--ground);
+  font-synthesis: none;
+  --collage-leaf: #e2e6db; --collage-on-leaf: #46533b;
+}
+:root[data-palette="grove"] {
+  --ground: #f3f5ed; --paper: #fcfdf8; --ink: #243428; --muted: #53644f;
+  --primary: #36593f; --champagne: #ede1ca; --gold: #624c2d;
+  --mauve: #dee8d6; --line: #d8e0d1; --outline: #75806e; --on-action: #fcfdf8;
+  --collage-leaf: #e2e9dc; --collage-on-leaf: #455d3a;
+}
+:root[data-palette="tide"] {
+  --ground: #eff5f7; --paper: #fbfdfe; --ink: #233640; --muted: #526872;
+  --primary: #285d70; --champagne: #dbeae3; --gold: #345d4c;
+  --mauve: #d7eaf0; --line: #d3e1e7; --outline: #728791; --on-action: #fbfdfe;
+  --collage-leaf: #f0e2cd; --collage-on-leaf: #624c2e;
+}
+@media (prefers-color-scheme: dark) {
+:root {
+    color-scheme: dark;
+    --ground: #1d181e;
+    --paper: #28212a;
+    --ink: #f5edf1;
+    --muted: #bcaebb;
+    --primary: #e2bcd4;
+    --champagne: #453929;
+    --gold: #e8cda6;
+    --mauve: #44313f;
+    --line: #4b3c48;
+    --danger: #f0a8b4;
+    --on-action: #1d181e;
+    --outline: #aa96a5;
+    --danger-container: #4e2c36;
+  --collage-leaf: #343e2f; --collage-on-leaf: #d0dfbf;
+}
+:root[data-palette="grove"] {
+    --ground: #171f19; --paper: #222d24; --ink: #edf3e8; --muted: #bdccb7;
+    --primary: #bcd5aa; --champagne: #443b29; --gold: #edddbd;
+    --mauve: #354a35; --line: #414f3d; --outline: #94a48c; --on-action: #171f19;
+    --collage-leaf: #344232; --collage-on-leaf: #c9ddbe;
+}
+:root[data-palette="tide"] {
+    --ground: #151f27; --paper: #202d37; --ink: #ecf3f7; --muted: #bacdd8;
+    --primary: #a7d6e5; --champagne: #2c443e; --gold: #c3e1d2;
+    --mauve: #294754; --line: #40515d; --outline: #90a7b4; --on-action: #151f27;
+    --collage-leaf: #473d2d; --collage-on-leaf: #efdec0;
+}
+}

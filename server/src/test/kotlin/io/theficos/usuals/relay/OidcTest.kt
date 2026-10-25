@@ -16,6 +16,9 @@ internal class OidcFixture(val now: () -> Long) {
     val issuer = "https://sso.example/application/o/usuals/"
     var subject = "member-subject"
     var nonce = "synthetic-nonce"
+    var email = "member@example.invalid"
+    var verifiedEmail = true
+    var authenticationTime: Long? = null
     var groups: JsonElement = buildJsonArray { add("usuals-users") }
     var discoveryOverride: JsonObject? = null
     var tokenOverride: String? = null
@@ -25,7 +28,8 @@ internal class OidcFixture(val now: () -> Long) {
     fun config(admins: Set<String> = setOf("admin-subject"), allowed: Set<String> = emptySet()) = OidcConfig(issuer, "usuals-web", "synthetic-client-secret", "https://usuals.invalid", admins, allowed)
     fun claims() = buildJsonObject {
         put("iss", issuer); put("sub", subject); put("aud", "usuals-web"); put("iat", now() / 1000); put("exp", now() / 1000 + 300)
-        put("nonce", nonce); put("name", "Synthetic Member"); put("email", "member@example.invalid"); put("email_verified", true); put("groups", groups)
+        put("nonce", nonce); put("name", "Synthetic Member"); put("email", email); put("email_verified", verifiedEmail); put("groups", groups)
+        put("auth_time", authenticationTime ?: now() / 1000)
     }
     fun jwt(claims: JsonObject = claims(), header: JsonObject = buildJsonObject { put("alg", "RS256"); put("kid", "fixture-key") }): String {
         val content = encode(header.toString().toByteArray()) + "." + encode(claims.toString().toByteArray())
@@ -111,6 +115,33 @@ class OidcTest {
             denied { client.metadata() }
         }
     }
+    @Test fun discoverySupportsExactIssuersWithAndWithoutTrailingSlash() {
+        for ((issuer, discovery) in listOf(
+            "https://sso.example" to "https://sso.example/.well-known/openid-configuration",
+            "https://sso.example/" to "https://sso.example/.well-known/openid-configuration",
+            "https://sso.example/realms/usuals" to "https://sso.example/realms/usuals/.well-known/openid-configuration",
+            fixture.issuer to "https://sso.example/application/o/usuals/.well-known/openid-configuration",
+        )) {
+            val exact = OidcConfig(issuer, config.clientId, config.clientSecret, config.origin)
+            val requested = mutableListOf<String>()
+            var metadataIssuer = issuer
+            val transport = OidcTransport { url, form, basic ->
+                requested += url.toString()
+                if (url.path.endsWith("openid-configuration")) fixture.metadata().changed("issuer", JsonPrimitive(metadataIssuer))
+                else fixture.transport.json(url, form, basic)
+            }
+            val client = OidcClient(exact, transport) { now }
+            fixture.tokenOverride = fixture.jwt(fixture.claims().changed("iss", JsonPrimitive(issuer)))
+            assertThat(client.complete("synthetic-code", "synthetic-verifier", digest(fixture.nonce)).subject).isEqualTo(fixture.subject)
+            assertThat(requested.first()).isEqualTo(discovery)
+
+            // Discovery URL construction must never change the identity namespace or token issuer check.
+            val different = if (issuer.endsWith('/')) issuer.dropLast(1) else "$issuer/"
+            metadataIssuer = different
+            assertThat(denied { client.metadata() }.code).isEqualTo("identity_unavailable")
+            assertThat(denied { client.verify(fixture.jwt(fixture.claims().changed("iss", JsonPrimitive(different))), fixture.keys(), digest(fixture.nonce)) }.code).isEqualTo("unauthenticated")
+        }
+    }
     @Test fun configuredGroupsAreStrictSignedArraysAndEmailIsOnlyAViewOfVerifiedClaims() {
         val client = OidcClient(fixture.config(allowed = setOf("usuals-users")), fixture.transport) { now }
         assertThat(client.verify(fixture.jwt(), fixture.keys(), digest(fixture.nonce)).email).isEqualTo("member@example.invalid")
@@ -121,12 +152,45 @@ class OidcTest {
         fixture.groups = buildJsonArray { add("usuals-users") }
         val unverified = fixture.claims().changed("email_verified", JsonPrimitive(false))
         assertThat(client.verify(fixture.jwt(unverified), fixture.keys(), digest(fixture.nonce)).email).isNull()
+        assertThat(client.verify(fixture.jwt(fixture.claims().changed("email_verified", JsonPrimitive("true"))), fixture.keys(), digest(fixture.nonce)).email).isNull()
     }
     @Test fun oidcIsExplicitlyDisabledAndConfigurationRejectsInvalidAuthority() {
         assertThat(OidcConfig.fromEnvironment(config.origin, emptyMap())).isNull()
         assertThrows(IllegalArgumentException::class.java) { OidcConfig.fromEnvironment(config.origin, mapOf("USUALS_OIDC_ENABLED" to "yes")) }
-        for (issuer in listOf("http://sso.example/", "https://user@sso.example/", "https://sso.example/path", "https://sso.example/a/../b/", "https://sso.example/?key=x")) {
+        for (issuer in listOf("http://sso.example/", "https://user@sso.example/", "https://sso.example/#fragment", "https://sso.example/a/../b/", "https://sso.example/?key=x")) {
             assertThrows(IllegalArgumentException::class.java) { OidcConfig(issuer, "client", "secret", config.origin) }
         }
+    }
+    @Test fun registrationAndFreshAuthenticationUseStandardParametersAndValidateAuthTime() {
+        val client = OidcClient(config, fixture.transport) { now }
+        val request = OidcFixture.query(client.authorization(client.metadata(), "state", fixture.nonce, "verifier", register = true, fresh = true))
+        assertThat(request["prompt"]).isEqualTo("create")
+        assertThat(request["max_age"]).isEqualTo("300")
+        assertThat(OidcFixture.query(client.authorization(client.metadata(), "state", fixture.nonce, "verifier", fresh = true))["prompt"]).isEqualTo("login")
+        assertThat(client.verify(fixture.jwt(), fixture.keys(), digest(fixture.nonce), fresh = true).authenticatedAt).isEqualTo(now)
+        for (claims in listOf(JsonObject(fixture.claims() - "auth_time"), fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 - 301)),
+            fixture.claims().changed("auth_time", JsonPrimitive(now / 1000 + 31)), fixture.claims().changed("auth_time", JsonPrimitive("1800000000")))) {
+            denied { client.verify(fixture.jwt(claims), fixture.keys(), digest(fixture.nonce), fresh = true) }
+        }
+    }
+    @Test fun plaintextOidcRequiresExplicitLoopbackDevelopmentAtBothBoundaries() {
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.localhost/realms/usuals", "client", "secret", config.origin, localHttp = true) }
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.example.org/realms/usuals", "client", "secret", "http://localhost:8080", localHttp = true) }
+        assertThrows(IllegalArgumentException::class.java) { OidcConfig("http://id.localhost/realms/usuals", "client", "secret", "http://localhost:8080") }
+        val local = OidcConfig("http://id.localhost/realms/usuals", "client", "secret", "http://localhost:8080", localHttp = true)
+        assertThat(local.endpoint(local.issuer).scheme).isEqualTo("http")
+        assertThrows(IllegalArgumentException::class.java) { local.endpoint("http://other.localhost/keys") }
+    }
+    @Test fun accountSwitchUsesOnlyTheValidatedProviderLogoutAndFixedApplicationReturn() {
+        fixture.discoveryOverride = fixture.metadata().changed("end_session_endpoint", JsonPrimitive("https://sso.example/logout/"))
+        val client = OidcClient(config, fixture.transport) { now }
+        val url = client.switchAccount(client.metadata())
+        assertThat(url).startsWith("https://sso.example/logout/?")
+        assertThat(OidcFixture.query(url)["post_logout_redirect_uri"]).isEqualTo("https://usuals.invalid/auth/login?fresh=true")
+        assertThat(OidcFixture.query(url)).doesNotContainKey("id_token_hint")
+        fixture.discoveryOverride = fixture.metadata().changed("end_session_endpoint", JsonPrimitive("https://foreign.example/logout/"))
+        denied { client.metadata() }
+        fixture.discoveryOverride = fixture.metadata()
+        assertThat(denied { client.switchAccount(client.metadata()) }.code).isEqualTo("account_switch_unavailable")
     }
 }

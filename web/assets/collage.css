@@ -1,0 +1,34 @@
+.brand-collage {
+  --collage-detail: 16%;
+  position: relative;
+  display: block;
+  aspect-ratio: 460 / 320;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+.brand-collage > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  mask: var(--collage-mask) center / contain no-repeat;
+}
+.brand-collage > .collage-secondary {
+  --collage-mask: url("./collage-secondary.svg");
+  background: color-mix(in srgb, var(--champagne) calc(100% - var(--collage-detail)), var(--gold));
+}
+.brand-collage > .collage-tertiary {
+  --collage-mask: url("./collage-tertiary.svg");
+  background: color-mix(in srgb, var(--collage-leaf) 65%, var(--collage-on-leaf));
+}
+.brand-collage > .collage-paper {
+  --collage-mask: url("./collage-paper.svg");
+  background: var(--paper);
+}
+.brand-collage > .collage-primary {
+  --collage-mask: url("./collage-primary.svg");
+  background: var(--primary);
+}
+@media (prefers-color-scheme: dark) {
+  .brand-collage { --collage-detail: 45%; }
+}

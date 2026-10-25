@@ -27,6 +27,18 @@ app. The store's PNG is a render of that artwork, not a separate design.
 
 ## First-run tour
 
+The colour collage is the decorative motif. `web/assets/collage.svg` holds its
+four shapes; `scripts/sync-brand-assets` exports matching browser masks and
+Android vectors. Each layer takes a semantic colour from the selected palette,
+including dark appearance. The logo and launcher keep their canonical artwork.
+The collage belongs in welcome, tutorial and empty-list screens, with a smaller
+crop in the browser sidebar. Populated grocery rows remain clear.
+
+`web/assets/theme.css` owns the browser palette definitions. The shopping client
+and Usuals Cloud load those same definitions and `collage.css`. Cloud reads the
+shopping client's saved palette and follows system appearance; there is no
+separate cloud palette or copy of the collage geometry.
+
 The first normal Android launch opens a five-step guided tour: the offline list,
 capture, scans/recipes, shopping/history and optional sharing through an account.
 Next, Back and Skip remain explicit; the final step offers **Start my list** or

@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
+import io.theficos.usuals.ui.theme.BrandCollage
 
 @Composable
 fun TutorialScreen(onFinish: (openAccount: Boolean) -> Unit) {
@@ -49,10 +50,10 @@ fun TutorialScreen(onFinish: (openAccount: Boolean) -> Unit) {
             key(page) {
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 32.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     Text(stringResource(R.string.tutorial_step, page + 1, titles.size), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.large) {
+                    if (page == 0) BrandCollage(Modifier.fillMaxWidth().height(192.dp))
+                    else Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.large) {
                         Box(Modifier.fillMaxWidth().height(128.dp), contentAlignment = Alignment.Center) {
-                            if (page == 0) Image(painterResource(R.drawable.ic_brand_mark), null, Modifier.size(72.dp))
-                            else Icon(when (page) {
+                            Icon(when (page) {
                                 1 -> Icons.AutoMirrored.Filled.PlaylistAdd
                                 2 -> Icons.Default.QrCodeScanner
                                 3 -> Icons.Default.CheckCircle
