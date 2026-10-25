@@ -90,6 +90,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val seq = next(c)
             c.execute("UPDATE list SET projection=NULL,deleted_at=?,seq=? WHERE id=?", relay.auth.now(), seq, id(list))
             c.execute("UPDATE list_member SET removed=? WHERE list_id=? AND removed IS NULL", seq, id(list))
+            c.execute("UPDATE email_invitation SET state='revoked',delivery='cancelled',mail_cipher=NULL WHERE list_id=? AND state='pending'", id(list))
             members
         }
         waiters.changed(members)
@@ -100,21 +101,29 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
         var members = emptyList<String>()
         val view = db.transaction { c ->
             access.verify(c)
-            val locked = lock(c, access.user, list, read = true)
-            // A plain read: locking another account here could deadlock with that account sharing back.
-            expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=?", id(request.userId)) { config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "not_found", 404)
-            if (role(c, request.userId, list) != null) return@transaction view(c, access.user, list, locked.seq, cipher.open(list, locked.sealed))
-            expect(current(c, list).size < 50, "limit_reached", 409)
-            // Before the counter: the insert's foreign key check waits on the added account's row.
-            c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL,archived=false", id(list), id(request.userId))
-            val seq = next(c)
-            c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
+            expect(config.directory == "all" || collaborators(c, access.user, request.userId), "not_found", 404)
+            val result = addMember(c, access.user, list, request.userId, access.user)
             members = current(c, list)
-            view(c, access.user, list, seq, cipher.open(list, locked.sealed))
+            result
         }
         waiters.changed(members)
         return view
     }
+
+    /** Called only after verified-recipient invitation checks, inside their transaction. */
+    internal fun addInvited(c: Connection, sender: String, list: String, recipient: String) = addMember(c, sender, list, recipient, recipient)
+    private fun addMember(c: Connection, sender: String, list: String, target: String, viewer: String): ListView {
+        val locked = lock(c, sender, list, read = true)
+        // A plain read avoids deadlocking two accounts sharing back to each other.
+        expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=?", id(target)) { config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "not_found", 404)
+        if (role(c, target, list) != null) return view(c, viewer, list, locked.seq, cipher.open(list, locked.sealed))
+        expect(current(c, list).size < 50, "limit_reached", 409)
+        c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL,archived=false", id(list), id(target))
+        val seq = next(c)
+        c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
+        return view(c, viewer, list, seq, cipher.open(list, locked.sealed))
+    }
+    internal fun existingView(c: Connection, user: String, list: String) = existing(c, user, list) ?: reject("not_found", 404)
 
     fun remove(access: AccountAccess, list: String, user: String) {
         id(list); id(user)
@@ -126,6 +135,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val members = current(c, list)
             val seq = next(c)
             c.execute("UPDATE list_member SET removed=? WHERE list_id=? AND user_id=?", seq, id(list), id(user))
+            c.execute("UPDATE email_invitation SET state='revoked',delivery='cancelled',mail_cipher=NULL WHERE list_id=? AND sender=? AND state='pending'", id(list), id(user))
             c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
             members
         }
@@ -157,11 +167,14 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
         expect(q.length <= 200)
         access.verify(c)
         People(c.query("SELECT id,$NAME,email FROM web_user u WHERE id<>? AND NOT disabled AND (issuer=? OR issuer=?) " +
+            (if (config.directory == "collaborators") "AND EXISTS(SELECT 1 FROM list_member a JOIN list_member b ON a.list_id=b.list_id WHERE a.user_id=? AND b.user_id=u.id AND a.removed IS NULL AND b.removed IS NULL) " else "") +
             "AND (strpos(lower($NAME),lower(?))>0 OR strpos(lower(coalesce(email,'')),lower(?))>0) ORDER BY lower($NAME),id LIMIT 20",
-            id(access.user), config.oidc?.issuer ?: "", if (config.localEnabled) WebIdentityConfig.LOCAL_ISSUER else "", q, q) {
+            *(listOf<Any?>(id(access.user), config.oidc?.issuer ?: "", if (config.localEnabled) WebIdentityConfig.LOCAL_ISSUER else "") +
+                (if (config.directory == "collaborators") listOf(id(access.user)) else emptyList()) + listOf(q, q)).toTypedArray()) {
             Person(it.getObject(1).toString(), it.getString(2), it.getString(3))
         })
     }
+    private fun collaborators(c: Connection, first: String, second: String) = c.query("SELECT 1 FROM list_member a JOIN list_member b ON a.list_id=b.list_id WHERE a.user_id=? AND b.user_id=? AND a.removed IS NULL AND b.removed IS NULL LIMIT 1", id(first), id(second)) { Unit }.isNotEmpty()
 
     fun changes(access: AccountAccess, cursor: String?, limit: Int): ListPage {
         expect(limit in 1..200)
@@ -225,7 +238,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
     }
     private class MemberRow(val list: String, val user: String, val role: String, val name: String, val email: String?, val archived: Boolean, val archivedByOwner: Boolean)
     private companion object {
-        const val NAME = "coalesce(nullif(u.display_name,''),u.local_username,'')"
+        const val NAME = "coalesce(nullif(u.display_name,''),u.local_username,nullif(u.email,''),'')"
         const val PAGE_BYTES = 4L * 1024 * 1024
     }
 }
