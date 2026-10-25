@@ -1,29 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="416" viewBox="0 0 1280 416" role="img" aria-labelledby="title description">
   <title id="title">Usuals. Good things, remembered.</title>
-  <desc id="description">Warm ivory, aubergine ink and a champagne dotted U mark. An editorial cover for a shopping list with a little less to remember.</desc>
+  <desc id="description">A shopping list with a memory. Warm paper, a champagne U mark and the familiar colour collage in aubergine, gold, sage and pink.</desc>
   <defs>
     <clipPath id="cover"><rect width="1280" height="416" rx="24"/></clipPath>
+    <clipPath id="collage-window"><rect x="856" width="424" height="416"/></clipPath>
   </defs>
   <g clip-path="url(#cover)">
     <rect width="1280" height="416" fill="#F8F5EF"/>
     <rect x="856" width="424" height="416" fill="#583D53"/>
-    <path d="M896 416V211a172 172 0 0 1 344 0v205" fill="none" stroke="#76596F" stroke-width="1"/>
-    <path d="M916 416V211a152 152 0 0 1 304 0v205" fill="none" stroke="#76596F" stroke-width="1"/>
     <text x="64" y="62" fill="#583D53" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" letter-spacing="4">USUALS</text>
     <g fill="#302331" font-family="Georgia, 'Times New Roman', serif" font-size="68">
       <text x="60" y="157">Good things,</text>
       <text x="60" y="233">remembered.</text>
     </g>
-    <text x="64" y="288" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="19">Your shopping list. A little more considered.</text>
+    <text x="64" y="288" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="19">An offline shopping list with a memory.</text>
     <path d="M64 335h60" stroke="#B39568" stroke-width="2"/>
     <text x="64" y="373" fill="#6E5E6B" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="2">OFFLINE FIRST · SHARED BY CHOICE</text>
+    <!-- Canonical collage geometry, tinted with the browser's dark Plum roles. -->
+    <g clip-path="url(#collage-window)">
+      <g transform="translate(1080 306) scale(1.2)">
+        <path id="cover-collage-secondary" fill="#8E7C61" d="M-45-112C17-147 126-126 156-74C194-14 151 63 89 76C38 89-13 36-39-3C-62-43-99-72-45-112Z"/>
+        <path id="cover-collage-tertiary" fill="#6B7661" d="M-187-8C-143-54-97-28-51 5C2 43 23 65 9 102C-13 147-75 151-132 119C-180 93-217 29-187-8Z"/>
+        <path id="cover-collage-paper" fill="#28212A" d="M-126-77C-105-123-57-109-23-61C6-22-5 39-29 57C-56 77-78 50-88 21C-102-14-153-29-126-77Z"/>
+        <path id="cover-collage-primary" fill="#E2BCD4" d="M49 13C87-11 116 11 148 48C174 79 210 99 186 126C169 149 121 113 92 89C64 68 14 36 49 13Z"/>
+      </g>
+    </g>
+    <!-- Position the managed mark without changing its exported geometry. -->
+    <g transform="translate(500 4) scale(.45)">
     <!-- brand-mark:start -->
     <g transform="translate(924 42) scale(4.5)" fill="none" stroke="#EFE1CA" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21.5 26v10a10.5 10.5 0 0 0 21 0V26" stroke-width="7"/>
       <circle cx="42.5" cy="14.5" r="3" fill="#EFE1CA" stroke="none"/>
     </g>
     <!-- brand-mark:end -->
-    <text x="1068" y="336" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">MAKE ROOM FOR</text>
-    <text x="1068" y="360" text-anchor="middle" fill="#EFE1CA" font-family="Arial, Helvetica, sans-serif" font-size="11" letter-spacing="2.5">THE GOOD THINGS</text>
+    </g>
   </g>
 </svg>
