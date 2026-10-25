@@ -181,6 +181,13 @@ class ReceiptWalletDeviceTest {
                 var stableBounds: Rect? = null
                 var stableSince = 0L
                 while (SystemClock.uptimeMillis() < deadline) {
+                    // Grid thumbnails can open Android's preview instead of selecting the file.
+                    if (nativeNode("List view") != null) {
+                        nativeClick("List view")
+                        while (nativeNode("List view") != null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100)
+                        stableBounds = null
+                        continue
+                    }
                     val grid = instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByViewId("com.google.android.documentsui:id/dir_list")?.firstOrNull()
                     row = if (grid?.childCount == 1 && (!inFolder || nativeNode("UsualsQA") != null)) grid.getChild(0)?.takeIf { it.viewIdResourceName != "android:id/empty" && it.isVisibleToUser && it.isEnabled } else null
                     val bounds = Rect().also { row?.getBoundsInScreen(it) }

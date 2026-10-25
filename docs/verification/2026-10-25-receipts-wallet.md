@@ -47,8 +47,9 @@ the date and extracted items, saves history, exports and restores its archive,
 opens the full-size photo, then removes the original photo while retaining
 purchases. The selected document is checked against the exact fixture bytes.
 
-The native test waits for the document row's bounds to settle during directory
-navigation. It does not retry a failed action or bypass the picker callback.
+The native test selects list view to avoid opening grid-thumbnail previews and
+waits for the document row's bounds to settle during directory navigation. It
+does not retry a failed action or bypass the picker callback.
 The receipt and model response are synthetic; this verifies the integration,
 not real-world recognition accuracy, a provider's availability or payments.
 Model HTTP contract tests use a local test server. Server AI requires updating
