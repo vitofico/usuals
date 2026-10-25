@@ -24,7 +24,7 @@ test("unavailable or full browser storage still permits a live palette choice", 
   assert.equal(writePalette("tide", null), "tide");
 });
 
-const css = await readFile(new URL("../assets/styles.css", import.meta.url), "utf8");
+const css = await readFile(new URL("../assets/theme.css", import.meta.url), "utf8");
 const darkStart = css.indexOf("@media (prefers-color-scheme: dark)");
 assert.ok(darkStart > 0);
 const blocks = (text) => [...text.matchAll(/:root(?:\[data-palette="(\w+)"\])?\s*\{([^}]+)\}/g)]

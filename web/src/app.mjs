@@ -90,6 +90,8 @@ function el(tag, attributes = {}, ...children) {
 const button = (label, action, kind = "secondary", attributes = {}) =>
   el("button", { type: "button", class: kind, onclick: action, ...attributes }, label);
 const paragraph = (key, kind = "lede", values = {}) => el("p", { class: kind }, t(key, values));
+const brandCollage = (kind = "") => el("div", { class: `brand-collage ${kind}`, "aria-hidden": "true" },
+  ...["secondary", "tertiary", "paper", "primary"].map((role) => el("span", { class: `collage-${role}` })));
 /** `action` is an optional [label, handler] pair, such as Undo. */
 function notice(key, error = false, values = {}, action = null) {
   const node = $("notice");
@@ -215,7 +217,7 @@ function tutorialDialog() {
         el("p", { class: "eyebrow" }, t("tutorialStep", { current: page + 1, total: steps.length })),
         el("progress", { class: "tutorial-progress", max: steps.length, value: page + 1,
           "aria-label": t("tutorialStep", { current: page + 1, total: steps.length }) }),
-        el("div", { class: "tutorial-art", "aria-hidden": "true" }, symbols[page]),
+        page === 0 ? brandCollage("tutorial-collage") : el("div", { class: "tutorial-art", "aria-hidden": "true" }, symbols[page]),
         el("h2", { id: "tutorial-heading", tabindex: -1 }, t(`tutorial${steps[page]}Title`)),
         paragraph(`tutorial${steps[page]}Body`),
         paragraph(`tutorial${steps[page]}Hint`, "helper"),
@@ -348,7 +350,7 @@ function welcome() {
       paragraph("welcomeText"),
       el("div", { class: "welcome-actions" }, ...welcomeActions()),
       paragraph(config?.emailInvitations ? "emailSignInText" : config?.localEnabled ? "localSignInText" : "signInText", "helper")),
-    el("div", { class: "welcome-art", "aria-hidden": "true" }));
+    brandCollage("welcome-art"));
 }
 async function render() {
   const own = generation;
@@ -462,7 +464,7 @@ function renderLists() {
   if (!active.length) {
     $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), el("div", {},
       el("section", { class: "paper empty" },
-        el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+        brandCollage("empty-collage"),
         ...(archived.length ? [paragraph("allListsArchived")] : [el("h2", {}, t("firstListTitle")), paragraph("firstListText")]),
         button(t("newList"), newListDialog, "primary")),
       archivedArea(archived)));
@@ -509,7 +511,7 @@ function renderLists() {
     ...(needed.length ? section("toPickUp", needed) : []),
     pickedSection,
     ...(!items.length ? [el("div", { class: "empty" },
-      el("div", { class: "empty-mark", "aria-hidden": "true" }, "✧"),
+      brandCollage("empty-collage"),
       el("h2", {}, t("emptyTitle")), paragraph("emptyText"))] : []),
     el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
   $("content").replaceChildren(
