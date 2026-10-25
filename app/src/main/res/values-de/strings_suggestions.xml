@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestion_repeat">Deine Wiederholungsregel ist fällig</string>
-    <string name="suggestion_interval">Üblicherweise jetzt wieder fällig</string>
-    <string name="suggestion_staple">Bei mindestens der Hälfte deiner letzten Einkäufe gekauft</string>
-    <string name="suggestion_add">Hinzufügen</string>
-    <string name="suggestion_not_now">Jetzt nicht</string>
     <string name="suggestion_action">%1$s %2$s</string>
 </resources>

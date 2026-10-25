@@ -4,10 +4,6 @@
     <string name="quiet_list_empty_help">Scrivi qui sotto, tieni premuto per parlare o scansiona un codice a barre.</string>
     <string name="quiet_list_store_filter">Negozio: %1$s</string>
     <string name="quiet_list_import">Importa ricetta o lista</string>
-    <plurals name="quiet_list_suggestions">
-        <item quantity="one">Suggerimenti (%1$d)</item>
-        <item quantity="other">Suggerimenti (%1$d)</item>
-    </plurals>
     <plurals name="quiet_list_archived">
         <item quantity="one">Archiviate (%1$d)</item>
         <item quantity="other">Archiviate (%1$d)</item>

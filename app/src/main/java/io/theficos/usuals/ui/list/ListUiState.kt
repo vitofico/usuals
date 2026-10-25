@@ -3,7 +3,6 @@ package io.theficos.usuals.ui.list
 import androidx.compose.runtime.Immutable
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.Suggestion
 import io.theficos.usuals.smart.RepeatOffer
 import io.theficos.usuals.model.Item
 import io.theficos.usuals.model.FinishedTrip
@@ -44,7 +43,8 @@ data class ListUiState(
     val basket: io.theficos.usuals.ui.basket.BasketSheetState? = null,
     val autocomplete: List<ItemMemory> = emptyList(),
     val repeatSuggestionKeys: Set<String> = emptySet(),
-    val suggestions: List<Suggestion> = emptyList(),
+    val reviewCandidates: List<io.theficos.usuals.smart.ReviewCandidate> = emptyList(),
+    val review: ReviewSession? = null,
     val captureMatches: List<CaptureMatchReview> = emptyList(),
     val matchingBusy: Boolean = false,
     val matchingError: Boolean = false,

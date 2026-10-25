@@ -4,7 +4,6 @@ import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.ItemIdentity
 
 enum class SuggestionReason { REPEAT, INTERVAL, STAPLE }
-enum class SuggestionChoice { ADD, NOT_NOW, NEVER }
 data class Suggestion(val key: String, val name: String, val reason: SuggestionReason)
 
 class SuggestionEngine(

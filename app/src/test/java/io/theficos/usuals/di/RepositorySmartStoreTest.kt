@@ -37,6 +37,58 @@ class RepositorySmartStoreTest {
     }
     @After fun tearDown() = db.close()
 
+    @Test fun `review adds beyond six without quantities and undo removes only its unchanged row`() = runTest {
+        history.importPast((1..13).map { ParsedItem("item $it", Quantity.pieces(2)) }, now - 7 * RepeatPlanner.DAY_MILLIS)
+        val scope = items.currentListId()
+        val candidate = smart.review(now, history.snapshot(), items.items()).last()
+        val added = smart.addReviewed(candidate.key, scope, now) as io.theficos.usuals.ui.list.ReviewAddResult.Added
+        assertThat(items.items().single().name).isEqualTo(candidate.name)
+        assertThat(items.items().single().quantity).isNull()
+        assertThat(items.items().single().fromSuggestion).isTrue()
+        assertThat(smart.addReviewed(candidate.key, scope, now)).isEqualTo(io.theficos.usuals.ui.list.ReviewAddResult.AlreadyPresent)
+        assertThat(smart.undoReviewed(added.version)).isTrue()
+        assertThat(items.items()).isEmpty()
+        assertThat(smart.undoReviewed(added.version)).isFalse()
+        assertThat(history.snapshot().purchases).hasSize(13)
+    }
+
+    @Test fun `review rechecks checked aliases muted rules and stale scopes at write time`() = runTest {
+        history.importPast(listOf(ParsedItem("milk"), ParsedItem("bread"), ParsedItem("eggs")), now - 7 * RepeatPlanner.DAY_MILLIS)
+        val scope = items.currentListId()
+        history.saveAlias(ItemAlias("whole milk", "milk"))
+        items.setChecked(items.add(ParsedItem("whole milk", Quantity.pieces(3))), true)
+        assertThat(smart.addReviewed("milk", scope, now)).isEqualTo(io.theficos.usuals.ui.list.ReviewAddResult.AlreadyPresent)
+        assertThat(items.items().single().quantity).isEqualTo(Quantity.pieces(3))
+        smart.muteSuggestion("bread", scope)
+        assertThat(smart.addReviewed("bread", scope, now)).isEqualTo(io.theficos.usuals.ui.list.ReviewAddResult.Unavailable)
+        history.savePreference(ItemPreference("eggs", repeatEveryDays = 7))
+        assertThat(smart.addReviewed("eggs", scope, now)).isEqualTo(io.theficos.usuals.ui.list.ReviewAddResult.Unavailable)
+        assertThat(smart.muteReviewed("eggs", scope, now)).isFalse()
+        assertThat(history.snapshot().preferences.single { it.key == "eggs" }.muted).isFalse()
+        ListRepository(db).create("Other")
+        assertThat(smart.addReviewed("milk", scope, now)).isEqualTo(io.theficos.usuals.ui.list.ReviewAddResult.Unavailable)
+        assertThat(items.items()).isEmpty()
+    }
+
+    @Test fun `review undo preserves a subsequently edited checked or switched row`() = runTest {
+        ListRepository(db).create("Source")
+        history.importPast(listOf(ParsedItem("milk")), now - 7 * RepeatPlanner.DAY_MILLIS)
+        val scope = items.currentListId()
+        val added = smart.addReviewed("milk", scope, now) as io.theficos.usuals.ui.list.ReviewAddResult.Added
+        val id = ItemId(added.version.id)
+        items.setQuantity(id, Quantity.pieces(2))
+        assertThat(smart.undoReviewed(added.version)).isFalse()
+        val edited = items.items().single().version!!
+        items.setChecked(id, true)
+        assertThat(smart.undoReviewed(edited)).isFalse()
+        val checked = items.items().single().version!!
+        ListRepository(db).create("Other")
+        assertThat(smart.undoReviewed(checked)).isFalse()
+        ListRepository(db).select(scope)
+        assertThat(items.items().single().checked).isTrue()
+        assertThat(items.items().single().quantity).isEqualTo(Quantity.pieces(2))
+    }
+
     @Test fun `archive three restores private favorites without sharing or erasing local choices`() = runTest {
         val tools = io.theficos.usuals.ui.shopping.ShoppingToolsStore()
         val favorite = io.theficos.usuals.ui.shopping.SavedShoppingItem("favorite", "milk", 2.0, "LITRE")
@@ -196,26 +248,26 @@ class RepositorySmartStoreTest {
         assertThat(history.snapshot().preferences.single { it.key == "oat milk" }.repeatEveryDays).isEqualTo(21)
     }
 
-    @Test fun `suggestion buttons persist snooze and Never and mark only accepted rows`() = runTest {
+    @Test fun `review respects existing snooze and mute and marks only accepted rows`() = runTest {
+        history.importPast(listOf(ParsedItem("milk"), ParsedItem("bread"), ParsedItem("eggs")), now - 14 * RepeatPlanner.DAY_MILLIS)
         history.importPast(listOf(ParsedItem("milk"), ParsedItem("bread"), ParsedItem("eggs")), now - 7 * RepeatPlanner.DAY_MILLIS)
-        smart.chooseSuggestion("milk", SuggestionChoice.NOT_NOW, now)
-        smart.chooseSuggestion("bread", SuggestionChoice.NEVER, now)
-        smart.chooseSuggestion("eggs", SuggestionChoice.ADD, now)
+        history.savePreference(ItemPreference("milk", snoozedUntil = now))
+        smart.muteSuggestion("bread", items.currentListId())
+        smart.addReviewed("eggs", items.currentListId(), now)
         assertThat(items.items().single().name).isEqualTo("eggs")
         assertThat(items.items().single().fromSuggestion).isTrue()
         assertThat(items.items().single().quantity).isNull()
-        assertThat(smart.suggestions(now, history.snapshot(), items.items())).isEmpty()
+        assertThat(smart.review(now, history.snapshot(), items.items())).isEmpty()
         items.setChecked(items.items().single().id, true)
         now += 1000
         smart.finish(null)
-        assertThat(smart.suggestions(now, history.snapshot(), items.items()).map { it.name }).contains("milk")
-        assertThat(smart.suggestions(now, history.snapshot(), items.items()).map { it.name }).doesNotContain("bread")
+        assertThat(smart.review(now, history.snapshot(), items.items()).map { it.name }).contains("milk")
+        assertThat(smart.review(now, history.snapshot(), items.items()).map { it.name }).doesNotContain("bread")
     }
 
-    @Test fun `typing can mute a memory outside the six cards and manual favourite adds still work`() = runTest {
+    @Test fun `typing can mute a memory and manual favourite adds still work`() = runTest {
         history.importPast((1..9).map { ParsedItem("item $it") }, now - RepeatPlanner.DAY_MILLIS)
         val scope = items.currentListId()
-        assertThat(smart.suggestions(now, history.snapshot(), items.items()).map { it.key }).doesNotContain("item 9")
         assertThat(smart.autocomplete("item 9", history.snapshot(), items.items()).single().key).isEqualTo("item 9")
         smart.muteSuggestion("item 9", scope)
         val facts = history.snapshot()
@@ -240,7 +292,7 @@ class RepositorySmartStoreTest {
             ItemPreference("milk", category = "DAIRY", muted = true, repeatEveryDays = 21, snoozedUntil = now))
         val reloaded = RepositorySmartStore(items, history, CategoryClassifier(InputLanguages.available), HistoryRanker(), RepeatPlanner())
         assertThat(reloaded.autocomplete(gtin.value, history.snapshot(), emptyList())).isEmpty()
-        assertThat(reloaded.suggestions(now, history.snapshot(), emptyList())).isEmpty()
+        assertThat(reloaded.review(now, history.snapshot(), emptyList())).isEmpty()
         items.add(ParsedItem("milk"))
         assertThat(items.items().single().name).isEqualTo("milk")
         assertThat(history.snapshot().purchases).hasSize(1)
@@ -275,13 +327,13 @@ class RepositorySmartStoreTest {
         assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)
 
         history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21))
-        smart.chooseSuggestion("milk", SuggestionChoice.NOT_NOW, now)
+        history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21, snoozedUntil = now))
         assertThat(history.snapshot().preferences.single().snoozedUntil).isEqualTo(now)
         assertThat(replica.projection(scope)).isEqualTo(shared)
         assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)
 
         history.savePreference(ItemPreference("whole milk", category = "DAIRY", repeatEveryDays = 21))
-        smart.chooseSuggestion("milk", SuggestionChoice.NEVER, now)
+        smart.muteSuggestion("milk", scope)
         assertThat(history.snapshot().preferences.single().muted).isTrue()
         assertThat(replica.projection(scope)).isEqualTo(shared)
         assertThat(db.syncDao().pending(scope)).isEqualTo(outbox)

@@ -18,12 +18,53 @@ class RepositorySmartStore(
     private val categories: CategoryClassifier,
     private val ranker: HistoryRanker,
     private val repeats: RepeatPlanner,
-    private val suggestions: SuggestionEngine = SuggestionEngine(repeats, IntervalModel(), ranker),
     private val quantities: QuantityHints = QuantityHints(),
     private val offers: RepeatOffers = RepeatOffers(),
     private val similar: SimilarItems = SimilarItems(ranker),
+    private val reviewRanker: ReviewRanker = ReviewRanker(),
 ) : SmartStore {
     private val maintenance = Mutex()
+    override fun review(now: Long, history: HistorySnapshot, active: List<Item>) = reviewRanker.rank(now, history, active)
+
+    override suspend fun addReviewed(key: String, scope: String, now: Long): ReviewAddResult = maintenance.withLock {
+        items.transaction {
+            if (items.currentListId() != scope) return@transaction ReviewAddResult.Unavailable
+            val facts = history.snapshot()
+            val aliases = facts.aliases.associate { it.fromKey to it.toKey }
+            val canonical = ItemIdentity.resolve(key, aliases)
+            val active = items.items()
+            if (active.any { ItemIdentity.key(it, aliases) == canonical }) return@transaction ReviewAddResult.AlreadyPresent
+            val candidate = review(now, facts, active).firstOrNull { it.key == canonical }
+                ?: return@transaction ReviewAddResult.Unavailable
+            val gtin = candidate.gtin?.takeIf { ItemIdentity.key(candidate.name, Normalizer.normalize(candidate.name), null, aliases) != canonical }
+            val id = items.add(ParsedItem(candidate.name), gtin = gtin, fromSuggestion = true)
+            ReviewAddResult.Added(requireNotNull(items.items().first { it.id == id }.version))
+        }
+    }
+
+    override suspend fun undoReviewed(version: ItemVersion): Boolean = maintenance.withLock {
+        items.transaction {
+            if (items.currentListId() != version.list) return@transaction false
+            val current = items.items().firstOrNull { it.id.value == version.id } ?: return@transaction false
+            if (current.version != version) return@transaction false
+            items.delete(current.id, version)
+            items.items().none { it.id == current.id }
+        }
+    }
+
+    override suspend fun muteReviewed(key: String, scope: String, now: Long): Boolean = maintenance.withLock {
+        items.transaction {
+            if (items.currentListId() != scope) return@transaction false
+            val facts = history.snapshot()
+            val aliases = facts.aliases.associate { it.fromKey to it.toKey }
+            val canonical = ItemIdentity.resolve(key, aliases)
+            // A newly enabled repeat rule must never be stopped by a stale review card.
+            if (review(now, facts, items.items()).none { it.key == canonical }) return@transaction false
+            val pref = ItemIdentity.preferences(facts.preferences, aliases)[canonical] ?: ItemPreference(canonical)
+            history.savePreference(pref.copy(muted = true))
+            true
+        }
+    }
     override suspend fun addAgain(rows: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = maintenance.withLock {
         items.transaction {
             require(items.currentListId() == scope)
@@ -74,27 +115,6 @@ class RepositorySmartStore(
             io.theficos.usuals.data.local.CaptureNameChoice(version, choice.usual.key, choice.usual.name)
         }
         items.matchCaptures(requests, remember)
-    }
-
-    // No setting enables intervals: rollout requires reviewed real-history replay evidence.
-    override fun suggestions(now: Long, history: HistorySnapshot, active: List<Item>) =
-        suggestions.rank(now, history, active, intervalsEnabled = false)
-
-    override suspend fun chooseSuggestion(key: String, choice: SuggestionChoice, now: Long) {
-        maintenance.withLock {
-            items.transaction {
-                val facts = history.snapshot()
-                val candidate = suggestions(now, facts, items.items()).firstOrNull { it.key == key }
-                    ?: return@transaction
-                val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-                val pref = ItemIdentity.preferences(facts.preferences, aliases)[key] ?: ItemPreference(key)
-                when (choice) {
-                    SuggestionChoice.ADD -> items.add(ParsedItem(candidate.name), fromSuggestion = true)
-                    SuggestionChoice.NOT_NOW -> history.savePreference(pref.copy(snoozedUntil = now))
-                    SuggestionChoice.NEVER -> history.savePreference(pref.copy(muted = true))
-                }
-            }
-        }
     }
 
     override suspend fun muteSuggestion(key: String, scope: String) {

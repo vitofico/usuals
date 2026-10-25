@@ -20,7 +20,6 @@ import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.smart.CategoryClassifier
 import io.theficos.usuals.smart.HistoryRanker
 import io.theficos.usuals.smart.RepeatPlanner
-import io.theficos.usuals.smart.SuggestionChoice
 import io.theficos.usuals.ui.history.ScopedHistoryStore
 import io.theficos.usuals.ui.product.ProductInfoStore
 import io.theficos.usuals.ui.product.ProductProvenance
@@ -70,7 +69,7 @@ class BarcodeMemoryListTest {
         history.finish()
 
         now += 8 * RepeatPlanner.DAY_MILLIS
-        smart.chooseSuggestion("milk", SuggestionChoice.ADD, now)
+        smart.addReviewed("milk", items.currentListId(), now)
         history.savePreference(ItemPreference("coffee", repeatEveryDays = 7))
         smart.maintainRepeats(now, items.items(), history.snapshot())
         items.add(ParsedItem("pesto"))

@@ -11,9 +11,6 @@ import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.Suggestion
-import io.theficos.usuals.smart.SuggestionChoice
-import io.theficos.usuals.smart.SuggestionReason
 import io.theficos.usuals.ui.shopping.ShoppingPreferences
 import io.theficos.usuals.ui.theme.UsualsTheme
 import org.junit.Rule
@@ -49,24 +46,15 @@ class QuietListScreenTest {
         }
     }
 
-    @Test fun suggestions_start_collapsed_and_keep_add_and_suppression_available() {
-        val choices = mutableListOf<SuggestionChoice>()
-        compose.setContent { UsualsTheme {
-            ListContent(ListUiState(pending = listOf(row), suggestions = listOf(Suggestion("oats", "oats", SuggestionReason.STAPLE))),
-                ListActions(onSuggestion = { _, choice -> choices += choice }))
-        } }
-        compose.onNodeWithText("Milk").assertIsDisplayed()
-        compose.onNodeWithText("Suggestions (1)").assertIsDisplayed()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
-        compose.onNodeWithText("Bought in at least half your recent shops").assertDoesNotExist()
-        compose.onNodeWithText("Suggestions (1)").performClick()
-        compose.onNodeWithText("Suggestions (1)").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded"))
-        compose.onNodeWithContentDescription("Add oats").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Suggestion options for oats").performClick()
-        compose.onNodeWithContentDescription("Don’t suggest oats again").performClick()
-        assertThat(choices).containsExactly(SuggestionChoice.ADD, SuggestionChoice.NEVER).inOrder()
-        compose.onNodeWithText("Suggestions (1)").performClick()
-        compose.onNodeWithText("Suggestions (1)").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+    @Test fun review_is_a_quiet_single_action() {
+        var opened = 0
+        compose.setContent {
+            ListContent(ListUiState(pending = listOf(row), reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))),
+                ListActions(onOpenReview = { opened++ }))
+        }
+        compose.onNodeWithText("Review your usuals").assertIsDisplayed().performClick()
+        assertThat(opened).isEqualTo(1)
+        compose.onNodeWithText("oats").assertDoesNotExist()
     }
 
     @Test fun typing_keeps_capture_and_memory_visible_without_unrelated_controls() {
@@ -74,13 +62,13 @@ class QuietListScreenTest {
             ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),
                 stores = listOf("Market", "Bakery"), capture = CaptureState.Typing("mi"),
                 autocomplete = listOf(ItemMemory("milk", "milk", 2, 1_000)),
-                suggestions = listOf(Suggestion("oats", "oats", SuggestionReason.STAPLE))), ListActions())
+                reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))), ListActions())
         } }
         compose.onNodeWithTag(DraftFieldTag).assertIsDisplayed()
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("More options").assertDoesNotExist()
         compose.onNodeWithText("Store: All stores").assertDoesNotExist()
-        compose.onNodeWithText("Suggestions (1)").assertDoesNotExist()
+        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
         compose.onNodeWithText("Add your first item").assertDoesNotExist()
     }
 
@@ -103,11 +91,11 @@ class QuietListScreenTest {
         var left = 0
         compose.setContent { UsualsTheme {
             ListContent(ListUiState(pending = listOf(row), checked = listOf(ListRow(ItemId("bread"), "Bread", checked = true)),
-                personal = ShoppingPreferences(mode = true), suggestions = listOf(Suggestion("oats", "oats", SuggestionReason.STAPLE))),
+                personal = ShoppingPreferences(mode = true), reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))),
                 ListActions(shoppingMode = true, onFinishShop = { finished++ }, onShoppingMode = { left++ }))
         } }
         compose.onNodeWithText("Shopping mode").assertIsDisplayed()
-        compose.onNodeWithText("Suggestions (1)").assertDoesNotExist()
+        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Finish shop"))
         compose.onNodeWithText("Finish shop").performClick()
         assertThat(finished).isEqualTo(1)

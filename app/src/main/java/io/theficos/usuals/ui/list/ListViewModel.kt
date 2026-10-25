@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import io.theficos.usuals.smart.BarcodeMemory
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.SuggestionChoice
 import io.theficos.usuals.smart.RepeatOffer
 import io.theficos.usuals.ui.recipe.*
 import io.theficos.usuals.ui.scan.ScanStore
@@ -42,6 +41,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -110,6 +110,7 @@ class ListViewModel(
         val matchingError: Boolean = false,
         val repeatOffer: RepeatOffer? = null,
         val recipe: RecipeUiState? = null,
+        val review: ReviewSession? = null,
         val scanNames: List<ScanNameOffer> = emptyList(),
         /** Scanned barcodes whose lookup has not answered yet. */
         val scanLookups: Set<Gtin> = emptySet(),
@@ -140,13 +141,16 @@ class ListViewModel(
     private val shopping = historyStore.shopping(store.items()).stateIn(viewModelScope, SharingStarted.Eagerly, ShoppingSnapshot())
 
     private val directory = directoryStore.observe().stateIn(viewModelScope, SharingStarted.Eagerly, ListDirectory())
+    private val listingTime = MutableStateFlow(clock())
 
     /**
      * Rows and suggestions, worked out off the main thread from the list, its
      * history and the store filter. A keystroke changes none of those, so typing
      * on a long list never waits for history to be scanned.
      */
-    private val listed = combine(shopping, shoppingTools.state, screen.map { it.selectedStore }.distinctUntilChanged(), ::list)
+    private val listed = combine(shopping, shoppingTools.state, screen.map { it.selectedStore }.distinctUntilChanged(), listingTime) {
+        snapshot, personal, filter, _ -> list(snapshot, personal, filter)
+    }
         .flowOn(compute).stateIn(viewModelScope, SharingStarted.Eagerly, Listed())
 
     /** This phone's row-fact choices, or null while lookup is off: row facts follow the opt-in. */
@@ -187,7 +191,11 @@ class ListViewModel(
     init {
         viewModelScope.launch {
             combine(shopping, directory) { snapshot, lists -> snapshot to lists }.collect { (snapshot, lists) ->
+                screen.update { state -> state.copy(review = state.review?.takeIf {
+                    it.scope == snapshot.listId && (directoryStore === NoListDirectory || it.scope == lists.selected)
+                }) }
                 if (snapshot.listId.isNotEmpty() && snapshot.listId != lists.selected) return@collect
+                refreshReview(snapshot)
                 if (snapshot.listId in shoppingTools.state.value.deferred) updateShoppingTools {
                     it.releaseAfterShop(snapshot.listId, snapshot.history.trips.map { trip -> trip.id }.toSet())
                 }
@@ -230,6 +238,8 @@ class ListViewModel(
     }
 
     fun onOpened() {
+        // Returning tomorrow can make recent purchases eligible without any database write.
+        listingTime.value = clock()
         val available = basket?.enabled() == true
         screen.update { it.copy(basketAvailable = available, basket = it.basket.takeIf { available }) }
         refreshPrompts(shopping.value.items, shopping.value.history)
@@ -499,7 +509,7 @@ class ListViewModel(
 
     private fun refreshOffers(rows: List<Item>, facts: HistorySnapshot) {
         val current = screen.value
-        if (current.busy || current.prompt != null || current.editingId != null || current.transfer != null || current.transferResult != null || current.captureMatches.isNotEmpty() || current.repeatOffer != null || current.recipe != null || current.scanNames.isNotEmpty()) return
+        if (current.busy || current.prompt != null || current.editingId != null || current.transfer != null || current.transferResult != null || current.captureMatches.isNotEmpty() || current.repeatOffer != null || current.recipe != null || current.review != null || current.scanNames.isNotEmpty()) return
         val offer = smartStore.repeatOffers(rows, facts).firstOrNull { claimPrompt("repeat_offer:${it.key}", "v1") }
         if (offer != null) screen.update { it.copy(repeatOffer = offer) }
     }
@@ -614,12 +624,90 @@ class ListViewModel(
         }
     }
 
-    fun onSuggestion(key: String, choice: SuggestionChoice) {
+    fun onOpenReview() {
+        val current = screen.value
+        if (current.busy || current.review != null || current.capture != CaptureState.Idle ||
+            current.editingId != null || current.recipe != null || current.scanNames.isNotEmpty()) return
+        val snapshot = shopping.value
+        if (directoryStore !== NoListDirectory && directory.value.selected != snapshot.listId) return
+        val startedAt = clock()
+        screen.update { it.copy(busy = true, prompt = null, repeatOffer = null) }
         viewModelScope.launch {
-            try { smartStore.chooseSuggestion(key, choice, clock()) }
-            catch (cancelled: CancellationException) { throw cancelled }
+            try {
+                val candidates = withContext(compute) { smartStore.review(startedAt, snapshot.history, snapshot.items) }
+                if (shopping.value.listId == snapshot.listId &&
+                    (directoryStore === NoListDirectory || directory.value.selected == snapshot.listId)) {
+                    screen.update { it.copy(review = ReviewSession(snapshot.listId, candidates, startedAt = startedAt)) }
+                    refreshReview(shopping.value)
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { screen.update { it.copy(historyError = true) } }
+            finally { screen.update { it.copy(busy = false) } }
         }
+    }
+
+    fun onCloseReview() { screen.update { it.copy(review = null) } }
+
+    fun onSkipReview() {
+        val review = screen.value.review ?: return
+        if (review.busy || review.current == null) return
+        screen.update { it.copy(review = review.advance()) }
+        refreshReview(shopping.value)
+    }
+
+    fun onMoreReview() {
+        val review = screen.value.review ?: return
+        if (review.busy || review.current != null) return
+        screen.update { it.copy(review = review.more()) }
+        refreshReview(shopping.value)
+    }
+
+    fun onAddReview() = reviewAction { review ->
+        val candidate = review.current ?: return@reviewAction review.copy(busy = false)
+        when (val result = smartStore.addReviewed(candidate.key, review.scope, clock())) {
+            is ReviewAddResult.Added -> review.advance(result.version)
+            ReviewAddResult.AlreadyPresent, ReviewAddResult.Unavailable -> review.advance(undoable = false)
+        }
+    }
+
+    fun onMuteReview() = reviewAction { review ->
+        val candidate = review.current ?: return@reviewAction review.copy(busy = false)
+        smartStore.muteReviewed(candidate.key, review.scope, clock())
+        review.advance(undoable = false)
+    }
+
+    fun onUndoReview() = reviewAction { review ->
+        val last = review.last ?: return@reviewAction review.copy(busy = false)
+        if (last.added == null) review.undo()
+        else if (smartStore.undoReviewed(last.added)) {
+            // Restore the card only after the list projection no longer excludes our removed row.
+            shopping.first { it.listId != review.scope || it.items.none { row -> row.id.value == last.added.id } }
+            review.undo()
+        } else review.copy(busy = false, last = null, problem = ReviewProblem.UNDO_CHANGED)
+    }
+
+    private fun reviewAction(action: suspend (ReviewSession) -> ReviewSession) {
+        val review = screen.value.review ?: return
+        if (review.busy) return
+        val pending = review.copy(busy = true, problem = null)
+        screen.update { it.copy(review = pending) }
+        viewModelScope.launch {
+            try {
+                val result = action(pending)
+                screen.update { if (it.review === pending) it.copy(review = result) else it }
+                refreshReview(shopping.value)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                screen.update { if (it.review === pending) it.copy(review = pending.copy(busy = false, problem = ReviewProblem.SAVE)) else it }
+            }
+        }
+    }
+
+    private fun refreshReview(snapshot: ShoppingSnapshot) {
+        val review = screen.value.review ?: return
+        if (review.busy || review.scope != snapshot.listId) return
+        val eligible = smartStore.review(clock(), snapshot.history, snapshot.items).map { it.key }.toSet()
+        screen.update { if (it.review === review) it.copy(review = review.reconcile(eligible)) else it }
     }
 
     fun onAutocomplete(memory: ItemMemory) {
@@ -650,7 +738,7 @@ class ListViewModel(
 
     private fun refreshPrompts(rows: List<Item>, history: HistorySnapshot) {
         if (screen.value.busy || screen.value.prompt != null || screen.value.editingId != null || screen.value.transfer != null || screen.value.transferResult != null ||
-            screen.value.captureMatches.isNotEmpty() || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.scanNames.isNotEmpty()) return
+            screen.value.captureMatches.isNotEmpty() || screen.value.repeatOffer != null || screen.value.recipe != null || screen.value.review != null || screen.value.scanNames.isNotEmpty()) return
         val purchasedIds = history.purchases.map { it.id }.toSet()
         val current = rows.filterNot { it.id in purchasedIds }
         val stale = current.filter { it.checked && it.checkedAt?.let { at -> at <= clock() - 12 * 60 * 60 * 1000L } == true }
@@ -1010,7 +1098,7 @@ class ListViewModel(
             repeatSuggestionKeys = io.theficos.usuals.parse.ItemIdentity.preferences(facts.preferences,
                 facts.aliases.associate { it.fromKey to it.toKey }).filterValues { it.repeatEveryDays != null && !it.muted }.keys,
             deferred = visible.filter(::isDeferred).map { toRow(it, presentation[it.id], memory) },
-            suggestions = smartStore.suggestions(clock(), facts, ordered),
+            reviewCandidates = smartStore.review(clock(), facts, ordered),
             stores = stores, selectedStore = filter,
             // Everything on the list, bought or not. It is the size of the
             // shop, which is what the number is being read for.
@@ -1029,6 +1117,7 @@ class ListViewModel(
         matchingError = screen.matchingError,
         repeatOffer = screen.repeatOffer,
         recipe = screen.recipe,
+        review = screen.review?.takeIf { it.scope == listed.snapshot.listId },
         scanNames = screen.scanNames,
         scanPending = screen.scanLookups + screen.scanNames.map { it.gtin },
         lastScan = screen.lastScan,
