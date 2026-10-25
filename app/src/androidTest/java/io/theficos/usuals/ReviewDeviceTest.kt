@@ -103,6 +103,9 @@ class ReviewDeviceTest {
                 compose.waitUntil(15_000) { vm.state.value.review?.current != null }
             }
             compose.waitUntil(15_000) { vm.state.value.directory.selected == source && vm.state.value.reviewCandidates.size == 13 }
+            compose.onNodeWithContentDescription(context.getString(R.string.review_title)).assertIsDisplayed()
+            compose.onNodeWithText(context.getString(R.string.review_title)).assertDoesNotExist()
+            screenshot("replay-shortcut.png")
             open()
             val first = vm.state.value.review!!.current!!
             compose.onNodeWithTag("review_candidate").assertIsDisplayed().assertTextEquals(first.name)

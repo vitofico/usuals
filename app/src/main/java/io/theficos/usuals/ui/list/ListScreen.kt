@@ -488,6 +488,7 @@ fun ListContent(
                 actions = actions,
                 compact = typing != null || state.personal.mode,
                 typing = typing != null,
+                showReview = !state.personal.mode && state.reviewCandidates.isNotEmpty(),
                 onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
                     { actions.onFinishRows?.invoke(rows, null) ?: actions.onFinishShop(null) }
                 },
@@ -500,9 +501,6 @@ fun ListContent(
                 val usefulFilter = state.stores.size > 1 || state.selectedStore != null ||
                     (state.stores.isNotEmpty() && (state.pending + state.checked + state.deferred).any { it.store == null })
                 if (usefulFilter) StoreFilter(state.stores, state.selectedStore, actions.onStoreFilter)
-            }
-            if (!state.personal.mode && typing == null && state.reviewCandidates.isNotEmpty()) {
-                ReviewEntry(!state.busy, actions.onOpenReview)
             }
             val partial = (state.capture as? CaptureState.Listening)?.partial.orEmpty()
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -548,7 +546,7 @@ private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier
 }
 
 @Composable
-private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, typing: Boolean, onFinish: (() -> Unit)?) {
+private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, typing: Boolean, showReview: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
         .clip(RoundedCornerShape(20.dp)).background(colors.primaryContainer)) {
@@ -567,6 +565,11 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                     style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer)
             }
             if (!typing) {
+                if (showReview) IconButton(onClick = actions.onOpenReview, enabled = !busy,
+                    modifier = Modifier.background(colors.surface, CircleShape).testTag("review_entry"),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
+                    Icon(Icons.Outlined.Replay, stringResource(R.string.review_title), Modifier.size(22.dp))
+                }
                 IconButton(onClick = actions.onOpenHistory, enabled = !busy,
                     modifier = Modifier.background(colors.surface, CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {

@@ -81,7 +81,8 @@ class MemoryScreenTest {
                     ListActions(onOpenReview = { opened = true }))
             }
         }
-        compose.onNodeWithText("Review your usuals").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Review your usuals").assertIsDisplayed().performClick()
         assertThat(opened).isTrue()
     }
 
@@ -94,7 +95,7 @@ class MemoryScreenTest {
         }
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("Suggestion options for milk").assertIsDisplayed()
-        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Review your usuals").assertDoesNotExist()
     }
 
     @Test fun favourites_explain_reuse_and_show_when_the_saved_item_is_already_open() {

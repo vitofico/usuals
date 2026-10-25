@@ -70,14 +70,16 @@ As you type, matching names come from the current list's purchase history.
 on this phone. You can still add it yourself. If it has a repeat rule, Usuals asks
 before stopping that rule too.
 
-**Review your usuals** offers past purchases one at a time, up to ten per round.
+Tap the **Replay** arrow beside History above the Android list for
+**Review your usuals**: past purchases one at a time, up to ten per round.
 **Add** saves immediately; **Skip** affects only this review. **Undo last choice**
 restores a skipped card or removes an unchanged item added by this review. Close
 whenever you like, or choose **Review more** at the end. Ranking uses the last
 eight shops, frequency and time since purchase. Current items, purchases from the
 last 24 hours, muted or snoozed items and repeat-rule items are excluded.
 Inferred interval predictions remain disabled until replay over real household
-history beats both comparison baselines.
+history beats both comparison baselines. The six-step first-run tour introduces
+this shortcut. Reopen it from **Settings > Help > Guided tour**.
 
 To move an item, open its editor and choose **More actions > Move or copy to
 another list**. Choose an active list and whether to keep the original. The new

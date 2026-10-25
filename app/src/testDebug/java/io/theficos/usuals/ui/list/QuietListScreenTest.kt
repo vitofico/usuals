@@ -52,7 +52,8 @@ class QuietListScreenTest {
             ListContent(ListUiState(pending = listOf(row), reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))),
                 ListActions(onOpenReview = { opened++ }))
         }
-        compose.onNodeWithText("Review your usuals").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Review your usuals").assertIsDisplayed().performClick()
         assertThat(opened).isEqualTo(1)
         compose.onNodeWithText("oats").assertDoesNotExist()
     }
@@ -83,7 +84,7 @@ class QuietListScreenTest {
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("More options").assertDoesNotExist()
         compose.onNodeWithText("Store: All stores").assertDoesNotExist()
-        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Review your usuals").assertDoesNotExist()
         compose.onNodeWithText("Add your first item").assertDoesNotExist()
     }
 
@@ -110,7 +111,7 @@ class QuietListScreenTest {
                 ListActions(shoppingMode = true, onFinishShop = { finished++ }, onShoppingMode = { left++ }))
         } }
         compose.onNodeWithText("Shopping mode").assertIsDisplayed()
-        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Review your usuals").assertDoesNotExist()
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Finish shop"))
         compose.onNodeWithText("Finish shop").performClick()
         assertThat(finished).isEqualTo(1)
