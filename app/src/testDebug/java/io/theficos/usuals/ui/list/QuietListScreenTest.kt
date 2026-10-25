@@ -65,6 +65,7 @@ class QuietListScreenTest {
                 reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))), ListActions())
         } }
         compose.onNodeWithTag(DraftFieldTag).assertIsDisplayed()
+        compose.onNodeWithText("1 item").assertDoesNotExist()
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("More options").assertDoesNotExist()
         compose.onNodeWithText("Store: All stores").assertDoesNotExist()

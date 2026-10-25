@@ -101,6 +101,7 @@ category, including supporting text on tinted containers.
 - Give the actual list name the header, with its picker and one labelled
   options menu. Its integrated collage band is about 88 dp at normal text size;
   typing and shopping use a smaller crop and title to keep content space useful.
+  Typing hides the item count and reduces the band to about 64 dp at normal text.
   Allow the band to grow for system text scaling and sync warnings. Keep the
   item count quiet, the one-tap History shortcut available, and every sync warning.
   History is also in the menu alongside favourites, import and sharing; list
