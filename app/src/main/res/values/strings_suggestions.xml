@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="suggestion_repeat">Your repeat rule is due</string>
-    <string name="suggestion_interval">Usually due around now</string>
-    <string name="suggestion_staple">Bought in at least half your recent shops</string>
-    <string name="suggestion_add">Add</string>
-    <string name="suggestion_not_now">Not now</string>
     <string name="suggestion_action">%1$s %2$s</string>
 </resources>

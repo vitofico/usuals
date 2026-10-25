@@ -6,7 +6,6 @@ import androidx.compose.material.icons.outlined.Repeat
 import io.theficos.usuals.ui.recipe.RecipeImportSheet
 import io.theficos.usuals.ui.scan.ScanNameSheet
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.SuggestionChoice
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -188,7 +187,13 @@ data class ListActions(
     val onKeepCaptureWording: () -> Unit = {},
     val onUndoCaptureMatch: (ItemId) -> Unit = {},
     val onRepeatOffer: (Boolean) -> Unit = {},
-    val onSuggestion: (String, SuggestionChoice) -> Unit = { _, _ -> },
+    val onOpenReview: () -> Unit = {},
+    val onCloseReview: () -> Unit = {},
+    val onAddReview: () -> Unit = {},
+    val onSkipReview: () -> Unit = {},
+    val onUndoReview: () -> Unit = {},
+    val onMoreReview: () -> Unit = {},
+    val onMuteReview: () -> Unit = {},
     val onAutocomplete: (ItemMemory) -> Unit = {},
     val onMuteAutocomplete: (ItemMemory) -> Unit = {},
     val onConfirmRemove: (ItemId) -> Unit = {},
@@ -327,7 +332,13 @@ fun ListScreen(
             onDismissTransferResult = vm::onDismissTransferResult,
             onAutocomplete = vm::onAutocomplete,
             onMuteAutocomplete = vm::onMuteAutocomplete,
-            onSuggestion = vm::onSuggestion,
+            onOpenReview = vm::onOpenReview,
+            onCloseReview = vm::onCloseReview,
+            onAddReview = vm::onAddReview,
+            onSkipReview = vm::onSkipReview,
+            onUndoReview = vm::onUndoReview,
+            onMoreReview = vm::onMoreReview,
+            onMuteReview = vm::onMuteReview,
             onQuantityHint = vm::onQuantityHint,
             onStoreFilter = vm::onStoreFilter,
             onConfirmScanName = vm::onConfirmScanName,
@@ -408,15 +419,14 @@ fun ListContent(
     actions: ListActions,
     modifier: Modifier = Modifier,
 ) {
-    var repeatToMute by remember(state.directory.selected) { mutableStateOf<PendingSuggestionMute?>(null) }
+    var repeatToMute by remember(state.directory.selected) { mutableStateOf<ItemMemory?>(null) }
     repeatToMute?.let { pending ->
         AlertDialog(onDismissRequest = { repeatToMute = null },
             title = { Text(stringResource(R.string.memory_stop_repeat_title, pending.name)) },
             text = { Text(stringResource(R.string.memory_stop_repeat_help)) },
             confirmButton = { TextButton(onClick = {
                 repeatToMute = null
-                if (pending.memory != null) actions.onMuteAutocomplete(pending.memory)
-                else actions.onSuggestion(pending.key, SuggestionChoice.NEVER)
+                actions.onMuteAutocomplete(pending)
             }) { Text(stringResource(R.string.memory_stop_suggesting)) } },
             dismissButton = { TextButton(onClick = { repeatToMute = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
@@ -458,6 +468,8 @@ fun ListContent(
     }
     SmartAssistanceDialogs(state, actions)
     ListHistoryDialogs(state, actions)
+    state.review?.let { ReviewSheet(it, actions.onCloseReview, actions.onAddReview, actions.onSkipReview,
+        actions.onUndoReview, actions.onMoreReview, actions.onMuteReview) }
     val typing = state.capture as? CaptureState.Typing
     BackHandler(enabled = typing != null) { actions.onDraftDismiss() }
 
@@ -484,11 +496,9 @@ fun ListContent(
                     (state.stores.isNotEmpty() && (state.pending + state.checked + state.deferred).any { it.store == null })
                 if (usefulFilter) StoreFilter(state.stores, state.selectedStore, actions.onStoreFilter)
             }
-            if (!state.personal.mode && typing == null) key(state.directory.selected) { SuggestionRow(state.suggestions) { key, choice ->
-                if (choice == SuggestionChoice.NEVER && key in state.repeatSuggestionKeys) {
-                    state.suggestions.firstOrNull { it.key == key }?.let { repeatToMute = PendingSuggestionMute(key, it.name) }
-                } else actions.onSuggestion(key, choice)
-            } }
+            if (!state.personal.mode && typing == null && state.reviewCandidates.isNotEmpty()) {
+                ReviewEntry(!state.busy, actions.onOpenReview)
+            }
             val partial = (state.capture as? CaptureState.Listening)?.partial.orEmpty()
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (state.isEmpty && partial.isBlank() && state.captureMatches.isEmpty()) {
@@ -513,7 +523,7 @@ fun ListContent(
             }
           }
             CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
-                if (memory.key in state.repeatSuggestionKeys) repeatToMute = PendingSuggestionMute(memory.key, memory.name, memory)
+                if (memory.key in state.repeatSuggestionKeys) repeatToMute = memory
                 else actions.onMuteAutocomplete(memory)
             }), autocomplete = state.autocomplete)
         }
@@ -1104,8 +1114,6 @@ private fun DraftField(
 
     }
 }
-
-private data class PendingSuggestionMute(val key: String, val name: String, val memory: ItemMemory? = null)
 
 @Composable
 private fun HistoryCompletion(choice: ItemMemory, actions: ListActions) {

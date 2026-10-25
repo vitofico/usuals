@@ -20,8 +20,6 @@ import io.theficos.usuals.parse.InputLanguages
 import io.theficos.usuals.smart.CategoryClassifier
 import io.theficos.usuals.smart.HistoryRanker
 import io.theficos.usuals.smart.RepeatPlanner
-import io.theficos.usuals.smart.IntervalModel
-import io.theficos.usuals.smart.SuggestionEngine
 import io.theficos.usuals.smart.QuantityHints
 import io.theficos.usuals.smart.RepeatOffers
 import io.theficos.usuals.smart.SimilarItems
@@ -177,13 +175,11 @@ object ServiceLocator {
     val categoryClassifier: CategoryClassifier by resettable { CategoryClassifier(InputLanguages.available) }
     val historyRanker: HistoryRanker by resettable { HistoryRanker() }
     val repeatPlanner: RepeatPlanner by resettable { RepeatPlanner() }
-    val intervalModel: IntervalModel by resettable { IntervalModel() }
-    val suggestionEngine: SuggestionEngine by resettable { SuggestionEngine(repeatPlanner, intervalModel, historyRanker) }
     val quantityHints: QuantityHints by resettable { QuantityHints() }
     val repeatOffers: RepeatOffers by resettable { RepeatOffers() }
     val similarItems: SimilarItems by resettable { SimilarItems(historyRanker) }
     val smartStore: SmartStore by resettable {
-        RepositorySmartStore(itemRepository, historyRepository, categoryClassifier, historyRanker, repeatPlanner, suggestionEngine, quantityHints, repeatOffers, similarItems)
+        RepositorySmartStore(itemRepository, historyRepository, categoryClassifier, historyRanker, repeatPlanner, quantityHints, repeatOffers, similarItems, io.theficos.usuals.smart.ReviewRanker())
     }
 
     val productRateLimiter: OffRateLimiter by resettable { OffRateLimiter(OffRateLimiter.PRODUCT_READS_PER_MINUTE, OffRateLimiter.ONE_MINUTE_MILLIS) }

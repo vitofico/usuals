@@ -3,8 +3,6 @@ package io.theficos.usuals.ui.list
 import io.theficos.usuals.model.*
 import io.theficos.usuals.smart.Category
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.Suggestion
-import io.theficos.usuals.smart.SuggestionChoice
 import io.theficos.usuals.smart.RepeatOffer
 
 data class ItemPresentation(val category: Category, val override: Category?, val repeatEveryDays: Int?, val quantityHint: Quantity? = null)
@@ -13,6 +11,10 @@ data class ItemEdit(val id: ItemId, val name: String, val quantity: Quantity?, v
 }
 
 interface SmartStore {
+    fun review(now: Long, history: HistorySnapshot, active: List<Item>): List<io.theficos.usuals.smart.ReviewCandidate> = emptyList()
+    suspend fun addReviewed(key: String, scope: String, now: Long): ReviewAddResult = ReviewAddResult.Unavailable
+    suspend fun muteReviewed(key: String, scope: String, now: Long): Boolean = false
+    suspend fun undoReviewed(version: ItemVersion): Boolean = false
     suspend fun addAgain(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = 0
     fun confirmedName(name: String, history: HistorySnapshot, active: List<Item>): String? = null
     fun nameMatches(name: String, history: HistorySnapshot, active: List<Item>): List<io.theficos.usuals.smart.NameMatch> = emptyList()
@@ -22,8 +24,6 @@ interface SmartStore {
     suspend fun applyQuantityHint(id: ItemId, version: ItemVersion?) = applyQuantityHint(id)
     suspend fun acceptQuantityHint(id: ItemId, quantity: Quantity, version: ItemVersion?) = applyQuantityHint(id, version)
     suspend fun matchCaptures(choices: List<CaptureMatchChoice>, remember: Boolean): List<Item>? = null
-    fun suggestions(now: Long, history: HistorySnapshot, active: List<Item>): List<Suggestion> = emptyList()
-    suspend fun chooseSuggestion(key: String, choice: SuggestionChoice, now: Long) = Unit
     suspend fun muteSuggestion(key: String, scope: String) = Unit
     fun present(items: List<Item>, history: HistorySnapshot): Map<ItemId, ItemPresentation>
     fun autocomplete(query: String, history: HistorySnapshot, active: List<Item>): List<ItemMemory>

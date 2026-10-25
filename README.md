@@ -46,7 +46,7 @@ The web editor offers the same choices from its Appearance control.
 | --- | --- |
 | **Catch what you need** | Type, dictate, share text or scan a barcode. Edit names, notes, quantities, categories and store tags. Add the home-screen widget for a quicker way back in. |
 | **Remember the last shop** | Finish a shop to save checked items as dated purchases. Keep unchecked rows open, undo a finish, search history and rebuy selected items. |
-| **Keep the essentials coming** | Set explicit repeat rules, pin essentials and choose from up to six suggestions. Quantity hints wait for a tap; similar names merge only with your approval. |
+| **Keep the essentials coming** | Set explicit repeat rules, pin essentials and review your usuals in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
 | **Turn a recipe into a list** | Share a recipe link, review its ingredients and choose what to add. Already-listed items are excluded; pantry staples and recent purchases start unticked. |
 | **Move through the shop** | Use a focused shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
@@ -58,13 +58,22 @@ not add items automatically.
 
 As you type, Usuals offers matching names from the current list's purchase
 history. Use a suggestion's menu and **Don't suggest again** to hide it from
-typing suggestions and the suggestion cards on this phone. You can still add the item yourself.
+typing suggestions and the history review on this phone. You can still add the item yourself.
 If it has a repeat rule, Usuals asks before stopping that rule too.
 
 Open an item's editor, then **More actions > Move or copy to another list**. Choose an active list
 and whether to keep the original. The new row is unchecked and keeps its item
 details. Moving between account lists confirms the destination first; if the
 connection or either list changes, the original stays available.
+
+Tap **Review your usuals** above the Android list to review past purchases one at
+a time, up to ten per round. **Add** saves immediately; **Skip** affects only this
+review. **Undo last choice** restores a skipped card or removes an unchanged item
+this review added. Close whenever you like, or choose **Review more** at the end.
+The review uses your last eight shops, ranks frequent purchases first and uses
+time since purchase to break ties. Items already listed, bought in the last
+24 hours, muted, snoozed or managed by repeat rules are excluded. Quantities
+remain optional hints on the list.
 
 Only your explicit repeat rules add items automatically. Inferred interval
 predictions stay disabled until replay over real household history beats both

@@ -34,6 +34,14 @@ after 8 to 10 weeks of real use. Enable intervals only if they beat both last
 trip's items and top-six staples on held-out top-six hits. Synthetic fixtures
 verify mechanics and cannot establish that result.
 
+Android’s **Review your usuals** replaces the six-card suggestion row with a
+one-item review, in rounds of up to ten. Ranking counts distinct appearances in
+the last eight shops, then uses the oldest last purchase to break ties. Add saves
+immediately; Skip is session-only; Undo removes only an unchanged row created by
+the review. Existing items, the last 24 hours of purchases, repeat rules, mute
+and snooze choices are respected. This uses existing data and no model or new
+server API. Learned interval predictions remain gated as described above.
+
 Shopping mode, store aisle order, searched/selected history rebuy, personal
 buy-next-time deferral, pinned essentials and opt-in weekly local reminders are
 implemented. English, Spanish, Italian, French and German input packs load

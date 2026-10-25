@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review_title">Übliche Einkäufe durchsehen</string>
+    <string name="review_progress">%1$d von %2$d</string>
+    <string name="review_skip">Überspringen</string>
+    <string name="review_undo">Letzte Auswahl rückgängig</string>
+    <string name="review_back">Zurück zur Liste</string>
+    <string name="review_more">Weitere Artikel ansehen</string>
+    <string name="review_failed">Die Auswahl konnte nicht gespeichert werden. Versuche es erneut.</string>
+    <string name="review_undo_changed">Dieser Artikel wurde geändert. Bearbeite ihn in deiner Liste.</string>
+    <plurals name="review_bought_ago">
+        <item quantity="one">Vor %1$d Tag gekauft</item>
+        <item quantity="other">Vor %1$d Tagen gekauft</item>
+    </plurals>
+    <plurals name="review_frequency">
+        <item quantity="one">Beim letzten Einkauf (%1$d von %2$d)</item>
+        <item quantity="other">Bei %1$d von deinen letzten %2$d Einkäufen</item>
+    </plurals>
+    <plurals name="review_added">
+        <item quantity="one">%1$d Artikel hinzugefügt</item>
+        <item quantity="other">%1$d Artikel hinzugefügt</item>
+    </plurals>
+</resources>

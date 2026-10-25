@@ -55,7 +55,7 @@ class InterfaceSweepDeviceTest {
             ListRow(ItemId("tomatoes"), "Cherry tomatoes", category = Category.PRODUCE),
             ListRow(ItemId("oil"), "Olive oil"), ListRow(ItemId("pasta"), "Pasta")),
         checked = listOf(ListRow(ItemId("eggs"), "Eggs", checked = true), ListRow(ItemId("coffee"), "Coffee", checked = true)),
-        suggestions = listOf(Suggestion("yoghurt", "Yoghurt", SuggestionReason.STAPLE), Suggestion("bananas", "Bananas", SuggestionReason.STAPLE)))
+        reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("yoghurt", "Yoghurt", 0, 2, 2), io.theficos.usuals.smart.ReviewCandidate("bananas", "Bananas", 0, 2, 2)))
 
     private fun show(dark: Boolean = false, narrowLarge: Boolean = false, content: @Composable () -> Unit) {
         compose.runOnUiThread {

@@ -12,12 +12,13 @@ portable history and dated imports make that memory something a person keeps.
 A text share supports a partner without any account.
 
 Memory should help without making the list untrustworthy. Only a person's
-explicit repeat rule adds automatically. Habits offer suggestions with Add,
-Not now and Never. Amounts are hints until tapped, and name corrections are
-reviewed together after capture. Automatic typo matching is optional and starts
+explicit repeat rule adds automatically. A short review of recent purchase
+history offers Add and Skip, with safe Undo. Skip affects only that session;
+hiding a suggestion is explicit. Amounts are hints until tapped, and name
+corrections are reviewed together after capture. Automatic typo matching is optional and starts
 off; quantities and item qualifiers are preserved. Interval predictions stay off
 until real-history replay beats last-trip and staple baselines; the current
-build ships staples.
+build orders the history review by recent shop frequency, then elapsed time.
 
 Recipe links become reviewed ingredients, rather than a recipe collection.
 Structured recipes are read on the device. An optional model, off by default,

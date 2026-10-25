@@ -17,9 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.smart.ItemMemory
-import io.theficos.usuals.smart.Suggestion
-import io.theficos.usuals.smart.SuggestionChoice
-import io.theficos.usuals.smart.SuggestionReason
 import io.theficos.usuals.ui.shopping.SavedShoppingItem
 import io.theficos.usuals.ui.shopping.ShoppingToolsSheet
 import io.theficos.usuals.ui.shopping.ShoppingToolsStore
@@ -76,51 +73,28 @@ class MemoryScreenTest {
         assertThat(muted).isEqualTo(1)
     }
 
-    @Test fun proactive_suggestions_use_the_same_repeat_warning() {
-        var choice: SuggestionChoice? = null
+    @Test fun review_has_a_single_entry_and_stays_out_of_typing() {
+        var opened = false
         compose.setContent {
             UsualsTheme {
-                ListContent(ListUiState(suggestions = listOf(Suggestion("milk", "milk", SuggestionReason.REPEAT)), repeatSuggestionKeys = setOf("milk")),
-                    ListActions(onSuggestion = { _, selected -> choice = selected }))
+                ListContent(ListUiState(reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("milk", "milk", 0, 2, 2))),
+                    ListActions(onOpenReview = { opened = true }))
             }
         }
-        compose.onNodeWithText("Suggestions (1)").performClick()
-        compose.onNodeWithContentDescription("Suggestion options for milk").performClick()
-        compose.onNodeWithContentDescription("Don’t suggest milk again").performClick()
-        compose.onNodeWithText("Stop suggesting milk?").assertIsDisplayed()
-        assertThat(choice).isNull()
-        compose.onNodeWithText("Stop suggesting").performClick()
-        assertThat(choice).isEqualTo(SuggestionChoice.NEVER)
+        compose.onNodeWithText("Review your usuals").assertIsDisplayed().performClick()
+        assertThat(opened).isTrue()
     }
 
-    @Test fun proactive_actions_stay_reachable_in_a_narrow_card() {
-        val choices = mutableListOf<SuggestionChoice>()
-        compose.setContent {
-            UsualsTheme {
-                Box(Modifier.width(280.dp)) {
-                    SuggestionRow(listOf(Suggestion("milk", "milk", SuggestionReason.STAPLE))) { _, choice -> choices += choice }
-                }
-            }
-        }
-        compose.onNodeWithText("Suggestions (1)").performClick()
-        compose.onNodeWithContentDescription("Add milk").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Suggestion options for milk").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Not now milk").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Suggestion options for milk").performClick()
-        compose.onNodeWithContentDescription("Don’t suggest milk again").assertIsDisplayed().performClick()
-        assertThat(choices).containsExactly(SuggestionChoice.ADD, SuggestionChoice.NOT_NOW, SuggestionChoice.NEVER).inOrder()
-    }
-
-    @Test fun typing_prioritises_history_completions_over_proactive_cards() {
+    @Test fun typing_prioritises_history_completions_over_the_review_entry() {
         compose.setContent {
             UsualsTheme {
                 ListContent(ListUiState(capture = CaptureState.Typing("mi"), autocomplete = listOf(milk),
-                    suggestions = listOf(Suggestion("oats", "oats", SuggestionReason.STAPLE))), ListActions())
+                    reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("milk", "milk", 0, 2, 2))), ListActions())
             }
         }
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("Suggestion options for milk").assertIsDisplayed()
-        compose.onNodeWithText("Bought in at least half your recent shops").assertDoesNotExist()
+        compose.onNodeWithText("Review your usuals").assertDoesNotExist()
     }
 
     @Test fun favourites_explain_reuse_and_show_when_the_saved_item_is_already_open() {
