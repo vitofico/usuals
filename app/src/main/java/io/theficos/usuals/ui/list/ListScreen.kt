@@ -29,6 +29,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -414,6 +416,7 @@ fun ListScreen(
  * capture surface. The middle one gets all the remaining height and the other
  * two are as short as they can be.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ListContent(
     state: ListUiState,
@@ -490,8 +493,8 @@ fun ListContent(
                 },
             )
             if (typing == null) {
-                if (state.personal.mode) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.shopping_mode), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                if (state.personal.mode) FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.shopping_mode), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelLarge)
                     TextButton(onClick = actions.onShoppingMode) { Text(stringResource(R.string.shopping_stop)) }
                 }
                 val usefulFilter = state.stores.size > 1 || state.selectedStore != null ||

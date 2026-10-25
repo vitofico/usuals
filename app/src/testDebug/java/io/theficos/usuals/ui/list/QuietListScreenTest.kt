@@ -104,6 +104,23 @@ class QuietListScreenTest {
         assertThat(left).isEqualTo(1)
     }
 
+    @Config(sdk = [33], qualifiers = "en-w320dp-h640dp")
+    @Test fun large_text_shopping_controls_wrap_and_leave_groceries_reachable() {
+        var left = false
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                UsualsTheme { ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),
+                    personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true, onShoppingMode = { left = true })) }
+            }
+        }
+        compose.onNodeWithText("Shopping mode").assertIsDisplayed()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+        compose.onNodeWithText("Milk").assertIsDisplayed()
+        compose.onNodeWithText("Leave shopping mode").assertIsDisplayed().performClick()
+        assertThat(left).isTrue()
+    }
+
     // Default width avoids Robolectric's text-field dialog loop: https://github.com/robolectric/robolectric/issues/8460
     @Config(sdk = [33], qualifiers = "en")
     @Test fun picker_keeps_new_list_fixed_and_archived_lists_disclosed() {
