@@ -122,7 +122,7 @@ object ServiceLocator {
     val connectionClient by resettable { io.theficos.usuals.sync.ConnectionClient(syncState, relayTransport) }
 
     /** The account's lists on the server; see [ListSync]. */
-    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name)) }
+    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name), onForgotten = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { receiptFiles.clear() } }) }
     private val listSyncSchedulerField = resettable { ListSyncScheduler(context, listSync, database.syncDao().observeOutgoing()) }
     val listSyncScheduler by listSyncSchedulerField
     val shareStore by resettable { AccountShareStore(listRepository, listSync) }
@@ -131,7 +131,7 @@ object ServiceLocator {
     val historyRepository: HistoryRepository by resettable { HistoryRepository(database, itemRepository, replica = replica) }
     val reminders by resettable { preferenceReminders(context) }
     val shoppingTools by resettable { preferenceShoppingTools(context) }
-    val historyStore: HistoryStore by resettable { RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools) }
+    val historyStore: HistoryStore by resettable { ReceiptHistoryStore(RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools), receiptStore, database, receiptImportFiles) }
     val promptMemory: PreferencePromptMemory by resettable { PreferencePromptMemory(context) }
     val captureMatchMemory: PreferenceCaptureMatchMemory by resettable { PreferenceCaptureMatchMemory(context) }
 
@@ -207,6 +207,7 @@ object ServiceLocator {
         RepositoryScanStore(itemRepository, historyRepository, settingsStore::scanLookupEnabled, { offEnricher }, barcodeCategories)
     }
     val themePreferences: ThemePreferences by resettable { ThemePreferences(context) }
+    val wallet by resettable { AndroidWallet(context) }
     val tutorialPreferences: TutorialPreferences by resettable { TutorialPreferences(context) }
     private val widgetUpdaterField = resettable { WidgetUpdater(context, itemRepository, themePreferences) }
     val widgetUpdater: WidgetUpdater by widgetUpdaterField
@@ -222,6 +223,9 @@ object ServiceLocator {
             markdown = markdownIngredients, files = recipeImportFiles, access = ::modelAccess)
     }
     val markdownIngredients by resettable { io.theficos.usuals.recipe.MarkdownIngredients() }
+    internal val receiptImportFiles by resettable { AndroidRecipeImportFiles(context, maxImageEdge = 4096) }
+    val receiptFiles by resettable { ReceiptFiles(java.io.File(context.filesDir, "receipts")) }
+    internal val receiptStore by resettable { RepositoryReceiptStore(database, historyRepository, receiptFiles, receiptImportFiles, ingredientParser, modelBudget, ::modelAccess) }
     val recipeImportFiles by resettable { AndroidRecipeImportFiles(context) }
 
     val speechSource: SpeechSource by resettable { AndroidSpeechSource(context) }

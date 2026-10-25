@@ -57,7 +57,7 @@ object UsualsViewModelFactories {
         initializer<ShareViewModel> { ShareViewModel(list, ServiceLocator.shareStore) }
     }
     fun history(): ViewModelProvider.Factory = viewModelFactory {
-        initializer<HistoryViewModel> { HistoryViewModel(ServiceLocator.historyStore, basket = ServiceLocator.basketSource) }
+        initializer<HistoryViewModel> { HistoryViewModel(ServiceLocator.historyStore, basket = ServiceLocator.basketSource, receipts = ServiceLocator.receiptStore) }
     }
 
     /**

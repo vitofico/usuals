@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receipt_title">Receipt</string>
+    <string name="receipt_add">Add receipt</string>
+    <string name="receipt_view">View receipt</string>
+    <string name="receipt_import">Import receipt photo</string>
+    <string name="receipt_preview">Receipt photo</string>
+    <string name="receipt_local">Photos stay on this phone. They are included in shopping-data exports and device transfers, but are not shared or synced.</string>
+    <string name="receipt_read">Read receipt with my model</string>
+    <string name="receipt_manual">Enter items myself</string>
+    <string name="receipt_model_privacy">Reading sends this prepared photo to your configured image-capable model, directly or through your Usuals server. Nothing is sent until you tap Read.</string>
+    <string name="receipt_review_hint">Check the date, names and amounts. Edit or remove lines before saving. Prices, totals and taxes are not purchases.</string>
+    <string name="receipt_items">Purchased items, one per line</string>
+    <string name="receipt_save_purchases">Save purchases and photo</string>
+    <string name="receipt_save_photo">Save photo</string>
+    <string name="receipt_export">Save photo to a file</string>
+    <string name="receipt_remove">Remove photo</string>
+    <string name="receipt_empty">No purchased items were found. Enter them yourself or try another photo.</string>
+    <string name="receipt_scope_changed">The selected list or shop has changed. Reopen the receipt from History.</string>
+    <string name="receipt_save_failed">Could not save the receipt. Your draft is still here. Try again.</string>
+    <string name="receipt_saved">Receipt saved.</string>
+    <string name="wallet_open">Open Wallet</string>
+    <string name="wallet_choose">Choose wallet app</string>
+    <string name="wallet_unavailable">Could not open this app. Choose your wallet app again in Favourites, Shopping preferences.</string>
+    <string name="receipt_model_failed">Could not read the receipt with your model. The photo is still here. Enter the items yourself or try again.</string>
+</resources>

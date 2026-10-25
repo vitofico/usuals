@@ -36,6 +36,9 @@ class ImageImportTest {
             val actual = server.takeRequest().body.readUtf8()
             assertThat(actual).contains("image_url")
             assertThat(actual).contains("untrusted")
+            assertThat(actual).contains("purchased products on a receipt")
+            assertThat(actual).contains("Never read a price as a quantity")
+            assertThat(client.promptVersion).isEqualTo(4)
             assertThat(challenge.image.toString()).isEqualTo("ModelImage([redacted])")
         }
     }

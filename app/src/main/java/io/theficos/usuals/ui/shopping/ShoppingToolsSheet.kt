@@ -36,6 +36,7 @@ fun ShoppingToolsSheet(
     onDismiss: () -> Unit,
     onReminder: (() -> Unit)? = null,
     alreadyAdded: Set<String> = emptySet(),
+    onChooseWallet: (() -> Unit)? = null,
 ) {
     var infoOpen by rememberSaveable { mutableStateOf(false) }
     var preferencesOpen by rememberSaveable { mutableStateOf(false) }
@@ -61,6 +62,7 @@ fun ShoppingToolsSheet(
                         Choice(R.string.shopping_mode, preferences.mode) { enabled -> update { it.mode(enabled) } }
                         Choice(R.string.shopping_keep_awake, preferences.keepAwake) { enabled -> update { it.keepAwake(enabled) } }
                         Choice(R.string.shopping_haptics, preferences.haptics) { enabled -> update { it.haptics(enabled) } }
+                        onChooseWallet?.let { choose -> TextButton(onClick = choose, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.wallet_choose)) } }
                         onReminder?.let { TextButton(onClick = it, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.reminder_title)) } }
                     }
                     DisclosureSection(stringResource(R.string.shopping_aisle_order), orderOpen, { orderOpen = it }) {

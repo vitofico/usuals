@@ -3,7 +3,10 @@ package io.theficos.usuals
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,6 +20,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import io.theficos.usuals.di.ServiceLocator
 import io.theficos.usuals.di.UsualsViewModelFactories
 import io.theficos.usuals.ui.history.HistoryScreen
 import io.theficos.usuals.ui.history.HistoryViewModel
@@ -96,6 +100,11 @@ fun UsualsApp(
     onTutorialFinished: () -> Unit = {},
 ) {
     var tutorialRequested by rememberSaveable { mutableStateOf(false) }
+    // A completed tour can remain in the restored registry. Give each requested tour fresh state.
+    var tutorialSession by rememberSaveable { mutableIntStateOf(0) }
+    val openWallet = io.theficos.usuals.ui.shopping.rememberWalletLauncher(ServiceLocator.wallet)
+    var receiptScope by rememberSaveable { mutableStateOf<String?>(null) }
+    var receiptTrip by rememberSaveable { mutableStateOf<String?>(null) }
     var sharing by rememberSaveable { mutableStateOf<String?>(null) }
     // A camera refusal, remembered above the scan destination. Design section
     // 12 says to fall back to typed entry and not to re-prompt, and the scan
@@ -128,6 +137,9 @@ fun UsualsApp(
                 onOpenScan = { navController.navigate(Routes.SCAN) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                onOpenReceipt = { trip -> receiptScope = listViewModel.state.value.directory.selected; receiptTrip = trip; navController.navigate(Routes.HISTORY) },
+                onOpenWallet = { openWallet(false) },
+                onChooseWallet = { openWallet(true) },
                 onOpenSharing = { sharing = listViewModel.state.value.directory.selected },
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 sharedText = sharedText?.takeIf { accountLink == null },
@@ -139,7 +151,7 @@ fun UsualsApp(
             val factory = remember(settingsViewModelFactory) { settingsViewModelFactory() }
             val vm: SettingsViewModel = viewModel(factory = factory)
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() },
-                onOpenTutorial = { tutorialRequested = true },
+                onOpenTutorial = { tutorialSession++; tutorialRequested = true },
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
                 palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts)
@@ -158,6 +170,13 @@ fun UsualsApp(
         composable(Routes.HISTORY) {
             val factory = remember(historyViewModelFactory) { historyViewModelFactory() }
             val vm: HistoryViewModel = viewModel(factory = factory)
+            val historyState by vm.state.collectAsState()
+            LaunchedEffect(receiptTrip, historyState.scope, historyState.history.trips) {
+                if (historyState.scope.isNotBlank()) receiptTrip?.let { id ->
+                    if (historyState.scope == receiptScope) vm.openReceipt(id)
+                    receiptTrip = null
+                }
+            }
             HistoryScreen(vm = vm, onBack = { navController.popBackStack() })
         }
 
@@ -204,7 +223,7 @@ fun UsualsApp(
         val vm: io.theficos.usuals.ui.share.ShareViewModel = viewModel(key = "share-$list", factory = remember(list) { shareViewModelFactory(list) })
         io.theficos.usuals.ui.share.ShareSheet(vm, onDismiss = { sharing = null }, onOpenAccount = { navController.navigate(Routes.ACCOUNT) { launchSingleTop = true } })
     }
-    if (touring) {
+    if (touring) key(tutorialSession) {
         io.theficos.usuals.ui.tutorial.TutorialScreen(
             onFinish = { account ->
                 tutorialRequested = false

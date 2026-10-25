@@ -17,7 +17,7 @@ class BackupPolicyTest {
         return (0 until nodes.length).map { nodes.item(it) as Element }
     }
 
-    @Test fun `cloud backup stays empty while only database files can transfer`() {
+    @Test fun `cloud backup stays empty while database and receipt photos can transfer`() {
         val manifest = root(File(source, "AndroidManifest.xml"))
         val app = elements(manifest, "application").single()
         assertThat(app.getAttribute("android:allowBackup")).isEqualTo("true")
@@ -33,10 +33,10 @@ class BackupPolicyTest {
         }
         val transfer = elements(modern, "device-transfer").single()
         val included = elements(transfer, "include")
-        assertThat(included.map { it.getAttribute("domain") }.toSet()).containsExactly("database")
-        assertThat(included.map { it.getAttribute("path") }).containsExactly("usuals.db", "usuals.db-wal", "usuals.db-shm")
+        assertThat(included.map { it.getAttribute("domain") }.toSet()).containsExactly("database", "file")
+        assertThat(included.map { it.getAttribute("path") }).containsExactly("usuals.db", "usuals.db-wal", "usuals.db-shm", "receipts/")
         // Includes are an allowlist: no preference, root or external file is eligible.
-        assertThat(included).hasSize(3)
+        assertThat(included).hasSize(4)
         assertThat(elements(transfer, "exclude")).isEmpty()
     }
 }

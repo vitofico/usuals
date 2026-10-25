@@ -192,3 +192,20 @@ use the existing transactional version-2 importer. Preference storage follows
 that transaction and is idempotent on retry; a preference disk-write failure may
 leave facts imported before the favourites/layouts are restored. No account or
 sharing state is imported.
+
+
+Receipt photos use private scoped JPEG files in the app, keyed by list and trip.
+Room remains unchanged. `RepositoryReceiptStore` prepares photos, gates explicit
+image-model reads, and imports reviewed purchases plus a photo under the selected
+list transaction. The existing ingredient parser reads the editable item lines.
+`ReceiptHistoryStore` decorates the app archive with local JPEG attachments in
+format 4; it validates images and resolves the destination list before attaching
+them. Account archives always bind receipts to their independent local copies.
+The developer ranking replay reads the selected list from formats 1 to 4 and
+ignores photo data.
+
+Wallet access is a launcher chosen through Android’s app picker, wired by
+ServiceLocator. A successful finish records its list and whether shopping mode
+was active. The completion card offers Wallet for that finish and retains Undo.
+No payment SDK, new dependency, permission to read payment data or Room migration
+is needed.

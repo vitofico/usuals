@@ -1,5 +1,22 @@
 # Changelog
 
+## Receipts and checkout
+
+- Keep a receipt photo with a finished shop, or read a photo with an optional
+  image model and review its items and date before saving purchases to History.
+  Photos stay local and travel in shopping-data exports and device transfers.
+- Open a chosen Wallet app after finishing in shopping mode, with Undo still
+  available. Choose the app once through Android’s picker.
+- The six-step tour now introduces receipts and Wallet in all five languages.
+
+## Replay shortcut and guided tour
+
+- Open the usuals review from a single replay icon beside History, with a screen
+  reader label. It stays out of typing and shopping mode.
+- The six-step first-run tour covers Replay, list and recipe imports, shopping
+  history, repeats and account sharing in all five languages. Reopen it from
+  Settings, Help, Guided tour.
+
 ## History shortcut
 
 - Open purchase history directly from the clock icon on the main shopping list.

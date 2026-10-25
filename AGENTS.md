@@ -7,7 +7,7 @@ spec. ADR-0012 supersedes the former retailer invariants.
 
 Usuals is an offline Android shopping list that remembers purchases on the
 phone. Capture is local. The optional model is only for unstructured recipes and
-written-list photos, with explicit input submission and review.
+written-list and receipt photos, with explicit input submission and review.
 There are no retailer integrations. Signed in to a Usuals server, the account's
 lists live on that server, the phone and the web app show the same lists, and
 accounts on the same server share a list by adding each other

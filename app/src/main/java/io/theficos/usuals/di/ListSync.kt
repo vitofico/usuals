@@ -20,7 +20,7 @@ import kotlinx.coroutines.sync.withLock
  * bring back lists that signing out removed.
  */
 class ListSync(private val lists: ListRepository, private val replica: LocalReplica, private val service: ListsService,
-    private val connections: ConnectionClient, private val store: SyncStateStore, private val unnamed: String) : AccountSession {
+    private val connections: ConnectionClient, private val store: SyncStateStore, private val unnamed: String, private val onForgotten: suspend () -> Unit = {}) : AccountSession {
     private val pushing = Mutex()
     private val pulling = Mutex()
     private val writes = Mutex()
@@ -69,6 +69,7 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { }
             replica.forgetAccount()
+            onForgotten()
         }
         signedIn.value = null
         mutable.value = SyncStatus.SYNCED

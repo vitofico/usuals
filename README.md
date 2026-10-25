@@ -52,7 +52,8 @@ These everyday shopping tools are available on Android:
 | **Remember the last shop** | Finish a shop to save checked items as dated purchases. Keep unchecked rows open, undo a finish, search history and rebuy selected items. |
 | **Keep essentials coming** | Set explicit repeat rules, pin favourites and review past purchases in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
 | **Bring a recipe along** | Share a recipe link, review its ingredients and choose what to add. Existing list items are excluded; pantry staples and recent purchases start unticked. |
-| **Move through the shop** | Use shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
+| **Move through the shop** | Use shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. After finishing in shopping mode, open your chosen Wallet app. |
+| **Keep receipts** | Attach a receipt photo to a finished shop, or read one with your optional image model, review the items and date, and save it into History. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
 Suggestions wait for your approval. Only repeat rules you set add items
@@ -70,20 +71,41 @@ As you type, matching names come from the current list's purchase history.
 on this phone. You can still add it yourself. If it has a repeat rule, Usuals asks
 before stopping that rule too.
 
-**Review your usuals** offers past purchases one at a time, up to ten per round.
+Tap the **Replay** arrow beside History above the Android list for
+**Review your usuals**: past purchases one at a time, up to ten per round.
 **Add** saves immediately; **Skip** affects only this review. **Undo last choice**
 restores a skipped card or removes an unchanged item added by this review. Close
 whenever you like, or choose **Review more** at the end. Ranking uses the last
 eight shops, frequency and time since purchase. Current items, purchases from the
 last 24 hours, muted or snoozed items and repeat-rule items are excluded.
 Inferred interval predictions remain disabled until replay over real household
-history beats both comparison baselines.
+history beats both comparison baselines. The six-step first-run tour introduces
+this shortcut. Reopen it from **Settings > Help > Guided tour**.
 
 To move an item, open its editor and choose **More actions > Move or copy to
 another list**. Choose an active list and whether to keep the original. The new
 row is unchecked and keeps its details. Moves between account lists confirm the
 destination first; if the connection or either list changes, the original stays
 available.
+
+</details>
+
+<details>
+<summary>Receipts and Wallet</summary>
+
+In **History**, open **Import receipt photo** from the menu to read a receipt or
+enter its items yourself. When using server AI, update your Usuals server along with
+the app to enable receipt reading. Review the date, item names and quantities before
+saving the purchases and photo. Use **Add receipt** on an existing shop to keep
+a photo without model calls or duplicate purchases. Tap a photo to enlarge and
+zoom. Photos stay on this phone,
+travel in shopping-data exports and direct device transfers, and can be saved
+as individual JPEGs. They are not synced or shared with a list.
+
+After **Finish shop** in shopping mode, **Open Wallet** opens the app you chose.
+The first tap uses Android’s app picker. Change it under **Favourites > Shopping
+preferences > Choose wallet app**. Usuals launches the app without reading its
+contents or initiating a payment. Undo remains available after returning.
 
 </details>
 

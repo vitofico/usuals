@@ -15,4 +15,4 @@ const val NORMALIZER_VERSION: Int = 1
  * stamped with the prompt that produced it, so a prompt edit does not leave old
  * answers looking current.
  */
-const val PROMPT_VERSION: Int = 3
+const val PROMPT_VERSION: Int = 4

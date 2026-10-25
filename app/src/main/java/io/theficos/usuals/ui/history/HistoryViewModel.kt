@@ -12,23 +12,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 
-enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY_LIST, FAILED, REBOUGHT }
+enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY_LIST, FAILED, REBOUGHT, RECEIPT_SAVED }
 data class HistoryUiState(val history: HistorySnapshot = HistorySnapshot(), val notice: HistoryNotice? = null,
     val scope: String = "", val query: String = "", val selected: Set<String> = emptySet(), val added: Int = 0,
     /** Basket overview per trip id, empty while the overview is off. */
-    val baskets: Map<String, BasketOverview> = emptyMap())
+    val baskets: Map<String, BasketOverview> = emptyMap(), val receiptIds: Set<String> = emptySet())
 
 class HistoryViewModel(
     private val store: HistoryStore,
     private val clock: () -> Long = System::currentTimeMillis,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val basket: BasketSource? = null,
+    private val receipts: ReceiptStore = NoReceiptStore,
 ) : ViewModel() {
     private val notice = MutableStateFlow<HistoryNotice?>(null)
     private val query = MutableStateFlow("")
@@ -36,12 +39,22 @@ class HistoryViewModel(
     private val selected = MutableStateFlow(Selection())
     private var rebuying = false
     private val added = MutableStateFlow(0)
-    private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>)
+    private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>, val receipts: Set<String>)
     private val source = (if (store is ScopedHistoryStore) store.observeShopping().map { it.listId to it.history }
-        else store.observe().map { "" to it }).map { (scope, history) -> Sourced(scope, history, baskets(history)) }
+        else store.observe().map { "" to it }).let { changes -> combine(changes, receipts.revision) { value, _ -> value } }
+        .map { (scope, history) -> Sourced(scope, history, baskets(history), try { receipts.ids(scope) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptySet() }) }
     val state: StateFlow<HistoryUiState> = combine(source, notice, query, selected, added) { source, message, text, ids, count ->
-        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets)
+        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets, source.receipts)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HistoryUiState())
+
+    val receipt = ReceiptEditor(viewModelScope, receipts, ::today, zone) { scope -> if (state.value.scope == scope) notice.value = HistoryNotice.RECEIPT_SAVED }
+    init { viewModelScope.launch { state.map { it.scope }.distinctUntilChanged().collect(receipt::scopeChanged) } }
+    fun openReceipt(trip: String? = null) {
+        val current = state.value
+        if (trip != null && current.history.trips.none { it.id == trip }) return
+        val date = current.history.trips.firstOrNull { it.id == trip }?.let { Instant.ofEpochMilli(it.closedAt).atZone(zone).toLocalDate().toString() } ?: today()
+        receipt.open(current.scope, trip, date)
+    }
 
     /** Read from the phone's saved product details only; a failed read leaves the trips without the section. */
     private suspend fun baskets(history: HistorySnapshot): Map<String, BasketOverview> {

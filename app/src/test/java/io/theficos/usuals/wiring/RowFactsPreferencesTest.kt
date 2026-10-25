@@ -35,14 +35,14 @@ class RowFactsPreferencesTest {
 
     /**
      * The avoid list is health data in shared preferences. Cloud backup must
-     * carry no shared preferences at all, and device transfer only the database.
+     * carry no shared preferences at all, and device transfer only the database and receipt files.
      */
     @Test fun `backup rules keep preferences, and so the avoid list, on the phone`() {
         val cloud = rules(R.xml.data_extraction_rules, "cloud-backup")
         assertThat(cloud.filter { it.first == "exclude" }.map { it.second }).containsAtLeast("sharedpref", "device_sharedpref")
         assertThat(cloud.filter { it.first == "include" }).isEmpty()
         val transfer = rules(R.xml.data_extraction_rules, "device-transfer")
-        assertThat(transfer.map { it.first to it.second }.toSet()).containsExactly("include" to "database")
+        assertThat(transfer.map { it.first to it.second }.toSet()).containsExactly("include" to "database", "include" to "file")
         val legacy = rules(R.xml.backup_rules, "full-backup-content")
         assertThat(legacy.filter { it.first == "exclude" }.map { it.second }).containsAtLeast("sharedpref", "device_sharedpref")
         assertThat(legacy.filter { it.first == "include" }).isEmpty()

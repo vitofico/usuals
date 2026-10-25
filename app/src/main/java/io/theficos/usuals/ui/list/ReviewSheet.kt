@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,15 +21,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
 import io.theficos.usuals.smart.RepeatPlanner
-
-@Composable
-internal fun ReviewEntry(enabled: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = onClick, enabled = enabled,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).heightIn(min = 48.dp).testTag("review_entry")) {
-        Text(stringResource(R.string.review_title), Modifier.weight(1f))
-        Icon(Icons.Outlined.ChevronRight, null)
-    }
-}
 
 @Composable
 internal fun ReviewSheet(session: ReviewSession, onClose: () -> Unit, onAdd: () -> Unit,

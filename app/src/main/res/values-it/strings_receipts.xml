@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receipt_title">Scontrino</string>
+    <string name="receipt_add">Aggiungi scontrino</string>
+    <string name="receipt_view">Vedi scontrino</string>
+    <string name="receipt_import">Importa foto scontrino</string>
+    <string name="receipt_preview">Foto dello scontrino</string>
+    <string name="receipt_local">Le foto restano su questo telefono. Sono incluse nelle esportazioni dei dati e nei trasferimenti tra dispositivi, ma non vengono condivise né sincronizzate.</string>
+    <string name="receipt_read">Leggi scontrino con il mio modello</string>
+    <string name="receipt_manual">Inserisco i prodotti a mano</string>
+    <string name="receipt_model_privacy">La lettura invia questa foto preparata al modello con supporto immagini configurato, direttamente o tramite il server Usuals. Nulla viene inviato prima che tocchi Leggi.</string>
+    <string name="receipt_review_hint">Controlla data, nomi e quantità. Modifica o rimuovi le righe prima di salvare. Prezzi, totali e tasse non sono prodotti.</string>
+    <string name="receipt_items">Prodotti acquistati, uno per riga</string>
+    <string name="receipt_save_purchases">Salva acquisti e foto</string>
+    <string name="receipt_save_photo">Salva foto</string>
+    <string name="receipt_export">Salva foto in un file</string>
+    <string name="receipt_remove">Rimuovi foto</string>
+    <string name="receipt_empty">Nessun prodotto trovato. Inseriscili a mano o prova un’altra foto.</string>
+    <string name="receipt_scope_changed">La lista o la spesa selezionata è cambiata. Riapri lo scontrino dalla Cronologia.</string>
+    <string name="receipt_save_failed">Impossibile salvare lo scontrino. La bozza è ancora qui. Riprova.</string>
+    <string name="receipt_saved">Scontrino salvato.</string>
+    <string name="wallet_open">Apri Wallet</string>
+    <string name="wallet_choose">Scegli app Wallet</string>
+    <string name="wallet_unavailable">Impossibile aprire questa app. Scegli di nuovo la tua app Wallet in Preferiti, Preferenze spesa.</string>
+    <string name="receipt_model_failed">Il modello non ha letto lo scontrino. La foto è ancora qui. Inserisci i prodotti a mano o riprova.</string>
+</resources>

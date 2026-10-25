@@ -96,14 +96,20 @@ is also stated on the app privacy screen.
 Cloud backup contains no app data on any supported Android version. The manifest
 enables the backup framework for direct device transfer, while both the legacy
 full-backup policy and Android 12 cloud policy exclude every storage domain.
-Android 12 and later may transfer only `usuals.db` and its WAL/shared-memory
-sidecars. Preferences, including encrypted model-key handles and provider
+Android 12 and later may transfer `usuals.db`, its WAL/shared-memory
+sidecars, and private copies under `files/receipts/`. Preferences, including encrypted model-key handles and provider
 configuration, are excluded.
 
 Explicit shopping-data export/import uses the system file picker. The JSON
 version-2 archive includes named lists, scoped rows, trips, purchases, item
 preferences and aliases. It excludes quality-cache data, provider settings,
 keys, the account connection, outbox, feed cursor and conflict diagnostics.
+App archive version 4 adds prepared receipt JPEGs to the existing version-3
+personal shopping settings and version-2 facts. Versions 1 to 3 remain readable.
+Photo bytes and their list/trip references are validated before import; account
+photos follow the independent copied list. The bounded JSON archive supports
+up to 32 MiB, with each prepared photo at most 2 MiB. Individual photos can also
+be exported through the system picker.
 Version-1 imports remain supported. An account list in an archive restores as an
 independent local copy with a fresh id and no members. An import cannot
 change an endpoint or disclose a stored model key. Imports validate before their
@@ -153,3 +159,18 @@ failed replacement disconnects the old provider. Native requests and browser
 requests are cancellable and response-bounded. Camera streams stop on dismissal,
 late permission completion and capture errors. These controls do not guarantee
 that a model identifies ingredients or quantities correctly.
+
+
+Receipt photos are local to this phone and scoped to a list and trip. Saving a
+photo to an existing shop makes no model call. Reading uses the same explicitly
+submitted image flow as written-list photos. Metadata is stripped and receipt
+images are bounded to a 4096-pixel edge before reading or storage. Only reviewed
+item names, quantities and dates enter purchase history. The receipt prompt
+excludes prices, totals and payment details; people must check the returned
+quantities before saving. Photos do not enter list sync. Signing out removes the
+phone’s saved receipt copies along with the account lists.
+
+The Wallet shortcut remembers an explicitly chosen launcher component in local
+preferences. The Android app picker selects it. Usuals launches that activity
+without passing shopping data, reading cards or initiating payments. The choice
+does not travel in an archive or device transfer.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the database may transfer directly to a new device. Secrets never transfer. -->
+<!-- The database and local receipt photos may transfer directly to a new device. Secrets never transfer. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" path="." />
@@ -14,6 +14,7 @@
     </cloud-backup>
     <device-transfer>
         <!-- An explicit include list excludes every other domain, including secrets. -->
+        <include domain="file" path="receipts/" />
         <include domain="database" path="usuals.db" />
         <include domain="database" path="usuals.db-wal" />
         <include domain="database" path="usuals.db-shm" />

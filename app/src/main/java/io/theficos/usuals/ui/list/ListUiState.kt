@@ -29,6 +29,7 @@ data class ListUiState(
     val checked: List<ListRow> = emptyList(),
     val checkedExpanded: Boolean = false,
     val finishedTrip: FinishedTrip? = null,
+    val finishedInShoppingMode: Boolean = false,
     val prompt: ListPrompt? = null,
     val busy: Boolean = false,
     val historyError: Boolean = false,

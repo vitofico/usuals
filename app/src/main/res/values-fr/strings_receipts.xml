@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receipt_title">Ticket de caisse</string>
+    <string name="receipt_add">Ajouter un ticket</string>
+    <string name="receipt_view">Voir le ticket</string>
+    <string name="receipt_import">Importer une photo de ticket</string>
+    <string name="receipt_preview">Photo du ticket</string>
+    <string name="receipt_local">Les photos restent sur ce téléphone. Elles sont incluses dans les exports de données et les transferts entre appareils, mais ne sont ni partagées ni synchronisées.</string>
+    <string name="receipt_read">Lire le ticket avec mon modèle</string>
+    <string name="receipt_manual">Saisir les produits moi-même</string>
+    <string name="receipt_model_privacy">La lecture envoie cette photo préparée au modèle avec vision configuré, directement ou via votre serveur Usuals. Rien ne part avant que vous touchiez Lire.</string>
+    <string name="receipt_review_hint">Vérifiez la date, les noms et les quantités. Modifiez ou supprimez des lignes avant de sauvegarder. Les prix, totaux et taxes ne sont pas des produits.</string>
+    <string name="receipt_items">Produits achetés, un par ligne</string>
+    <string name="receipt_save_purchases">Enregistrer achats et photo</string>
+    <string name="receipt_save_photo">Enregistrer la photo</string>
+    <string name="receipt_export">Enregistrer la photo dans un fichier</string>
+    <string name="receipt_remove">Supprimer la photo</string>
+    <string name="receipt_empty">Aucun produit trouvé. Saisissez-les ou essayez une autre photo.</string>
+    <string name="receipt_scope_changed">La liste ou les courses sélectionnées ont changé. Rouvrez le ticket depuis l’Historique.</string>
+    <string name="receipt_save_failed">Impossible de sauvegarder le ticket. Le brouillon est toujours là. Réessayez.</string>
+    <string name="receipt_saved">Ticket enregistré.</string>
+    <string name="wallet_open">Ouvrir Wallet</string>
+    <string name="wallet_choose">Choisir l’appli Wallet</string>
+    <string name="wallet_unavailable">Impossible d’ouvrir cette appli. Choisissez à nouveau votre appli Wallet dans Favoris, Préférences de courses.</string>
+    <string name="receipt_model_failed">Le modèle n’a pas pu lire le ticket. La photo est toujours là. Saisissez les produits ou réessayez.</string>
+</resources>

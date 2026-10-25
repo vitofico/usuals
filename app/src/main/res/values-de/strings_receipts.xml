@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receipt_title">Kassenbon</string>
+    <string name="receipt_add">Kassenbon hinzufügen</string>
+    <string name="receipt_view">Kassenbon ansehen</string>
+    <string name="receipt_import">Kassenbonfoto importieren</string>
+    <string name="receipt_preview">Foto des Kassenbons</string>
+    <string name="receipt_local">Fotos bleiben auf diesem Telefon. Sie sind in Datenexporten und Geräteübertragungen enthalten, werden aber weder geteilt noch synchronisiert.</string>
+    <string name="receipt_read">Kassenbon mit meinem Modell lesen</string>
+    <string name="receipt_manual">Artikel selbst eingeben</string>
+    <string name="receipt_model_privacy">Beim Lesen wird das vorbereitete Foto direkt oder über deinen Usuals-Server an das konfigurierte bildfähige Modell gesendet. Erst beim Tippen auf Lesen wird es gesendet.</string>
+    <string name="receipt_review_hint">Prüfe Datum, Namen und Mengen. Ändere oder entferne Zeilen vor dem Speichern. Preise, Summen und Steuern sind keine Artikel.</string>
+    <string name="receipt_items">Gekaufte Artikel, einer pro Zeile</string>
+    <string name="receipt_save_purchases">Käufe und Foto speichern</string>
+    <string name="receipt_save_photo">Foto speichern</string>
+    <string name="receipt_export">Foto in einer Datei speichern</string>
+    <string name="receipt_remove">Foto entfernen</string>
+    <string name="receipt_empty">Keine gekauften Artikel gefunden. Gib sie selbst ein oder versuche ein anderes Foto.</string>
+    <string name="receipt_scope_changed">Die gewählte Liste oder der Einkauf hat sich geändert. Öffne den Kassenbon erneut im Verlauf.</string>
+    <string name="receipt_save_failed">Kassenbon konnte nicht gespeichert werden. Dein Entwurf ist noch da. Versuche es erneut.</string>
+    <string name="receipt_saved">Kassenbon gespeichert.</string>
+    <string name="wallet_open">Wallet öffnen</string>
+    <string name="wallet_choose">Wallet-App wählen</string>
+    <string name="wallet_unavailable">Diese App konnte nicht geöffnet werden. Wähle deine Wallet-App erneut unter Favoriten, Einkaufseinstellungen.</string>
+    <string name="receipt_model_failed">Dein Modell konnte den Kassenbon nicht lesen. Das Foto ist noch da. Gib die Artikel selbst ein oder versuche es erneut.</string>
+</resources>
