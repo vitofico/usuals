@@ -57,6 +57,8 @@ class InterfaceSweepDeviceTest {
             ListRow(ItemId("oil"), "Olive oil"), ListRow(ItemId("pasta"), "Pasta")),
         checked = listOf(ListRow(ItemId("eggs"), "Eggs", checked = true), ListRow(ItemId("coffee"), "Coffee", checked = true)),
         reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("yoghurt", "Yoghurt", 0, 2, 2), io.theficos.usuals.smart.ReviewCandidate("bananas", "Bananas", 0, 2, 2)))
+    private val longList = populated.copy(directory = directory.copy(lists = listOf(
+        NamedList("groceries", "Weekend groceries with friends", false))))
 
     private fun show(dark: Boolean = false, narrowLarge: Boolean = false, palette: AppPalette = AppPalette.PLUM, fontScale: Float = 1.6f, content: @Composable () -> Unit) {
         compose.runOnUiThread {
@@ -91,9 +93,7 @@ class InterfaceSweepDeviceTest {
         }
     }
 
-    @Test fun dailyIdentityKeepsLongPickerAndSyncWarningsReachable() {
-        val longList = populated.copy(directory = directory.copy(lists = listOf(
-            NamedList("groceries", "Weekend groceries with friends", false))))
+    @Test fun dailyIdentityKeepsLongPickerReachable() {
         show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
             ListContent(longList, ListActions())
         }
@@ -105,6 +105,9 @@ class InterfaceSweepDeviceTest {
         record("identity-large-dark")
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
         compose.onNodeWithText("Milk").assertIsDisplayed()
+    }
+
+    @Test fun dailyIdentityKeepsTypingReachableAtLargeText() {
         show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
             ListContent(longList.copy(capture = CaptureState.Typing("mi"),
                 autocomplete = listOf(ItemMemory("milk", "Milk", 4, 1_000))), ListActions())
@@ -112,6 +115,9 @@ class InterfaceSweepDeviceTest {
         compose.onNodeWithTag(DraftFieldTag).assertIsDisplayed()
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         record("identity-typing-large-dark")
+    }
+
+    @Test fun dailyIdentityKeepsShoppingReachableAtLargeText() {
         show(dark = true, narrowLarge = true, palette = AppPalette.GROVE, fontScale = 2f) {
             ListContent(longList.copy(personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true))
         }
@@ -120,6 +126,9 @@ class InterfaceSweepDeviceTest {
         record("identity-shopping-large-dark")
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
         compose.onNodeWithText("Milk").assertIsDisplayed()
+    }
+
+    @Test fun dailyIdentityKeepsSyncWarningsReachable() {
         show(palette = AppPalette.TIDE) {
             ListContent(populated.copy(directory = directory.copy(pending = 2, status = SyncStatus.OFFLINE)), ListActions())
         }
