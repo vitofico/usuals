@@ -44,7 +44,7 @@ for (const palette of palettes) for (const night of [false, true]) {
     const values = Object.assign({}, ...light.filter(([id]) => id === "plum" || id === palette).map(([, v]) => v),
       ...(night ? dark.filter(([id]) => id === "plum" || id === palette).map(([, v]) => v) : []));
     for (const [foreground, background] of [["ink", "paper"], ["muted", "paper"], ["primary", "ground"],
-      ["on-action", "primary"], ["gold", "champagne"], ["muted", "mauve"]]) {
+      ["on-action", "primary"], ["gold", "champagne"], ["muted", "mauve"], ["ink", "mauve"]]) {
       assert.ok(contrast(values[`--${foreground}`], values[`--${background}`]) >= 4.5,
         `${foreground}/${background}`);
     }

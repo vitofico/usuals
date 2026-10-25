@@ -29,7 +29,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.IconButtonDefaults
@@ -413,6 +416,7 @@ fun ListScreen(
  * capture surface. The middle one gets all the remaining height and the other
  * two are as short as they can be.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ListContent(
     state: ListUiState,
@@ -482,14 +486,15 @@ fun ListContent(
                 directory = state.directory,
                 busy = state.busy || state.matchingBusy || state.capture != CaptureState.Idle,
                 actions = actions,
-                compact = typing != null,
+                compact = typing != null || state.personal.mode,
+                typing = typing != null,
                 onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
                     { actions.onFinishRows?.invoke(rows, null) ?: actions.onFinishShop(null) }
                 },
             )
             if (typing == null) {
-                if (state.personal.mode) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.shopping_mode), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                if (state.personal.mode) FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.shopping_mode), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelLarge)
                     TextButton(onClick = actions.onShoppingMode) { Text(stringResource(R.string.shopping_stop)) }
                 }
                 val usefulFilter = state.stores.size > 1 || state.selectedStore != null ||
@@ -543,24 +548,35 @@ private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier
 }
 
 @Composable
-private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, onFinish: (() -> Unit)?) {
+private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, typing: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+        .clip(RoundedCornerShape(20.dp)).background(colors.primaryContainer)) {
+        Box(Modifier.matchParentSize()) {
+            io.theficos.usuals.ui.theme.BrandCollage(Modifier.align(Alignment.CenterEnd)
+                .offset(x = 34.dp, y = (-8).dp)
+                .size(width = if (compact) 210.dp else 260.dp, height = if (compact) 146.dp else 181.dp))
+        }
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()
+            .heightIn(min = when { typing -> 56.dp; compact -> 72.dp; else -> 80.dp })
+            .padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 6.dp)) {
             Column(Modifier.weight(1f)) {
                 NamedListPicker(header.name, directory, busy, actions, compact)
-                Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount), style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant)
+                if (!typing) Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount),
+                    modifier = Modifier.background(colors.primaryContainer).padding(end = 4.dp),
+                    style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer)
             }
-            if (!compact) {
+            if (!typing) {
                 IconButton(onClick = actions.onOpenHistory, enabled = !busy,
+                    modifier = Modifier.background(colors.surface, CircleShape),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary)) {
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
-                ListMenu(header, directory, busy, actions, onFinish)
+                Box(Modifier.background(colors.surface, CircleShape)) {
+                    ListMenu(header, directory, busy, actions, onFinish)
+                }
             }
         }
-        HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

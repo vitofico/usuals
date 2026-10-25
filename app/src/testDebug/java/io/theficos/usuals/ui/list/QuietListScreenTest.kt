@@ -57,6 +57,20 @@ class QuietListScreenTest {
         compose.onNodeWithText("oats").assertDoesNotExist()
     }
 
+    @Test fun picker_dialog_survives_switching_heading_style() {
+        val compact = mutableStateOf(false)
+        val directory = ListDirectory("home", listOf(NamedList("home", "Groceries", false)))
+        compose.setContent { UsualsTheme { NamedListPicker("Groceries", directory, false, ListActions(), compact.value) } }
+        compose.onNodeWithText("Groceries").performClick()
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.runOnIdle { compact.value = true }
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.runOnIdle { compact.value = false }
+        compose.onNodeWithText("New list").assertIsDisplayed()
+        compose.onNodeWithText("Dismiss").performClick()
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+    }
+
     @Test fun typing_keeps_capture_and_memory_visible_without_unrelated_controls() {
         compose.setContent { UsualsTheme {
             ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),
@@ -65,6 +79,7 @@ class QuietListScreenTest {
                 reviewCandidates = listOf(io.theficos.usuals.smart.ReviewCandidate("oats", "oats", 0, 2, 2))), ListActions())
         } }
         compose.onNodeWithTag(DraftFieldTag).assertIsDisplayed()
+        compose.onNodeWithText("1 item").assertDoesNotExist()
         compose.onNodeWithText("From past shops").assertIsDisplayed()
         compose.onNodeWithContentDescription("More options").assertDoesNotExist()
         compose.onNodeWithText("Store: All stores").assertDoesNotExist()
@@ -101,6 +116,23 @@ class QuietListScreenTest {
         assertThat(finished).isEqualTo(1)
         compose.onNodeWithText("Leave shopping mode").performClick()
         assertThat(left).isEqualTo(1)
+    }
+
+    @Config(sdk = [33], qualifiers = "en-w320dp-h640dp")
+    @Test fun large_text_shopping_controls_wrap_and_leave_groceries_reachable() {
+        var left = false
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
+                UsualsTheme { ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),
+                    personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true, onShoppingMode = { left = true })) }
+            }
+        }
+        compose.onNodeWithText("Shopping mode").assertIsDisplayed()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
+        compose.onNodeWithText("Milk").assertIsDisplayed()
+        compose.onNodeWithText("Leave shopping mode").assertIsDisplayed().performClick()
+        assertThat(left).isTrue()
     }
 
     // Default width avoids Robolectric's text-field dialog loop: https://github.com/robolectric/robolectric/issues/8460

@@ -516,6 +516,7 @@ function renderLists() {
     el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
   $("content").replaceChildren(
     el("section", { class: "list-heading" },
+      brandCollage("list-heading-collage"),
       el("div", { class: "list-title-row" },
         el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
           "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
