@@ -17,8 +17,8 @@
     <string name="tutorial_scan_body">Open the list menu to import a text note or recipe. Use the barcode button for packaged items. Review everything before adding.</string>
     <string name="tutorial_scan_hint">Product lookup is optional. Photos of written lists use an optional image-capable model and are sent only when you request a read.</string>
     <string name="tutorial_shop_title">Shop, then save the memory.</string>
-    <string name="tutorial_shop_body">Choose Start shopping and check items as you buy them. Finish shop saves checked items in History; unchecked items stay on your list.</string>
-    <string name="tutorial_shop_hint">The clock icon opens History. You can undo a finished shop if you closed it too soon.</string>
+    <string name="tutorial_shop_body">Choose Start shopping and check items as you buy them. Finish shop saves checked items in History; the others stay listed. Open Wallet lets you choose a payment app and open it.</string>
+    <string name="tutorial_shop_hint">The clock opens History. Attach receipt photos to a shop, or read one with your optional image model and review the items before saving.</string>
     <string name="tutorial_review_body">After your first shops, find this shortcut above your list. Your frequent purchases come first: choose Add or Skip, one item at a time.</string>
     <string name="tutorial_review_hint">Up to 10 per round. Close whenever you like; additions stay. Undo last choice reverses your last action.</string>
     <string name="tutorial_share_title">Your everyday, together.</string>

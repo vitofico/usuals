@@ -19,7 +19,7 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.ConcurrentHashMap
 
 /** Decodes locally, applies orientation and re-encodes pixels so source metadata never leaves. */
-class AndroidRecipeImportFiles(private val context: Context) : RecipeImportFiles {
+class AndroidRecipeImportFiles(private val context: Context, private val maxImageEdge: Int = 2048) : RecipeImportFiles {
     private val captures = ConcurrentHashMap<String, File>()
     override suspend fun markdown(uri: String): String = withContext(Dispatchers.IO) {
         val bytes = read(uri, MarkdownIngredients.MAX_TEXT * 4)
@@ -34,13 +34,17 @@ class AndroidRecipeImportFiles(private val context: Context) : RecipeImportFiles
         catch (_: OutOfMemoryError) { throw ImportFailure(ImportProblem.TOO_LARGE) }
         catch (_: IllegalArgumentException) { throw ImportFailure(ImportProblem.INVALID_IMAGE) }
     }
-    private fun preparePhoto(bytes: ByteArray): ModelImage {
+    internal fun preparePhoto(bytes: ByteArray): ModelImage = try { preparePixels(bytes) }
+        catch (_: OutOfMemoryError) { throw ImportFailure(ImportProblem.TOO_LARGE) }
+        catch (_: IllegalArgumentException) { throw ImportFailure(ImportProblem.INVALID_IMAGE) }
+
+    private fun preparePixels(bytes: ByteArray): ModelImage {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw ImportFailure(ImportProblem.INVALID_IMAGE)
         if (bounds.outWidth.toLong() * bounds.outHeight > 48_000_000L || bounds.outWidth > 16384 || bounds.outHeight > 16384) throw ImportFailure(ImportProblem.TOO_LARGE)
         var sample = 1
-        while ((bounds.outWidth + sample - 1) / sample > 2048 || (bounds.outHeight + sample - 1) / sample > 2048) sample *= 2
+        while ((bounds.outWidth + sample - 1) / sample > maxImageEdge || (bounds.outHeight + sample - 1) / sample > maxImageEdge) sample *= 2
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
             ?: throw ImportFailure(ImportProblem.INVALID_IMAGE)
         val orientation = runCatching { ExifInterface(bytes.inputStream()).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)

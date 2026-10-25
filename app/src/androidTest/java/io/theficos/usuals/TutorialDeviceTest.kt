@@ -48,6 +48,7 @@ class TutorialDeviceTest {
         bodies.forEachIndexed { page, body ->
             compose.onNodeWithText(compose.activity.getString(R.string.tutorial_step, page + 1, bodies.size)).assertIsDisplayed()
             compose.onNodeWithText(text(body)).performScrollTo().assertIsDisplayed()
+            if (page == 3) screenshot("tour-shopping.png")
             if (page == 4) {
                 compose.onNodeWithText(text(R.string.review_title)).performScrollTo().assertIsDisplayed()
                 screenshot("tour-review.png")

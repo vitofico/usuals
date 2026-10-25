@@ -17,8 +17,8 @@
     <string name="tutorial_scan_body">Öffne das Listenmenü, um eine Textnotiz oder ein Rezept zu importieren. Nutze die Barcode-Taste für verpackte Produkte. Prüfe alles vor dem Hinzufügen.</string>
     <string name="tutorial_scan_hint">Die Produktsuche ist optional. Fotos geschriebener Listen nutzen ein optionales bildfähiges Modell und werden erst auf deinen Leseauftrag hin gesendet.</string>
     <string name="tutorial_shop_title">Einkaufen und merken.</string>
-    <string name="tutorial_shop_body">Wähle Einkauf starten und hake Artikel beim Einkaufen ab. Einkauf abschließen speichert abgehakte Artikel im Verlauf; die anderen bleiben auf der Liste.</string>
-    <string name="tutorial_shop_hint">Das Uhrsymbol öffnet den Verlauf. Du kannst einen abgeschlossenen Einkauf rückgängig machen, wenn du ihn zu früh beendet hast.</string>
+    <string name="tutorial_shop_body">Wähle Einkauf starten und hake deine Käufe ab. Einkauf abschließen speichert abgehakte Artikel im Verlauf; die anderen bleiben auf der Liste. Mit Wallet öffnen wählst und öffnest du eine Bezahl-App.</string>
+    <string name="tutorial_shop_hint">Das Uhrsymbol öffnet den Verlauf. Füge einem Einkauf ein Kassenbonfoto hinzu oder lies es mit deinem optionalen bildfähigen Modell und prüfe die Artikel vor dem Speichern.</string>
     <string name="tutorial_review_body">Nach den ersten Einkäufen erscheint dieser Zugang über deiner Liste. Häufige Käufe kommen zuerst: Wähle für jeden Artikel Hinzufügen oder Überspringen.</string>
     <string name="tutorial_review_hint">Bis zu 10 pro Runde. Schließe jederzeit; Ergänzungen bleiben. Letzte Auswahl rückgängig macht deine letzte Aktion rückgängig.</string>
     <string name="tutorial_share_title">Dein Alltag, gemeinsam.</string>

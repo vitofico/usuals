@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="receipt_title">Recibo</string>
+    <string name="receipt_add">Añadir recibo</string>
+    <string name="receipt_view">Ver recibo</string>
+    <string name="receipt_import">Importar foto de recibo</string>
+    <string name="receipt_preview">Foto del recibo</string>
+    <string name="receipt_local">Las fotos se quedan en este teléfono. Se incluyen en las exportaciones de datos y transferencias entre dispositivos, pero no se comparten ni sincronizan.</string>
+    <string name="receipt_read">Leer recibo con mi modelo</string>
+    <string name="receipt_manual">Introducir productos a mano</string>
+    <string name="receipt_model_privacy">La lectura envía esta foto preparada al modelo con visión configurado, directamente o a través de tu servidor Usuals. No se envía nada hasta que toques Leer.</string>
+    <string name="receipt_review_hint">Comprueba la fecha, los nombres y las cantidades. Edita o elimina líneas antes de guardar. Los precios, totales e impuestos no son productos.</string>
+    <string name="receipt_items">Productos comprados, uno por línea</string>
+    <string name="receipt_save_purchases">Guardar compras y foto</string>
+    <string name="receipt_save_photo">Guardar foto</string>
+    <string name="receipt_export">Guardar foto en un archivo</string>
+    <string name="receipt_remove">Eliminar foto</string>
+    <string name="receipt_empty">No se encontraron productos. Introdúcelos a mano o prueba otra foto.</string>
+    <string name="receipt_scope_changed">La lista o compra seleccionada ha cambiado. Abre el recibo de nuevo desde el Historial.</string>
+    <string name="receipt_save_failed">No se pudo guardar el recibo. El borrador sigue aquí. Inténtalo de nuevo.</string>
+    <string name="receipt_saved">Recibo guardado.</string>
+    <string name="wallet_open">Abrir Wallet</string>
+    <string name="wallet_choose">Elegir app Wallet</string>
+    <string name="wallet_unavailable">No se pudo abrir esta app. Elige de nuevo tu app Wallet en Favoritos, Preferencias de compra.</string>
+    <string name="receipt_model_failed">El modelo no pudo leer el recibo. La foto sigue aquí. Introduce los productos a mano o inténtalo de nuevo.</string>
+</resources>

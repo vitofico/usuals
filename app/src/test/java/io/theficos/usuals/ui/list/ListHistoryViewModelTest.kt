@@ -96,6 +96,18 @@ class ListHistoryViewModelTest {
         assertThat(viewModel.state.value.finishedTrip).isNull()
     }
 
+    @Test fun `wallet is offered only for a successful finish started in shopping mode`() = runTest(main.dispatcher) {
+        val tools = io.theficos.usuals.ui.shopping.ShoppingToolsStore()
+        val vm = ListViewModel(FakeItemStore(listOf(item("milk", "milk", checked = true))), LocalUtteranceParser(), FakeSpeechSource(),
+            historyStore = FakeHistoryStore(), shoppingTools = tools, compute = main.dispatcher)
+        vm.onFinishShop()
+        assertThat(vm.state.value.finishedInShoppingMode).isFalse()
+        tools.mode(true)
+        vm.onFinishShop()
+        assertThat(vm.state.value.finishedInShoppingMode).isTrue()
+        assertThat(vm.state.value.finishedTrip).isNotNull()
+    }
+
     @Test fun `stale finish forwards only the selected rows`() = runTest(main.dispatcher) {
         val history = FakeHistoryStore()
         val viewModel = vm(FakeItemStore(), history)
@@ -131,7 +143,10 @@ class ListHistoryViewModelTest {
         val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { now }, historyStore = scoped, compute = main.dispatcher)
         vm.onFinishShop()
         assertThat(vm.state.value.finishedTrip!!.trip.id).isEqualTo("trip")
-        snapshots.value = snapshots.value.copy(history = HistorySnapshot(trips = listOf(Trip("accepted-elsewhere", 11_000))))
+        snapshots.value = snapshots.value.copy(listId = "another-list")
+        runCurrent()
+        assertThat(vm.state.value.finishedTrip).isNull()
+        snapshots.value = snapshots.value.copy(listId = "", history = HistorySnapshot(trips = listOf(Trip("accepted-elsewhere", 11_000))))
         runCurrent()
         assertThat(vm.state.value.finishedTrip).isNull()
     }

@@ -102,6 +102,8 @@ class ListViewModel(
         val transfer: ItemTransferRequest? = null,
         val transferResult: ItemTransferResult? = null,
         val finishedTrip: FinishedTrip? = null,
+        val finishedInShoppingMode: Boolean = false,
+        val finishedScope: String? = null,
         val prompt: ListPrompt? = null,
         val busy: Boolean = false,
         val historyError: Boolean = false,
@@ -770,11 +772,13 @@ class ListViewModel(
 
     fun onFinishShop(onlyIds: Set<ItemId>? = null, versions: List<ItemVersion>? = null) {
         if (screen.value.busy) return
+        val finishedScope = shopping.value.listId
+        val inShoppingMode = shoppingTools.state.value.mode
         screen.update { it.copy(busy = true, prompt = null) }
         viewModelScope.launch {
             try {
                 val finished = if (versions == null) historyStore.finish(onlyIds) else historyStore.finishVersions(versions, onlyIds)
-                screen.update { it.copy(busy = false, finishedTrip = finished ?: it.finishedTrip, checkedExpanded = false) }
+                screen.update { it.copy(busy = false, finishedTrip = finished ?: it.finishedTrip, finishedScope = if (finished != null) finishedScope else it.finishedScope, finishedInShoppingMode = if (finished != null) inShoppingMode else it.finishedInShoppingMode, checkedExpanded = false) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { screen.update { it.copy(busy = false, historyError = true) } }
             refreshPrompts(shopping.value.items, shopping.value.history)
@@ -1122,7 +1126,8 @@ class ListViewModel(
         scanPending = screen.scanLookups + screen.scanNames.map { it.gtin },
         lastScan = screen.lastScan,
         checkedExpanded = screen.checkedExpanded,
-        finishedTrip = screen.finishedTrip?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
+        finishedInShoppingMode = screen.finishedInShoppingMode,
+        finishedTrip = screen.finishedTrip?.takeIf { screen.finishedScope == listed.snapshot.listId }?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
         prompt = screen.prompt,
         busy = screen.busy,
         historyError = screen.historyError,

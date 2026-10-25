@@ -39,7 +39,8 @@ class ListSyncTest {
         override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse =
             throw RelayProblem("offline")
     })
-    private val sync = ListSync(lists, replica, server, connections, state, unnamed = "Home")
+    private var forgotten = 0
+    private val sync = ListSync(lists, replica, server, connections, state, unnamed = "Home", onForgotten = { forgotten++ })
 
     @After fun close() = db.close()
 
@@ -220,9 +221,11 @@ class ListSyncTest {
         add(home, "Milk")
         server.offline = true
         assertThat(sync.signOut(force = false)).isEqualTo(1)
+        assertThat(forgotten).isEqualTo(0)
         assertThat(db.listDao().find(home)).isNotNull()
         assertThat(connections.current()).isNotNull()
         assertThat(sync.signOut(force = true)).isEqualTo(0)
+        assertThat(forgotten).isEqualTo(1)
         assertThat(connections.current()).isNull()
         val left = db.listDao().all().single()
         assertThat(left.id).isNotEqualTo(home)

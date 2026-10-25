@@ -208,6 +208,8 @@ data class ListActions(
     val onSelectList: (String) -> Unit = {},
     val onCreateList: (String) -> Unit = {},
     val onOpenHistory: () -> Unit = {},
+    val onOpenWallet: () -> Unit = {},
+    val onOpenReceipt: (String) -> Unit = {},
     val onShareList: () -> Unit = {},
     val onShareText: () -> Unit = {},
     /** Null hides the menu entry: the basket overview is off. */
@@ -247,6 +249,9 @@ fun ListScreen(
     onOpenHistory: () -> Unit = {},
     onOpenSharing: () -> Unit = {},
     onOpenAccount: () -> Unit = {},
+    onOpenWallet: () -> Unit = {},
+    onChooseWallet: () -> Unit = {},
+    onOpenReceipt: (String) -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -258,7 +263,7 @@ fun ListScreen(
     state.basket?.let { io.theficos.usuals.ui.basket.BasketOverviewSheet(it, vm::onDismissBasket) }
     if (toolsOpen) io.theficos.usuals.ui.shopping.ShoppingToolsSheet(state.personal, state.selectedStore,
         vm::updateShoppingTools, vm::onAddFavorite, { toolsOpen = false },
-        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } }, alreadyAdded = state.favoritesOnList)
+        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } }, alreadyAdded = state.favoritesOnList, onChooseWallet = onChooseWallet)
     var microphoneAsked by rememberSaveable { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner, vm) {
@@ -373,6 +378,8 @@ fun ListScreen(
             onOpenSettings = onOpenSettings,
             onOpenAccount = onOpenAccount,
             onOpenHistory = onOpenHistory,
+            onOpenWallet = onOpenWallet,
+            onOpenReceipt = onOpenReceipt,
             onSelectList = vm::onSelectList,
             onDismissConflict = vm::onDismissConflict,
             onReviewConflict = vm::onReviewConflict,
@@ -494,10 +501,7 @@ fun ListContent(
                 },
             )
             if (typing == null) {
-                if (state.personal.mode) FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.shopping_mode), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelLarge)
-                    TextButton(onClick = actions.onShoppingMode) { Text(stringResource(R.string.shopping_stop)) }
-                }
+                if (state.personal.mode) ShoppingModeBar(actions.onShoppingMode)
                 val usefulFilter = state.stores.size > 1 || state.selectedStore != null ||
                     (state.stores.isNotEmpty() && (state.pending + state.checked + state.deferred).any { it.store == null })
                 if (usefulFilter) StoreFilter(state.stores, state.selectedStore, actions.onStoreFilter)
@@ -506,24 +510,17 @@ fun ListContent(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (state.isEmpty && partial.isBlank() && state.captureMatches.isEmpty()) {
                     if (typing == null) {
-                        if (state.selectedStore == null) EmptyInstruction() else Text(stringResource(R.string.store_empty), modifier = Modifier.padding(20.dp))
+                        if (state.finishedTrip == null) {
+                            if (state.selectedStore == null) EmptyInstruction() else Text(stringResource(R.string.store_empty), modifier = Modifier.padding(20.dp))
+                        }
                     }
                 } else {
                     ItemList(state = state, partial = partial, actions = actions)
                 }
             }
 
-            state.finishedTrip?.let { finished ->
-                Snackbar(action = {
-                    TextButton(onClick = actions.onUndoFinish, enabled = !state.busy) {
-                        Text(stringResource(R.string.finish_shop_undo))
-                    }
-                }, dismissAction = {
-                    TextButton(onClick = actions.onDismissFinished) { Text(stringResource(R.string.history_dismiss)) }
-                }) {
-                    Text(pluralStringResource(R.plurals.finish_shop_saved, finished.count, finished.count))
-                }
-            }
+            ShopCompletion(state, actions)
+
           }
             CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
                 if (memory.key in state.repeatSuggestionKeys) repeatToMute = memory
@@ -542,6 +539,17 @@ private fun Modifier.closesDraft(typing: Boolean, onClose: () -> Unit): Modifier
             val event = awaitPointerEvent(PointerEventPass.Initial)
             event.changes.forEach { it.consume() }
         } while (event.changes.any { it.pressed })
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ShoppingModeBar(onStop: () -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.shopping_mode), style = MaterialTheme.typography.labelLarge)
+        }
+        TextButton(onClick = onStop) { Text(stringResource(R.string.shopping_stop)) }
     }
 }
 

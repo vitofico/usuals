@@ -78,6 +78,7 @@ import java.time.format.FormatStyle
 @Composable
 fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
+    ReceiptSheet(vm.receipt)
     val resolver = LocalContext.current.contentResolver
     val scope = rememberCoroutineScope()
     var pastOpen by rememberSaveable { mutableStateOf(false) }
@@ -150,6 +151,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
             Box {
                 IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.quiet_history_options)) }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.receipt_import)) }, onClick = { menuOpen = false; vm.openReceipt() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.history_past_title)) }, onClick = { menuOpen = false; vm.dismissNotice(); pastOpen = true })
                     DropdownMenuItem(text = { Text(stringResource(R.string.history_export)) }, onClick = { menuOpen = false; export.launch("usuals-${vm.today()}.json") })
                     DropdownMenuItem(text = { Text(stringResource(R.string.history_import)) }, onClick = { menuOpen = false; importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
@@ -178,6 +180,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                 item {
                     Spacer(Modifier.height(12.dp))
                     Text(if (notice == HistoryNotice.REBOUGHT) stringResource(R.string.history_rebuy_done, state.added) else stringResource(when (notice) {
+                        HistoryNotice.RECEIPT_SAVED -> R.string.receipt_saved
                         HistoryNotice.REBOUGHT -> R.string.history_rebuy_done
                         HistoryNotice.IMPORTED -> R.string.history_imported
                         HistoryNotice.EXPORTED -> R.string.history_exported
@@ -205,6 +208,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                         Text(pluralStringResource(R.plurals.history_item_count, rows.size, rows.size),
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         state.baskets[trip.id]?.let { io.theficos.usuals.ui.basket.BasketTripSummary(it) }
+                        TextButton(onClick = { vm.openReceipt(trip.id) }) { Text(stringResource(if (trip.id in state.receiptIds) R.string.receipt_view else R.string.receipt_add)) }
                         TextButton(onClick = { vm.selectTrip(trip.id) }) { Text(stringResource(R.string.history_select_trip)) }
                     }
                 }

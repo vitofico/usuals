@@ -17,8 +17,8 @@
     <string name="tutorial_scan_body">Apri il menu della lista per importare una nota di testo o una ricetta. Usa il pulsante del codice a barre per i prodotti confezionati. Rivedi tutto prima di aggiungere.</string>
     <string name="tutorial_scan_hint">La ricerca dei prodotti è facoltativa. Le foto di liste scritte usano un modello facoltativo con supporto immagini e vengono inviate solo quando chiedi di leggerle.</string>
     <string name="tutorial_shop_title">Fai la spesa e ricordala.</string>
-    <string name="tutorial_shop_body">Scegli Inizia la spesa e spunta i prodotti mentre li acquisti. Concludi la spesa salva quelli spuntati nella cronologia; gli altri rimangono nella lista.</string>
-    <string name="tutorial_shop_hint">L’icona dell’orologio apre la Cronologia. Puoi annullare una spesa conclusa se l’hai chiusa troppo presto.</string>
+    <string name="tutorial_shop_body">Scegli Inizia la spesa e spunta i prodotti mentre li compri. Concludi la spesa salva quelli spuntati nella Cronologia; gli altri restano in lista. Apri Wallet ti permette di scegliere e aprire l’app per pagare.</string>
+    <string name="tutorial_shop_hint">L’orologio apre la Cronologia. Allega la foto di uno scontrino a una spesa, oppure leggila con il modello facoltativo per immagini e rivedi i prodotti prima di salvare.</string>
     <string name="tutorial_review_body">Dopo le prime spese, trovi questa scorciatoia sopra la lista. I prodotti che compri spesso vengono prima: scegli Aggiungi o Salta, uno alla volta.</string>
     <string name="tutorial_review_hint">Fino a 10 per giro. Chiudi quando vuoi: le aggiunte restano. Annulla ultima scelta ripristina la tua ultima azione.</string>
     <string name="tutorial_share_title">Il quotidiano, insieme.</string>

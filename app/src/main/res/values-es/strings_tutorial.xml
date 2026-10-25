@@ -17,8 +17,8 @@
     <string name="tutorial_scan_body">Abre el menú de la lista para importar una nota de texto o una receta. Usa el botón del código de barras para productos envasados. Revisa todo antes de añadirlo.</string>
     <string name="tutorial_scan_hint">La consulta de productos es opcional. Las fotos de listas escritas usan un modelo opcional con visión y solo se envían cuando pides leerlas.</string>
     <string name="tutorial_shop_title">Compra y guarda el recuerdo.</string>
-    <string name="tutorial_shop_body">Elige Empezar compra y marca los productos que vayas comprando. Terminar compra guarda los marcados en el historial; los demás siguen en la lista.</string>
-    <string name="tutorial_shop_hint">El icono del reloj abre el Historial. Puedes deshacer una compra terminada si la cerraste demasiado pronto.</string>
+    <string name="tutorial_shop_body">Elige Empezar compra y marca los productos al comprarlos. Terminar compra guarda los marcados en el Historial; los demás siguen en la lista. Abrir Wallet permite elegir y abrir una app de pago.</string>
+    <string name="tutorial_shop_hint">El reloj abre el Historial. Adjunta fotos de recibos a una compra o léelas con tu modelo opcional con visión y revisa los productos antes de guardar.</string>
     <string name="tutorial_review_body">Tras tus primeras compras, encontrarás este acceso encima de la lista. Tus productos habituales aparecen primero: elige Añadir o Saltar, uno a uno.</string>
     <string name="tutorial_review_hint">Hasta 10 por ronda. Cierra cuando quieras; lo añadido se queda. Deshacer última elección revierte tu última acción.</string>
     <string name="tutorial_share_title">El día a día, en compañía.</string>

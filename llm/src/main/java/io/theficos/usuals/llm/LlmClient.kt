@@ -120,5 +120,6 @@ interface LlmClient {
     suspend fun probeImages(): ModelCapabilities = ModelCapabilities(false, false, null,
         ModelProblem(ModelProblem.Kind.IMAGES_UNSUPPORTED))
 
+    /** Extracts written lists, ingredients or receipt purchases after explicit submission. */
     suspend fun parseImage(image: ModelImage): List<ParsedItem> = emptyList()
 }
