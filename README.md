@@ -1,185 +1,192 @@
 <p align="center">
-  <img src="docs/assets/readme-cover.svg" alt="Usuals. Good things, remembered. Your shopping list, a little more considered." width="100%">
+  <img src="docs/assets/readme-cover.svg" alt="Usuals. Good things, remembered. An offline shopping list with a memory." width="100%">
 </p>
 
 <h1 align="center">Usuals</h1>
 
 <p align="center">
-  <strong>A shopping list with a memory. And room for your household.</strong><br>
-  Capture on Android. Remember what you buy. Share lists through your own server.
+  <strong>A shopping list that remembers what you buy.</strong><br>
+  Works offline on Android. Add an optional server to share lists and edit them in your browser.
 </p>
 
 <p align="center">
-  <a href="#a-little-less-to-remember">Explore</a> ·
-  <a href="#your-everyday-together">Shared lists</a> ·
+  <a href="https://github.com/vitofico/usuals/releases/latest/download/app-release.apk">Download Android APK</a> ·
   <a href="#get-started">Get started</a> ·
-  <a href="docs/translating.md">Translations</a> ·
+  <a href="#your-everyday-together">Phone + browser</a> ·
   <a href="docs/README.md">Documentation</a>
 </p>
 
 <p align="center">
-  <a href="LICENSE">Apache-2.0</a> · Android + Web · Offline first · No telemetry
+  <a href="LICENSE">Apache-2.0</a> · Offline first · No telemetry
 </p>
 
 <p align="center">
-  <a href="docs/assets/android-list.png"><img src="docs/assets/android-list.png" alt="Android shopping list: groceries grouped by category, quantities and clearly labelled capture actions" width="42%"></a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="docs/assets/android-product.png"><img src="docs/assets/android-product.png" alt="Product details: a real Open Food Facts lookup with ingredients, nutrition grades, declared allergens and source attribution" width="42%"></a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/android-list-dark.png">
+    <img src="docs/assets/android-list.png" alt="Usuals on Android: groceries grouped by category, quantities, a History shortcut and capture controls" width="300">
+  </picture>
 </p>
 
-<p align="center"><em>Everyday essentials. A considered design. Your data stays yours.</em></p>
+<p align="center">
+  <em>Your everyday list, in light or dark.</em><br>
+  <a href="docs/assets/android-list.png">View light</a> · <a href="docs/assets/android-list-dark.png">View dark</a>
+</p>
 
 ## A little less to remember
 
-Usuals remembers the shops you finish, so the next list starts with a little
-more context. The Android app works on its own, without an account, a server or
-a model. Warm paper, aubergine accents, serif headings and a matching dark theme
-keep the list easy to read in the kitchen and at the shop.
+Usuals remembers the shops you finish, so your next list starts with a little
+more context. The Android app works on its own without an account, a server or a
+model. The familiar colour collage stays with your list while names, quantities
+and checkboxes remain easy to read.
 
-Choose **Plum**, **Grove** or **Tide** in **Settings > Appearance**. Each palette
-has a matching dark mode, follows your device and carries through to the widget.
-The web editor offers the same choices from its Appearance control.
+Choose **Plum**, **Grove** or **Tide** in **Settings > Appearance** on Android or
+**Preferences > Appearance** in the browser. Each follows your device's light or
+dark appearance; Android's choice also carries through to the widget.
+[Preview the three palettes](docs/assets/palettes.svg).
 
-![Plum, Grove and Tide palettes, each with matching light and dark colors](docs/assets/palettes.svg)
+These everyday shopping tools are available on Android:
 
 | When you want to… | Usuals helps you… |
 | --- | --- |
-| **Catch what you need** | Type, dictate, share text or scan a barcode. Edit names, notes, quantities, categories and store tags. Add the home-screen widget for a quicker way back in. |
+| **Catch what you need** | Type, dictate, share text or scan a barcode. Edit names, quantities, notes, categories and store tags. Open the list quickly from its home-screen widget. |
 | **Remember the last shop** | Finish a shop to save checked items as dated purchases. Keep unchecked rows open, undo a finish, search history and rebuy selected items. |
-| **Keep the essentials coming** | Set explicit repeat rules, pin essentials and review your usuals in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
-| **Turn a recipe into a list** | Share a recipe link, review its ingredients and choose what to add. Already-listed items are excluded; pantry staples and recent purchases start unticked. |
-| **Move through the shop** | Use a focused shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
+| **Keep essentials coming** | Set explicit repeat rules, pin favourites and review past purchases in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
+| **Bring a recipe along** | Share a recipe link, review its ingredients and choose what to add. Existing list items are excluded; pantry staples and recent purchases start unticked. |
+| **Move through the shop** | Use shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
-On Android, **Favourites** in the list's **More options** menu are personal
-shortcuts for items you want to add again. Save an item from its editor, then tap it in Favourites
-when you need it. Items already on the current list are marked. Favourites do
-not add items automatically.
+Suggestions wait for your approval. Only repeat rules you set add items
+automatically; purchase memory, favourites and review work without AI.
 
-As you type, Usuals offers matching names from the current list's purchase
-history. Use a suggestion's menu and **Don't suggest again** to hide it from
-typing suggestions and the history review on this phone. You can still add the item yourself.
-If it has a repeat rule, Usuals asks before stopping that rule too.
+<details>
+<summary>Purchase memory, favourites and review</summary>
 
-Open an item's editor, then **More actions > Move or copy to another list**. Choose an active list
-and whether to keep the original. The new row is unchecked and keeps its item
-details. Moving between account lists confirms the destination first; if the
-connection or either list changes, the original stays available.
+**Favourites** in the list's **More options** menu are personal shortcuts. Save an
+item from its editor, then tap it in Favourites when you need it again. Items
+already on the list are marked; favourites never add themselves automatically.
 
-Tap **Review your usuals** above the Android list to review past purchases one at
-a time, up to ten per round. **Add** saves immediately; **Skip** affects only this
-review. **Undo last choice** restores a skipped card or removes an unchanged item
-this review added. Close whenever you like, or choose **Review more** at the end.
-The review uses your last eight shops, ranks frequent purchases first and uses
-time since purchase to break ties. Items already listed, bought in the last
-24 hours, muted, snoozed or managed by repeat rules are excluded. Quantities
-remain optional hints on the list.
+As you type, matching names come from the current list's purchase history.
+**Don't suggest again** hides an item from typing suggestions and history review
+on this phone. You can still add it yourself. If it has a repeat rule, Usuals asks
+before stopping that rule too.
 
-Only your explicit repeat rules add items automatically. Inferred interval
-predictions stay disabled until replay over real household history beats both
-baselines. Staples, purchase memory and explicit repeats work now.
+**Review your usuals** offers past purchases one at a time, up to ten per round.
+**Add** saves immediately; **Skip** affects only this review. **Undo last choice**
+restores a skipped card or removes an unchanged item added by this review. Close
+whenever you like, or choose **Review more** at the end. Ranking uses the last
+eight shops, frequency and time since purchase. Current items, purchases from the
+last 24 hours, muted or snoozed items and repeat-rule items are excluded.
+Inferred interval predictions remain disabled until replay over real household
+history beats both comparison baselines.
+
+To move an item, open its editor and choose **More actions > Move or copy to
+another list**. Choose an active list and whether to keep the original. The new
+row is unchecked and keeps its details. Moves between account lists confirm the
+destination first; if the connection or either list changes, the original stays
+available.
+
+</details>
 
 ## Scan once. Know a little more.
 
-The scanner pauses after each accepted barcode. Choose **Scan next item** when
-you are ready; holding the same package in view does not fill the list with
-copies.
+On Android, the scanner pauses after each accepted barcode. Choose **Scan next
+item** when you are ready; keeping one package in view does not fill the list
+with copies.
 
-Enable **Open Food Facts** lookup to get a suggested name and category, with
-brand and pack size when available. Confirm the name once and reuse it offline.
-Missing records can still be named manually.
+Optional **Open Food Facts** lookup suggests a name and category, with brand and
+pack size when available. Confirm the name once and reuse it offline. Missing
+records can be named manually.
 
-Open **Product details** on a barcoded item for ingredients, Nutri-Score, NOVA,
-declared allergens and traces. Saved details remain available offline, with a
-saved date, explicit refresh and a link to view or improve the source record.
-Community data can be incomplete or outdated; check the packaging for ingredients
-and allergens. Product data is credited to Open Food Facts under the ODbL.
+**Product details** shows ingredients, Nutri-Score, NOVA, declared allergens and
+traces. Saved details remain available offline with a saved date, explicit
+refresh and source link. Community data can be incomplete or outdated; check the
+packaging for ingredients and allergens. Product data is credited to Open Food
+Facts under the ODbL. [View an example](docs/assets/android-product.png).
 
 ## Recipes, without the busywork
 
-Tap **Import** to paste a note from Google Keep or another app, or open a plain
-text or Markdown file. Plain lists use one item per line. Bullets, numbered lists
-and checkboxes are supported. Ticked entries are imported too and arrive ticked,
-so a Keep list reused from the last trip comes in whole and as it was. Turn on
-**Repeated emoji set the quantity** to read `Cerveza 🍺🍺🍺` as 3 Cerveza; with it
-off, emoji stay in the item name. Text is read locally, without a model. Review
-the proposed items and quantities before adding; long notes are added in the
-background, batch by batch, so the list stays usable.
-Use a Markdown heading such as `# Weekend shopping` for a custom note title.
-On Android, you can also share the note directly to Usuals for the same review.
+On Android, share a note or recipe URL, or choose **More options > Import recipe
+or list**. Plain text and Markdown are read locally. Structured recipes are read
+directly on the phone without a model. Review the proposed items before adding;
+recipe imports avoid existing list items and preserve your review choices.
 
-Share a recipe URL into Usuals or select **Link** in the import screen. Structured
-recipes are read directly on the phone and need no model. Review the ingredients
-before adding them; Usuals preserves your choices and avoids existing list
-items. Sites that block the request show an explanation.
+The browser's **List options > Import list or recipe** also offers text, file and
+photo imports with review. An optional OpenAI-compatible model can read prose
+recipes or, with image support, photos of written lists. AI is off by default.
+Selecting a photo does not send it: you must request a read, its image check must
+succeed, and you review the result before adding items.
 
-An optional OpenAI-compatible model can read prose recipes. With image support,
-it can also read photos of written lists. Photos stay local until you
-request a read and its image check succeeds. Both Android and web offer a
-review before anything is added. See [provider setup](docs/providers.md) for the server gateway and advanced
-direct-provider options.
-Sign in under **Settings > Account** and turn on **AI assistance**.
-Your server supplies the provider setup; model details remain available before
-use. AI is off by default and inputs are sent only after your explicit action.
-The everyday list needs no AI service.
+Signed in, **Settings > Account > AI assistance** uses the server's configured
+provider. Provider and model details remain available before use. See
+[provider setup](docs/providers.md) for the server gateway and advanced direct
+options. The everyday list needs no AI service.
+
+<details>
+<summary>Android text and Markdown import formats</summary>
+
+Plain lists use one item per line. Bullets, numbered lists and checkboxes are
+supported. Ticked entries arrive ticked, so a reused list comes in as it was.
+Enable **Repeated emoji set the quantity** to read `Cerveza 🍺🍺🍺` as 3 Cerveza;
+otherwise emoji stay in the name. A Markdown heading such as `# Weekend shopping`
+sets a custom note title. Long notes are added in the background, batch by batch,
+so the list stays usable.
+
+</details>
 
 ## Your everyday, together
 
 Use Android alone, or sign in to a Usuals server that you or someone you trust
-runs. Signed in, your lists live in your account on that server: the phone and
-the web app show the same lists, and a change on one appears on the other within
-a second or two. The phone keeps an offline copy and sends its changes when it is
-back online.
+runs. Signed in, your lists live in your account on that server. The phone and
+browser show the same lists; the phone keeps an offline copy and sends pending
+changes when it is back online.
 
-To connect your phone, open **Account > Connect a phone** in the web app. On the
-phone, choose **Settings > Account > Scan the QR from the web app**, or scan the
-code with the camera. Confirm the server address once and the phone is connected,
-with no code to compare. Without a computer at hand, enter the server address on
-the phone and choose **Sign in in your browser**.
+In the web app, **Account > Connect a phone** offers a QR code. Without a computer,
+you can sign in using the phone's browser. The
+[connection guide](docs/server-connection.md) explains both flows.
 
-To shop together, choose **Share** on a list and add people who have an
-account on the same server. Everyone added can edit the list and add others; the
-owner can remove people or delete the list, and anyone else can leave it. There
-are no invitations or codes to send. See the
-[server connection guide](docs/server-connection.md) for the details.
+Choose **Share** on a list to add other accounts on the same server. Everyone
+added can edit the list and add others; the owner can remove people or delete the
+list, and anyone else can leave it. Some server configurations also offer email
+invitations. Account and invitation options depend on the server you choose.
 
 <p align="center">
-  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Usuals web app in dark mode: a list shared with another account, with quantities and a picked-up item" width="100%"></a>
+  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Groceries in the Usuals browser app: list picker, Add field, quantities and checkboxes in dark mode" width="100%"></a>
 </p>
 
-<p align="center"><em>Android in your pocket. A larger workspace in your browser.</em></p>
+<p align="center"><em>The same account lists, from a larger screen.</em></p>
 
 | Part | What it does |
 | --- | --- |
-| **Android** | Offline lists, purchase history, capture and shopping tools. Signing in is optional; it syncs your lists with your account and lets you share them. |
-| **Web** | Your account's lists in the browser, sharing, **Connect a phone** and connected-phone management. Local accounts or optional Authentik SSO provide sign-in. |
-| **Server** | A small Kotlin/Ktor service with PostgreSQL that holds every list of its accounts, applies changes and serves the web app. Lists are encrypted at rest. You run it on your infrastructure. |
+| **Android** | Offline lists, purchase history, capture and shopping tools. Signing in is optional and connects your lists to an account. |
+| **Web** | Account lists, capture and import, sharing, phone pairing and account management. Sign-in options depend on the server configuration. |
+| **Server** | A Kotlin/Ktor service with PostgreSQL that stores account lists, applies changes and serves the web app. You run it on your infrastructure. |
 
-The server applies every change, so it can read the lists of its accounts, and so
-can whoever operates it. Encryption at rest protects a copied database or backup,
-not a running server. Lists on a phone that is not signed in never leave it. Read
-the [privacy policy](PRIVACY.md), the [browser boundary](web/PROTOCOL.md) and the
-[account/SSO guide](docs/sync/web-identity.md) before choosing a server.
+**The server and its operator can read account lists.** Encryption at rest
+protects a copied database or backup, not a running server. Lists on a phone that
+is not signed in never leave it. Read the [privacy policy](PRIVACY.md),
+[browser boundary](web/PROTOCOL.md) and [account guide](docs/sync/web-identity.md)
+before choosing a server.
 
-The server and clients are implemented and tested locally. Cluster deployment,
-production capacity, off-site recovery and a pilot with real users still need
-their operational checks. The [deployment package](deploy/README.md) is preparation
-material, not a running hosted service.
+Running a server also means operating its database, access controls, backups and
+recovery. The [deployment package](deploy/README.md) provides preparation material
+and operational checks; it does not provide a hosted instance.
 
-**Usuals Cloud** is planned as optional paid managed hosting. Offline and
-self-hosted use remain free; billing and paid onboarding are not implemented.
-The [hosting plan](docs/hosted-service-plan.md) records the work and launch gates.
+**Usuals Cloud** is a separate managed-hosting project. This release does not
+offer a hosted subscription. Offline Android and self-hosted use remain free. The
+[hosting plan](docs/hosted-service-plan.md) records the service boundary and launch
+requirements.
 
 ## Private by default
 
 - **No telemetry, analytics, advertising, crash reporting or Play Services.**
   Lists, local purchase history and suggestions work without a network.
-- **Direct, optional reads.** Recipe requests go from the phone to the recipe
-  site. Enabled barcode lookup sends the code to Open Food Facts, not your list
-  or purchase history. No application server proxies either read.
-- **Your model, your choice.** Recipe text reaches the configured model only
-  after an explicit action. Direct-provider keys stay in Android Keystore. Personal server-AI keys are
-  sent to your chosen server and stored encrypted there.
+- **Direct, optional reads.** Native recipe URL requests go from the phone to the
+  recipe site. Enabled barcode lookup sends the code to Open Food Facts, not
+  your list or purchase history. No application server proxies either read.
+- **Explicit AI requests.** The configured model receives submitted recipe text
+  or photos after an explicit action. Server AI sends those inputs through your
+  chosen server and stores personal provider keys encrypted there. Direct native
+  provider keys stay in Android Keystore.
 - **Speech follows Android's service.** Availability and audio processing depend
   on the selected speech service; keyboard capture works offline.
 - **Portable shopping data.** Export/import and Android device transfer preserve
@@ -190,25 +197,24 @@ See the [security model](docs/security-model.md) for the complete trust boundari
 
 ## Get started
 
-The first launch includes a guided tour. Skip it whenever you like and reopen
-it from **Settings > Guided tour** on Android, or **Guided tour** in the web
-navigation. Its last step explains how to sign in and share.
-
 Download the signed **[Android APK](https://github.com/vitofico/usuals/releases/latest/download/app-release.apk)** from GitHub Releases, or add
 `https://github.com/vitofico/usuals` to **[Obtainium](https://obtainium.imranr.dev/)**
 for updates. The [one-tap Obtainium import](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%257B%2522id%2522%253A%2522io.theficos.usuals%2522%252C%2522url%2522%253A%2522https%253A%252F%252Fgithub.com%252Fvitofico%252Fusuals%2522%252C%2522author%2522%253A%2522vitofico%2522%252C%2522name%2522%253A%2522Usuals%2522%252C%2522additionalSettings%2522%253A%2522%257B%255C%2522includePrereleases%255C%2522%253Afalse%252C%255C%2522apkFilterRegEx%255C%2522%253A%255C%2522%255Eapp-release%255C%255C%255C%255C.apk%2524%255C%2522%252C%255C%2522verifyLatestTag%255C%2522%253Atrue%257D%2522%257D) selects only
-stable production APKs. GitHub CI builds, signs and publishes updates automatically
-after changes on `main` pass the Android and server checks. Usuals is not available on F-Droid; the
-[initial submission was closed](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/53283)
-because the project is too new and other inclusion concerns remain.
-See the [distribution guide](docs/distribution.md) for signatures,
-checksums and the inclusion status.
-The [corrected F-Droid draft](distribution/fdroid/README.md) remains unsubmitted while
-the maintenance requirement is unmet; no resubmission is scheduled.
+stable production APKs.
 
-Android works offline without an account. Syncing and shared lists are optional
-and use your own compatible server. There is no managed hosting subscription in this release.
-Read the [privacy policy](PRIVACY.md) before enabling external services.
+GitHub CI builds, signs and publishes updates after the Android and server checks
+pass. Usuals is not available on F-Droid. See the
+[distribution guide](docs/distribution.md) for signatures, checksums and inclusion
+status; the [corrected F-Droid draft](distribution/fdroid/README.md) remains
+unsubmitted.
+
+Android works offline without an account. Sync and shared lists use a compatible
+server of your choice. Read the [privacy policy](PRIVACY.md) before enabling
+external services.
+
+The first launch includes a guided tour. Skip it whenever you like and reopen it
+from **Settings > Guided tour** on Android or **Preferences > Guided tour** in the
+browser.
 
 To build Android, install Git and Docker, then run:
 
@@ -234,11 +240,10 @@ server/scripts/test-local
 
 Use the [server guide](server/README.md) and [deployment runbook](deploy/README.md)
 for instance preparation. Production deployment is an explicit operator action.
-
 The [development guide](docs/development.md) covers full tests, native 16 KB
-alignment, emulator checks and suggestion replay. The
+alignment, emulator checks and suggestion replay. See the
 [verification record](docs/release-check.md) and [known issues](docs/known-issues.md)
-explain the tested scope and remaining limits.
+for tested scope and remaining limits.
 
 ## Make Usuals speak your language
 
