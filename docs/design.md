@@ -33,9 +33,10 @@ Android vectors. Each layer takes a semantic colour from the selected palette,
 including dark appearance. The logo and launcher keep their canonical artwork.
 The collage appears in the daily selected-list header as well as welcome,
 tutorial and empty-list screens, with a smaller crop in the browser sidebar.
-The daily header uses a close crop on a palette container: the actual list name,
-picker and controls remain its foreground. Text has opaque container backing and
-icon controls have paper surfaces, so artwork never determines their contrast.
+On Android, the list name and chooser sit directly on the page, with a faint
+collage crop and opaque backings for helper text and controls. The browser keeps
+its palette container with text and controls in the foreground, preserving their
+contrast.
 The canonical shapes stay unchanged. Populated grocery rows remain clear.
 
 Artwork backgrounds also use a large, faint edge crop on populated Android and mobile browser lists and a quieter settings crop.

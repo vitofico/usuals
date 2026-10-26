@@ -38,6 +38,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.graphicsLayer
+import io.theficos.usuals.ui.theme.AmbientCollageOpacity
 import io.theficos.usuals.ui.theme.categoryAccent
 import io.theficos.usuals.ui.theme.ambientLabelBacking
 import io.theficos.usuals.ui.NutriScoreChip
@@ -561,11 +563,12 @@ private fun ShoppingModeBar(onStop: () -> Unit) {
 private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, typing: Boolean, showReview: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-        .clip(RoundedCornerShape(20.dp)).background(colors.primaryContainer)) {
+        .clip(RoundedCornerShape(20.dp))) {
         if (io.theficos.usuals.ui.theme.LocalBackgroundStyle.current == io.theficos.usuals.ui.theme.BackgroundStyle.ARTWORK) Box(Modifier.matchParentSize()) {
             io.theficos.usuals.ui.theme.BrandCollage(Modifier.align(Alignment.CenterEnd)
                 .offset(x = 34.dp, y = (-8).dp)
-                .size(width = if (compact) 210.dp else 260.dp, height = if (compact) 146.dp else 181.dp))
+                .size(width = if (compact) 210.dp else 260.dp, height = if (compact) 146.dp else 181.dp)
+                .graphicsLayer { alpha = AmbientCollageOpacity })
         }
         Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()
             .heightIn(min = when { typing -> 56.dp; compact -> 72.dp; else -> 80.dp })
@@ -573,8 +576,8 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
             Column(Modifier.weight(1f)) {
                 NamedListPicker(header.name, directory, busy, actions, compact)
                 if (!typing) Text(pluralStringResource(R.plurals.list_item_count, header.itemCount, header.itemCount),
-                    modifier = Modifier.background(colors.primaryContainer).padding(end = 4.dp),
-                    style = MaterialTheme.typography.bodySmall, color = colors.onPrimaryContainer)
+                    modifier = Modifier.ambientLabelBacking().padding(end = 4.dp),
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             }
             if (!typing) {
                 if (showReview) IconButton(onClick = actions.onOpenReview, enabled = !busy,
