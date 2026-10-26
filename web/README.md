@@ -98,6 +98,10 @@ cancellation and failures stop the stream.
 
 Use **Preferences > Appearance** for Plum, Grove or Tide. The choice is local
 to this browser and follows system light or dark mode.
+Choose **Background style > Plain** or **Artwork** separately. Artwork is the
+default, with a faint collage along the page edge; list rows and inputs stay on
+opaque paper. Plain keeps quiet page surfaces. Both choices survive reopening
+the browser and changing palettes; logos and welcome illustrations remain.
 
 English is the default. Copy `locales/en.json` to another `locales/xx.json` and
 translate every value, keeping `{placeholders}` unchanged. Catalog tests discover

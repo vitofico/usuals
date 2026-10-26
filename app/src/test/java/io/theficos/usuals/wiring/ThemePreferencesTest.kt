@@ -10,6 +10,7 @@ import io.theficos.usuals.R
 import io.theficos.usuals.di.PreferenceSettingsStore
 import io.theficos.usuals.di.ThemePreferences
 import io.theficos.usuals.ui.theme.AppPalette
+import io.theficos.usuals.ui.theme.BackgroundStyle
 import io.theficos.usuals.ui.theme.paletteScheme
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.test.runTest
@@ -40,6 +41,26 @@ class ThemePreferencesTest {
     }
 
     @Test fun `light widget surfaces match their application palettes`() = widgetSurfaces(false)
+
+    @Test fun `background defaults to artwork and preserves a deliberate plain choice independently`() {
+        context.getSharedPreferences("appearance", Context.MODE_PRIVATE).edit().clear().commit()
+        val themes = ThemePreferences(context)
+        assertThat(themes.backgroundStyle.value).isEqualTo(BackgroundStyle.ARTWORK)
+        themes.selectBackground(BackgroundStyle.PLAIN)
+        themes.select(AppPalette.TIDE)
+        assertThat(themes.backgroundStyle.value).isEqualTo(BackgroundStyle.PLAIN)
+        val reopened = ThemePreferences(context)
+        assertThat(reopened.backgroundStyle.value).isEqualTo(BackgroundStyle.PLAIN)
+        assertThat(reopened.palette.value).isEqualTo(AppPalette.TIDE)
+        reopened.selectBackground(BackgroundStyle.ARTWORK)
+        assertThat(ThemePreferences(context).backgroundStyle.value).isEqualTo(BackgroundStyle.ARTWORK)
+        assertThat(ThemePreferences(context).palette.value).isEqualTo(AppPalette.TIDE)
+    }
+
+    @Test fun `unknown background preferences fall back to artwork`() {
+        context.getSharedPreferences("appearance", Context.MODE_PRIVATE).edit().putString("background_style", "future").commit()
+        assertThat(ThemePreferences(context).backgroundStyle.value).isEqualTo(BackgroundStyle.ARTWORK)
+    }
 
     @Test @Config(qualifiers = "night")
     fun `dark widget surfaces match their application palettes`() = widgetSurfaces(true)

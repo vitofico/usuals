@@ -7,6 +7,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -55,8 +56,11 @@ private val UsualsShapes = Shapes(
 fun UsualsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     palette: AppPalette = AppPalette.PLUM,
+    backgroundStyle: BackgroundStyle = BackgroundStyle.ARTWORK,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(colorScheme = paletteScheme(palette, darkTheme),
-        typography = UsualsTypography, shapes = UsualsShapes, content = content)
+    CompositionLocalProvider(LocalBackgroundStyle provides backgroundStyle) {
+        MaterialTheme(colorScheme = paletteScheme(palette, darkTheme),
+            typography = UsualsTypography, shapes = UsualsShapes, content = content)
+    }
 }

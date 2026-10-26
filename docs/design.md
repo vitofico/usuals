@@ -38,6 +38,23 @@ picker and controls remain its foreground. Text has opaque container backing and
 icon controls have paper surfaces, so artwork never determines their contrast.
 The canonical shapes stay unchanged. Populated grocery rows remain clear.
 
+Artwork backgrounds also use a large, faint edge crop on populated Android and mobile browser lists and a quieter settings crop.
+Grocery rows and inputs keep opaque surfaces. The four vector layers take a
+soft pigment treatment without remote images or continuous animation.
+The paper grain is a static alpha texture over those same silhouettes: a small
+deterministic procedural tile on Android, and `web/assets/paper-grain.svg` in the
+browser. It only fades pigment, so it cannot exceed the tested ambient contrast
+bounds. The tile is cached; there are no frame loops or remote artwork requests.
+Exposed counts, sync captions and helper text also keep small opaque ground
+backings so artwork cannot reduce their contrast; headings and category glyphs
+are checked against the strongest ambient layer in all six appearance schemes.
+
+**Background style** is independent of the palette and system light/dark mode.
+Artwork is the default when no choice is saved. Plain removes ambient page and
+sidebar backgrounds, while preserving the logo and welcome/empty illustrations.
+The choice applies immediately and stays on the device/browser through restarts
+and palette changes. Appearance offers labelled Plain and Artwork previews.
+
 `web/assets/theme.css` owns the browser palette definitions. The shopping client
 and Usuals Cloud load those same definitions and `collage.css`. Cloud reads the
 shopping client's saved palette and follows system appearance; there is no
