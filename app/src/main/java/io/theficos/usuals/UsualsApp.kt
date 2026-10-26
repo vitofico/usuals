@@ -34,6 +34,7 @@ import io.theficos.usuals.ui.scan.rememberBarcodeCamera
 import io.theficos.usuals.ui.settings.SettingsScreen
 import io.theficos.usuals.ui.settings.SettingsViewModel
 import io.theficos.usuals.ui.theme.AppPalette
+import io.theficos.usuals.ui.theme.BackgroundStyle
 
 /**
  * Three screens, and the list is the one the app is for. Route names are plain
@@ -98,6 +99,8 @@ fun UsualsApp(
     rowFacts: io.theficos.usuals.ui.product.RowFactsStore? = null,
     showTutorial: Boolean = false,
     onTutorialFinished: () -> Unit = {},
+    backgroundStyle: BackgroundStyle = BackgroundStyle.ARTWORK,
+    onBackgroundStyleChange: (BackgroundStyle) -> Unit = {},
 ) {
     var tutorialRequested by rememberSaveable { mutableStateOf(false) }
     // A completed tour can remain in the restored registry. Give each requested tour fresh state.
@@ -154,7 +157,8 @@ fun UsualsApp(
                 onOpenTutorial = { tutorialSession++; tutorialRequested = true },
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
-                palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts)
+                palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts,
+                backgroundStyle = backgroundStyle, onBackgroundStyleChange = onBackgroundStyleChange)
         }
 
         composable(Routes.ADVANCED) {

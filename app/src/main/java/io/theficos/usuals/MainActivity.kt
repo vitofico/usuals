@@ -76,13 +76,16 @@ class MainActivity : ComponentActivity() {
         if (sharedText != null || (savedInstanceState == null && intent.getBooleanExtra(EXTRA_OPEN_LIST, false))) openListRequest++
         setContent {
             val palette by ServiceLocator.themePreferences.palette.collectAsStateWithLifecycle()
+            val backgroundStyle by ServiceLocator.themePreferences.backgroundStyle.collectAsStateWithLifecycle()
             val tutorialCompleted by ServiceLocator.tutorialPreferences.completed.collectAsStateWithLifecycle()
-            UsualsTheme(palette = palette) {
+            UsualsTheme(palette = palette, backgroundStyle = backgroundStyle) {
                 val background = MaterialTheme.colorScheme.background
                 SideEffect { syncSystemBars(background) }
                 UsualsApp(
                     palette = palette,
                     onPaletteChange = ServiceLocator.themePreferences::select,
+                    backgroundStyle = backgroundStyle,
+                    onBackgroundStyleChange = ServiceLocator.themePreferences::selectBackground,
                     rowFacts = ServiceLocator.rowFactsStore,
                     showTutorial = !tutorialCompleted && allowsTutorial(intent) && sharedText == null && openListRequest == 0,
                     onTutorialFinished = ServiceLocator.tutorialPreferences::complete,

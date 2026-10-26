@@ -3,6 +3,7 @@ package io.theficos.usuals.ui.theme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 import io.theficos.usuals.smart.Category
@@ -49,6 +50,32 @@ class ThemeContrastTest {
     @Test fun `every grade glyph is readable on its fill`() {
         for (shade in GradeShade.entries) {
             assertWithMessage("grade %s", shade).that(ratio(shade.glyph, shade.fill).toDouble()).isAtLeast(4.5)
+        }
+    }
+
+    @Test fun `ambient collage preserves exposed text actions and category glyphs in every scheme`() {
+        for (palette in AppPalette.entries) for (dark in listOf(false, true)) {
+            val scheme = paletteScheme(palette, dark)
+            val layers = listOf(
+                lerp(scheme.secondaryContainer, scheme.onSecondaryContainer, if (dark) 0.45f else 0.16f),
+                lerp(scheme.tertiaryContainer, scheme.onTertiaryContainer, 0.35f),
+                scheme.surface, scheme.primary,
+            )
+            // Muted metadata uses an opaque ambientLabelBacking, checked against background above.
+            for ((index, layer) in layers.withIndex()) {
+                val pigment = lerp(scheme.surface, layer, AmbientPigmentStrength)
+                val ground = pigment.copy(alpha = AmbientCollageOpacity).compositeOver(scheme.background)
+                for (text in listOf(scheme.onBackground, scheme.primary)) {
+                    assertWithMessage("%s/%s ambient layer %s text", palette, dark, index)
+                        .that(ratio(text, ground).toDouble()).isAtLeast(4.5)
+                }
+                for (category in Category.entries) {
+                    val accent = categoryAccent(category, dark)
+                    val chip = accent.copy(alpha = 0.08f).compositeOver(ground)
+                    assertWithMessage("%s/%s ambient layer %s category %s", palette, dark, index, category)
+                        .that(ratio(accent, chip).toDouble()).isAtLeast(3.0)
+                }
+            }
         }
     }
 }

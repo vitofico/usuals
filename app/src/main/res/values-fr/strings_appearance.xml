@@ -8,4 +8,10 @@
     <string name="appearance_grove_description">Verts botaniques et doux tons avoine.</string>
     <string name="appearance_tide">Marée</string>
     <string name="appearance_tide_description">Bleu encre, verre de mer et papier frais.</string>
+    <string name="appearance_background">Style du fond</string>
+    <string name="appearance_background_hint">Choisissez le fond indépendamment de la palette.</string>
+    <string name="appearance_plain">Uni</string>
+    <string name="appearance_plain_description">Des surfaces sobres sans illustration de fond.</string>
+    <string name="appearance_artwork">Illustrations</string>
+    <string name="appearance_artwork_description">Des couches de papier sur les bords de vos listes.</string>
 </resources>

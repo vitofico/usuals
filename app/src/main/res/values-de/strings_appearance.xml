@@ -8,4 +8,10 @@
     <string name="appearance_grove_description">Botanisches Grün und sanfte Hafertöne.</string>
     <string name="appearance_tide">Gezeiten</string>
     <string name="appearance_tide_description">Tintenblau, Meerglas und kühles Papier.</string>
+    <string name="appearance_background">Hintergrundstil</string>
+    <string name="appearance_background_hint">Wähle den Hintergrund unabhängig von der Farbpalette.</string>
+    <string name="appearance_plain">Schlicht</string>
+    <string name="appearance_plain_description">Ruhige Flächen ohne Hintergrundgrafik.</string>
+    <string name="appearance_artwork">Grafik</string>
+    <string name="appearance_artwork_description">Papierschichten an den Rändern deiner Listen.</string>
 </resources>

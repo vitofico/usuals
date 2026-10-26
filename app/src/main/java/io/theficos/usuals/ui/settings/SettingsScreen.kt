@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,6 +70,8 @@ import io.theficos.usuals.R
 import io.theficos.usuals.llm.ModelCapabilities
 import io.theficos.usuals.auth.ProviderKind
 import io.theficos.usuals.ui.theme.AppPalette
+import io.theficos.usuals.ui.theme.BackgroundStyle
+import io.theficos.usuals.ui.theme.BrandBackdrop
 
 @Composable
 fun SettingsScreen(
@@ -82,6 +85,8 @@ fun SettingsScreen(
     onOpenAdvanced: () -> Unit = {},
     advanced: Boolean = false,
     rowFacts: io.theficos.usuals.ui.product.RowFactsStore? = null,
+    backgroundStyle: BackgroundStyle = BackgroundStyle.ARTWORK,
+    onBackgroundStyleChange: (BackgroundStyle) -> Unit = {},
 ) {
     val state by vm.state.collectAsState()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -107,10 +112,11 @@ fun SettingsScreen(
             )
         },
     ) { padding ->
+      Box(Modifier.fillMaxSize().padding(padding)) {
+        BrandBackdrop(Modifier.matchParentSize(), compact = true)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -137,6 +143,7 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(32.dp))
         }
+      }
     }
     panel?.let { selected ->
         AlertDialog(onDismissRequest = { panel = null },
@@ -144,7 +151,7 @@ fun SettingsScreen(
                 "allergens" -> R.string.row_facts_allergens; else -> R.string.settings_help })) },
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (selected) {
-                    "appearance" -> AppearanceSection(palette, onPaletteChange)
+                    "appearance" -> AppearanceSection(palette, onPaletteChange, backgroundStyle, onBackgroundStyleChange)
                     "allergens" -> rowFacts?.let { AllergensSection(it) }
                     "privacy" -> PrivacySection(state, vm::setScanLookup, vm::setBasketOverview, rowFacts)
                     else -> {

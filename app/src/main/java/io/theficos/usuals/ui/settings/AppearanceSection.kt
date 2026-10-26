@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,16 +23,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
 import io.theficos.usuals.ui.components.SectionCard
 import io.theficos.usuals.ui.theme.AppPalette
+import io.theficos.usuals.ui.theme.BackgroundStyle
+import io.theficos.usuals.ui.theme.BrandCollage
 import io.theficos.usuals.ui.theme.paletteScheme
 
 @Composable
-internal fun AppearanceSection(selected: AppPalette, onSelect: (AppPalette) -> Unit) {
+internal fun AppearanceSection(
+    selected: AppPalette,
+    onSelect: (AppPalette) -> Unit,
+    backgroundStyle: BackgroundStyle = BackgroundStyle.ARTWORK,
+    onBackgroundStyleChange: (BackgroundStyle) -> Unit = {},
+) {
     val dark = isSystemInDarkTheme()
     SectionCard {
         Text(stringResource(R.string.appearance_title), style = MaterialTheme.typography.titleMedium)
@@ -70,6 +79,44 @@ internal fun AppearanceSection(selected: AppPalette, onSelect: (AppPalette) -> U
                     }
                 }
             }
+        }
+        Text(stringResource(R.string.appearance_background), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.appearance_background_hint), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BackgroundStyle.entries.forEach { style ->
+                val active = style == backgroundStyle
+                val name = if (style == BackgroundStyle.ARTWORK) R.string.appearance_artwork else R.string.appearance_plain
+                val description = if (style == BackgroundStyle.ARTWORK) R.string.appearance_artwork_description else R.string.appearance_plain_description
+                Row(Modifier.fillMaxWidth().heightIn(min = 80.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp))
+                    .border(1.dp, if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(14.dp))
+                    .selectable(active, role = Role.RadioButton, onClick = { onBackgroundStyleChange(style) })
+                    .padding(10.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RadioButton(active, onClick = null)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(name), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(description), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    BackgroundPreview(style)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackgroundPreview(style: BackgroundStyle) {
+    Box(Modifier.size(width = 60.dp, height = 52.dp).clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.background)
+        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))) {
+        if (style == BackgroundStyle.ARTWORK) BrandCollage(Modifier.matchParentSize(), softened = true)
+        Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            repeat(3) { Box(Modifier.fillMaxWidth(0.8f).height(6.dp)
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(2.dp))) }
         }
     }
 }
