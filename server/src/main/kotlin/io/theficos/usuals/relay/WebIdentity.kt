@@ -8,7 +8,7 @@ import java.util.UUID
 @Serializable data class WebAuthConfig(val enabled: Boolean, val loginPath: String? = null, val oidcEnabled: Boolean = false, val localEnabled: Boolean = false,
     val registrationPath: String? = null, val emailInvitations: Boolean = false, val invitationOnly: Boolean = false)
 @Serializable data class WebUser(val id: String, val displayName: String, val email: String?, val admin: Boolean, val disabled: Boolean, val createdAt: Long, val lastLoginAt: Long, val issuer: String, val subject: String, val username: String? = null)
-@Serializable data class WebMe(val user: WebUser, val csrfToken: String, val expiresAt: Long) { override fun toString() = "WebMe([redacted])" }
+@Serializable data class WebMe(val user: WebUser, val csrfToken: String, val expiresAt: Long, val limits: AccountLimitView? = null) { override fun toString() = "WebMe([redacted])" }
 @Serializable data class WebSessionView(val id: String, val createdAt: Long, val expiresAt: Long, val current: Boolean)
 @Serializable data class WebSessions(val sessions: List<WebSessionView>)
 @Serializable data class WebUsers(val users: List<WebUser>, val next: String? = null)
@@ -129,7 +129,11 @@ class WebIdentity internal constructor(
         return row.copy(expires = clock() + SESSION, renewed = true)
     }
     internal fun reader(token: String): WebCaller = db.transaction { c -> caller(c, token) }
-    internal fun me(token: String): WebMe = reader(token).me()
+    internal fun me(token: String): WebMe = me(reader(token))
+    internal fun me(caller: WebCaller): WebMe = db.transaction { c ->
+        current(c, caller)
+        caller.me().copy(limits = config.accountLimits.view(c, caller.user.id))
+    }
     internal fun csrf(token: String, origin: String?, csrf: String?): WebCaller = db.transaction { c ->
         val caller = caller(c, token)
         expect(origin == config.origin && csrf != null && MessageDigest.isEqual(digest(csrf), digest(caller.csrf)), "forbidden", 403)
@@ -178,9 +182,18 @@ class WebIdentity internal constructor(
         c.execute("DELETE FROM connection_ticket WHERE user_id=?", id(target))
     }
     internal fun current(c: Connection, caller: WebCaller): WebCaller {
+        accountRead(c)
         val active = c.query("SELECT s.revoked,s.expires,u.disabled,u.issuer FROM web_session s JOIN web_user u ON u.id=s.user_id WHERE s.id=? AND s.user_id=?", id(caller.session), id(caller.user.id)) { !it.getBoolean(1) && it.getLong(2) > clock() && !it.getBoolean(3) && config.accepts(it.getString(4)) }.singleOrNull()
         expect(active == true, "unauthenticated", 401)
         return caller
+    }
+    internal fun requireFresh(c: Connection, caller: WebCaller, password: String) {
+        auth.limit("account-closure:${caller.user.id}", 5)
+        if (caller.user.issuer == WebIdentityConfig.LOCAL_ISSUER) {
+            expect(password.length in 1..1024, "reauthentication_required", 401)
+            val credential = c.query("SELECT salt,password_hash FROM local_credential WHERE user_id=?", id(caller.user.id)) { it.getBytes(1) to it.getBytes(2) }.singleOrNull()
+            expect(LocalPasswords.matches(password, credential?.first, credential?.second), "reauthentication_required", 401)
+        } else expect(caller.authenticatedAt != null && caller.authenticatedAt >= clock() - 300000 && caller.authenticatedAt <= clock() + 30000, "reauthentication_required", 401)
     }
     private fun user(row: java.sql.ResultSet) = user(row, 0)
     private fun user(row: java.sql.ResultSet, offset: Int) = WebUser(row.getObject(offset + 1).toString(), row.getString(offset + 2), row.getString(offset + 3), config.administrator(row.getString(offset + 8), row.getString(offset + 4), row.getBoolean(offset + 9)), row.getBoolean(offset + 5), row.getLong(offset + 6), row.getLong(offset + 7), row.getString(offset + 8), row.getString(offset + 4), row.getString(offset + 10))

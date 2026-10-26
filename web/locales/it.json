@@ -342,5 +342,6 @@
   "invitation_resend_later": "Attendi un minuto prima di inviare di nuovo questo invito.",
   "emailSignIn": "Accedi",
   "emailSignInText": "Crea una lista o accedi per fare la spesa insieme.",
-  "account_switch_unavailable": "Per usare un'altra email, esci dal provider di accesso o apri l'invito in un altro profilo del browser."
+  "account_switch_unavailable": "Per usare un'altra email, esci dal provider di accesso o apri l'invito in un altro profilo del browser.",
+  "ai_monthly_budget": "Limite mensile AI raggiunto. Si azzera all’inizio del prossimo mese UTC."
 }

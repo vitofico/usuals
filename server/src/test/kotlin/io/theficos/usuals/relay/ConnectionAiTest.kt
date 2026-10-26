@@ -217,6 +217,23 @@ class ConnectionAiTest {
         gateway(1).execute(user, "text", request)
         assertThat(gateway.settings(user).used).isEqualTo(1)
     }
+    @Test fun monthlyProviderRequestsIncludeProbesPersistAcrossInstancesAndUseExpiredFallback() = runBlocking {
+        val limits = AccountLimits(clock = { now })
+        val policy = AccountPolicy(db, limits, ByteArray(32)) { now }
+        policy.put(user, AccountPolicyUpdate(AccountLimit(25, 6, 20), AccountLimit(1, 2, 2), now + 300000))
+        val calls = mutableListOf<String?>()
+        val gateway = gateway(limit = 100, keys = calls)
+        val request = AiRequest(text = "milk", revision = gateway.settings(user).revision)
+        gateway.execute(user, "probe", AiRequest(revision = request.revision))
+        repeat(19) { gateway.execute(user, "text", request) }
+        assertThat(assertThrows(RelayError::class.java) { runBlocking { gateway(limit = 100, keys = calls).execute(user, "text", request) } }.code).isEqualTo("ai_monthly_budget")
+        assertThat(calls).hasSize(20)
+        now += 300000
+        assertThat(db.transaction { limits.effective(it, user)?.monthlyAiRequests }).isEqualTo(2)
+        now = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneOffset.UTC).plusMonths(1).withDayOfMonth(1).toInstant().toEpochMilli()
+        repeat(2) { gateway.execute(user, "text", request) }
+        assertThat(assertThrows(RelayError::class.java) { runBlocking { gateway.execute(user, "text", request) } }.code).isEqualTo("ai_monthly_budget")
+    }
     @Test fun providerSelectionCannotInjectEndpointOrUnsupportedModels() {
         assertThrows(RelayError::class.java) { gateway().select(user, AiSelection("http://169.254.169.254")) }
         assertThrows(RelayError::class.java) { gateway().select(user, AiSelection("private", model = "cloud-model")) }

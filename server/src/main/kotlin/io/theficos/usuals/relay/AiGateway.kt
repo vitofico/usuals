@@ -57,6 +57,7 @@ class AiConfiguration(val profiles: List<AiProvider> = emptyList(), val default:
 /** Fixed operator destinations prevent user credentials turning the gateway into an open proxy. */
 class AiGateway(private val db: Database, val configuration: AiConfiguration,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val accountLimits: AccountLimits = AccountLimits(clock = clock),
     private val build: (ProviderConfig) -> LlmClient = { OpenAiCompatibleClient(it, failOnError = true) }) {
     private data class Choice(val profile: AiProvider, val model: String?, val key: String?, val revision: String) {
         override fun toString() = "Choice([redacted])"
@@ -98,12 +99,18 @@ class AiGateway(private val db: Database, val configuration: AiConfiguration,
         return settings(user)
     }
     private fun lockAccount(c: java.sql.Connection, user: String) {
+        accountRead(c)
         expect(c.query("SELECT disabled FROM web_user WHERE id=? FOR UPDATE", id(user)) { !it.getBoolean(1) }.singleOrNull() == true, "forbidden", 403)
     }
     private fun consume(c: java.sql.Connection, user: String) {
         val day = clock() / 86400000
         val used = c.query("INSERT INTO ai_usage VALUES (?,?,1) ON CONFLICT(user_id) DO UPDATE SET day=EXCLUDED.day,attempts=CASE WHEN ai_usage.day=EXCLUDED.day THEN ai_usage.attempts+1 ELSE 1 END RETURNING attempts", id(user), day) { it.getInt(1) }.single()
         expect(used <= configuration.dailyLimit, "ai_budget", 429)
+        accountLimits.effective(c, user)?.monthlyAiRequests?.let { limit ->
+            val month = java.time.Instant.ofEpochMilli(clock()).atZone(java.time.ZoneOffset.UTC).toLocalDate().withDayOfMonth(1).toString()
+            val monthly = c.query("INSERT INTO ai_usage_monthly VALUES (?,?,1) ON CONFLICT(user_id) DO UPDATE SET month=EXCLUDED.month,requests=CASE WHEN ai_usage_monthly.month=EXCLUDED.month THEN ai_usage_monthly.requests+1 ELSE 1 END RETURNING requests", id(user), month) { it.getInt(1) }.single()
+            expect(monthly <= limit, "ai_monthly_budget", 429)
+        }
     }
     suspend fun execute(user: String, action: String, request: AiRequest, authorize: (java.sql.Connection) -> Unit = {}): AiReply {
         val (choice, image, stamp) = db.transaction { c ->
@@ -131,6 +138,7 @@ class AiGateway(private val db: Database, val configuration: AiConfiguration,
         if (action.startsWith("probe")) {
             val caps = if (action == "probe-image") client.probeImages() else client.probe()
             if (action == "probe-image" && caps.supportsImages) db.transaction { c ->
+                lockAccount(c, user); authorize(c)
                 c.execute("INSERT INTO ai_vision_check VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET profile_hash=EXCLUDED.profile_hash,expires=EXCLUDED.expires", id(user), stamp, clock() + 600000)
             }
             return AiReply(reachable = caps.reachable, structured = caps.supportsStructuredOutput, images = caps.supportsImages, model = caps.model, problem = caps.problem?.kind?.name)
