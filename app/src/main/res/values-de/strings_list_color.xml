@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="list_color_title">Listenfarbe</string>
+    <string name="list_color_automatic">Automatisch</string>
+    <string name="list_color_plum">Pflaume</string>
+    <string name="list_color_sage">Salbei</string>
+    <string name="list_color_teal">Petrol</string>
+    <string name="list_color_slate">Schiefer</string>
+    <string name="list_color_ochre">Ocker</string>
+    <string name="list_color_rose">Rosé</string>
+</resources>

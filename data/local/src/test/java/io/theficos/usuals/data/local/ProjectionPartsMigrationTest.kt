@@ -48,7 +48,7 @@ class ProjectionPartsMigrationTest {
         schemaSeven(name, rows)
 
         val db = UsualsDatabase.build(context, name)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(9)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(10)
         assertThat(db.syncDao().projection("busy", optimistic = false).size).isGreaterThan(1)
         db.openHelper.writableDatabase.query("SELECT MAX(length(CAST(text AS BLOB))) FROM sync_projection").use {
             it.moveToFirst(); assertThat(it.getLong(0)).isLessThan(1_000_000)

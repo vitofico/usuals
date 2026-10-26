@@ -147,6 +147,7 @@ class Reducer(private val normalizer: Int = 1) {
                 "alias" -> alias()
                 "preference" -> preference()
                 "list_name" -> renameList()
+                "list_color" -> colorList()
                 "import" -> import()
                 else -> Outcome.REJECTED
             }
@@ -371,6 +372,7 @@ class Reducer(private val normalizer: Int = 1) {
         }
         private fun preference(): Outcome {
             val key = p.text("key")
+            require(key != ListAppearance.KEY)
             val current = state.preferences[key] ?: JsonObject(emptyMap())
             if (current["revision"].stringOrNull() != p["expected"].stringOrNull()) return conflict(p.obj("changes"), current)
             val changes = p.obj("changes")
@@ -378,6 +380,17 @@ class Reducer(private val normalizer: Int = 1) {
             changes["repeatEveryDays"]?.takeIf { it != JsonNull }?.let { require(it.jsonPrimitive.int > 0) }
             state = state.copy(preferences = state.preferences + (key to JsonObject(current + changes + ("revision" to JsonPrimitive(id)))))
             if ("repeatEveryDays" in changes) state = state.copy(rules = if (changes["repeatEveryDays"] == JsonNull) state.rules - key else state.rules + (key to jsonObject("revision" to JsonPrimitive(id), "everyDays" to changes.getValue("repeatEveryDays"))))
+            return Outcome.APPLIED
+        }
+        private fun colorList(): Outcome {
+            require(p.keys == setOf("color", "expected"))
+            val expected = p.getValue("expected")
+            require(expected == JsonNull || (expected is JsonPrimitive && expected.isString))
+            val value = p.getValue("color")
+            require(value == JsonNull || (value is JsonPrimitive && value.isString && io.theficos.usuals.model.ListColor.fromId(value.content) != null))
+            if (p["expected"].stringOrNull() != ListAppearance.revision(state))
+                return conflict(p, state.preferences[ListAppearance.KEY] ?: JsonObject(emptyMap()), "list_color_stale")
+            state = ListAppearance.withColor(state, io.theficos.usuals.model.ListColor.fromId(value.stringOrNull()), id)
             return Outcome.APPLIED
         }
         private fun renameList(): Outcome {

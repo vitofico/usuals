@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="list_color_title">Color de la lista</string>
+    <string name="list_color_automatic">Automático</string>
+    <string name="list_color_plum">Ciruela</string>
+    <string name="list_color_sage">Salvia</string>
+    <string name="list_color_teal">Verde azulado</string>
+    <string name="list_color_slate">Pizarra</string>
+    <string name="list_color_ochre">Ocre</string>
+    <string name="list_color_rose">Rosa</string>
+</resources>

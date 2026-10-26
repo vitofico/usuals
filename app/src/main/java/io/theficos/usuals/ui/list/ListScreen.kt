@@ -218,6 +218,7 @@ data class ListActions(
     /** Null hides the menu entry: the basket overview is off. */
     val onBasketOverview: (() -> Unit)? = null,
     val onRenameList: (String, String) -> Unit = { _, _ -> },
+    val onListColor: (NamedList, io.theficos.usuals.model.ListColor?) -> Unit = { _, _ -> },
     val onRemoveList: (String) -> Unit = {},
     val onArchiveList: (String, Boolean) -> Unit = { _, _ -> },
     val onFinishShop: (Set<ItemId>?) -> Unit = {},
@@ -389,6 +390,7 @@ fun ListScreen(
             onCreateList = vm::onCreateList,
             onShareList = onOpenSharing,
             onRenameList = vm::onRenameList,
+            onListColor = vm::onListColor,
             onRemoveList = vm::onRemoveList,
             onBasketOverview = if (state.basketAvailable) vm::onBasketOverview else null,
             onArchiveList = vm::onArchiveList,
@@ -623,11 +625,13 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
     var open by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf(false) }
     // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
+    var coloring by remember { mutableStateOf<NamedList?>(null) }
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
     var draft by rememberSaveable { mutableStateOf("") }
     var archiving by rememberSaveable { mutableStateOf<String?>(null) }
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     var clearing by rememberSaveable { mutableStateOf<String?>(null) }
+    coloring?.let { list -> ListColorDialog(list, { coloring = null }) { actions.onListColor(list, it) } }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     Box {
         IconButton(onClick = { managing = false; open = true }, enabled = !busy, colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)) {
@@ -652,6 +656,7 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
           } else {
             DropdownMenuItem(text = { Text(stringResource(R.string.quiet_list_options)) }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) }, onClick = { managing = false })
             HorizontalDivider()
+            DropdownMenuItem(text = { Text(stringResource(R.string.list_color_title)) }, onClick = { open = false; coloring = selected })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_rename)) }, onClick = { open = false; renaming = selected?.id; draft = selected?.name.orEmpty() })
             DropdownMenuItem(text = { Text(stringResource(R.string.list_clear)) }, enabled = header.itemCount > 0, onClick = { open = false; clearing = selected?.id ?: "" })
             if (!directory.unused) DropdownMenuItem(text = { Text(stringResource(R.string.list_archive)) }, onClick = { open = false; archiving = selected?.id })
@@ -715,7 +720,7 @@ private fun EmptyInstruction() {
 }
 
 @Composable
-private fun CategoryHeader(category: Category, count: Int) {
+private fun CategoryHeader(category: Category, count: Int, color: io.theficos.usuals.model.ListColor?) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val accent = categoryAccent(category, dark)
     Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 28.dp, top = 18.dp, bottom = 10.dp),
@@ -739,7 +744,8 @@ private fun CategoryHeader(category: Category, count: Int) {
         }
         Text(categoryLabel(category), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         Text(count.toString(), style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.ambientLabelBacking())
+            color = io.theficos.usuals.ui.theme.listAccent(color, MaterialTheme.colorScheme),
+            modifier = Modifier.background(io.theficos.usuals.ui.theme.listAccentFill(color, MaterialTheme.colorScheme), RoundedCornerShape(12.dp)).padding(horizontal = 9.dp, vertical = 3.dp))
     }
 }
 
@@ -762,7 +768,7 @@ private fun ItemList(
         }
         state.pending.groupBy { it.category }.toSortedMap(compareBy { state.personal.portable.categoryOrder(state.selectedStore).indexOf(it) }).forEach { (category, rows) ->
             item(key = "category:${category.name}") {
-                CategoryHeader(category, rows.size)
+                CategoryHeader(category, rows.size, state.directory.lists.firstOrNull { it.id == state.directory.selected }?.color)
             }
             itemsIndexed(rows, key = { _, row -> "item:${row.id.value}" }) { index, row ->
                 RemovableItemRow(row, actions, RoundedCornerShape(

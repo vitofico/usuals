@@ -215,3 +215,19 @@ pending intents applied on top through the same reducer.
 **Browser.** No local copy: it reads the feed with a reset on load, waits on it
 with `wait=25` while the tab is visible, sends intents and renders the list the
 server returns.
+
+
+### List colors
+
+`list_color` carries `color` (null for Automatic, or `plum`, `sage`, `teal`,
+`slate`, `ochre`, `rose`) and `expected` (the reviewed color revision, or null).
+Every list member may change it. A stale revision creates a conflict without
+replacing the current choice. Its revision is independent of the list name.
+
+The durable metadata is `preferences["usuals:list-appearance"]`, containing only
+`color` and `revision`. The namespace cannot be written through a shopping
+`preference` intent. It is excluded from shopping preferences when materialized.
+Keeping the existing projection envelope lets older clients read and preserve the
+JSON without understanding the accent. Servers need this reducer to accept new
+color commands. Android caches the color in schema 10 and includes it in list
+backup manifests; copying a list keeps its color with fresh revision lineage.

@@ -343,5 +343,14 @@
   "emailSignIn": "Sign in",
   "emailSignInText": "Create a list or sign in to keep shopping together.",
   "account_switch_unavailable": "To use another email, sign out at your sign-in provider or open the invitation in another browser profile.",
-  "ai_monthly_budget": "Monthly AI allowance reached. It resets at the start of the next UTC month."
+  "ai_monthly_budget": "Monthly AI allowance reached. It resets at the start of the next UTC month.",
+  "listColorTitle": "List color",
+  "listColor_automatic": "Automatic",
+  "listColor_plum": "Plum",
+  "listColor_sage": "Sage",
+  "listColor_teal": "Teal",
+  "listColor_slate": "Slate",
+  "listColor_ochre": "Ochre",
+  "listColor_rose": "Rose",
+  "conflict_list_color_stale": "The list color changed on another device. The current color was kept. Choose again to change it."
 }

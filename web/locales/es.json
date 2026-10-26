@@ -343,5 +343,14 @@
   "emailSignIn": "Iniciar sesión",
   "emailSignInText": "Crea una lista o inicia sesión para comprar juntos.",
   "account_switch_unavailable": "Para usar otro correo, cierra sesión en tu proveedor de acceso o abre la invitación en otro perfil del navegador.",
-  "ai_monthly_budget": "Has alcanzado el límite mensual de IA. Se restablece al inicio del próximo mes UTC."
+  "ai_monthly_budget": "Has alcanzado el límite mensual de IA. Se restablece al inicio del próximo mes UTC.",
+  "listColorTitle": "Color de la lista",
+  "listColor_automatic": "Automático",
+  "listColor_plum": "Ciruela",
+  "listColor_sage": "Salvia",
+  "listColor_teal": "Verde azulado",
+  "listColor_slate": "Pizarra",
+  "listColor_ochre": "Ocre",
+  "listColor_rose": "Rosa",
+  "conflict_list_color_stale": "El color de la lista ha cambiado en otro dispositivo. Se ha conservado el color actual. Vuelve a elegir para cambiarlo."
 }

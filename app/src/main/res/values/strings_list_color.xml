@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="list_color_title">List color</string>
+    <string name="list_color_automatic">Automatic</string>
+    <string name="list_color_plum">Plum</string>
+    <string name="list_color_sage">Sage</string>
+    <string name="list_color_teal">Teal</string>
+    <string name="list_color_slate">Slate</string>
+    <string name="list_color_ochre">Ochre</string>
+    <string name="list_color_rose">Rose</string>
+</resources>
