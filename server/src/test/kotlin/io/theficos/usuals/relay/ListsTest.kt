@@ -44,8 +44,8 @@ class ListsTest {
         val saved = client.apply(alice, list.id, color(uuid(), "rose"))
         assertThat(saved.status).isEqualTo(HttpStatusCode.OK)
         val after = Wire.json.decodeFromString<IntentBatchResult>(saved.bodyAsText()).list
-        val read = client.send(HttpMethod.Get, "/api/lists/${list.id}", bob)
-        assertThat(ListAppearance.color(Wire.json.decodeFromString<SharedList>(read.bodyAsText()).projection)).isEqualTo(io.theficos.usuals.model.ListColor.ROSE)
+        val read = client.changes(bob).lists.single { it.id == list.id }
+        assertThat(ListAppearance.color(read.projection)).isEqualTo(io.theficos.usuals.model.ListColor.ROSE)
         val stale = client.apply(bob, list.id, color(uuid(), "sage"))
         assertThat(Wire.json.decodeFromString<IntentBatchResult>(stale.bodyAsText()).results.single().outcome).isEqualTo("conflict")
         val reset = client.apply(bob, list.id, color(uuid(), null, ListAppearance.revision(after.projection)))

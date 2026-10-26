@@ -25,7 +25,7 @@ class ListColorViewModelTest {
         val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
             override fun observeShopping() = store.items().map { ShoppingSnapshot("first", it) }
         }
-        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, compute = main.dispatcher)
+        val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(), historyStore = history, directoryStore = directory, clock = { 1_700_000_000_000L }, compute = main.dispatcher)
         vm.onStoreFilter("Market")
         vm.onListColor(shown, ListColor.ROSE)
         assertThat(changed).isEqualTo(Triple("first", ListColor.ROSE, "reviewed"))

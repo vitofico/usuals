@@ -47,10 +47,11 @@ class ListColorDeviceTest {
         val large = args.getString("colorsLarge") == "true"
         val dark = args.getString("colorsDark") == "true"
         try {
+            val now = 1_700_000_000_000L
             val replica = LocalReplica(db)
             val lists = ListRepository(db)
-            val items = ItemRepository(db, replica = replica)
-            val history = HistoryRepository(db, items, replica = replica)
+            val items = ItemRepository(db, clock = { now }, replica = replica)
+            val history = HistoryRepository(db, items, clock = { now }, replica = replica)
             val market = lists.create("Market")
             items.add(ParsedItem("milk")); items.add(ParsedItem("bread"))
             val weekend = lists.create("Weekend")
@@ -59,7 +60,7 @@ class ListColorDeviceTest {
             val smart = RepositorySmartStore(items, history, CategoryClassifier(InputLanguages.available), HistoryRanker(), RepeatPlanner())
             lateinit var vm: ListViewModel
             compose.runOnUiThread {
-                vm = ListViewModel(RepositoryItemStore(items), parser, NoSpeechSource,
+                vm = ListViewModel(RepositoryItemStore(items), parser, NoSpeechSource, clock = { now },
                     historyStore = RepositoryHistoryStore(history, parser, smart), smartStore = smart,
                     directoryStore = RepositoryListDirectory(lists, replica))
                 models.put("list-colors", vm)
