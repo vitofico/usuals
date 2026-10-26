@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
         embeddedServer(Netty, configure = {
             connector { host = if (local) "127.0.0.1" else "0.0.0.0"; port = System.getenv("PORT")?.toInt() ?: 8080 }
             connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 4
-        }) { relayModule(relay, operations, ingress, webIdentity, browserModels, AiGateway(db, AiConfiguration.fromEnvironment())) }.start(wait = true)
+        }) { relayModule(relay, operations, ingress, webIdentity, browserModels, AiGateway(db, AiConfiguration.fromEnvironment(), accountLimits = identityConfig?.accountLimits ?: AccountLimits()), identityConfig?.let { AccountPolicy.fromEnvironment(db, it.accountLimits) }, webIdentity?.let { AccountLifecycle.fromEnvironment(relay, it) }) }.start(wait = true)
     }
 }
 private fun required(name: String) = requireNotNull(System.getenv(name)) { "missing_config:$name" }.also { require(it.isNotBlank()) }

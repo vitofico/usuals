@@ -342,5 +342,6 @@
   "invitation_resend_later": "Wait a minute before resending this invitation.",
   "emailSignIn": "Sign in",
   "emailSignInText": "Create a list or sign in to keep shopping together.",
-  "account_switch_unavailable": "To use another email, sign out at your sign-in provider or open the invitation in another browser profile."
+  "account_switch_unavailable": "To use another email, sign out at your sign-in provider or open the invitation in another browser profile.",
+  "ai_monthly_budget": "Monthly AI allowance reached. It resets at the start of the next UTC month."
 }

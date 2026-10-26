@@ -1,7 +1,7 @@
 package io.theficos.usuals.relay
 
 class WebIdentityConfig(val origin: String, val oidc: OidcConfig?, val localEnabled: Boolean,
-    val invitationOnly: Boolean = false, val directory: String = "all") {
+    val invitationOnly: Boolean = false, val directory: String = "all", val accountLimits: AccountLimits = AccountLimits()) {
     val secureCookies = java.net.URI(origin).scheme == "https"
     init {
         require(origin == canonicalOrigin(origin, !secureCookies))
@@ -21,7 +21,8 @@ class WebIdentityConfig(val origin: String, val oidc: OidcConfig?, val localEnab
             val oidc = OidcConfig.fromEnvironment(origin, environment)
             val invited = environment["USUALS_INVITATION_ONLY"] ?: "false"
             require(invited in setOf("true", "false"))
-            return if (oidc == null && local == "false") null else WebIdentityConfig(origin, oidc, local == "true", invited == "true", environment["USUALS_DIRECTORY"] ?: "all")
+            val limits = AccountLimits.fromEnvironment(environment)
+            return if (oidc == null && local == "false") null else WebIdentityConfig(origin, oidc, local == "true", invited == "true", environment["USUALS_DIRECTORY"] ?: "all", limits)
         }
     }
 }

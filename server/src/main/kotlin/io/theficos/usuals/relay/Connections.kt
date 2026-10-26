@@ -100,6 +100,7 @@ class Connections(private val db: Database, private val relay: Relay, private va
         return user
     }
     internal fun allowed(c: Connection, user: String) {
+        accountRead(c)
         // Serializes with the account's other requests and with disabling it, but not with rows that reference it.
         expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=? FOR NO KEY UPDATE", id(user)) { identity.config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "forbidden", 403)
     }
