@@ -78,4 +78,24 @@ class ThemeContrastTest {
             }
         }
     }
+
+    @Test fun `unfilled list title stays readable where header and ambient collages overlap`() {
+        for (palette in AppPalette.entries) for (dark in listOf(false, true)) {
+            val scheme = paletteScheme(palette, dark)
+            val pigments = listOf(
+                lerp(scheme.secondaryContainer, scheme.onSecondaryContainer, if (dark) 0.45f else 0.16f),
+                lerp(scheme.tertiaryContainer, scheme.onTertiaryContainer, 0.35f),
+                scheme.surface, scheme.primary,
+            ).map { lerp(scheme.surface, it, AmbientPigmentStrength) }
+            val grounds = listOf(scheme.background) + pigments.map {
+                it.copy(alpha = AmbientCollageOpacity).compositeOver(scheme.background)
+            }
+            for (ground in grounds) for (pigment in pigments) {
+                val header = pigment.copy(alpha = AmbientCollageOpacity).compositeOver(ground)
+                assertWithMessage("%s/%s list title and chooser over both collages", palette, dark)
+                    .that(ratio(scheme.onSurface, header).toDouble()).isAtLeast(4.5)
+            }
+        }
+    }
+
 }
