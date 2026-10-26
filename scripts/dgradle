@@ -10,7 +10,7 @@
 # and rebuilt whenever the Dockerfile changes.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
 
 # The image is named after the Dockerfile that produced it. The tag used to be
 # a fixed usuals-build:latest, which meant the image was built once and then
@@ -31,6 +31,16 @@ else
   DOCKERFILE_SHA=$(sha256sum "$ROOT/Dockerfile" | cut -c1-12)
 fi
 IMAGE="usuals-build:$DOCKERFILE_SHA"
+
+# Different checkouts must not share writable Gradle caches: Gradle's lock-owner
+# communication cannot cross Docker PID/network namespaces. Serialize builds of
+# the same checkout with flock inside the container as well.
+if command -v shasum >/dev/null 2>&1; then
+  WORKSPACE_SHA=$(printf '%s' "$ROOT" | shasum -a 256 | cut -c1-12)
+else
+  WORKSPACE_SHA=$(printf '%s' "$ROOT" | sha256sum | cut -c1-12)
+fi
+GRADLE_CACHE="usuals-gradle-cache-$WORKSPACE_SHA"
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "[dgradle] building $IMAGE under linux/amd64 (Rosetta on Apple Silicon, ~5 min)…"
@@ -71,6 +81,7 @@ fi
 # only test allowed to touch the real Open Food Facts. Unset, those tests skip.
 # It is passed through rather than defaulted so that CI, which sets nothing,
 # cannot accidentally point a build matrix at a volunteer-funded service.
+echo "[dgradle] using $GRADLE_CACHE; builds in this checkout run one at a time." >&2
 exec docker run --rm "${RUN_FLAGS[@]}" \
   --platform linux/amd64 \
   --add-host=host.docker.internal:host-gateway \
@@ -80,7 +91,7 @@ exec docker run --rm "${RUN_FLAGS[@]}" \
   -e USUALS_TEST_DB_USER="${USUALS_TEST_DB_USER:-}" \
   -e USUALS_TEST_DB_PASSWORD \
   -v "$ROOT":/workspace \
-  -v usuals-gradle-cache:/root/.gradle \
+  -v "$GRADLE_CACHE":/root/.gradle \
   -v usuals-android-cache:/root/.android \
   "$IMAGE" \
-  ./gradlew "$@"
+  flock --timeout 1800 --conflict-exit-code 75 /root/.gradle/.usuals-build.lock ./gradlew "$@"

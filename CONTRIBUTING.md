@@ -4,7 +4,9 @@ Usuals is an offline shopping list with local purchase memory. Read
 `AGENTS.md` and the current docs before making a change. Keep capture fast,
 keep secrets local and preserve the no-telemetry and no-Play-Services rules.
 
-Use `scripts/dgradle test` and `scripts/dgradle :app:assembleDebug`. New behavior
+Run `scripts/check-ci` before submitting; it matches the hosted Android and
+server jobs, including release builds and lint. For iteration, use
+`scripts/dgradle test` and `scripts/dgradle :app:assembleDebug`. New behavior
 needs meaningful tests; fixes need regression tests. Verify UI changes on the
 emulator. Keep the docs and exported Room schema in step with implementation.
 From finalized schema 4 onward, changes need migrations and migration tests.

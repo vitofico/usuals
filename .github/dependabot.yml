@@ -44,6 +44,14 @@ updates:
     # The Dockerfile's base image is one half of build reproducibility, the
     # Android SDK pins inside it are the other. Dependabot can only see the base
     # image, so an SDK bump stays a deliberate edit.
+    # JDK/Node major upgrades need a coordinated Gradle and OS compatibility
+    # check. JDK 25 cannot run this wrapper; newer Node builds may need a newer
+    # libc than the Android build stage. Keep patch/minor and digest updates.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: ["version-update:semver-major"]
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: ":arrow_up: chore"
     open-pull-requests-limit: 3
