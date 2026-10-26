@@ -22,7 +22,7 @@ ENV ANDROID_SDK_ROOT=/opt/android-sdk \
 ENV PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl unzip git ca-certificates python3 python3-venv \
+        curl unzip git ca-certificates python3 python3-venv util-linux \
  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p ${ANDROID_SDK_ROOT}/cmdline-tools \
@@ -41,5 +41,7 @@ RUN yes | sdkmanager --licenses >/dev/null \
 
 # Browser protocol tests use the same Docker entry point; no npm dependencies.
 COPY --from=web-tests /usr/local/bin/node /usr/local/bin/node
+# Fail at image build time if a Node image update needs a newer libc.
+RUN node --version
 
 WORKDIR /workspace

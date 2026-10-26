@@ -2,6 +2,19 @@
 
 Docker is required. Use `scripts/dgradle` for every Gradle invocation:
 
+Before submitting, run `scripts/check-ci`. CI calls the same script. It includes
+the history secret scan, debug and release builds, unit tests, lint, native
+alignment, release tooling, and the disposable PostgreSQL and browser protocol
+tests. Use `scripts/check-ci android`, `server` or `secrets` for a focused check.
+The server helper always reruns integration tests against its fresh database;
+previously cached test results do not count as PostgreSQL verification.
+CodeQL and native emulator checks are separate. Only explicit transient HTTP
+download errors receive up to three attempts; test and compilation failures stop
+immediately. JDK and Node major upgrades require a coordinated toolchain change;
+Dependabot still proposes patch, minor and digest updates.
+
+For iteration, individual Gradle tasks remain available:
+
 ```sh
 scripts/dgradle test
 scripts/dgradle :core:parse:test
@@ -13,6 +26,9 @@ python3 scripts/check-native-alignment.py app/build/outputs/apk/debug/app-debug.
 
 The Dockerfile pins the JVM and Android toolchain. The wrapper keys its image
 on the Dockerfile contents and keeps Gradle and Android caches in named volumes.
+Each checkout has a separate Gradle volume; concurrent builds of the same checkout wait
+for a shared container lock instead of failing on Gradle's cache journal lock.
+The Android volume stays shared to preserve the debug signing identity.
 No host JDK is required. Full tests take about ten minutes; keep their logs in a
 local file and run them in the background during pivot verification.
 

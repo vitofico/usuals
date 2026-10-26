@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Retry only an explicit transient dependency-download failure, never a test failure.
+set -uo pipefail
+LOG="$(mktemp "${TMPDIR:-/tmp}/usuals-gradle-download.XXXXXX")"
+trap 'rm -f "$LOG"' EXIT
+for attempt in 1 2 3; do
+  "$@" 2>&1 | tee "$LOG"
+  status=${PIPESTATUS[0]}
+  if [[ "$status" -eq 0 ]]; then exit 0; fi
+  if [[ "$attempt" -eq 3 ]] ||
+      ! grep -Eq "Could not (GET|HEAD)|Could not download" "$LOG" ||
+      ! grep -Eq 'Received status code (429|500|502|503|504) from server' "$LOG" ||
+      grep -Eq 'There were failing tests|Compilation error|Lint found|[0-9]+ tests completed, [1-9][0-9]* failed' "$LOG"; then
+    exit "$status"
+  fi
+  echo "Transient dependency download failure; retrying ($attempt/3)." >&2
+  sleep "$((attempt * 5))"
+done

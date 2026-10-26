@@ -62,7 +62,7 @@ jobs:
       # cost for no extra coverage.
       # Extraction must observe compiler processes even when all APK inputs are unchanged.
       - name: Build for analysis
-        run: ./gradlew assembleDebug -x test --stacktrace --no-build-cache --rerun-tasks
+        run: ./gradlew assembleDebug -x test --stacktrace --no-daemon --no-build-cache --rerun-tasks
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@311b4ee155dcdab395044f00946f664bd51ff173 # v4

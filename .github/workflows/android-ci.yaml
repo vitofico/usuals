@@ -17,22 +17,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
-      - run: scripts/secret-scan
+      - run: scripts/check-ci secrets
   android:
     needs: secrets-scan
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - run: scripts/dgradle verifyReleaseTools :app:assembleDebug :app:assembleRelease test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
-      - run: python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release-unsigned.apk
+      - run: scripts/check-ci android
   server:
     needs: secrets-scan
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - run: server/scripts/test-local --no-daemon --no-parallel --max-workers=2
+      - run: scripts/check-ci server
 
   release:
     needs: [android, server]

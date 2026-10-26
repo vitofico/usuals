@@ -24,6 +24,10 @@ JVM. `ServiceLocator` must construct every production component.
 
 - Use `scripts/dgradle` for every build and test. Never invoke Gradle directly.
   Drive builds centrally if multiple agents share the tree.
+- Before submission, run `scripts/check-ci` for the complete local gate, or its
+  `android`, `server` and `secrets` modes for every affected surface. Android
+  checks include release builds and lint; server checks include PostgreSQL and
+  browser protocol tests. UI changes still need emulator verification.
 - JUnit 4, Truth, `runTest`, and Robolectric are the test conventions. Test new
   behavior and regressions with deterministic clocks, stable ordering and fakes.
 - Verify each pivot phase on the emulator, run the full Docker suite in the
