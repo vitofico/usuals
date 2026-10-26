@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="swipe_removed">
+        <item quantity="one">Rimosso %1$d articolo</item>
+        <item quantity="other">Rimossi %1$d articoli</item>
+    </plurals>
+</resources>

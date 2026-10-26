@@ -1,1 +1,1 @@
-Open History directly from the clock icon on your shopping list. Review suggested item names together after speaking or typing. Usuals remembers your choices and preserves quantities and item details. Optional automatic typo matching starts off and includes Undo.
+Accidentally swiped an item away? Tap Undo at the bottom to bring it back with all its details. Several quick swipes can be undone together. Give each list a coordinated color for its title and item counts.

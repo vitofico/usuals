@@ -28,6 +28,7 @@ data class ListUiState(
     /** Checked. Collapsed into one counted row unless [checkedExpanded]. */
     val checked: List<ListRow> = emptyList(),
     val checkedExpanded: Boolean = false,
+    val swipeRemoval: SwipeRemoval? = null,
     val finishedTrip: FinishedTrip? = null,
     val finishedInShoppingMode: Boolean = false,
     val prompt: ListPrompt? = null,
@@ -70,6 +71,8 @@ data class ListHeader(
     val name: String? = null,
     val itemCount: Int = 0,
 )
+
+data class SwipeRemoval(val token: Long, val scope: String, val rows: List<ListRow>)
 
 data class ItemTransferRequest(val row: ListRow, val source: NamedList)
 

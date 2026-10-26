@@ -190,3 +190,13 @@ Category icons keep their category colors. The web client uses the same hue
 identities on names, picker swatches and section counts. Labels and selection
 controls accompany swatches, so color is never the only way to choose a list.
 Colors belong to the shared list and follow it across clients and backups.
+
+## Undo after a swipe
+
+On Android, swiping an item away shows a bottom message with Undo and a dismiss
+button. Further quick swipes join the same batch and restart the Undo window.
+Undo reveals the original rows with their quantities, notes, checked state and
+positions intact. Deletion is committed only after the message times out or is
+dismissed, against the row versions that were swiped. Switching lists cancels
+pending removal. If pending UI state is lost before a deletion commits, the stored
+items remain.

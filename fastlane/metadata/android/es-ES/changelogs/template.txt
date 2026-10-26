@@ -1,1 +1,1 @@
-Abre el historial desde el icono del reloj de tu lista. Revisa juntas las sugerencias de nombres después de dictar o escribir. Usuals recuerda tus elecciones y conserva las cantidades y los detalles. La asociación automática opcional empieza desactivada e incluye Deshacer.
+¿Has quitado un artículo por error al deslizar? Toca Deshacer en la parte inferior para recuperarlo con todos sus detalles. Puedes deshacer varios deslizamientos seguidos. Dale a cada lista un color coordinado para su título y los contadores.
