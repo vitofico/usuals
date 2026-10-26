@@ -1,5 +1,6 @@
 package io.theficos.usuals.ui.list
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -37,7 +38,7 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
         .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
         .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onSurface,
+        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = io.theficos.usuals.ui.theme.listAccent(selected?.color, MaterialTheme.colorScheme),
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
         if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose),
             Modifier.size(24.dp).padding(start = 4.dp), tint = MaterialTheme.colorScheme.onSurface)
@@ -72,6 +73,7 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
             val (archived, current) = directory.lists.partition { it.archived }
             current.forEach { list ->
                 TextButton(onClick = { open = false; actions.onSelectList(list.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Box(Modifier.padding(end = 12.dp).size(12.dp).background(io.theficos.usuals.ui.theme.listAccent(list.color, MaterialTheme.colorScheme), androidx.compose.foundation.shape.CircleShape))
                     Column(Modifier.weight(1f)) {
                         Text(listTitle(list))
                         if (list.shared) Text(stringResource(R.string.lists_shared_label),

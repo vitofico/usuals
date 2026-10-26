@@ -35,6 +35,24 @@ class ListsTest {
     }
     @After fun after() = database.close()
 
+    @Test fun listColorsAreSharedGuardedAndResettable() = http {
+        val list = client.create(alice)
+        client.share(alice, list.id, bob)
+        fun color(id: String, value: String?, expected: String? = null) = Intent(id, list.id, "list_color", buildJsonObject {
+            put("color", value?.let(::JsonPrimitive) ?: JsonNull); put("expected", expected?.let(::JsonPrimitive) ?: JsonNull)
+        })
+        val saved = client.apply(alice, list.id, color(uuid(), "rose"))
+        assertThat(saved.status).isEqualTo(HttpStatusCode.OK)
+        val after = Wire.json.decodeFromString<IntentBatchResult>(saved.bodyAsText()).list
+        val read = client.changes(bob).lists.single { it.id == list.id }
+        assertThat(ListAppearance.color(read.projection)).isEqualTo(io.theficos.usuals.model.ListColor.ROSE)
+        val stale = client.apply(bob, list.id, color(uuid(), "sage"))
+        assertThat(Wire.json.decodeFromString<IntentBatchResult>(stale.bodyAsText()).results.single().outcome).isEqualTo("conflict")
+        val reset = client.apply(bob, list.id, color(uuid(), null, ListAppearance.revision(after.projection)))
+        assertThat(ListAppearance.color(Wire.json.decodeFromString<IntentBatchResult>(reset.bodyAsText()).list.projection)).isNull()
+        assertThat(client.apply(carol, list.id, color(uuid(), "teal")).status).isEqualTo(HttpStatusCode.NotFound)
+    }
+
     private fun http(relay: Relay = f.relay, operations: RelayMetrics = RelayMetrics(db), block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
         application { relayModule(relay, operations, webIdentity = f.web) }
         block()

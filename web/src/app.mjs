@@ -3,6 +3,7 @@ import { RunScope, request } from "./client.mjs";
 import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "./lists.mjs";
 import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
+import { listColors, listColor, colorChange } from "./list-colors.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { qrMatrix } from "./qr.mjs";
@@ -515,7 +516,7 @@ function renderLists() {
   } }, el("label", { for: captureInput.id, class: "visually-hidden" }, t("addPlaceholder")),
     captureInput, el("button", { type: "submit", "aria-label": t("add") }, t("quietAdd")));
   const section = (key, rows, extra = null) => [
-    el("div", { class: "list-section-label" }, el("span", {}, t(key)), el("span", { class: "header-actions" }, extra, el("span", {}, rows.length))),
+    el("div", { class: "list-section-label" }, el("span", {}, t(key)), el("span", { class: "header-actions" }, extra, el("span", { class: "list-accent-count", "data-list-color": listColor(list.projection) }, rows.length))),
     el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
   ];
   const people = access(list, account.user.id);
@@ -538,7 +539,7 @@ function renderLists() {
       el("div", { class: "list-title-row" },
         el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
           "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
-          el("span", { class: "list-title-name" }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
+          el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
         el("button", { type: "button", class: "text-button list-options", onclick: () => listMenu(id),
           "aria-haspopup": "dialog", "aria-label": t("quietListOptionsFor", { name: listName(list) }) },
           el("span", { class: "list-options-label" }, t("quietListOptions")), el("span", { class: "list-options-icon", "aria-hidden": "true" }, "···"))),
@@ -551,7 +552,7 @@ function listPickerDialog() {
   const { active, archived } = arrange(store.lists.values(), selected, listName, locale);
   openDialog(el("div", {}, el("h2", {}, t("quietChooseList")),
     el("div", { class: "list-choices" }, active.map((list) =>
-      button(listName(list), () => {
+      button([el("span", { class: "list-color-dot", "data-list-color": listColor(list.projection), "aria-hidden": "true" }), listName(list)], () => {
         selected = list.id;
         closeDialog(false); clearNotice();
         render().then(() => dialogFocus.restore($("list-switcher"))).catch(failure);
@@ -672,6 +673,7 @@ function listMenu(listId) {
     el("div", { class: "menu-actions" },
       button(t("share"), () => shareDialog(listId)),
       button(t("newList"), newListDialog),
+      button(t("listColorTitle"), () => listColorDialog(listId)),
       // A rename is guarded by the name this browser showed, so two people renaming at once see a conflict.
       button(t("renameList"), () => nameDialog("renameList", list.projection.name, (name) => change(listId, "list_name", rename(list.projection, name)))),
       button(t("importTitle"), () => { closeDialog(); openImport(listId); }),
@@ -681,6 +683,25 @@ function listMenu(listId) {
         ? button(t("deleteList"), () => messageDialog("deleteListTitle", "deleteListText", () => lists.delete(listId), values), "danger")
         : button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(listId, account.user.id), values), "danger")),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
+function listColorDialog(listId) {
+  const list = store.lists.get(listId);
+  if (!list) return;
+  const initial = listColor(list.projection);
+  let chosen = initial;
+  const preview = el("h3", { "data-list-color": chosen, class: "list-color-preview" }, listName(list));
+  const options = ["automatic", ...listColors].map((color) => {
+    const radio = el("input", { type: "radio", name: "list-color", value: color, checked: color === chosen,
+      onchange: () => { chosen = color; preview.dataset.listColor = color; } });
+    return el("label", { class: "list-color-option" }, radio,
+      el("span", { class: "list-color-dot", "data-list-color": color, "aria-hidden": "true" }), t(`listColor_${color}`));
+  });
+  openDialog(el("form", { onsubmit: (event) => {
+    event.preventDefault(); closeDialog();
+    if (chosen !== initial) act(() => change(listId, "list_color", colorChange(list.projection, chosen)));
+  } }, el("h2", {}, t("listColorTitle")), preview,
+    el("fieldset", { class: "list-color-options" }, el("legend", { class: "visually-hidden" }, t("listColorTitle")), options),
+    el("div", { class: "button-row" }, button(t("cancel"), closeDialog), el("button", { type: "submit", class: "primary" }, t("save")))));
 }
 function openImport(listId) {
   act(async () => {

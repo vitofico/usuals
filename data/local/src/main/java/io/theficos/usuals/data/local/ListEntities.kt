@@ -16,7 +16,7 @@ const val LOCAL_LIST_ID = "00000000-0000-4000-8000-000000000001"
 data class ListEntity(@PrimaryKey val id: String, val name: String, val archiveSource: String? = null,
     val synced: Boolean = false, val created: Boolean = false, val seq: Long = 0, val role: String? = null,
     val owner: String? = null, val members: String? = null, val stale: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val archived: Boolean = false, @ColumnInfo(defaultValue = "0") val archivedByOwner: Boolean = false)
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false, @ColumnInfo(defaultValue = "0") val archivedByOwner: Boolean = false, val color: String? = null, val colorRevision: String? = null)
 @Entity(tableName = "list_selection")
 data class ListSelectionEntity(@PrimaryKey val singleton: Int = 1, val listId: String)
 @Entity(tableName = "item_pref", primaryKeys = ["listId", "key"])

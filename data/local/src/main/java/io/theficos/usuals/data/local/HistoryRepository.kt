@@ -96,7 +96,7 @@ class HistoryRepository(
     suspend fun exportJson(): String = database.withTransaction {
         val lists = database.listDao().all().ifEmpty { listOf(ListEntity(LOCAL_LIST_ID, "")) }
         json.encodeToString(ShoppingArchive(formatVersion = 2,
-            selectedListId = listId(), lists = lists.map { ArchiveList(it.id, it.name, it.synced) },
+            selectedListId = listId(), lists = lists.map { ArchiveList(it.id, it.name, it.synced, it.color) },
             items = lists.flatMap { dao.allItems(it.id) }, trips = lists.flatMap { dao.trips(it.id) },
             purchases = lists.flatMap { dao.purchases(it.id) }, preferences = lists.flatMap { dao.preferences(it.id) },
             aliases = lists.flatMap { dao.aliases(it.id) }))
@@ -121,13 +121,13 @@ class HistoryRepository(
                     dao.trips(listId()).isEmpty() && dao.purchases(listId()).isEmpty() &&
                     dao.preferences(listId()).isEmpty() && dao.aliases(listId()).isEmpty()
                 val copies = decoded.lists.map { manifest ->
-                    require(manifest.id.isNotBlank() && manifest.name.length <= 100)
+                    require(manifest.id.isNotBlank() && manifest.name.length <= 100 && (manifest.color == null || ListColor.fromId(manifest.color) != null))
                     val existing = database.listDao().find(manifest.id)
                     // A server list's id belongs to its account, so its archive returns as a copy.
                     val copied = if (manifest.shared || existing?.synced == true) {
                         database.listDao().all().firstOrNull { it.archiveSource == manifest.id } ?:
-                            ListEntity(UUID.randomUUID().toString(), manifest.name, archiveSource = manifest.id)
-                    } else existing ?: ListEntity(manifest.id, manifest.name, archiveSource = manifest.id)
+                            ListEntity(UUID.randomUUID().toString(), manifest.name, archiveSource = manifest.id, color = manifest.color)
+                    } else existing ?: ListEntity(manifest.id, manifest.name, archiveSource = manifest.id, color = manifest.color)
                     val part = decoded.copy(formatVersion = 1, lists = emptyList(),
                         items = decoded.items.filter { it.listId == manifest.id }, trips = decoded.trips.filter { it.listId == manifest.id },
                         purchases = decoded.purchases.filter { it.listId == manifest.id }, preferences = decoded.preferences.filter { it.listId == manifest.id },
@@ -249,7 +249,7 @@ private data class ShoppingArchive(
 
 @Serializable
 /** [shared] is the archive's name for a list the server holds. */
-private data class ArchiveList(val id: String, val name: String, val shared: Boolean = false)
+private data class ArchiveList(val id: String, val name: String, val shared: Boolean = false, val color: String? = null)
 
 private fun ShoppingArchive.rebind(scope: String) = copy(formatVersion = 1, lists = emptyList(), selectedListId = null,
     items = items.map { it.copy(listId = scope) }, trips = trips.map { it.copy(listId = scope) },

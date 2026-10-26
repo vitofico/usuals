@@ -176,3 +176,17 @@ starts with connecting a phone, then named groups for optional AI and security
 settings. Forms retain explicit consent and review before external processing.
 Dialogs have accessible titles, scrolling content, visible actions and focus
 restoration. Text wraps even for unbroken names; controls have 48 px targets.
+
+
+## List identity colors
+
+Manage list offers List color with Automatic and six muted choices: plum, sage,
+teal, slate, ochre and rose. The dialog previews the name before Save; Cancel
+keeps the current choice. Automatic follows the selected app palette. Every
+explicit hue is gently blended with that palette and has a light and dark shade.
+
+The list name, picker swatch and category count pills use the list accent.
+Category icons keep their category colors. The web client uses the same hue
+identities on names, picker swatches and section counts. Labels and selection
+controls accompany swatches, so color is never the only way to choose a list.
+Colors belong to the shared list and follow it across clients and backups.

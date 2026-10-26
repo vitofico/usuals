@@ -215,6 +215,16 @@ class ListViewModel(
     fun onSelectList(id: String) = changeList { directoryStore.select(id) }
     fun onCreateList(name: String) = changeList { directoryStore.create(name) }
     fun onRenameList(id: String, name: String) = changeList { directoryStore.rename(id, name) }
+    fun onListColor(list: NamedList, color: io.theficos.usuals.model.ListColor?) {
+        if (screen.value.busy) return
+        screen.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            try { directoryStore.setColor(list.id, color, list.colorRevision) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(historyError = true) } }
+            finally { screen.update { it.copy(busy = false) } }
+        }
+    }
     /** Deletes a list, or leaves it when someone else owns it. */
     fun onRemoveList(id: String) = changeList { directoryStore.remove(id) }
     /** Archives a list, or restores one from the picker's Archived section. */

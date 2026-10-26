@@ -27,12 +27,12 @@ internal fun ConflictDetails(conflict: ListConflict) {
     }
     val labels = mapOf("name" to R.string.edit_name, "quantity" to R.string.edit_quantity,
         "note" to R.string.lists_note, "store" to R.string.lists_store, "checked" to R.string.lists_check,
-        "category" to R.string.edit_category, "repeatEveryDays" to R.string.edit_repeat_days)
+        "category" to R.string.edit_category, "repeatEveryDays" to R.string.edit_repeat_days, "color" to R.string.list_color_title)
     val changes = labels.keys.filter { key ->
         key in conflict.incoming &&
             (conflict.incoming[key] != conflict.current[key] || (key == "quantity" && conflict.incoming["unit"] != conflict.current["unit"])) &&
             (conflict.kind != "capture" || (conflict.incoming[key] != null && key != "checked"))
-    }.ifEmpty { listOf("name") }
+    }.ifEmpty { listOf(if (conflict.kind == "list_color") "color" else "name") }
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Text(stringResource(R.string.lists_review_body))
         for (key in changes) {
@@ -45,6 +45,7 @@ internal fun ConflictDetails(conflict: ListConflict) {
 
 @Composable
 private fun conflictValue(key: String, values: Map<String, String?>): String {
+    if (key == "color") return io.theficos.usuals.ui.theme.listColorLabel(io.theficos.usuals.model.ListColor.fromId(values[key]))
     val value = values[key] ?: return stringResource(R.string.lists_value_unspecified)
     return when (key) {
         "quantity" -> {

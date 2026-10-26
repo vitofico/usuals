@@ -343,5 +343,14 @@
   "emailSignIn": "Accedi",
   "emailSignInText": "Crea una lista o accedi per fare la spesa insieme.",
   "account_switch_unavailable": "Per usare un'altra email, esci dal provider di accesso o apri l'invito in un altro profilo del browser.",
-  "ai_monthly_budget": "Limite mensile AI raggiunto. Si azzera all’inizio del prossimo mese UTC."
+  "ai_monthly_budget": "Limite mensile AI raggiunto. Si azzera all’inizio del prossimo mese UTC.",
+  "listColorTitle": "Colore della lista",
+  "listColor_automatic": "Automatico",
+  "listColor_plum": "Prugna",
+  "listColor_sage": "Salvia",
+  "listColor_teal": "Verde petrolio",
+  "listColor_slate": "Ardesia",
+  "listColor_ochre": "Ocra",
+  "listColor_rose": "Rosa",
+  "conflict_list_color_stale": "Il colore della lista è cambiato su un altro dispositivo. Il colore attuale è stato mantenuto. Scegli di nuovo per cambiarlo."
 }

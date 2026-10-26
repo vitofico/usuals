@@ -1,0 +1,23 @@
+
+/* A list's identity accent is independent of category and warning colors. */
+[data-list-color] { --list-accent: var(--primary); }
+[data-list-color="plum"] { --list-accent: color-mix(in srgb, #583d53 90%, var(--primary)); }
+[data-list-color="sage"] { --list-accent: color-mix(in srgb, #36593f 90%, var(--primary)); }
+[data-list-color="teal"] { --list-accent: color-mix(in srgb, #285d70 90%, var(--primary)); }
+[data-list-color="slate"] { --list-accent: color-mix(in srgb, #4c5d7a 90%, var(--primary)); }
+[data-list-color="ochre"] { --list-accent: color-mix(in srgb, #765125 90%, var(--primary)); }
+[data-list-color="rose"] { --list-accent: color-mix(in srgb, #8c425d 90%, var(--primary)); }
+@media (prefers-color-scheme: dark) {
+  [data-list-color="plum"] { --list-accent: color-mix(in srgb, #e2bcd4 90%, var(--primary)); }
+  [data-list-color="sage"] { --list-accent: color-mix(in srgb, #bcd5aa 90%, var(--primary)); }
+  [data-list-color="teal"] { --list-accent: color-mix(in srgb, #a7d6e5 90%, var(--primary)); }
+  [data-list-color="slate"] { --list-accent: color-mix(in srgb, #bccae6 90%, var(--primary)); }
+  [data-list-color="ochre"] { --list-accent: color-mix(in srgb, #e5c48d 90%, var(--primary)); }
+  [data-list-color="rose"] { --list-accent: color-mix(in srgb, #eab6c7 90%, var(--primary)); }
+}
+.list-title-name[data-list-color], .list-color-preview { color: var(--list-accent); }
+.list-accent-count { color: var(--list-accent); background: color-mix(in srgb, var(--list-accent) 12%, var(--paper)); border-radius: 999px; padding: 3px 9px; }
+.list-color-dot { display: inline-block; flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%; background: var(--list-accent); margin-inline-end: 10px; }
+.list-color-options { border: 0; padding: 0; margin: 0; }
+.list-color-option { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+.list-color-option input { width: auto; }

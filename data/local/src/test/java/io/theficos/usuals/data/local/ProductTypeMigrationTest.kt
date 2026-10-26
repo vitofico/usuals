@@ -37,7 +37,7 @@ class ProductTypeMigrationTest {
             old.version = 8
         }
         var db = UsualsDatabase.build(context, name)
-        assertThat(db.openHelper.writableDatabase.version).isEqualTo(9)
+        assertThat(db.openHelper.writableDatabase.version).isEqualTo(10)
         val row = db.qualityDao().find("4006381333931")!!
         assertThat(row.nutriScoreNotApplicable).isNull()
         assertThat(row.productType).isNull()

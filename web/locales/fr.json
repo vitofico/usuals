@@ -343,5 +343,14 @@
   "emailSignIn": "Se connecter",
   "emailSignInText": "Créez une liste ou connectez-vous pour faire les courses ensemble.",
   "account_switch_unavailable": "Pour utiliser une autre adresse, déconnectez-vous auprès de votre fournisseur ou ouvrez l'invitation dans un autre profil de navigateur.",
-  "ai_monthly_budget": "Le quota mensuel d’IA est atteint. Il est réinitialisé au début du prochain mois UTC."
+  "ai_monthly_budget": "Le quota mensuel d’IA est atteint. Il est réinitialisé au début du prochain mois UTC.",
+  "listColorTitle": "Couleur de la liste",
+  "listColor_automatic": "Automatique",
+  "listColor_plum": "Prune",
+  "listColor_sage": "Sauge",
+  "listColor_teal": "Bleu canard",
+  "listColor_slate": "Ardoise",
+  "listColor_ochre": "Ocre",
+  "listColor_rose": "Rose",
+  "conflict_list_color_stale": "La couleur de la liste a changé sur un autre appareil. La couleur actuelle a été conservée. Choisissez à nouveau pour la modifier."
 }

@@ -78,6 +78,13 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         if (!synced) save(scope, optimistic = false, encoded) else if (saved == null) save(scope, optimistic = false, json.encodeToString(before))
         return results
     }
+    suspend fun setColor(scope: String, color: io.theficos.usuals.model.ListColor?, expected: String?): Reduction = database.withTransaction {
+        requireNotNull(database.listDao().find(scope))
+        submitTo(scope, "list_color", buildJsonObject {
+            put("color", color?.id?.let(::JsonPrimitive) ?: JsonNull)
+            put("expected", expected?.let(::JsonPrimitive) ?: JsonNull)
+        })
+    }
     suspend fun rename(scope: String, name: String): Reduction = database.withTransaction {
         require(name.isNotBlank() && name.length <= 100)
         submitTo(scope, "list_name", buildJsonObject {
@@ -166,7 +173,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
     suspend fun copyAsNew(source: String): String = database.withTransaction {
         val original = requireNotNull(database.listDao().find(source))
         val id = newId()
-        database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced, archived = original.archived))
+        database.listDao().insert(ListEntity(id, original.name, original.archiveSource, synced = original.synced, archived = original.archived, color = original.color))
         copyTo(source, id)
         database.historyDao().saveLocalPreferences(database.historyDao().preferences(source).map { LocalPreferenceEntity(id, it.key, it.muted, it.snoozedUntil) })
         val selected = database.listDao().selected() == source
@@ -291,7 +298,9 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
             rules = prefs.filter { it.repeatEveryDays != null }.associate { it.key to buildJsonObject { put("revision", "genesis"); put("everyDays", it.repeatEveryDays!!) } },
             tombstones = rows.filter { (id, row) -> row.archived && id !in byItem }.mapValues { "genesis" },
             closes = purchases.groupBy { it.tripId }.mapKeys { "legacy:${it.key}" }.mapValues { (_, values) -> Close(values.first().tripId, values.map { it.id }) },
-            name = database.listDao().find(scope)?.name.orEmpty())
+            name = database.listDao().find(scope)?.name.orEmpty()).let { seeded ->
+                io.theficos.usuals.model.ListColor.fromId(database.listDao().find(scope)?.color)?.let { ListAppearance.withColor(seeded, it) } ?: seeded
+            }
     }
     private suspend fun materialize(scope: String, before: Projection, after: Projection) {
         val history = database.historyDao()
@@ -305,11 +314,12 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         for ((id, trip) in after.trips) if (trip != before.trips[id]) history.insertTrip(TripEntity(id, trip.getValue("closedAt").jsonPrimitive.long, scope))
         val purchases = after.purchases.filter { (id, facts) -> facts != before.purchases[id] }
         history.insertPurchases(purchases.map { (id, facts) -> facts.purchase(id, scope) })
-        history.saveSharedPreferences(after.preferences.filter { (key, value) -> value != before.preferences[key] }.map { (key, value) ->
+        history.saveSharedPreferences(after.preferences.filter { (key, value) -> key != ListAppearance.KEY && value != before.preferences[key] }.map { (key, value) ->
             SharedPreferenceEntity(scope, key, value.string("category"), value["repeatEveryDays"]?.jsonPrimitive?.intOrNull)
         })
         history.saveAliases(after.aliases.filter { (key, value) -> value != before.aliases[key] }.map { ItemAliasEntity(it.key, it.value, scope) })
-        if (before.name != after.name) database.listDao().find(scope)?.let { database.listDao().update(it.copy(name = after.name)) }
+        if (before.name != after.name || before.preferences[ListAppearance.KEY] != after.preferences[ListAppearance.KEY])
+            database.listDao().find(scope)?.let { database.listDao().update(it.copy(name = after.name, color = ListAppearance.color(after)?.id, colorRevision = ListAppearance.revision(after))) }
     }
 }
 
