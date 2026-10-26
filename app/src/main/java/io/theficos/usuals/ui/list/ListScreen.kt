@@ -10,7 +10,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -157,6 +160,9 @@ data class ListActions(
     val onEditRow: ((ListRow) -> Unit)? = null,
     val onCheckedRow: ((ListRow, Boolean) -> Unit)? = null,
     val onRemoveRow: ((ListRow) -> Unit)? = null,
+    val onSwipeRemoveRow: ((ListRow) -> Unit)? = null,
+    val onUndoSwipeRemoval: (Long) -> Unit = {},
+    val onCommitSwipeRemoval: (Long) -> Unit = {},
     val onHintRow: ((ListRow) -> Unit)? = null,
     val onDismissEdit: () -> Unit = {},
     val onProductInfo: (ListRow) -> Unit = {},
@@ -333,6 +339,9 @@ fun ListScreen(
                 if (haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                 vm.onCheckedRow(row, checked)
             }, onRemoveRow = vm::onRemoveRow, onHintRow = vm::onHintRow,
+            onSwipeRemoveRow = vm::onSwipeRemoveRow,
+            onUndoSwipeRemoval = vm::onUndoSwipeRemoval,
+            onCommitSwipeRemoval = vm::onCommitSwipeRemoval,
             onDismissEdit = vm::onDismissEdit,
             onProductInfo = vm::onProductInfo,
             onDismissProduct = vm::onDismissProduct,
@@ -435,6 +444,19 @@ fun ListContent(
     actions: ListActions,
     modifier: Modifier = Modifier,
 ) {
+    val removalSnackbar = remember { SnackbarHostState() }
+    val removal = state.swipeRemoval
+    val removalMessage = if (removal != null) pluralStringResource(R.plurals.swipe_removed, removal.rows.size, removal.rows.size) else ""
+    val undoLabel = stringResource(R.string.finish_shop_undo)
+    val currentActions by rememberUpdatedState(actions)
+    LaunchedEffect(removal?.token) {
+        removalSnackbar.currentSnackbarData?.dismiss()
+        if (removal != null) {
+            val result = removalSnackbar.showSnackbar(removalMessage, undoLabel, withDismissAction = true, duration = SnackbarDuration.Long)
+            if (result == SnackbarResult.ActionPerformed) currentActions.onUndoSwipeRemoval(removal.token)
+            else currentActions.onCommitSwipeRemoval(removal.token)
+        }
+    }
     var repeatToMute by remember(state.directory.selected) { mutableStateOf<ItemMemory?>(null) }
     repeatToMute?.let { pending ->
         AlertDialog(onDismissRequest = { repeatToMute = null },
@@ -529,6 +551,7 @@ fun ListContent(
             ShopCompletion(state, actions)
 
           }
+            SnackbarHost(removalSnackbar, Modifier.fillMaxWidth().testTag("swipe_removal_snackbar"))
             CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
                 if (memory.key in state.repeatSuggestionKeys) repeatToMute = memory
                 else actions.onMuteAutocomplete(memory)
@@ -832,7 +855,10 @@ private fun RemovableItemRow(row: ListRow, actions: ListActions, shape: Shape = 
     key(row.id, row.version ?: row) {
         val current by rememberUpdatedState(actions)
         val dismiss = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
-            if (value != SwipeToDismissBoxValue.Settled) current.onRemoveRow?.invoke(row) ?: current.onConfirmRemove(row.id)
+            if (value != SwipeToDismissBoxValue.Settled) {
+                val remove = current.onSwipeRemoveRow ?: current.onRemoveRow
+                if (remove != null) remove(row) else current.onConfirmRemove(row.id)
+            }
             true
         })
         SwipeToDismissBox(state = dismiss,

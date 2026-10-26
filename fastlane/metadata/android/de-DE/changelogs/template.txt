@@ -1,1 +1,1 @@
-Öffne den Verlauf direkt über das Uhrsymbol in deiner Einkaufsliste. Prüfe vorgeschlagene Artikelnamen nach dem Diktieren oder Tippen gemeinsam. Usuals merkt sich deine Auswahl und erhält Mengen und Details. Die optionale automatische Zuordnung ist standardmäßig aus und lässt sich rückgängig machen.
+Einen Artikel versehentlich weggewischt? Tippe unten auf Rückgängig, um ihn mit allen Details wiederherzustellen. Mehrere schnelle Wischgesten lassen sich gemeinsam rückgängig machen. Wähle für jede Liste eine passende Farbe für Titel und Artikelanzahl.

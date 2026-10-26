@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import java.util.UUID
@@ -93,6 +94,8 @@ class ListViewModel(
 
     /** State the screen owns rather than the database: what is open, what is being said. */
     private data class ScreenState(
+        val swipeRemoval: SwipeRemoval? = null,
+        val committingRemovals: List<SwipeRemoval> = emptyList(),
         val checkedExpanded: Boolean = false,
         val capture: CaptureState = CaptureState.Idle,
         val productInfo: io.theficos.usuals.ui.product.ProductInfoState? = null,
@@ -131,6 +134,7 @@ class ListViewModel(
 
     private val screen = MutableStateFlow(ScreenState(basketAvailable = basket?.enabled() == true))
     private val captureLock = kotlinx.coroutines.sync.Mutex()
+    private var removalToken = 0L
     private var productJob: Job? = null
     private var scanNameGeneration = 0
 
@@ -1040,6 +1044,46 @@ class ListViewModel(
         screen.update { it.copy(editingId = null) }
         viewModelScope.launch { store.setChecked(row.id, checked, row.version) }
     }
+    fun onSwipeRemoveRow(row: ListRow) {
+        val snapshot = shopping.value
+        if (state.value.busy || snapshot.items.none { it.id == row.id && it.version == row.version }) return
+        screen.update { current ->
+            val pending = current.swipeRemoval?.takeIf { it.scope == snapshot.listId }
+            if (pending?.rows?.any { it.id == row.id } == true || current.committingRemovals.any { batch -> batch.scope == snapshot.listId && batch.rows.any { it.id == row.id } }) current
+            else current.copy(editingId = null, swipeRemoval = SwipeRemoval(++removalToken, snapshot.listId, pending?.rows.orEmpty() + row))
+        }
+    }
+
+    fun onUndoSwipeRemoval(token: Long) {
+        screen.update { if (it.swipeRemoval?.token == token) it.copy(swipeRemoval = null) else it }
+    }
+
+    fun onCommitSwipeRemoval(token: Long) {
+        val pending = screen.value.swipeRemoval?.takeIf { it.token == token } ?: return
+        if (shopping.value.listId != pending.scope || (directoryStore !== NoListDirectory && directory.value.selected != pending.scope)) {
+            onUndoSwipeRemoval(token)
+            return
+        }
+        screen.update { it.copy(swipeRemoval = null, committingRemovals = it.committingRemovals + pending) }
+        viewModelScope.launch {
+            try {
+                store.removeAll(pending.rows.map { it.id to it.version })
+                // Room emits after the transaction returns. Do not briefly show the old rows again.
+                val projected = withTimeoutOrNull(5_000) {
+                    shopping.first { snapshot ->
+                        snapshot.listId != pending.scope || pending.rows.none { removed ->
+                            snapshot.items.any { it.id == removed.id && it.version == removed.version }
+                        }
+                    }
+                    shown.first { it.snapshot == shopping.value }
+                }
+                if (projected == null) screen.update { it.copy(historyError = true) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { screen.update { it.copy(historyError = true) } }
+            finally { screen.update { it.copy(committingRemovals = it.committingRemovals.filterNot { batch -> batch.token == token }) } }
+        }
+    }
+
     fun onRemoveRow(row: ListRow) {
         screen.update { it.copy(editingId = null) }
         viewModelScope.launch { store.remove(row.id, row.version) }
@@ -1122,31 +1166,41 @@ class ListViewModel(
         ))
     }
 
-    private fun project(listed: Listed, matches: List<ItemMemory>, screen: ScreenState): ListUiState = listed.rows.copy(
-        productInfo = screen.productInfo,
-        basketAvailable = screen.basketAvailable,
-        basket = screen.basket,
-        captureMatches = screen.captureMatches,
-        matchingBusy = screen.matchingBusy,
-        matchingError = screen.matchingError,
-        repeatOffer = screen.repeatOffer,
-        recipe = screen.recipe,
-        review = screen.review?.takeIf { it.scope == listed.snapshot.listId },
-        scanNames = screen.scanNames,
-        scanPending = screen.scanLookups + screen.scanNames.map { it.gtin },
-        lastScan = screen.lastScan,
-        checkedExpanded = screen.checkedExpanded,
-        finishedInShoppingMode = screen.finishedInShoppingMode,
-        finishedTrip = screen.finishedTrip?.takeIf { screen.finishedScope == listed.snapshot.listId }?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
-        prompt = screen.prompt,
-        busy = screen.busy,
-        historyError = screen.historyError,
-        capture = screen.capture,
-        editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id], listed.memory) },
-        transfer = screen.transfer?.takeIf { it.source.id == listed.snapshot.listId },
-        transferResult = screen.transferResult,
-        autocomplete = matches,
-    )
+    private fun project(listed: Listed, matches: List<ItemMemory>, screen: ScreenState): ListUiState {
+        val removal = screen.swipeRemoval?.takeIf { it.scope == listed.snapshot.listId }
+        val hidden = (screen.committingRemovals + listOfNotNull(removal)).filter { it.scope == listed.snapshot.listId }
+            .flatMap { it.rows }.map { it.id }.toSet()
+        return listed.rows.copy(
+            swipeRemoval = removal,
+            pending = listed.rows.pending.filterNot { it.id in hidden },
+            checked = listed.rows.checked.filterNot { it.id in hidden },
+            deferred = listed.rows.deferred.filterNot { it.id in hidden },
+            header = listed.rows.header.copy(itemCount = (listed.rows.pending + listed.rows.checked + listed.rows.deferred).count { it.id !in hidden }),
+            productInfo = screen.productInfo,
+            basketAvailable = screen.basketAvailable,
+            basket = screen.basket,
+            captureMatches = screen.captureMatches,
+            matchingBusy = screen.matchingBusy,
+            matchingError = screen.matchingError,
+            repeatOffer = screen.repeatOffer,
+            recipe = screen.recipe,
+            review = screen.review?.takeIf { it.scope == listed.snapshot.listId },
+            scanNames = screen.scanNames,
+            scanPending = screen.scanLookups + screen.scanNames.map { it.gtin },
+            lastScan = screen.lastScan,
+            checkedExpanded = screen.checkedExpanded,
+            finishedInShoppingMode = screen.finishedInShoppingMode,
+            finishedTrip = screen.finishedTrip?.takeIf { screen.finishedScope == listed.snapshot.listId }?.takeIf { historyStore !is io.theficos.usuals.ui.history.ScopedHistoryStore || listed.snapshot.history.trips.any { trip -> trip.id == it.trip.id } },
+            prompt = screen.prompt,
+            busy = screen.busy,
+            historyError = screen.historyError,
+            capture = screen.capture,
+            editing = if (screen.editingId == null) null else screen.editingSnapshot ?: listed.ordered.firstOrNull { it.id == screen.editingId }?.let { toRow(it, listed.presentation[it.id], listed.memory) },
+            transfer = screen.transfer?.takeIf { it.source.id == listed.snapshot.listId },
+            transferResult = screen.transferResult,
+            autocomplete = matches,
+        )
+    }
 
     private fun toRow(item: Item, presentation: ItemPresentation?, memory: BarcodeMemory): ListRow {
         // Typed rows ask too, not only suggestions and repeats: a staple scanned
