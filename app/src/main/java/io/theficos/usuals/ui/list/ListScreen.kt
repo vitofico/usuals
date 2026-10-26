@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.luminance
 import io.theficos.usuals.ui.theme.categoryAccent
+import io.theficos.usuals.ui.theme.ambientLabelBacking
 import io.theficos.usuals.ui.NutriScoreChip
 import io.theficos.usuals.ui.allergenList
 import io.theficos.usuals.ui.theme.cautionColor
@@ -485,6 +486,8 @@ fun ListContent(
     BackHandler(enabled = typing != null) { actions.onDraftDismiss() }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      Box(Modifier.fillMaxSize()) {
+        io.theficos.usuals.ui.theme.BrandBackdrop(Modifier.matchParentSize())
         // The window draws behind the system bars and the keyboard, so the list keeps clear of all three.
         Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
           Column(modifier = Modifier.weight(1f).closesDraft(typing != null, actions.onDraftDismiss)) {
@@ -527,6 +530,7 @@ fun ListContent(
                 else actions.onMuteAutocomplete(memory)
             }), autocomplete = state.autocomplete)
         }
+      }
     }
 }
 
@@ -558,7 +562,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
         .clip(RoundedCornerShape(20.dp)).background(colors.primaryContainer)) {
-        Box(Modifier.matchParentSize()) {
+        if (io.theficos.usuals.ui.theme.LocalBackgroundStyle.current == io.theficos.usuals.ui.theme.BackgroundStyle.ARTWORK) Box(Modifier.matchParentSize()) {
             io.theficos.usuals.ui.theme.BrandCollage(Modifier.align(Alignment.CenterEnd)
                 .offset(x = 34.dp, y = (-8).dp)
                 .size(width = if (compact) 210.dp else 260.dp, height = if (compact) 146.dp else 181.dp))
@@ -701,7 +705,8 @@ private fun EmptyInstruction() {
                 modifier = Modifier.padding(bottom = 8.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Text(stringResource(R.string.quiet_list_empty_help), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.ambientLabelBacking())
         }
     }
 }
@@ -731,7 +736,7 @@ private fun CategoryHeader(category: Category, count: Int) {
         }
         Text(categoryLabel(category), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         Text(count.toString(), style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.ambientLabelBacking())
     }
 }
 
@@ -990,7 +995,7 @@ private fun CheckedDivider(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp).ambientLabelBacking(),
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),

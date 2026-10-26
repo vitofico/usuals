@@ -8,4 +8,10 @@
     <string name="appearance_grove_description">Botanical greens and soft oat tones.</string>
     <string name="appearance_tide">Tide</string>
     <string name="appearance_tide_description">Ink blue, sea glass and cool paper.</string>
+    <string name="appearance_background">Background style</string>
+    <string name="appearance_background_hint">Choose your background independently of your palette.</string>
+    <string name="appearance_plain">Plain</string>
+    <string name="appearance_plain_description">Quiet surfaces without background artwork.</string>
+    <string name="appearance_artwork">Artwork</string>
+    <string name="appearance_artwork_description">Layered paper at the edges of your lists.</string>
 </resources>

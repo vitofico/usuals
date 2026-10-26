@@ -8,4 +8,10 @@
     <string name="appearance_grove_description">Verdes botánicos y suaves tonos avena.</string>
     <string name="appearance_tide">Marea</string>
     <string name="appearance_tide_description">Azul tinta, vidrio marino y papel fresco.</string>
+    <string name="appearance_background">Estilo de fondo</string>
+    <string name="appearance_background_hint">Elige el fondo independientemente de la paleta.</string>
+    <string name="appearance_plain">Liso</string>
+    <string name="appearance_plain_description">Superficies tranquilas sin ilustraciones de fondo.</string>
+    <string name="appearance_artwork">Ilustraciones</string>
+    <string name="appearance_artwork_description">Papel en capas en los bordes de tus listas.</string>
 </resources>

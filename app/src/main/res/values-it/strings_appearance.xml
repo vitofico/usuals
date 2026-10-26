@@ -8,4 +8,10 @@
     <string name="appearance_grove_description">Verdi botanici e morbidi toni avena.</string>
     <string name="appearance_tide">Marea</string>
     <string name="appearance_tide_description">Blu inchiostro, vetro marino e carta fresca.</string>
+    <string name="appearance_background">Stile dello sfondo</string>
+    <string name="appearance_background_hint">Scegli lo sfondo indipendentemente dalla palette.</string>
+    <string name="appearance_plain">Semplice</string>
+    <string name="appearance_plain_description">Superfici sobrie senza illustrazioni di sfondo.</string>
+    <string name="appearance_artwork">Illustrazioni</string>
+    <string name="appearance_artwork_description">Strati di carta ai bordi delle tue liste.</string>
 </resources>

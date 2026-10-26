@@ -3,7 +3,7 @@ import { RunScope, request } from "./client.mjs";
 import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "./lists.mjs";
 import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
-import { palettes, readPalette, writePalette } from "./appearance.mjs";
+import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { qrMatrix } from "./qr.mjs";
 import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "./connect.mjs";
@@ -34,9 +34,11 @@ function localStore() {
   try { return localStorage; } catch { return null; }
 }
 let palette = readPalette(localStore());
+let backgroundStyle = readBackgroundStyle(localStore());
 let tutorialSeen = tutorialCompleted(localStore()), tutorialActive = false;
 function applyAppearance() {
   document.documentElement.dataset.palette = palette;
+  document.documentElement.dataset.backgroundStyle = backgroundStyle;
   document.querySelector('meta[name="theme-color"]').content =
     getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
 }
@@ -92,6 +94,8 @@ const button = (label, action, kind = "secondary", attributes = {}) =>
 const paragraph = (key, kind = "lede", values = {}) => el("p", { class: kind }, t(key, values));
 const brandCollage = (kind = "") => el("div", { class: `brand-collage ${kind}`, "aria-hidden": "true" },
   ...["secondary", "tertiary", "paper", "primary"].map((role) => el("span", { class: `collage-${role}` })));
+const loadingAppearance = () => el("div", { class: "loading-appearance", role: "status" },
+  brandCollage("loading-collage"), paragraph("loading", "helper"));
 /** `action` is an optional [label, handler] pair, such as Undo. */
 function notice(key, error = false, values = {}, action = null) {
   const node = $("notice");
@@ -307,10 +311,24 @@ function appearanceDialog() {
     el("span", { class: "theme-swatches", "data-preview-palette": id, "aria-hidden": "true" },
       el("i"), el("i"), el("i")),
   ));
+  const backgrounds = backgroundStyles.map((id) => el("label", { class: "theme-choice" },
+    el("input", { type: "radio", name: "background-style", value: id, checked: id === backgroundStyle,
+      onchange: () => {
+        backgroundStyle = writeBackgroundStyle(id, localStore());
+        applyAppearance();
+      },
+    }),
+    el("span", { class: "theme-copy" }, el("strong", {}, t(`background_${id}`)),
+      el("span", {}, t(`background_${id}_description`))),
+    el("span", { class: "background-preview", "data-preview-background": id, "aria-hidden": "true" },
+      id === "artwork" ? brandCollage() : null, el("i"), el("i"), el("i")),
+  ));
   openDialog(el("div", {},
     el("h2", {}, t("appearance")),
     el("fieldset", { class: "theme-options" },
       el("legend", { class: "helper" }, t("appearanceHint")), ...choices),
+    el("fieldset", { class: "theme-options" },
+      el("legend", {}, t("backgroundStyle")), paragraph("backgroundStyleHint", "helper"), ...backgrounds),
     el("div", { class: "button-row" }, button(t("close"), closeDialog)),
   ));
 }
@@ -456,7 +474,7 @@ function listSyncLabel() {
 }
 function renderLists() {
   if (!store.cursor) {
-    $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), paragraph("loading"));
+    $("content").replaceChildren(title("listTitle", "listSubtitle"), listSyncLabel(), loadingAppearance());
     return;
   }
   const { active, archived, selected: shown } = arrange(store.lists.values(), selected, listName, locale);
@@ -497,7 +515,7 @@ function renderLists() {
   } }, el("label", { for: captureInput.id, class: "visually-hidden" }, t("addPlaceholder")),
     captureInput, el("button", { type: "submit", "aria-label": t("add") }, t("quietAdd")));
   const section = (key, rows, extra = null) => [
-    el("div", { class: "list-section-label" }, t(key), el("span", { class: "header-actions" }, extra, el("span", {}, rows.length))),
+    el("div", { class: "list-section-label" }, el("span", {}, t(key)), el("span", { class: "header-actions" }, extra, el("span", {}, rows.length))),
     el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
   ];
   const people = access(list, account.user.id);
@@ -1039,7 +1057,7 @@ $("preferences").addEventListener("click", preferencesDialog);
   await localeLoad(preferred);
   loadImportResources().catch(() => {});
   if (location.hash) history.replaceState(null, "", location.pathname + location.search);
-  $("content").replaceChildren(paragraph("loading"));
+  $("content").replaceChildren(loadingAppearance());
   await loadAccount();
   if (!tutorialSeen && !pendingConnect && !config?.emailInvitations) tutorialDialog();
 })().catch(failure);
