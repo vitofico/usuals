@@ -125,3 +125,7 @@ and [additive service API](../docs/server-services.openapi.json) cover native ac
 approval and the optional model gateway. A phone that claims a connection offer
 shown by a signed-in browser is approved at once. The gateway is disabled with no configured
 provider profiles, and its availability does not determine relay readiness.
+
+The optional [account policy and lifecycle interfaces](../docs/sync/account-policy-and-lifecycle.md)
+cover per-account limits, paginated export, fresh closure authorization and
+operator execution keys.

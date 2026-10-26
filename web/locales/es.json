@@ -336,5 +336,6 @@
   "invitation_resend_later": "Espera un minuto antes de reenviar esta invitación.",
   "emailSignIn": "Iniciar sesión",
   "emailSignInText": "Crea una lista o inicia sesión para comprar juntos.",
-  "account_switch_unavailable": "Para usar otro correo, cierra sesión en tu proveedor de acceso o abre la invitación en otro perfil del navegador."
+  "account_switch_unavailable": "Para usar otro correo, cierra sesión en tu proveedor de acceso o abre la invitación en otro perfil del navegador.",
+  "ai_monthly_budget": "Has alcanzado el límite mensual de IA. Se restablece al inicio del próximo mes UTC."
 }

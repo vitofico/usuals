@@ -22,8 +22,9 @@ private val idle = AttributeKey<Long>("idle")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetrics(relay.db), ingress: TrustedIngress = TrustedIngress(), webIdentity: WebIdentity? = null,
-    browserModels: BrowserModels = BrowserModels(), ai: AiGateway = AiGateway(relay.db, AiConfiguration())) {
+    browserModels: BrowserModels = BrowserModels(), ai: AiGateway = AiGateway(relay.db, AiConfiguration()), accountPolicy: AccountPolicy? = null, accountLifecycle: AccountLifecycle? = null) {
     val connections = webIdentity?.let { Connections(relay.db, relay, it) }
+    val lifecycle = accountLifecycle ?: webIdentity?.let { AccountLifecycle(relay, it, null) }
     val aiSlots = Semaphore(2)
     val aiIo = Dispatchers.IO.limitedParallelism(2)
     /** A phone's bearer or a browser's cookie; browser mutations also need the CSRF token. */
@@ -94,6 +95,21 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
         get("/healthz") { call.respondText("ok") }
         get("/readyz") { run { val ready = relay.db.ready(); call.respondText(if (ready) "ok" else "unavailable", status = if (ready) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable) } }
         get("/v1/server-info") { call.json(relay.identity.info()) }
+        if (accountPolicy != null) put("/api/service/accounts/{id}/limits") { run {
+            call.privateResponse()
+            expect(call.request.headers.getAll(HttpHeaders.Authorization)?.size == 1 && call.request.headers[HttpHeaders.Cookie] == null, "unauthenticated", 401)
+            accountPolicy.authenticate(call.request.headers[HttpHeaders.Authorization])
+            call.json(accountPolicy.put(call.routeId("id"), call.body(1024)))
+        } }
+        if (lifecycle?.serviceEnabled == true) route("/api/service/accounts/{id}/closure/{requestId}") {
+            fun ApplicationCall.lifecycleAuth() {
+                expect(request.headers.getAll(HttpHeaders.Authorization)?.size == 1 && request.headers[HttpHeaders.Cookie] == null, "unauthenticated", 401)
+                lifecycle.authenticate(request.headers[HttpHeaders.Authorization])
+            }
+            get { run { call.privateResponse(); call.lifecycleAuth(); call.json(lifecycle.status(call.routeId("id"), call.routeId("requestId"))) } }
+            post { run { call.privateResponse(); call.lifecycleAuth(); call.json(lifecycle.close(call.routeId("id"), call.routeId("requestId"))) } }
+            post("purge") { run { call.privateResponse(); call.lifecycleAuth(); call.json(lifecycle.purgeIdentity(call.routeId("id"), call.routeId("requestId"))) } }
+        }
 
         get("/v1/instance") { call.privateResponse(); call.json(InstanceInfo(name = "Usuals", server = relay.identity.info(), accounts = webIdentity != null, ai = webIdentity != null && ai.configuration.profiles.isNotEmpty())) }
         if (webIdentity != null && connections != null) {
@@ -122,6 +138,15 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 } finally { aiSlots.release() }
             }
             val lists = Lists(relay, webIdentity.config)
+            get("/api/account/export") { run {
+                call.privateResponse()
+                call.response.headers.append(HttpHeaders.ContentDisposition, "attachment; filename=\"usuals-account.json\"")
+                val caller = call.reader(webIdentity)
+                call.json(AccountExport(caller.user, lists.changes(AccountAccess(caller.user.id) { c -> webIdentity.current(c, caller) }, call.request.queryParameters["cursor"], 200)))
+            } }
+            post("/api/account/closure-requests") { run {
+                call.privateResponse(); call.json(requireNotNull(lifecycle).authorize(call.webCaller(webIdentity), call.body(2048)))
+            } }
             route("/api/lists") {
                 install(Compression) { mode = CompressionConfig.Mode.CompressResponse; gzip { minimumSize(1024) } }
                 get("changes") { run(admitted = false) {
@@ -253,7 +278,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 call.webCookie(webIdentity, webIdentity.sessionCookieName(), complete.token, WebIdentity.SESSION_SECONDS)
                 call.respondRedirect("/")
             } }
-            get("/api/me") { run { call.privateResponse(); call.json(call.reader(webIdentity).me()) } }
+            get("/api/me") { run { call.privateResponse(); call.json(webIdentity.me(call.reader(webIdentity))) } }
             get("/api/sessions") { run { call.privateResponse(); call.json(webIdentity.sessions(call.webToken(webIdentity))) } }
             post("/auth/logout") { run {
                 call.privateResponse(); webIdentity.logout(call.webCaller(webIdentity))

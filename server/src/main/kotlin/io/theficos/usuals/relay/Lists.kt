@@ -38,7 +38,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             // Serializes this account's creates, so a retried create and the list limit cannot race.
             c.query("SELECT 1 FROM web_user WHERE id=? FOR UPDATE", id(access.user)) { Unit }
             existing(c, access.user, list)?.let { return@transaction it to false }
-            expect(c.query("SELECT count(*) FROM list WHERE owner=? AND deleted_at IS NULL", id(access.user)) { it.getLong(1) }.single() < 500, "limit_reached", 409)
+            expect(c.query("SELECT count(*) FROM list WHERE owner=? AND deleted_at IS NULL", id(access.user)) { it.getLong(1) }.single() < config.accountLimits.ownedLists(c, access.user), "limit_reached", 409)
             val seq = next(c)
             expect(c.execute("INSERT INTO list(id,owner,projection,seq,created_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO NOTHING",
                 id(list), id(access.user), cipher.seal(list, plain), seq, relay.auth.now()) == 1, "list_exists", 409)
@@ -53,6 +53,26 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             id(user), id(list)) { Triple(it.getLong(1), it.getBytes(2), it.getString(3)) }.singleOrNull() ?: return null
         expect(sealed != null && role != null, "list_exists", 409)
         return view(c, user, list, seq, cipher.open(list, sealed))
+    }
+
+    internal fun requireNoSharedOwned(c: Connection, user: String) {
+        expect(c.query("SELECT 1 FROM list l JOIN list_member m ON m.list_id=l.id WHERE l.owner=? AND l.projection IS NOT NULL AND m.user_id<>? AND m.removed IS NULL LIMIT 1", id(user), id(user)) { Unit }.isEmpty(), "shared_owned_lists_require_confirmation", 409)
+    }
+    /** Called under the account lifecycle's exclusive write fence; keeps every other owner's list. */
+    internal fun closeAccount(c: Connection, user: String, now: Long): List<String> {
+        val affected = c.query("SELECT l.id,l.owner FROM list l JOIN list_member m ON m.list_id=l.id WHERE m.user_id=? AND m.removed IS NULL AND l.projection IS NOT NULL ORDER BY l.id FOR UPDATE OF l", id(user)) { it.getObject(1).toString() to it.getObject(2).toString() }
+        val woken = mutableListOf<String>()
+        for ((list, owner) in affected) {
+            woken += current(c, list)
+            val seq = next(c)
+            if (owner == user) {
+                c.execute("UPDATE list SET projection=NULL,deleted_at=?,seq=? WHERE id=?", now, seq, id(list))
+                c.execute("UPDATE list_member SET removed=? WHERE list_id=? AND removed IS NULL", seq, id(list))
+                c.execute("DELETE FROM email_invitation WHERE list_id=?", id(list))
+            } else c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
+        }
+        c.execute("DELETE FROM list_member WHERE user_id=?", id(user))
+        return woken
     }
 
     fun apply(access: AccountAccess, list: String, batch: IntentBatch): BatchView {
@@ -117,7 +137,10 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
         // A plain read avoids deadlocking two accounts sharing back to each other.
         expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=?", id(target)) { config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "not_found", 404)
         if (role(c, target, list) != null) return view(c, viewer, list, locked.seq, cipher.open(list, locked.sealed))
-        expect(current(c, list).size < 50, "limit_reached", 409)
+        val owner = c.query("SELECT owner FROM list WHERE id=?", id(list)) { it.getObject(1).toString() }.single()
+        // The policy writer locks the same account row. A downgrade preserves existing members.
+        c.query("SELECT 1 FROM web_user WHERE id=? FOR UPDATE", id(owner)) { Unit }
+        expect(current(c, list).size < config.accountLimits.members(c, owner), "limit_reached", 409)
         c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL,archived=false", id(list), id(target))
         val seq = next(c)
         c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))

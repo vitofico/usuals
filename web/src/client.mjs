@@ -31,6 +31,7 @@ const allowedCodes = new Set([
   "upgrade_required",
   "ai_unavailable",
   "ai_budget",
+  "ai_monthly_budget",
   "ai_images_unverified",
   "ai_credentials_unavailable",
   "ai_configuration_changed",

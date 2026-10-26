@@ -336,5 +336,6 @@
   "invitation_resend_later": "Warte eine Minute, bevor du diese Einladung erneut sendest.",
   "emailSignIn": "Anmelden",
   "emailSignInText": "Erstelle eine Liste oder melde dich an, um gemeinsam einzukaufen.",
-  "account_switch_unavailable": "Melde dich bei deinem Anmeldeanbieter ab oder öffne die Einladung in einem anderen Browserprofil, um eine andere E-Mail-Adresse zu verwenden."
+  "account_switch_unavailable": "Melde dich bei deinem Anmeldeanbieter ab oder öffne die Einladung in einem anderen Browserprofil, um eine andere E-Mail-Adresse zu verwenden.",
+  "ai_monthly_budget": "Das monatliche KI-Kontingent ist aufgebraucht. Es wird zu Beginn des nächsten UTC-Monats zurückgesetzt."
 }

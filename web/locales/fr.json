@@ -336,5 +336,6 @@
   "invitation_resend_later": "Attendez une minute avant de renvoyer cette invitation.",
   "emailSignIn": "Se connecter",
   "emailSignInText": "Créez une liste ou connectez-vous pour faire les courses ensemble.",
-  "account_switch_unavailable": "Pour utiliser une autre adresse, déconnectez-vous auprès de votre fournisseur ou ouvrez l'invitation dans un autre profil de navigateur."
+  "account_switch_unavailable": "Pour utiliser une autre adresse, déconnectez-vous auprès de votre fournisseur ou ouvrez l'invitation dans un autre profil de navigateur.",
+  "ai_monthly_budget": "Le quota mensuel d’IA est atteint. Il est réinitialisé au début du prochain mois UTC."
 }
