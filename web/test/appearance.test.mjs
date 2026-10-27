@@ -48,7 +48,7 @@ test("unavailable or full browser storage still permits a live palette choice", 
 
 const css = await readFile(new URL("../assets/theme.css", import.meta.url), "utf8");
 const artworkCss = await readFile(new URL("../assets/collage.css", import.meta.url), "utf8");
-const ambientOpacity = Math.max(...[...artworkCss.matchAll(/\.ambient-collage\s*\{([^}]+)\}/g)]
+const ambientOpacity = Math.max(...[...artworkCss.matchAll(/\.(?:ambient|list-heading)-collage\s*\{([^}]+)\}/g)]
   .flatMap((m) => [...m[1].matchAll(/opacity:\s*([\d.]+)/g)].map((v) => Number(v[1]))));
 assert.ok(ambientOpacity > 0 && ambientOpacity <= 1);
 const darkStart = css.indexOf("@media (prefers-color-scheme: dark)");
@@ -83,7 +83,7 @@ for (const palette of palettes) for (const night of [false, true]) {
       blend(rgb(values["--collage-leaf"]), rgb(values["--collage-on-leaf"]), 0.35),
       rgb(values["--paper"]), rgb(values["--primary"]),
     ];
-    // Muted captions and transparent header actions use opaque ground backings.
+    // Muted captions keep opaque ground backings; the title and header icons sit directly on the artwork.
     for (const layer of layers) {
       const paintedGround = hex(blend(rgb(values["--ground"]), layer, ambientOpacity));
       assert.ok(contrast(values["--ink"], paintedGround) >= 4.5, "main text over the strongest ambient layer");

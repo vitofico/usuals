@@ -6,15 +6,24 @@ npm install, CDN, third-party script or browser provider token is involved.
 
 The browser is a window onto your account. The server keeps every list you own or
 were added to, and the browser shows them as the server holds them: nothing is
-stored in the browser, so there is nothing to unlock, back up or lose. Your phone
+stored as a browser list replica, so there is nothing to unlock or restore. Your phone
 and this browser show the same lists because they read the same account.
+
+Personal favourites and hidden Replay suggestions are saved separately in this
+browser, scoped to your account and list. They are device choices, like the
+phone's personal shopping preferences, and do not sync with the phone. Clearing
+browser storage removes those choices; lists and purchases remain on the server.
 
 ## Lists
 
 Sign in with a local account or the configured OIDC provider and your lists
 appear. The selected list is the page heading. Select its name and chevron to switch lists or create a **New list**.
 
-- Type in **What do we need?** to add an item. Tick it when it is in the basket;
+- Type in **What do we need?** to add an item. It reads input like the phone:
+  "2 bananas" adds Bananas ×2, "500g flour" adds 500 g, and "milk and eggs" or
+  "milk, eggs" adds two items. Items are grouped by category,
+  like the phone; **Details** in an item's options sets its category for
+  everyone on the list. Tick an item when it is in the basket;
   **Picked up** expands the items already in your basket.
   **Finish shopping** moves them into the list's history, with
   **Undo** while the notice is showing.
@@ -32,6 +41,21 @@ appear. The selected list is the page heading. Select its name and chevron to sw
   tab is visible. A hidden tab stops asking and catches up when you come back.
 - Two people changing the same thing at once is fine: the server keeps one
   answer and this browser shows a short notice when its own change lost.
+- The Replay icon next to **History** opens **Review your usuals**. It reviews
+  factual purchases from the last eight shops, with **Add**, **Skip**, **Undo
+  last choice**, **Review more** and **Don't suggest again**. Existing items,
+  recent purchases and items with repeat rules stay out of the queue. Undo only
+  removes the exact item the review added; another person's changes are kept.
+- **History** searches actual purchases and adds selected items or a past shop
+  again. Existing unchecked items keep their quantities, even when another
+  person adds the same item concurrently.
+- **List options** also holds **Favourites**, **Start shopping**, **Share list
+  as text** and **Remove all items**. Shopping mode increases row height and
+  hides capture until **Leave shopping mode**. A store selector filters rows.
+- **More item actions** saves a favourite or moves/copies an item to another
+  active list. A move removes the original only after a new destination item is
+  confirmed and the source is still unchanged. **Set repeat rule** edits the
+  shared interval; due repeats are added by the connected phone.
 
 ## Sharing
 
@@ -75,7 +99,7 @@ and [provider guide](../docs/providers.md).
 
 ## Guided tour
 
-A three-step tour (welcome, your list, sharing) opens on the first visit to this
+A six-step tour (welcome, your list, Replay, import, shopping and sharing) opens on the first visit to this
 browser. **Skip tour** closes it, and **Preferences > Guided tour** reopens
 it. Completion is remembered in this browser's local storage, so the tour may
 appear again if that storage is cleared.

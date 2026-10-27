@@ -9,10 +9,14 @@ and what it deliberately does not do.
 
 ## What the browser keeps
 
-Nothing about lists survives the page. Lists, cursors and member names live in
+No list replica survives the page. Lists, cursors and member names live in
 memory and are read again from the feed on every load. There is no vault,
 passphrase, device key, outbox or IndexedDB database. Local storage holds only
-preferences: language, palette and whether the guided tour was completed.
+preferences: language, palette, background style, guided-tour completion and
+personal favourites/hidden Replay keys scoped to the account and list. Favourites
+include their chosen name, quantity, barcode and store so they can be added again;
+they do not replace the server's current rows or sync with the phone. Clearing
+storage discards these choices without changing any server-held list or purchase.
 
 Earlier versions kept an encrypted vault in IndexedDB (`usuals-private-vault`) and
 two storage keys (`usuals-join-invite` in session storage, `usuals-tutorial-v1` in
@@ -109,6 +113,14 @@ OIDC tokens never enter browser storage or cookies. Administrators may disable
 accounts or revoke sessions; those screens do not show or change anyone's lists.
 
 ## Trust
+
+Reusing history, Replay, favourites or imported rows sends `reuse` with the capture payload.
+The reducer atomically skips an existing unchecked canonical identity rather
+than increasing its quantity. Ordinary capture retains its existing merge
+behavior. Older servers reject this unknown command instead of silently merging
+quantities after a rollback. Replay Undo, clear-list and move-source removal guard every editable
+field as well as lifecycle, including fields absent when the action was opened.
+The updated browser is packaged with the server that supports this command.
 
 The served origin supplies the code and holds the lists, so whoever operates the
 server can read them; the browser adds no protection against its own origin. A

@@ -137,6 +137,7 @@ class Reducer(private val normalizer: Int = 1) {
             require(id.isNotBlank() && intent.listId.isNotBlank())
             return when (intent.kind) {
                 "capture" -> capture()
+                "reuse" -> capture(reuse = true)
                 "repeat" -> repeat()
                 "edit" -> edit()
                 "merge" -> merge()
@@ -152,7 +153,7 @@ class Reducer(private val normalizer: Int = 1) {
                 else -> Outcome.REJECTED
             }
         }
-        private fun capture(): Outcome {
+        private fun capture(reuse: Boolean = false): Outcome {
             val proposed = p.text("proposedId")
             val key = canonical(p.text("key"))
             require(proposed !in state.rows && proposed !in state.redirects && proposed !in state.tombstones && proposed !in state.purchases)
@@ -160,6 +161,8 @@ class Reducer(private val normalizer: Int = 1) {
             validateFacts(p)
             require(key.isNotBlank())
             val existing = state.rows.values.firstOrNull { alive(it) && !it.facts.bool("checked") && canonical(it.facts.text("key")) == key }
+            // Reusing history or favourites must not increase a concurrently added row's quantity.
+            if (existing != null && reuse) return Outcome.NO_OP
             if (existing == null) {
                 require(p.text("name").isNotBlank())
                 val facts = JsonObject(p.filterKeys { it in ROW_FIELDS } + mapOf("key" to JsonPrimitive(key), "checked" to JsonPrimitive(false)))

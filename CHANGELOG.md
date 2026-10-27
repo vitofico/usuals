@@ -1,5 +1,25 @@
 # Changelog
 
+## Browser shopping tools
+
+- Remove the tinted rounded list-title enclosure and add Replay and History
+  shortcuts to the browser shopping list.
+- Review usual purchases with Add, Skip, Undo and hidden suggestions. Search
+  purchase history and add items again without increasing existing quantities,
+  including when someone else adds the same item at the same time.
+- Add personal browser favourites, shopping mode, store filtering, shared repeat
+  settings, text sharing, move/copy and guarded clear-list actions. Moves and
+  Replay Undo preserve items changed by another person.
+- Expand the browser tour and keep every new control translated in English,
+  Spanish, Italian, French and German.
+- Group browser items by category in the app's aisle order, with the app's
+  category icons and a shared category choice in item details. Show quantities
+  as the app's compact badge, and give the list header the app's faint artwork
+  and icon buttons instead of white patches behind the title and controls.
+- Read the browser capture box with the app's rules: quantities and units
+  ("2 bananas", "500g flour", "leche x2"), several items in one line ("milk and
+  eggs"), and notes ("milk for the coffee", "milk (semi skimmed)").
+
 ## Receipts and checkout
 
 - Keep a receipt photo with a finished shop, or read a photo with an optional

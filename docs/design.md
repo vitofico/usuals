@@ -162,13 +162,28 @@ hierarchy while retaining semantic controls and visible focus states.
 
 ## Browser hierarchy
 
-The selected list is the page title. Its palette container carries a cropped
-collage on desktop and mobile, with no separate artwork or actions band. The
-artwork is decorative and does not receive focus or intercept pointer input.
-A quiet Change list action opens list selection; List options contains the
-remaining list actions. The capture field
-and its labelled Add button are the clear next step. Picked-up rows have a
+The selected list is the page title. Its open heading carries a faint, soft-edged
+collage crop on desktop and mobile, at the ambient artwork's opacity, so the title
+and header icons sit directly on the page as on Android. The sync state, Replay,
+History and List options are icon buttons beside the title; on narrow screens they
+share the row below it with the item count. The artwork is decorative and does
+not receive focus or intercept pointer input. The title opens list selection.
+The capture field and its labelled Add button are the clear next step. It reads
+input with Android's capture rules, so "2 bananas" is Bananas ×2 and "milk and
+eggs" is two rows, sent as one change; rows start with a capital for display only.
+Items to pick up are grouped by category in Android's aisle order, each group with
+its icon, name and count above its own card. Capture parsing and grouping use the
+same input-language packs as the app (staged by the server build as
+`input-language.json`) and the shared per-item category choice; until the packs
+load, capture adds the typed text as one item and the list shows one ungrouped
+section. Quantities sit in a compact badge at the row's end. Picked-up rows have a
 counted disclosure and Finish shopping remains reachable without expanding it.
+
+Replay reviews factual recent purchases using the same eligibility and ordering
+as Android. History, favourites, shopping mode, store filtering, repeat settings,
+text sharing and move/copy actions are available from the list and item menus.
+Favourites and hidden Replay suggestions belong to the signed-in account and
+list in this browser; the server remains the authority for lists and purchases.
 
 Navigation shows Lists and Account. Appearance, language and the guided tour
 share Preferences, which keeps the mobile header to one small band. Account

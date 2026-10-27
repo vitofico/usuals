@@ -4,6 +4,7 @@ import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem
 import { rows as listRows, isChecked, intent, captures, check, edit, remove, rename, finish, undo, decimal } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
 import { listColors, listColor, colorChange } from "./list-colors.mjs";
+import { DAY, itemKey, historyTrips, reviewCandidates, addAgain, unchangedRow, guardedRemoval, ShoppingChoices } from "./shopping.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { qrMatrix } from "./qr.mjs";
@@ -12,6 +13,9 @@ import { importDialog } from "./import-dialog.mjs";
 import { forgetLegacyVault } from "./legacy.mjs";
 import { DialogFocus, DialogCancellation } from "./dialog-focus.mjs";
 import { invitationToken, InvitationsApi } from "./invitations.mjs";
+import { icon } from "./icons.mjs";
+import { categories, categoryClassifier, groupByCategory } from "./categories.mjs";
+import { utteranceParser } from "./utterance.mjs";
 
 forgetLegacyVault();
 let pendingInvitationToken = invitationToken(location), invitation = null;
@@ -49,7 +53,7 @@ let uiScope = new RunScope();
 const api = (path, options = {}) => request(path, { ...options, scope: uiScope });
 let importResources = null;
 function loadImportResources() {
-  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
+  if (!importResources) importResources = Promise.all([languagePacks(), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
     .catch(error => { importResources = null; throw error; });
   return importResources;
 }
@@ -69,6 +73,16 @@ let availableLocales = ["en"],
   lists = null,
   feed = null,
   syncState = "";
+// One read of the input-language packs feeds capture parsing, category grouping and imports. Until it succeeds the
+// capture box adds what was typed as one item and the list stays one ungrouped section; a later caller retries it.
+let classify = null, parseCapture = null, packsRequest = null;
+const languagePacks = () => packsRequest ??= request("/assets/input-language.json").then((packs) => {
+  classify = categoryClassifier(packs);
+  parseCapture = utteranceParser(packs);
+  if (screen === "lists") renderLists();
+  return packs;
+}).catch((error) => { packsRequest = null; throw error; });
+languagePacks().catch(() => {});
 const invitations = new InvitationsApi({ transport: api, csrf: () => account?.csrfToken });
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
@@ -92,6 +106,7 @@ function el(tag, attributes = {}, ...children) {
 }
 const button = (label, action, kind = "secondary", attributes = {}) =>
   el("button", { type: "button", class: kind, onclick: action, ...attributes }, label);
+const replace = (node, ...children) => node.replaceChildren(...children.flat().filter((child) => child != null));
 const paragraph = (key, kind = "lede", values = {}) => el("p", { class: kind }, t(key, values));
 const brandCollage = (kind = "") => el("div", { class: `brand-collage ${kind}`, "aria-hidden": "true" },
   ...["secondary", "tertiary", "paper", "primary"].map((role) => el("span", { class: `collage-${role}` })));
@@ -132,7 +147,7 @@ function setSync(state) {
   syncState = state;
   for (const node of document.querySelectorAll("[data-sync-status]")) {
     const label = account && state ? t(state) : t("synced");
-    node.querySelector(".sync-glyph").textContent = state === "synced" ? "✓" : "↻";
+    node.querySelector(".sync-glyph").replaceChildren(syncIcon(state));
     node.setAttribute("aria-label", `${t("syncDetails")}: ${label}`);
     node.title = label;
     node.disabled = !account;
@@ -140,6 +155,7 @@ function setSync(state) {
   }
   for (const node of document.querySelectorAll("[data-sync-details]")) node.textContent = t(state || "synced");
 }
+const syncIcon = (state) => icon(state === "synced" ? "check" : state === "offline" ? "offline" : "sync");
 function startLists() {
   store = new ListStore();
   lists = new ListsApi({ store, csrf: () => account.csrfToken, transport: api });
@@ -161,6 +177,7 @@ async function leaveAccount(message = null) {
   uiScope.stop();
   uiScope = new RunScope();
   store = lists = feed = selected = null;
+  shoppingModes.clear(); storeFilters.clear();
   account = null;
   if (invitation && invitation.state !== "none") invitation = { state: "signin" };
   busy = false;
@@ -215,8 +232,8 @@ function finishTutorial() {
 }
 function tutorialDialog() {
   let page = 0;
-  const steps = ["Welcome", "List", "Share"];
-  const symbols = ["✓", "+", "↗"];
+  const steps = ["Welcome", "List", "Review", "Import", "Shopping", "Share"];
+  const symbols = ["✓", "+", "↻", "↓", "◷", "↗"];
   function draw() {
     const last = page === steps.length - 1;
     $("dialog-content").replaceChildren(
@@ -457,6 +474,12 @@ const captureInput = el("input", { id: "capture-name", type: "text", maxlength: 
 // Whether the Archived area is open survives re-rendering too.
 let archivedOpen = false;
 const pickedOpen = new Map();
+const shoppingModes = new Set(), storeFilters = new Map();
+const choices = (id) => new ShoppingChoices(localStore(), `${account.user.id}:${id}`);
+function toggleShopping(id) {
+  if (shoppingModes.has(id)) shoppingModes.delete(id); else shoppingModes.add(id);
+  closeDialog(); render().catch(failure);
+}
 function archivedRow(list) {
   const values = { name: listName(list) };
   return el("li", { class: "item" },
@@ -483,7 +506,7 @@ function syncDetails() {
 $("sync-status").addEventListener("click", syncDetails);
 function listSyncLabel() {
   return el("button", { type: "button", class: "sync-status list-sync", "data-sync-status": "", "data-sync-state": syncState,
-    "aria-haspopup": "dialog", "aria-label": `${t("syncDetails")}: ${t(syncState || "synced")}`, onclick: syncDetails }, el("span", { class: "sync-glyph", "aria-hidden": "true" }, syncState === "synced" ? "✓" : "↻"));
+    "aria-haspopup": "dialog", "aria-label": `${t("syncDetails")}: ${t(syncState || "synced")}`, onclick: syncDetails }, el("span", { class: "sync-glyph", "aria-hidden": "true" }, syncIcon(syncState)));
 }
 function renderLists() {
   if (!store.cursor) {
@@ -501,16 +524,23 @@ function renderLists() {
       archivedArea(archived)));
     return;
   }
-  const list = store.lists.get(selected), id = list.id, items = listRows(list.projection),
+  const list = store.lists.get(selected), id = list.id, allItems = listRows(list.projection),
+    items = allItems.filter((row) => !storeFilters.get(id) || row.facts.store === storeFilters.get(id)),
     needed = items.filter((r) => !isChecked(r)), picked = items.filter(isChecked);
+  const shopping = shoppingModes.has(id);
+  $("main").dataset.shopping = String(shopping);
   const focused = document.activeElement === captureInput;
   captureInput.placeholder = t("addPlaceholder");
   captureInput.setAttribute("aria-label", t("addPlaceholder"));
   const capture = el("form", { class: "capture", onsubmit: (event) => {
     event.preventDefault();
-    const name = captureInput.value.trim();
+    const text = captureInput.value.trim();
     if (busy) return;
-    if (!name || name.length > 1000) {
+    if (!parseCapture) languagePacks().catch(() => {});
+    // Like the app: "2 bananas" is Bananas ×2 and "milk and eggs" is two rows, all sent as one change.
+    const items = text.length > 1000 ? [] : (parseCapture?.(text) ?? (text ? [{ name: text }] : []))
+      .map((item) => ({ ...item, quantity: item.quantity == null ? null : decimal(item.quantity), rawText: text }));
+    if (!items.length) {
       notice("invalidName", true);
       return;
     }
@@ -519,18 +549,29 @@ function renderLists() {
       try {
         const current = store.lists.get(id);
         requireThat(current, "not_found");
-        await change(id, "capture", captures(current.projection, [{ name }], Date.now())[0]);
+        report(await lists.send(id, captures(current.projection, items, Date.now()).map((payload) => intent(id, "capture", payload))));
       } catch (error) {
-        if (!captureInput.value) captureInput.value = name;
+        if (!captureInput.value) captureInput.value = text;
         throw error;
       }
     });
   } }, el("label", { for: captureInput.id, class: "visually-hidden" }, t("addPlaceholder")),
     captureInput, el("button", { type: "submit", "aria-label": t("add") }, t("quietAdd")));
-  const section = (key, rows, extra = null) => [
-    el("div", { class: "list-section-label" }, el("span", {}, t(key)), el("span", { class: "header-actions" }, extra, el("span", { class: "list-accent-count", "data-list-color": listColor(list.projection) }, rows.length))),
-    el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
-  ];
+  const section = (label, rows, category = null) => {
+    const heading = `section-${category ?? "needed"}`;
+    return [
+      el("div", { class: "list-section-label", id: heading, "data-category": category },
+        category ? el("span", { class: "category-icon" }, icon(category, 18)) : null,
+        el("span", { class: "section-name" }, label),
+        el("span", { class: "list-accent-count", "data-list-color": listColor(list.projection) }, rows.length)),
+      el("ul", { class: "items", "aria-labelledby": heading }, rows.map((r) => itemNode(id, r))),
+    ];
+  };
+  const preferences = (row) => list.projection.preferences?.[itemKey(row.facts, list.projection.aliases)];
+  const neededSections = !needed.length ? [] : classify
+    ? groupByCategory(needed, (row) => classify(row.facts.name, preferences(row)?.category))
+      .flatMap(([category, rows]) => section(t(`category${category}`), rows, category))
+    : section(t("toPickUp"), needed);
   const people = access(list, account.user.id);
   const pickedSection = picked.length ? el("section", { class: "picked-section" },
     el("details", { open: pickedOpen.get(id) || null, ontoggle: (event) => { pickedOpen.set(id, event.target.open); } },
@@ -538,26 +579,30 @@ function renderLists() {
       el("ul", { class: "items" }, picked.map((r) => itemNode(id, r)))),
     el("div", { class: "finish-actions" }, button(t("finishShopping"), () => act(() => finishShopping(id)), "secondary"))) : null;
   const paper = el("section", { class: "paper list-paper", "aria-label": listName(list) },
-    capture,
-    ...(needed.length ? section("toPickUp", needed) : []),
+    shopping ? null : capture,
+    ...neededSections,
     pickedSection,
     ...(!items.length ? [el("div", { class: "empty" },
       brandCollage("empty-collage"),
       el("h2", {}, t("emptyTitle")), paragraph("emptyText"))] : []),
     el("progress", { class: "visually-hidden", value: picked.length, max: Math.max(items.length, 1), "aria-label": t("pickedUp") }));
-  $("content").replaceChildren(
+  replace($("content"),
     el("section", { class: "list-heading" },
       brandCollage("list-heading-collage"),
       el("div", { class: "list-title-row" },
         el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
           "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
-          el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
-        listSyncLabel(),
-        el("button", { type: "button", class: "text-button list-options", onclick: () => listMenu(id),
-          "aria-haspopup": "dialog", "aria-label": t("quietListOptionsFor", { name: listName(list) }) },
-          el("span", { class: "list-options-label" }, t("quietListOptions")), el("span", { class: "list-options-icon", "aria-hidden": "true" }, "···"))),
-      el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: needed.length })),
+          el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, icon("chevron")))),
+        el("div", { class: "list-shortcuts" },
+          listSyncLabel(),
+          shopping ? null : button(icon("replay"), () => reviewDialog(id), "list-shortcut", { "aria-label": t("reviewTitle"), title: t("reviewTitle"), id: "review-shortcut" }),
+          button(icon("history"), () => historyDialog(id), "list-shortcut", { "aria-label": t("historyTitle"), title: t("historyTitle"), id: "history-shortcut" }),
+          button(icon("more"), () => listMenu(id), "list-shortcut", { "aria-haspopup": "dialog",
+            "aria-label": t("quietListOptionsFor", { name: listName(list) }), title: t("quietListOptions") }))),
+      el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: allItems.filter((row) => !isChecked(row)).length })),
         el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")))),
+    shopping ? el("div", { class: "shopping-banner" }, el("span", {}, t("shoppingMode")), button(t("shoppingStop"), () => toggleShopping(id), "text-button")) : null,
+    storeFilter(id, allItems),
     el("div", { class: "list-layout" }, el("div", {}, paper, archivedArea(archived))));
   if (focused) captureInput.focus({ preventScroll: true });
 }
@@ -581,24 +626,226 @@ function report(reply) {
   return reply;
 }
 const change = async (listId, kind, payload) => report(await lists.apply(listId, kind, payload));
+function storeFilter(listId, items) {
+  const stores = [...new Set(items.map((row) => row.facts.store).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale));
+  if (!stores.length && !storeFilters.get(listId)) return null;
+  const selector = el("select", { id: "store-filter", class: "field", onchange: (event) => {
+    storeFilters.set(listId, event.target.value || null); render().catch(failure);
+  } }, el("option", { value: "" }, t("allStores")),
+  ...[...new Set([...stores, storeFilters.get(listId)].filter(Boolean))].map((name) => el("option", { value: name }, name)));
+  selector.value = storeFilters.get(listId) ?? "";
+  return el("div", { class: "store-filter" }, el("label", { for: "store-filter" }, t("store")), selector);
+}
+async function reuseItems(listId, items) {
+  const current = store.lists.get(listId);
+  requireThat(current, "not_found");
+  const payloads = addAgain(current.projection, items, Date.now());
+  if (!payloads.length) { notice("alreadyOnList"); return; }
+  const reply = report(await lists.send(listId, payloads.map((payload) => intent(listId, "reuse", payload))));
+  if (!problem(reply)) notice("itemsReused", false, { count: reply.results.filter((result) => result.outcome === "applied").length });
+}
+function historyDialog(listId) {
+  const search = el("input", { id: "history-search", class: "field", type: "search", placeholder: t("historySearch"), oninput: draw });
+  const results = el("div", { class: "history-trips" });
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+  function draw() {
+    const list = store.lists.get(listId);
+    const trips = list ? historyTrips(list.projection, search.value) : [];
+    results.replaceChildren(...(trips.length ? trips.map((trip, index) => el("details", { class: "history-trip", open: index === 0 || null },
+      el("summary", {}, date.format(trip.closedAt), el("span", { class: "helper" }, t(trip.items.length === 1 ? "historyItemCountOne" : "historyItemCount", { count: trip.items.length }))),
+      el("ul", { class: "items" }, trip.items.map((item) => el("li", { class: "item history-item" },
+        el("div", { class: "item-info" }, el("span", { class: "item-name" }, item.name),
+          item.quantity == null ? null : el("span", { class: "item-meta" }, quantityText(item))),
+        button(t("quietAdd"), () => act(() => reuseItems(listId, [item])), "text-button", { "aria-label": t("addNamed", { name: item.name }) })))),
+      button(t("historyAddThese"), () => act(() => reuseItems(listId, trip.items)), "secondary")))
+      : [paragraph("historyEmpty", "helper")]));
+  }
+  openDialog(el("div", {}, el("h2", {}, t("historyTitle")),
+    el("label", { for: search.id, class: "label" }, t("historySearch")), search, results,
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))), null, draw);
+  draw();
+}
+function reviewDialog(listId) {
+  const startedAt = Date.now(), list = store.lists.get(listId);
+  if (!list) return;
+  const queue = reviewCandidates(list.projection, startedAt, choices(listId).read().muted);
+  const session = { cursor: 0, limit: Math.min(10, queue.length), added: 0, last: null, busy: false, problem: null };
+  const content = el("div", { class: "review-dialog" }, el("h2", {}, t("reviewTitle")));
+  let active = true;
+  function draw() {
+    if (!active) return;
+    const focusId = content.contains(document.activeElement) ? document.activeElement.id : null;
+    if (!session.busy) {
+      const current = store.lists.get(listId);
+      const eligible = new Set(current ? reviewCandidates(current.projection, Date.now(), choices(listId).read().muted).map((item) => item.key) : []);
+      while (session.cursor < session.limit && !eligible.has(queue[session.cursor].key)) session.cursor++;
+    }
+    const candidate = session.cursor < session.limit ? queue[session.cursor] : null;
+    const choiceButton = (label, action, kind = "secondary", attributes = {}) => button(label, action, kind, { disabled: session.busy || null, ...attributes });
+    replace(content, el("h2", { id: "dialog-heading" }, t("reviewTitle")),
+      candidate ? el("div", { class: "review-card", "aria-live": "polite" },
+        paragraph("reviewProgress", "helper", { current: session.cursor + 1, total: session.limit }),
+        el("h3", {}, candidate.name), paragraph(startedAt - candidate.boughtAt < 2 * DAY ? "reviewBoughtAgoOne" : "reviewBoughtAgo", "helper", { count: Math.max(1, Math.floor((startedAt - candidate.boughtAt) / DAY)) }),
+        paragraph(candidate.windowSize === 1 ? "reviewFrequencyOne" : "reviewFrequency", "helper", { count: candidate.shopCount, total: candidate.windowSize }),
+        el("div", { class: "button-row" }, choiceButton(t("reviewSkip"), () => run("skip"), "secondary", { id: "review-skip" }),
+          choiceButton(t("quietAdd"), () => run("add"), "primary", { id: "review-add", "aria-label": t("addNamed", { name: candidate.name }) })),
+        el("details", {}, el("summary", {}, t("quietItemActions")), choiceButton(t("reviewMute"), () => run("mute"), "text-button")))
+        : el("div", { "aria-live": "polite" }, paragraph(queue.length ? session.added === 1 ? "reviewAddedOne" : "reviewAdded" : "reviewEmpty", "lede", { count: session.added })),
+      session.problem ? el("p", { class: "dialog-error", role: "alert" }, t(session.problem)) : null,
+      session.last ? choiceButton(t("reviewUndo"), () => run("undo"), "text-button", { id: "review-undo" }) : null,
+      !candidate && session.limit < queue.length ? choiceButton(t("reviewMore"), () => {
+        session.limit = Math.min(queue.length, session.limit + 10); session.last = null; draw();
+      }) : null,
+      el("div", { class: "button-row dialog-actions" }, choiceButton(t("reviewBack"), closeDialog, "secondary", { id: "review-back" })));
+    if (focusId && !session.busy) {
+      const target = $(focusId);
+      (target && !target.disabled ? target : $("review-back"))?.focus({ preventScroll: true });
+    }
+  }
+  async function run(action) {
+    if (busy || session.busy) return;
+    const candidate = queue[session.cursor];
+    const actionFocus = document.activeElement?.id;
+    session.busy = true; session.problem = null; draw();
+    await act(async () => {
+      try {
+        const current = store.lists.get(listId);
+        requireThat(current, "not_found");
+        if (action === "undo") {
+          const last = session.last;
+          if (!last) return;
+          if (last.row) {
+            const row = unchangedRow(current.projection, last.row);
+            if (!row) { session.last = null; session.problem = "reviewUndoChanged"; return; }
+            const reply = await change(listId, "delete", guardedRemoval(row, Date.now()));
+            if (problem(reply)) { session.last = null; session.problem = "reviewUndoChanged"; return; }
+            session.added--;
+          }
+          session.cursor = last.index; session.last = null;
+        } else if (action === "skip") {
+          session.last = { index: session.cursor }; session.cursor++;
+        } else {
+          if (!reviewCandidates(current.projection, Date.now(), choices(listId).read().muted).some((item) => item.key === candidate.key)) return;
+          if (action === "mute") {
+            choices(listId).write((value) => ({ ...value, muted: [...new Set([...value.muted, candidate.key])].slice(-500) }));
+            session.last = null;
+          } else {
+            const [payload] = addAgain(current.projection, [{ name: candidate.name, key: candidate.key, gtin: candidate.gtin }], Date.now());
+            if (!payload) return;
+            const reply = await change(listId, "reuse", { ...payload, fromSuggestion: true });
+            const issue = problem(reply);
+            if (issue) { session.problem = dictionary[issue] ? issue : "serverUnavailable"; return; }
+            const row = reply.list.projection.rows[payload.proposedId];
+            session.last = row?.lifecycle === reply.intent.id ? { index: session.cursor, row } : null;
+            if (session.last) session.added++;
+          }
+          session.cursor++;
+        }
+      } catch (error) {
+        session.problem = dictionary[error?.code] ? error.code : "serverUnavailable";
+        throw error;
+      } finally {
+        session.busy = false; draw();
+        if (active && actionFocus) ($(actionFocus) ?? $("review-back"))?.focus({ preventScroll: true });
+      }
+    });
+  }
+  openDialog(content, () => { active = false; }, draw);
+  draw();
+}
+function saveFavorite(listId, row) {
+  const key = itemKey(row.facts, store.lists.get(listId).projection.aliases);
+  choices(listId).write((value) => ({ ...value, favorites: value.favorites.some((item) => item.key === key) ? value.favorites :
+    [...value.favorites, { key, name: row.facts.name, quantity: row.facts.quantity ?? null, unit: row.facts.unit ?? null,
+      gtin: row.facts.gtin ?? null, store: row.facts.store ?? null }].slice(-500) }));
+  closeDialog(); notice("favoriteSaved");
+}
+function favoritesDialog(listId) {
+  const content = el("div", {}, el("h2", {}, t("favoritesTitle")));
+  function draw() {
+    const saved = choices(listId).read(), list = store.lists.get(listId);
+    const present = new Set(list ? listRows(list.projection).filter((row) => !isChecked(row)).map((row) => itemKey(row.facts, list.projection.aliases)) : []);
+    replace(content, el("h2", { id: "dialog-heading" }, t("favoritesTitle")), paragraph("favoritesHelp", "helper"),
+      ...(saved.favorites.length ? saved.favorites.map((item) => {
+        const onList = present.has(itemKey(item, list?.projection.aliases));
+        return el("div", { class: "favorite-row" }, el("span", { class: "item-name" }, item.name),
+          button(t(onList ? "alreadyOnList" : "quietAdd"), () => act(async () => { await reuseItems(listId, [item]); draw(); }), "secondary", { disabled: onList || !list || null, "aria-label": t("addNamed", { name: item.name }) }),
+          button(t("favoriteRemove"), () => {
+            act(() => { choices(listId).write((value) => ({ ...value, favorites: value.favorites.filter((entry) => entry.key !== item.key) })); draw(); });
+          }, "text-button", { "aria-label": t("favoriteRemoveNamed", { name: item.name }) }));
+      }) : [paragraph("favoritesEmpty", "helper")]),
+      saved.muted.length ? button(t("reviewResetMuted"), () => act(() => { choices(listId).write((value) => ({ ...value, muted: [] })); draw(); })) : null,
+      el("div", { class: "button-row dialog-actions" }, button(t("close"), closeDialog)));
+  }
+  openDialog(content, null, draw); draw();
+}
+function clearListDialog(listId) {
+  const list = store.lists.get(listId);
+  if (!list) return;
+  const shown = listRows(list.projection);
+  messageDialog("clearList", "clearListHelp", () => lists.send(listId, shown.map((row) => intent(listId, "delete", guardedRemoval(row, Date.now())))).then(report));
+}
+function shareTextDialog(listId) {
+  const list = store.lists.get(listId);
+  if (!list) return;
+  const text = [listName(list), ...listRows(list.projection).map((row) => `${isChecked(row) ? "☑" : "☐"} ${row.facts.name}${row.facts.quantity == null ? "" : ` · ${row.facts.quantity} ${t(row.facts.unit)}`}`)].join("\n");
+  const field = el("textarea", { class: "field", rows: 10, readonly: true, "aria-label": t("shareText"), value: text });
+  openDialog(el("div", {}, el("h2", {}, t("shareText")), field, paragraph("shareTextHelp", "helper"),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog), button(t("selectText"), () => { field.focus(); field.select(); }))));
+}
+function transferDialog(listId, row) {
+  const others = [...store.lists.values()].filter((list) => list.id !== listId && !list.archived);
+  const destination = el("select", { id: "transfer-list", class: "field" },
+    others.map((list) => el("option", { value: list.id }, listName(list))));
+  const move = el("input", { id: "transfer-move", type: "checkbox" });
+  openDialog(el("form", { onsubmit: (event) => {
+    event.preventDefault();
+    const target = store.lists.get(destination.value), moving = move.checked;
+    if (!target || target.archived) return;
+    closeDialog();
+    act(async () => {
+      const [payload] = addAgain(target.projection, [{ ...row.facts, key: normalize(row.facts.name) }], Date.now());
+      if (!payload) { notice("transferAlready", true); return; }
+      const reply = await change(target.id, "reuse", payload);
+      if (problem(reply)) return;
+      if (reply.results[0]?.outcome !== "applied") { notice("transferAlready", true); return; }
+      if (moving) {
+        const source = store.lists.get(listId);
+        const current = source && unchangedRow(source.projection, row);
+        if (!current) { notice("transferKept", true); return; }
+        const removal = await change(listId, "delete", guardedRemoval(current, Date.now()));
+        if (problem(removal)) return;
+      }
+      notice("transferDone");
+    });
+  } }, el("h2", {}, t("transferTitle")),
+  others.length ? el("div", {}, el("label", { class: "label", for: destination.id }, t("transferDestination")), destination,
+    el("label", { class: "check-row", for: move.id }, move, t("transferMove"))) : paragraph("transferNoLists", "helper"),
+  el("div", { class: "button-row" }, button(t("cancel"), closeDialog),
+    el("button", { type: "submit", class: "primary", disabled: !others.length || null }, t("confirm")))));
+}
+/** The app's compact quantity: "×2" for pieces, an abbreviated unit otherwise. */
+function quantityText({ quantity, unit }) {
+  const amount = new Intl.NumberFormat(locale, { maximumFractionDigits: 10 }).format(Number(quantity));
+  return unit === "PIECE" ? t("quantityPieces", { amount }) : unit === "PACK" ? t("quantityPacks", { amount })
+    : t("quantityLabel", { amount, unit: t(unit) });
+}
+/** Like the app, a row starts with a capital; the stored name keeps the person's own casing. */
+const displayName = (name) => name.replace(/^\p{Ll}/u, (first) => first.toUpperCase());
 function itemNode(listId, row) {
   const checked = isChecked(row);
   const metadata = [];
-  if (row.facts.quantity != null)
-    metadata.push(t("quantityLabel", {
-      amount: new Intl.NumberFormat(locale, { maximumFractionDigits: 10 }).format(Number(row.facts.quantity)),
-      unit: t(row.facts.unit),
-    }));
   if (row.facts.store) metadata.push(row.facts.store);
   if (row.facts.note) metadata.push(row.facts.note);
   return el("li", { class: `item${checked ? " checked" : ""}` },
     el("button", { type: "button", class: "check", role: "checkbox", id: `check-${row.id}`, "aria-checked": checked,
       "aria-label": t(checked ? "uncheckItem" : "checkItem", { name: row.facts.name }),
-      onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? "✓" : ""),
+      onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? icon("check", 18) : null),
     el("div", { class: "item-info" },
-      el("div", { class: "item-name" }, row.facts.name),
+      el("div", { class: "item-name" }, displayName(row.facts.name)),
       metadata.length ? el("div", { class: "item-meta" }, metadata.join(" · ")) : null),
-    button("···", () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
+    row.facts.quantity == null ? null : el("span", { class: "quantity-badge" }, quantityText(row.facts)),
+    button(icon("more"), () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
 }
 function editDialog(listId, row) {
   const fields = {};
@@ -611,13 +858,29 @@ function editDialog(listId, row) {
   const unit = el("select", { id: "edit-unit", class: "field" },
     ["PIECE", "PACK", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE"].map((k) =>
       el("option", { value: k, ...(row.facts.unit === k ? { selected: true } : {}) }, t(k))));
+  const projection = store.lists.get(listId)?.projection;
+  const prefKey = itemKey(row.facts, projection?.aliases), preference = projection?.preferences?.[prefKey];
+  const repeat = el("input", { id: "edit-repeat", class: "field", type: "number", min: 1, step: 1, value: preference?.repeatEveryDays ?? "" });
+  const savedCategory = categories.includes(preference?.category) ? preference.category : "";
+  const category = el("select", { id: "edit-category", class: "field" },
+    el("option", { value: "" }, t("categoryAutomatic")),
+    categories.map((k) => el("option", { value: k, ...(savedCategory === k ? { selected: true } : {}) }, t(`category${k}`))));
   const error = el("p", { class: "dialog-error", role: "alert" });
+  const savedAction = (action) => () => {
+    const unsaved = ["name", "note", "store", "quantity"].some((key) => fields[key].value.trim() !== String(row.facts[key] ?? "")) ||
+      row.facts.quantity != null && unit.value !== row.facts.unit || repeat.value !== String(preference?.repeatEveryDays ?? "") ||
+      category.value !== savedCategory;
+    if (unsaved) { error.textContent = t("saveFirst"); return; }
+    action();
+  };
   const form = el("form", { onsubmit: (event) => {
     event.preventDefault();
     const name = fields.name.value.trim(), amount = fields.quantity.value;
     try {
       requireThat(name && name.length <= 1000, "invalidName");
       requireThat(amount === "" || (Number.isFinite(Number(amount)) && Number(amount) >= 0), "invalidQuantity");
+      const days = repeat.value === "" ? null : Number(repeat.value);
+      requireThat(days === null || Number.isInteger(days) && days > 0 && days <= 2147483647, "invalidRepeat");
       const changes = {};
       for (const k of ["name", "note", "store"]) {
         const value = fields[k].value.trim() || null;
@@ -630,7 +893,17 @@ function editDialog(listId, row) {
         changes.unit = selectedUnit;
       }
       closeDialog();
-      if (Object.keys(changes).length) act(() => change(listId, "edit", edit(row, changes, Date.now())));
+      act(async () => {
+        if (Object.keys(changes).length) {
+          const reply = await change(listId, "edit", edit(row, changes, Date.now()));
+          if (problem(reply)) return;
+        }
+        const shared = {};
+        if (days !== (preference?.repeatEveryDays ?? null)) shared.repeatEveryDays = days;
+        if (category.value !== savedCategory) shared.category = category.value || null;
+        if (Object.keys(shared).length)
+          await change(listId, "preference", { key: changes.key ?? prefKey, expected: projection.preferences?.[changes.key ?? prefKey]?.revision ?? null, changes: shared });
+      });
     } catch (e) {
       error.textContent = t(e.code ?? "invalid");
     }
@@ -640,9 +913,17 @@ function editDialog(listId, row) {
   el("div", { class: "row-grid" },
     el("div", {}, ...field("quantity", "number")),
     el("div", {}, el("label", { class: "label", for: "edit-unit" }, t("unit")), unit)),
-  el("details", { class: "edit-details", open: row.facts.note || row.facts.store ? true : null },
-    el("summary", {}, t("quietItemDetails")), ...field("note", "text", 8000), ...field("store", "text", 80)),
+  el("details", { class: "edit-details", open: row.facts.note || row.facts.store || savedCategory ? true : null },
+    el("summary", {}, t("quietItemDetails")), ...field("note", "text", 8000), ...field("store", "text", 80),
+    el("label", { class: "label", for: category.id }, t("categoryLabel")), category),
+  el("details", { class: "edit-details", open: preference?.repeatEveryDays ? true : null },
+    el("summary", {}, t("repeatTitle")), el("label", { class: "label", for: repeat.id }, t("repeatDays")), repeat, paragraph("repeatHelp", "helper")),
   el("details", { class: "edit-actions" }, el("summary", {}, t("quietItemActions")),
+    button(t("favoriteSave"), savedAction(() => act(() => {
+      try { saveFavorite(listId, row); }
+      catch (issue) { error.textContent = t(issue.code ?? "invalid"); throw issue; }
+    }))),
+    button(t("transferTitle"), savedAction(() => transferDialog(listId, row))),
     button(t("remove"), () => messageDialog("quietRemoveItemTitle", "quietRemoveItemHelp",
       () => change(listId, "delete", remove(row, Date.now())), { name: row.facts.name }, () => openDialog(form)), "danger")),
   error,
@@ -684,12 +965,20 @@ function listMenu(listId) {
   const values = { name: listName(list) };
   openDialog(el("div", {}, el("h2", {}, listName(list)),
     el("div", { class: "menu-actions" },
+      shoppingModes.has(listId) ? null : button(t("reviewTitle"), () => reviewDialog(listId)),
+      button(t("historyTitle"), () => historyDialog(listId)),
+      button(t("favoritesTitle"), () => favoritesDialog(listId)),
+      button(t(shoppingModes.has(listId) ? "shoppingStop" : "shoppingStart"), () => toggleShopping(listId)),
+      listRows(list.projection).some(isChecked) ? button(t("finishShopping"), () => { closeDialog(); act(() => finishShopping(listId)); }) : null,
       button(t("share"), () => shareDialog(listId)),
+      button(t("shareText"), () => shareTextDialog(listId)),
       button(t("newList"), newListDialog),
       button(t("listColorTitle"), () => listColorDialog(listId)),
       // A rename is guarded by the name this browser showed, so two people renaming at once see a conflict.
       button(t("renameList"), () => nameDialog("renameList", list.projection.name, (name) => change(listId, "list_name", rename(list.projection, name)))),
       button(t("importTitle"), () => { closeDialog(); openImport(listId); }),
+      button(t("clearList"), () => clearListDialog(listId)),
+      button(t("quietPreferences"), preferencesDialog),
       button(t("archiveList"), () => messageDialog("archiveListTitle", list.role === "owner" ? "archiveListOwnerText" : "archiveListText",
         () => lists.archive(listId, true), values)),
       list.role === "owner"
@@ -724,7 +1013,7 @@ function openImport(listId) {
     const projection = () => (own === generation ? store.lists.get(listId)?.projection ?? null : null);
     importDialog({ el, button, t, openDialog, closeDialog, dialog: $("dialog"), packs, origins: modelConfig.origins,
       server: instance.ai ? { csrf: account.csrfToken } : null, projection,
-      capture: async (items) => report(await lists.send(listId, captures(projection(), items, Date.now()).map((p) => intent(listId, "capture", p)))),
+      capture: async (items) => report(await lists.send(listId, captures(projection(), items, Date.now()).map((p) => intent(listId, "reuse", p)))),
       valid: () => projection() !== null, finished: () => render() });
   }, { rerender: false });
 }

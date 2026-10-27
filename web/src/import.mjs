@@ -1,8 +1,8 @@
 import { requireThat } from "./wire.mjs";
 const headingKey = value => value.toLowerCase().normalize("NFD").replace(/\p{M}+/gu, "").trim().replace(/:$/, "");
 const token = value => value.toLowerCase().replace(/ñ/g, "\u0000").normalize("NFD").replace(/\p{M}+/gu, "").replace(/\u0000/g, "ñ");
-const words = (packs, key) => packs.flatMap(p => (p[key] ?? "").split(",").map(x => x.trim()).filter(Boolean));
-const pairs = (packs, key) => new Map(words(packs, key).map(x => { const at = x.indexOf(":"); return [x.slice(0, at), x.slice(at + 1)]; }));
+export const words = (packs, key) => packs.flatMap(p => (p[key] ?? "").split(",").map(x => x.trim()).filter(Boolean));
+export const pairs = (packs, key) => new Map(words(packs, key).map(x => { const at = x.indexOf(":"); return [x.slice(0, at), x.slice(at + 1)]; }));
 const clean = value => value.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
   .replace(/<[^>]+>/g, " ").replace(/\*\*|__|`|\*|_/g, "").replace(/\s+/g, " ").trim();
 const heading = value => { const m = /^(#{1,6})\s+(.+)$/.exec(value.trim()); return m && [m[1].length, clean(m[2].replace(/[# ]+$/, ""))]; };

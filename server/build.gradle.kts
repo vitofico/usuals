@@ -64,12 +64,15 @@ val stageWebAssets by tasks.registering(Sync::class) {
         destinationDir.resolve("locales.json").writeText(codes.joinToString(",", "[", "]") { "\"$it\"" } + "\n")
         fun quote(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
             .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
-        val keys = listOf("ingredient-headings", "ignored-recipe-headings", "numbers", "multipliers", "units", "recipe-measures", "connectors")
+        val keys = listOf("ingredient-headings", "ignored-recipe-headings", "numbers", "multipliers", "units", "recipe-measures",
+            "connectors", "noise", "articles", "conjunctions", "non-names", "note-markers")
+        // Packs in file order, as InputLanguages loads them, so merged words keep the app's precedence.
         val packs = fileTree("../core/parse/src/main/resources/input-language") { include("*.properties") }.files.sorted().map { file ->
             val values = Properties().apply { file.reader(Charsets.UTF_8).use { load(it) } }
-            keys.joinToString(",", "{", "}") { quote(it) + ":" + quote(values.getProperty(it, "")) }
+            (keys + values.stringPropertyNames().filter { it.startsWith("category.") }.sorted())
+                .joinToString(",", "{", "}") { quote(it) + ":" + quote(values.getProperty(it, "")) }
         }
-        destinationDir.resolve("assets/import-language.json").writeText(packs.joinToString(",", "[", "]") + "\n")
+        destinationDir.resolve("assets/input-language.json").writeText(packs.joinToString(",", "[", "]") + "\n")
     }
 }
 sourceSets.main { resources.srcDir(layout.buildDirectory.dir("generated/web-resources")) }
