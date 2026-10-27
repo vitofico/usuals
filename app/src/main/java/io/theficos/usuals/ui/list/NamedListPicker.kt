@@ -8,6 +8,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.SyncProblem
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,10 +26,10 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.R
-import io.theficos.usuals.ui.theme.ambientLabelBacking
 
 @Composable
 internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean = false) {
+    var syncInfo by rememberSaveable { mutableStateOf(false) }
     var review by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf(false) }
     var creating by rememberSaveable { mutableStateOf(false) }
@@ -35,34 +39,46 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
     var draft by rememberSaveable { mutableStateOf("") }
     val selected = directory.lists.firstOrNull { it.id == directory.selected }
     val title = selected?.let { listTitle(it) } ?: name ?: stringResource(R.string.household_fallback_name)
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-        .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
-        .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = io.theficos.usuals.ui.theme.listAccent(selected?.color, MaterialTheme.colorScheme),
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose),
-            Modifier.size(24.dp).padding(start = 4.dp), tint = MaterialTheme.colorScheme.onSurface)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).heightIn(min = 48.dp)
+            .clickable(enabled = !busy && directory.lists.isNotEmpty(), role = Role.Button, onClickLabel = stringResource(R.string.lists_choose)) { open = true }
+            .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineLarge, color = io.theficos.usuals.ui.theme.listAccent(selected?.color, MaterialTheme.colorScheme),
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            if (directory.lists.isNotEmpty()) Icon(Icons.Outlined.ExpandMore, stringResource(R.string.lists_choose), Modifier.size(24.dp).padding(start = 4.dp), tint = MaterialTheme.colorScheme.onSurface)
+        }
+        if (directory.status != null || directory.pending > 0 || directory.conflicts.isNotEmpty()) {
+            val attention = directory.status in setOf(SyncStatus.OFFLINE, SyncStatus.SIGN_IN, SyncStatus.UPGRADE, SyncStatus.CAPACITY) || directory.conflicts.isNotEmpty()
+            val syncing = directory.pending > 0 && !attention
+            val rotation = if (syncing) {
+                val transition = rememberInfiniteTransition(label = "sync")
+                transition.animateFloat(0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "sync rotation").value
+            } else 0f
+            val description = stringResource(R.string.sync_details) + ": " + syncStatusText(directory)
+            IconButton(onClick = { syncInfo = true }, modifier = Modifier.size(48.dp)) {
+                Icon(if (attention) Icons.Outlined.SyncProblem else if (syncing) Icons.Outlined.Sync else Icons.Outlined.Check,
+                    description, Modifier.size(24.dp).rotate(rotation),
+                    tint = if (attention) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else Spacer(Modifier.size(48.dp))
     }
-    if (directory.pending > 0) Text(androidx.compose.ui.res.pluralStringResource(R.plurals.lists_pending, directory.pending, directory.pending),
-        modifier = Modifier.ambientLabelBacking(),
-        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    if (directory.conflicts.isNotEmpty()) TextButton(onClick = { review = true }, modifier = Modifier.ambientLabelBacking(), contentPadding = PaddingValues(0.dp)) {
-        Text(androidx.compose.ui.res.pluralStringResource(R.plurals.lists_conflicts, directory.conflicts.size, directory.conflicts.size))
-    }
+    if (syncInfo) AlertDialog(onDismissRequest = { syncInfo = false },
+        title = { Text(stringResource(R.string.sync_details)) },
+        text = { Column {
+            Text(syncStatusText(directory))
+            if (directory.pending > 0) Text(pluralStringResource(R.plurals.lists_pending, directory.pending, directory.pending))
+            if (directory.conflicts.isNotEmpty()) TextButton(onClick = { syncInfo = false; review = true }) {
+                Text(pluralStringResource(R.plurals.lists_conflicts, directory.conflicts.size, directory.conflicts.size))
+            }
+        } },
+        confirmButton = { TextButton(onClick = { syncInfo = false }) { Text(stringResource(R.string.history_dismiss)) } },
+        dismissButton = { if (directory.status == SyncStatus.SIGN_IN) TextButton(onClick = { syncInfo = false; actions.onOpenAccount() }) {
+            Text(stringResource(R.string.account_expired_title))
+        } })
     if (review) directory.conflicts.firstOrNull()?.let { conflict ->
         AlertDialog(onDismissRequest = { review = false }, title = { Text(stringResource(R.string.lists_review_title)) },
             text = { ConflictDetails(conflict) }, confirmButton = { TextButton(enabled = conflict.itemId != null, onClick = { review = false; actions.onReviewConflict(conflict) }) { Text(stringResource(R.string.lists_review_item)) } },
             dismissButton = { TextButton(onClick = { actions.onDismissConflict(conflict.id); if (directory.conflicts.size <= 1) review = false }) { Text(stringResource(R.string.lists_keep_current)) } })
-    }
-    when (directory.status) {
-        null, SyncStatus.SYNCED -> Unit
-        SyncStatus.SIGN_IN -> TextButton(onClick = actions.onOpenAccount, modifier = Modifier.ambientLabelBacking(), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.sync_sign_in)) }
-        else -> Text(stringResource(when (directory.status) {
-            SyncStatus.UPGRADE -> R.string.sync_upgrade
-            SyncStatus.CAPACITY -> R.string.sync_capacity
-            else -> R.string.sync_offline
-        }), modifier = Modifier.ambientLabelBacking(),
-        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     // Keeping one dialog window avoids a focus handoff when entering a new list's name.
     if (open) AlertDialog(onDismissRequest = { open = false; creating = false },
@@ -116,3 +132,12 @@ internal fun NamedListPicker(name: String?, directory: ListDirectory, busy: Bool
 private fun listTitle(list: NamedList): String = list.name.ifBlank {
     stringResource(if (list.imported) R.string.lists_imported_home else R.string.household_fallback_name)
 }
+
+@Composable
+private fun syncStatusText(directory: ListDirectory): String = stringResource(when (directory.status) {
+    SyncStatus.SIGN_IN -> R.string.sync_sign_in
+    SyncStatus.UPGRADE -> R.string.sync_upgrade
+    SyncStatus.CAPACITY -> R.string.sync_capacity
+    SyncStatus.OFFLINE -> R.string.sync_offline
+    else -> if (directory.pending > 0) R.string.sync_updating else R.string.sync_current
+})

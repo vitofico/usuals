@@ -13,6 +13,7 @@
   "serverUnavailable": "The server is unavailable. Try again when your connection returns.",
   "ssoDisabled": "Account sign-in is not configured on this server yet.",
   "loading": "Opening your lists…",
+  "syncDetails": "Sync details",
   "synced": "Up to date",
   "offline": "Offline, retrying…",
   "listTitle": "The good things.",

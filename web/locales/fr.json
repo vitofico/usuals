@@ -13,6 +13,7 @@
   "serverUnavailable": "Le serveur est indisponible. Réessayez lorsque la connexion revient.",
   "ssoDisabled": "La connexion par compte n’est pas encore configurée sur ce serveur.",
   "loading": "Ouverture de vos listes…",
+  "syncDetails": "Détails de synchronisation",
   "synced": "À jour",
   "offline": "Hors ligne, nouvel essai…",
   "listTitle": "Les bonnes choses.",
