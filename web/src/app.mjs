@@ -131,9 +131,14 @@ async function act(action, { rerender = true } = {}) {
 function setSync(state) {
   syncState = state;
   for (const node of document.querySelectorAll("[data-sync-status]")) {
-    node.textContent = account && state ? t(state) : "";
+    const label = account && state ? t(state) : t("synced");
+    node.querySelector(".sync-glyph").textContent = state === "synced" ? "✓" : "↻";
+    node.setAttribute("aria-label", `${t("syncDetails")}: ${label}`);
+    node.title = label;
+    node.disabled = !account;
     node.dataset.syncState = state;
   }
+  for (const node of document.querySelectorAll("[data-sync-details]")) node.textContent = t(state || "synced");
 }
 function startLists() {
   store = new ListStore();
@@ -470,8 +475,15 @@ function archivedArea(archived) {
       el("summary", {}, t("archivedLists", { count: archived.length })),
       el("ul", { class: "items" }, archived.map(archivedRow))));
 }
+function syncDetails() {
+  openDialog(el("div", {}, el("h2", {}, t("syncDetails")),
+    el("p", { "data-sync-details": "", role: "status" }, t(syncState || "synced")), paragraph("serverHeld", "helper"),
+    el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
+$("sync-status").addEventListener("click", syncDetails);
 function listSyncLabel() {
-  return el("span", { class: "sync-status list-sync", "data-sync-status": "", "data-sync-state": syncState, role: "status" }, account && syncState ? t(syncState) : "");
+  return el("button", { type: "button", class: "sync-status list-sync", "data-sync-status": "", "data-sync-state": syncState,
+    "aria-haspopup": "dialog", "aria-label": `${t("syncDetails")}: ${t(syncState || "synced")}`, onclick: syncDetails }, el("span", { class: "sync-glyph", "aria-hidden": "true" }, syncState === "synced" ? "✓" : "↻"));
 }
 function renderLists() {
   if (!store.cursor) {
@@ -540,11 +552,12 @@ function renderLists() {
         el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
           "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
           el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
+        listSyncLabel(),
         el("button", { type: "button", class: "text-button list-options", onclick: () => listMenu(id),
           "aria-haspopup": "dialog", "aria-label": t("quietListOptionsFor", { name: listName(list) }) },
           el("span", { class: "list-options-label" }, t("quietListOptions")), el("span", { class: "list-options-icon", "aria-hidden": "true" }, "···"))),
       el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: needed.length })),
-        el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")), listSyncLabel())),
+        el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")))),
     el("div", { class: "list-layout" }, el("div", {}, paper, archivedArea(archived))));
   if (focused) captureInput.focus({ preventScroll: true });
 }

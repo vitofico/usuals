@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sync_details">Dettagli sincronizzazione</string>
+    <string name="sync_current">Aggiornato</string>
+    <string name="sync_updating">Sincronizzazione…</string>
+</resources>

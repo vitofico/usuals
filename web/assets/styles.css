@@ -213,9 +213,24 @@ main {
   color: var(--primary);
 }
 .sync-status {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 24px;
   color: var(--muted);
 }
+.sync-glyph { display: inline-block; }
+main[data-view="list"] .topbar .sync-status { visibility: hidden; }
+.sync-status[data-sync-state="syncing"] .sync-glyph { animation: sync-spin 1.2s linear infinite; }
+.sync-status[data-sync-state="offline"] { color: var(--danger); }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sync-glyph { animation: none !important; } }
 #content {
   padding: 32px 0 48px;
   flex: 1;
@@ -753,7 +768,7 @@ dialog .lede {
 .list-title-name { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; background: var(--mauve); }
 .list-chevron { flex-shrink: 0; font: 24px/1 Manrope, sans-serif; color: var(--ink); background: var(--mauve); }
 .list-options { flex-shrink: 0; border-radius: 14px; padding-inline: 14px; background: var(--paper); }
-.list-options-icon, .list-sync { display: none; }
+.list-options-icon { display: none; }
 .list-summary { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; margin: 4px 0 0; }
 .list-summary > span { background: var(--mauve); }
 .list-choices { display: grid; gap: 8px; margin-top: 24px; }
@@ -822,8 +837,7 @@ dialog .lede, dialog .helper { overflow-wrap: anywhere; }
   main { padding: 0 16px; min-height: calc(100dvh - 136px); }
   .topbar { min-height: 0; border: 0; justify-content: flex-end; }
   .topbar > .eyebrow { display: none; }
-  .topbar .sync-status:empty, .topbar .sync-status[data-sync-state="synced"] { display: none; }
-  .topbar .sync-status { padding-block: 8px; }
+
   main[data-view="list"] .topbar { display: none; }
   .list-heading { margin-bottom: 12px; padding: 10px 12px; }
   .list-heading-collage { width: 240px; right: -34px; }
@@ -832,11 +846,10 @@ dialog .lede, dialog .helper { overflow-wrap: anywhere; }
   .list-options { width: 48px; min-height: 48px; padding: 0; }
   .list-options-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .list-options-icon { display: inline; font-size: 24px; }
-  .list-sync { display: inline; }
-  .list-summary .sync-status { font-size: 13px; text-align: left; }
+
   .topbar > .eyebrow { font-size: 10px; letter-spacing: 1px; }
   .top-actions { gap: 12px; }
-  .sync-status { font-size: 12px; white-space: normal; text-align: right; }
+
   #content { padding: 20px 0 32px; }
   .hero { margin-bottom: 22px; gap: 12px; }
   .hero h1 { font-size: 36px; letter-spacing: -1px; }
