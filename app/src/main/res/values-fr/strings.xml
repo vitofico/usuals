@@ -18,13 +18,13 @@
     <string name="item_uncheck">Remettre %1$s sur la liste</string>
     <string name="item_remove">Supprimer</string>
     <string name="item_quantity_pieces">×%1$s</string>
-    <string name="capture_hint">Maintenez pour parler</string>
+    <string name="capture_hint">Tenez et parlez</string>
     <string name="capture_listening">À l’écoute</string>
     <string name="capture_write_hint">Saisissez ce qu’il vous faut</string>
     <string name="capture_add">Ajouter</string>
     <string name="capture_speech_unavailable">La dictée n’est pas disponible sur ce téléphone. Saisissez ce qu’il vous faut.</string>
     <string name="capture_scan">Scanner un code-barres</string>
-    <string name="capture_type">Ajouter des articles</string>
+    <string name="capture_type">Ajouter</string>
     <string name="scan_title">Scanner</string>
     <string name="scan_back">Retour</string>
     <string name="scan_intro">Scannez un emballage</string>

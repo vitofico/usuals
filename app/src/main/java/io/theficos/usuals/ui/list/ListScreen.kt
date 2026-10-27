@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -57,6 +59,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import io.theficos.usuals.smart.Category
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -1070,9 +1073,12 @@ private fun CaptureBand(capture: CaptureState, actions: ListActions, autocomplet
                     }
                     CaptureVoiceButton(listening, hold, Modifier.fillMaxWidth())
                 }
-            } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                CaptureTypeButton(actions.onType, Modifier.weight(1f))
-                CaptureVoiceButton(listening, hold, Modifier.weight(1f))
+            } else Row(Modifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Hold-to-speak labels run longer than add labels in every language; one that still
+                // wraps must not leave its neighbour shorter.
+                CaptureTypeButton(actions.onType, Modifier.weight(1f).fillMaxHeight())
+                CaptureVoiceButton(listening, hold, Modifier.weight(1.3f).fillMaxHeight())
                 CaptureScanButton(actions.onOpenScan)
             }
         }
@@ -1086,7 +1092,7 @@ private fun CaptureTypeButton(onType: () -> Unit, modifier: Modifier) {
         .clickable(role = Role.Button, onClick = onType).semantics { contentDescription = label }
         .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(label, Modifier.weight(1f).padding(start = 6.dp),
+        Text(label, Modifier.weight(1f).padding(start = 6.dp), maxLines = 2, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -1100,7 +1106,7 @@ private fun CaptureVoiceButton(listening: Boolean, hold: Modifier, modifier: Mod
         Icon(Icons.Outlined.Mic, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
         Text(label,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.weight(1f).padding(start = 6.dp))
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 6.dp))
     }
 }
 
