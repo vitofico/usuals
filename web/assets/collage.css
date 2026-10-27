@@ -88,8 +88,7 @@ main > :not(.ambient-artwork) { position: relative; z-index: 1; }
 .loading-collage { width: 84px; opacity: 0.6; }
 .loading-appearance .helper { margin: 0; }
 /* Keep the stronger crop in the gaps while exposed metadata has an opaque ground. */
-:root[data-background-style="artwork"] :is(.list-summary > span, .list-section-label > span,
-  .list-options-label, .sync-status, .page-footer > span, .page-footer > a,
+:root[data-background-style="artwork"] :is(.list-summary > span, .page-footer > span, .page-footer > a,
   .welcome p, .hero .lede, .hero .helper, .loading-appearance .helper, .list-paper .empty p) {
   background: var(--ground);
   border-radius: 3px;
@@ -99,12 +98,19 @@ main > :not(.ambient-artwork) { position: relative; z-index: 1; }
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 18px;
-  margin-block: 8px 16px;
+  margin-block: 0 8px;
+  padding-bottom: 0;
 }
 :root[data-background-style="artwork"] .list-paper > .capture,
 :root[data-background-style="artwork"] .list-paper .picked-section {
   background: var(--paper);
   border-radius: 18px;
+}
+:root[data-background-style="artwork"] .list-paper > .capture { margin: 0 0 12px; }
+/* A faint crop like Android's header: unbacked title and icons keep the ambient contrast bound, and the edges fade out. */
+.list-heading-collage {
+  opacity: 0.24;
+  mask-image: radial-gradient(closest-side, #000 45%, transparent);
 }
 @media (max-width: 900px) {
   .ambient-collage { width: 700px; top: -30px; right: -220px; opacity: 0.26; }

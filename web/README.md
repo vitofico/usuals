@@ -19,7 +19,9 @@ browser storage removes those choices; lists and purchases remain on the server.
 Sign in with a local account or the configured OIDC provider and your lists
 appear. The selected list is the page heading. Select its name and chevron to switch lists or create a **New list**.
 
-- Type in **What do we need?** to add an item. Tick it when it is in the basket;
+- Type in **What do we need?** to add an item. Items are grouped by category,
+  like the phone; **Details** in an item's options sets its category for
+  everyone on the list. Tick an item when it is in the basket;
   **Picked up** expands the items already in your basket.
   **Finish shopping** moves them into the list's history, with
   **Undo** while the notice is showing.

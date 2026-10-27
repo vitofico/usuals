@@ -12,6 +12,10 @@
   Replay Undo preserve items changed by another person.
 - Expand the browser tour and keep every new control translated in English,
   Spanish, Italian, French and German.
+- Group browser items by category in the app's aisle order, with the app's
+  category icons and a shared category choice in item details. Show quantities
+  as the app's compact badge, and give the list header the app's faint artwork
+  and icon buttons instead of white patches behind the title and controls.
 
 ## Receipts and checkout
 

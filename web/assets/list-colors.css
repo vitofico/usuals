@@ -21,3 +21,31 @@
 .list-color-options { border: 0; padding: 0; margin: 0; }
 .list-color-option { display: flex; align-items: center; gap: 10px; min-height: 48px; }
 .list-color-option input { width: auto; }
+
+/* Category glyph colours match Android's categoryAccent; they never carry meaning alone. */
+[data-category] { --category: #686570; }
+[data-category="PRODUCE"] { --category: #4c6e50; }
+[data-category="DAIRY"] { --category: #705274; }
+[data-category="BAKERY"] { --category: #8a6035; }
+[data-category="MEAT"] { --category: #9b4e64; }
+[data-category="FISH"] { --category: #456f80; }
+[data-category="FROZEN"] { --category: #467778; }
+[data-category="PANTRY"] { --category: #866344; }
+[data-category="DRINKS"] { --category: #8a4d70; }
+[data-category="SNACKS"] { --category: #856a2c; }
+[data-category="HOUSEHOLD"] { --category: #60678a; }
+[data-category="PERSONAL_CARE"] { --category: #7b5c80; }
+@media (prefers-color-scheme: dark) {
+  [data-category] { --category: #c9c0d0; }
+  [data-category="PRODUCE"] { --category: #b7d5ae; }
+  [data-category="DAIRY"] { --category: #d9b8dd; }
+  [data-category="BAKERY"] { --category: #e1c198; }
+  [data-category="MEAT"] { --category: #e7afbf; }
+  [data-category="FISH"] { --category: #afd0dc; }
+  [data-category="FROZEN"] { --category: #a8d7d3; }
+  [data-category="PANTRY"] { --category: #dfc4a4; }
+  [data-category="DRINKS"] { --category: #e3b2d0; }
+  [data-category="SNACKS"] { --category: #e9d199; }
+  [data-category="HOUSEHOLD"] { --category: #c5cbe4; }
+  [data-category="PERSONAL_CARE"] { --category: #d8bedc; }
+}

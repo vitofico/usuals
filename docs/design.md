@@ -162,13 +162,18 @@ hierarchy while retaining semantic controls and visible focus states.
 
 ## Browser hierarchy
 
-The selected list is the page title. Its open heading carries a cropped
-collage on desktop and mobile, without a tinted rounded enclosure. Replay and
-History sit beside the title's controls and wrap below the title on narrow screens. The
-artwork is decorative and does not receive focus or intercept pointer input.
-A quiet Change list action opens list selection; List options contains the
-remaining list actions. The capture field
-and its labelled Add button are the clear next step. Picked-up rows have a
+The selected list is the page title. Its open heading carries a faint, soft-edged
+collage crop on desktop and mobile, at the ambient artwork's opacity, so the title
+and header icons sit directly on the page as on Android. The sync state, Replay,
+History and List options are icon buttons beside the title; on narrow screens they
+share the row below it with the item count. The artwork is decorative and does
+not receive focus or intercept pointer input. The title opens list selection.
+The capture field and its labelled Add button are the clear next step.
+Items to pick up are grouped by category in Android's aisle order, each group with
+its icon, name and count above its own card. The browser classifies with the same
+input-language seeds (staged by the server build as `category-seeds.json`) and the
+same shared per-item category choice; until the seeds load it shows one ungrouped
+section. Quantities sit in a compact badge at the row's end. Picked-up rows have a
 counted disclosure and Finish shopping remains reachable without expanding it.
 
 Replay reviews factual recent purchases using the same eligibility and ordering

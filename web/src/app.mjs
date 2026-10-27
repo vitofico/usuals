@@ -13,6 +13,8 @@ import { importDialog } from "./import-dialog.mjs";
 import { forgetLegacyVault } from "./legacy.mjs";
 import { DialogFocus, DialogCancellation } from "./dialog-focus.mjs";
 import { invitationToken, InvitationsApi } from "./invitations.mjs";
+import { icon } from "./icons.mjs";
+import { categories, categoryClassifier, groupByCategory } from "./categories.mjs";
 
 forgetLegacyVault();
 let pendingInvitationToken = invitationToken(location), invitation = null;
@@ -70,6 +72,12 @@ let availableLocales = ["en"],
   lists = null,
   feed = null,
   syncState = "";
+// Grouping waits for the seeds; until then, or if they fail to load, the list stays one ungrouped section.
+let classify = null;
+request("/assets/category-seeds.json").then((seeds) => {
+  classify = categoryClassifier(seeds);
+  if (screen === "lists") renderLists();
+}).catch(() => {});
 const invitations = new InvitationsApi({ transport: api, csrf: () => account?.csrfToken });
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
@@ -134,7 +142,7 @@ function setSync(state) {
   syncState = state;
   for (const node of document.querySelectorAll("[data-sync-status]")) {
     const label = account && state ? t(state) : t("synced");
-    node.querySelector(".sync-glyph").textContent = state === "synced" ? "✓" : "↻";
+    node.querySelector(".sync-glyph").replaceChildren(syncIcon(state));
     node.setAttribute("aria-label", `${t("syncDetails")}: ${label}`);
     node.title = label;
     node.disabled = !account;
@@ -142,6 +150,7 @@ function setSync(state) {
   }
   for (const node of document.querySelectorAll("[data-sync-details]")) node.textContent = t(state || "synced");
 }
+const syncIcon = (state) => icon(state === "synced" ? "check" : state === "offline" ? "offline" : "sync");
 function startLists() {
   store = new ListStore();
   lists = new ListsApi({ store, csrf: () => account.csrfToken, transport: api });
@@ -492,7 +501,7 @@ function syncDetails() {
 $("sync-status").addEventListener("click", syncDetails);
 function listSyncLabel() {
   return el("button", { type: "button", class: "sync-status list-sync", "data-sync-status": "", "data-sync-state": syncState,
-    "aria-haspopup": "dialog", "aria-label": `${t("syncDetails")}: ${t(syncState || "synced")}`, onclick: syncDetails }, el("span", { class: "sync-glyph", "aria-hidden": "true" }, syncState === "synced" ? "✓" : "↻"));
+    "aria-haspopup": "dialog", "aria-label": `${t("syncDetails")}: ${t(syncState || "synced")}`, onclick: syncDetails }, el("span", { class: "sync-glyph", "aria-hidden": "true" }, syncIcon(syncState)));
 }
 function renderLists() {
   if (!store.cursor) {
@@ -539,10 +548,21 @@ function renderLists() {
     });
   } }, el("label", { for: captureInput.id, class: "visually-hidden" }, t("addPlaceholder")),
     captureInput, el("button", { type: "submit", "aria-label": t("add") }, t("quietAdd")));
-  const section = (key, rows, extra = null) => [
-    el("div", { class: "list-section-label" }, el("span", {}, t(key)), el("span", { class: "header-actions" }, extra, el("span", { class: "list-accent-count", "data-list-color": listColor(list.projection) }, rows.length))),
-    el("ul", { class: "items" }, rows.map((r) => itemNode(id, r))),
-  ];
+  const section = (label, rows, category = null) => {
+    const heading = `section-${category ?? "needed"}`;
+    return [
+      el("div", { class: "list-section-label", id: heading, "data-category": category },
+        category ? el("span", { class: "category-icon" }, icon(category, 18)) : null,
+        el("span", { class: "section-name" }, label),
+        el("span", { class: "list-accent-count", "data-list-color": listColor(list.projection) }, rows.length)),
+      el("ul", { class: "items", "aria-labelledby": heading }, rows.map((r) => itemNode(id, r))),
+    ];
+  };
+  const preferences = (row) => list.projection.preferences?.[itemKey(row.facts, list.projection.aliases)];
+  const neededSections = !needed.length ? [] : classify
+    ? groupByCategory(needed, (row) => classify(row.facts.name, preferences(row)?.category))
+      .flatMap(([category, rows]) => section(t(`category${category}`), rows, category))
+    : section(t("toPickUp"), needed);
   const people = access(list, account.user.id);
   const pickedSection = picked.length ? el("section", { class: "picked-section" },
     el("details", { open: pickedOpen.get(id) || null, ontoggle: (event) => { pickedOpen.set(id, event.target.open); } },
@@ -551,7 +571,7 @@ function renderLists() {
     el("div", { class: "finish-actions" }, button(t("finishShopping"), () => act(() => finishShopping(id)), "secondary"))) : null;
   const paper = el("section", { class: "paper list-paper", "aria-label": listName(list) },
     shopping ? null : capture,
-    ...(needed.length ? section("toPickUp", needed) : []),
+    ...neededSections,
     pickedSection,
     ...(!items.length ? [el("div", { class: "empty" },
       brandCollage("empty-collage"),
@@ -563,14 +583,13 @@ function renderLists() {
       el("div", { class: "list-title-row" },
         el("h1", {}, el("button", { type: "button", class: "list-title-trigger", id: "list-switcher", onclick: listPickerDialog,
           "aria-haspopup": "dialog", "aria-label": t("quietChangeListFor", { name: listName(list) }) },
-          el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, "⌄"))),
+          el("span", { class: "list-title-name", "data-list-color": listColor(list.projection) }, listName(list)), el("span", { class: "list-chevron", "aria-hidden": "true" }, icon("chevron")))),
         el("div", { class: "list-shortcuts" },
-          shopping ? null : button("↻", () => reviewDialog(id), "list-shortcut", { "aria-label": t("reviewTitle"), title: t("reviewTitle"), id: "review-shortcut" }),
-          button("◷", () => historyDialog(id), "list-shortcut", { "aria-label": t("historyTitle"), title: t("historyTitle"), id: "history-shortcut" }),
-          listSyncLabel()),
-        el("button", { type: "button", class: "text-button list-options", onclick: () => listMenu(id),
-          "aria-haspopup": "dialog", "aria-label": t("quietListOptionsFor", { name: listName(list) }) },
-          el("span", { class: "list-options-label" }, t("quietListOptions")), el("span", { class: "list-options-icon", "aria-hidden": "true" }, "···"))),
+          listSyncLabel(),
+          shopping ? null : button(icon("replay"), () => reviewDialog(id), "list-shortcut", { "aria-label": t("reviewTitle"), title: t("reviewTitle"), id: "review-shortcut" }),
+          button(icon("history"), () => historyDialog(id), "list-shortcut", { "aria-label": t("historyTitle"), title: t("historyTitle"), id: "history-shortcut" }),
+          button(icon("more"), () => listMenu(id), "list-shortcut", { "aria-haspopup": "dialog",
+            "aria-label": t("quietListOptionsFor", { name: listName(list) }), title: t("quietListOptions") }))),
       el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: allItems.filter((row) => !isChecked(row)).length })),
         el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")))),
     shopping ? el("div", { class: "shopping-banner" }, el("span", {}, t("shoppingMode")), button(t("shoppingStop"), () => toggleShopping(id), "text-button")) : null,
@@ -627,7 +646,7 @@ function historyDialog(listId) {
       el("summary", {}, date.format(trip.closedAt), el("span", { class: "helper" }, t(trip.items.length === 1 ? "historyItemCountOne" : "historyItemCount", { count: trip.items.length }))),
       el("ul", { class: "items" }, trip.items.map((item) => el("li", { class: "item history-item" },
         el("div", { class: "item-info" }, el("span", { class: "item-name" }, item.name),
-          item.quantity == null ? null : el("span", { class: "item-meta" }, t("quantityLabel", { amount: item.quantity, unit: t(item.unit) }))),
+          item.quantity == null ? null : el("span", { class: "item-meta" }, quantityText(item))),
         button(t("quietAdd"), () => act(() => reuseItems(listId, [item])), "text-button", { "aria-label": t("addNamed", { name: item.name }) })))),
       button(t("historyAddThese"), () => act(() => reuseItems(listId, trip.items)), "secondary")))
       : [paragraph("historyEmpty", "helper")]));
@@ -796,24 +815,26 @@ function transferDialog(listId, row) {
   el("div", { class: "button-row" }, button(t("cancel"), closeDialog),
     el("button", { type: "submit", class: "primary", disabled: !others.length || null }, t("confirm")))));
 }
+/** The app's compact quantity: "×2" for pieces, an abbreviated unit otherwise. */
+function quantityText({ quantity, unit }) {
+  const amount = new Intl.NumberFormat(locale, { maximumFractionDigits: 10 }).format(Number(quantity));
+  return unit === "PIECE" ? t("quantityPieces", { amount }) : unit === "PACK" ? t("quantityPacks", { amount })
+    : t("quantityLabel", { amount, unit: t(unit) });
+}
 function itemNode(listId, row) {
   const checked = isChecked(row);
   const metadata = [];
-  if (row.facts.quantity != null)
-    metadata.push(t("quantityLabel", {
-      amount: new Intl.NumberFormat(locale, { maximumFractionDigits: 10 }).format(Number(row.facts.quantity)),
-      unit: t(row.facts.unit),
-    }));
   if (row.facts.store) metadata.push(row.facts.store);
   if (row.facts.note) metadata.push(row.facts.note);
   return el("li", { class: `item${checked ? " checked" : ""}` },
     el("button", { type: "button", class: "check", role: "checkbox", id: `check-${row.id}`, "aria-checked": checked,
       "aria-label": t(checked ? "uncheckItem" : "checkItem", { name: row.facts.name }),
-      onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? "✓" : ""),
+      onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? icon("check", 18) : null),
     el("div", { class: "item-info" },
       el("div", { class: "item-name" }, row.facts.name),
       metadata.length ? el("div", { class: "item-meta" }, metadata.join(" · ")) : null),
-    button("···", () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
+    row.facts.quantity == null ? null : el("span", { class: "quantity-badge" }, quantityText(row.facts)),
+    button(icon("more"), () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
 }
 function editDialog(listId, row) {
   const fields = {};
@@ -829,10 +850,15 @@ function editDialog(listId, row) {
   const projection = store.lists.get(listId)?.projection;
   const prefKey = itemKey(row.facts, projection?.aliases), preference = projection?.preferences?.[prefKey];
   const repeat = el("input", { id: "edit-repeat", class: "field", type: "number", min: 1, step: 1, value: preference?.repeatEveryDays ?? "" });
+  const savedCategory = categories.includes(preference?.category) ? preference.category : "";
+  const category = el("select", { id: "edit-category", class: "field" },
+    el("option", { value: "" }, t("categoryAutomatic")),
+    categories.map((k) => el("option", { value: k, ...(savedCategory === k ? { selected: true } : {}) }, t(`category${k}`))));
   const error = el("p", { class: "dialog-error", role: "alert" });
   const savedAction = (action) => () => {
     const unsaved = ["name", "note", "store", "quantity"].some((key) => fields[key].value.trim() !== String(row.facts[key] ?? "")) ||
-      row.facts.quantity != null && unit.value !== row.facts.unit || repeat.value !== String(preference?.repeatEveryDays ?? "");
+      row.facts.quantity != null && unit.value !== row.facts.unit || repeat.value !== String(preference?.repeatEveryDays ?? "") ||
+      category.value !== savedCategory;
     if (unsaved) { error.textContent = t("saveFirst"); return; }
     action();
   };
@@ -861,8 +887,11 @@ function editDialog(listId, row) {
           const reply = await change(listId, "edit", edit(row, changes, Date.now()));
           if (problem(reply)) return;
         }
-        if (days !== (preference?.repeatEveryDays ?? null))
-          await change(listId, "preference", { key: changes.key ?? prefKey, expected: projection.preferences?.[changes.key ?? prefKey]?.revision ?? null, changes: { repeatEveryDays: days } });
+        const shared = {};
+        if (days !== (preference?.repeatEveryDays ?? null)) shared.repeatEveryDays = days;
+        if (category.value !== savedCategory) shared.category = category.value || null;
+        if (Object.keys(shared).length)
+          await change(listId, "preference", { key: changes.key ?? prefKey, expected: projection.preferences?.[changes.key ?? prefKey]?.revision ?? null, changes: shared });
       });
     } catch (e) {
       error.textContent = t(e.code ?? "invalid");
@@ -873,8 +902,9 @@ function editDialog(listId, row) {
   el("div", { class: "row-grid" },
     el("div", {}, ...field("quantity", "number")),
     el("div", {}, el("label", { class: "label", for: "edit-unit" }, t("unit")), unit)),
-  el("details", { class: "edit-details", open: row.facts.note || row.facts.store ? true : null },
-    el("summary", {}, t("quietItemDetails")), ...field("note", "text", 8000), ...field("store", "text", 80)),
+  el("details", { class: "edit-details", open: row.facts.note || row.facts.store || savedCategory ? true : null },
+    el("summary", {}, t("quietItemDetails")), ...field("note", "text", 8000), ...field("store", "text", 80),
+    el("label", { class: "label", for: category.id }, t("categoryLabel")), category),
   el("details", { class: "edit-details", open: preference?.repeatEveryDays ? true : null },
     el("summary", {}, t("repeatTitle")), el("label", { class: "label", for: repeat.id }, t("repeatDays")), repeat, paragraph("repeatHelp", "helper")),
   el("details", { class: "edit-actions" }, el("summary", {}, t("quietItemActions")),
