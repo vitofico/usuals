@@ -1,19 +1,20 @@
-// Mirrors :smart CategoryClassifier over the same input-language seeds, which the server build stages as category-seeds.json.
+// Mirrors :smart CategoryClassifier over the category seeds of the input-language packs (assets/input-language.json).
 import { normalize } from "./identity.mjs";
+import { words } from "./import.mjs";
 
 export const categories = ["PRODUCE", "DAIRY", "BAKERY", "MEAT", "FISH", "FROZEN", "PANTRY", "DRINKS", "SNACKS",
   "HOUSEHOLD", "PERSONAL_CARE", "OTHER"];
 
 /** Longer phrases win over the words inside them, so "frozen peas" is Frozen even though "peas" is Produce. */
-export function categoryClassifier(seeds) {
+export function categoryClassifier(packs) {
   const unique = new Map();
   for (const category of categories)
-    for (const word of seeds?.[category] ?? []) {
+    for (const word of words(packs ?? [], `category.${category}`)) {
       const key = normalize(word);
       if (key && !unique.has(`${category} ${key}`)) unique.set(`${category} ${key}`, { key, category });
     }
-  const words = (key) => key.split(" ").length;
-  const order = [...unique.values()].sort((a, b) => words(b.key) - words(a.key) || b.key.length - a.key.length ||
+  const length = (key) => key.split(" ").length;
+  const order = [...unique.values()].sort((a, b) => length(b.key) - length(a.key) || b.key.length - a.key.length ||
     categories.indexOf(a.category) - categories.indexOf(b.category) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return (name, override = null) => {
     if (categories.includes(override)) return override;

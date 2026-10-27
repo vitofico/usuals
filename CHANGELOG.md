@@ -16,6 +16,9 @@
   category icons and a shared category choice in item details. Show quantities
   as the app's compact badge, and give the list header the app's faint artwork
   and icon buttons instead of white patches behind the title and controls.
+- Read the browser capture box with the app's rules: quantities and units
+  ("2 bananas", "500g flour", "leche x2"), several items in one line ("milk and
+  eggs"), and notes ("milk for the coffee", "milk (semi skimmed)").
 
 ## Receipts and checkout
 

@@ -168,11 +168,14 @@ and header icons sit directly on the page as on Android. The sync state, Replay,
 History and List options are icon buttons beside the title; on narrow screens they
 share the row below it with the item count. The artwork is decorative and does
 not receive focus or intercept pointer input. The title opens list selection.
-The capture field and its labelled Add button are the clear next step.
+The capture field and its labelled Add button are the clear next step. It reads
+input with Android's capture rules, so "2 bananas" is Bananas ×2 and "milk and
+eggs" is two rows, sent as one change; rows start with a capital for display only.
 Items to pick up are grouped by category in Android's aisle order, each group with
-its icon, name and count above its own card. The browser classifies with the same
-input-language seeds (staged by the server build as `category-seeds.json`) and the
-same shared per-item category choice; until the seeds load it shows one ungrouped
+its icon, name and count above its own card. Capture parsing and grouping use the
+same input-language packs as the app (staged by the server build as
+`input-language.json`) and the shared per-item category choice; until the packs
+load, capture adds the typed text as one item and the list shows one ungrouped
 section. Quantities sit in a compact badge at the row's end. Picked-up rows have a
 counted disclosure and Finish shopping remains reachable without expanding it.
 

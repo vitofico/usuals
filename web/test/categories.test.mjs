@@ -2,13 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { categoryClassifier, groupByCategory } from "../src/categories.mjs";
 
-const classify = categoryClassifier({
-  PRODUCE: ["peas", "banana", "tomate"],
-  FROZEN: ["frozen peas"],
-  DAIRY: ["milk", "oat milk"],
-  DRINKS: ["oat milk"],
-  PANTRY: ["salsa de tomate"],
-});
+const classify = categoryClassifier([
+  { "category.PRODUCE": "peas,banana", "category.FROZEN": "frozen peas", "category.DAIRY": "milk,oat milk" },
+  { "category.PRODUCE": "tomate", "category.DRINKS": "oat milk", "category.PANTRY": "salsa de tomate" },
+]);
 
 test("the longest matching phrase decides, as on Android", () => {
   assert.equal(classify("Frozen peas"), "FROZEN");

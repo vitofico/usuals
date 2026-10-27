@@ -64,16 +64,15 @@ val stageWebAssets by tasks.registering(Sync::class) {
         destinationDir.resolve("locales.json").writeText(codes.joinToString(",", "[", "]") { "\"$it\"" } + "\n")
         fun quote(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
             .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\""
-        val keys = listOf("ingredient-headings", "ignored-recipe-headings", "numbers", "multipliers", "units", "recipe-measures", "connectors")
-        val packs = fileTree("../core/parse/src/main/resources/input-language") { include("*.properties") }.files.sorted()
-            .map { file -> Properties().apply { file.reader(Charsets.UTF_8).use { load(it) } } }
-        val imports = packs.map { values -> keys.joinToString(",", "{", "}") { quote(it) + ":" + quote(values.getProperty(it, "")) } }
-        destinationDir.resolve("assets/import-language.json").writeText(imports.joinToString(",", "[", "]") + "\n")
-        val seeds = sortedMapOf<String, List<String>>()
-        for (values in packs) for (key in values.stringPropertyNames().filter { it.startsWith("category.") })
-            seeds.merge(key.removePrefix("category."), values.getProperty(key).split(',').map(String::trim).filter(String::isNotEmpty), List<String>::plus)
-        destinationDir.resolve("assets/category-seeds.json").writeText(seeds.entries.joinToString(",", "{", "}") { (category, words) ->
-            quote(category) + ":" + words.joinToString(",", "[", "]", transform = ::quote) } + "\n")
+        val keys = listOf("ingredient-headings", "ignored-recipe-headings", "numbers", "multipliers", "units", "recipe-measures",
+            "connectors", "noise", "articles", "conjunctions", "non-names", "note-markers")
+        // Packs in file order, as InputLanguages loads them, so merged words keep the app's precedence.
+        val packs = fileTree("../core/parse/src/main/resources/input-language") { include("*.properties") }.files.sorted().map { file ->
+            val values = Properties().apply { file.reader(Charsets.UTF_8).use { load(it) } }
+            (keys + values.stringPropertyNames().filter { it.startsWith("category.") }.sorted())
+                .joinToString(",", "{", "}") { quote(it) + ":" + quote(values.getProperty(it, "")) }
+        }
+        destinationDir.resolve("assets/input-language.json").writeText(packs.joinToString(",", "[", "]") + "\n")
     }
 }
 sourceSets.main { resources.srcDir(layout.buildDirectory.dir("generated/web-resources")) }

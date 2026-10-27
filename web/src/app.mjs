@@ -15,6 +15,7 @@ import { DialogFocus, DialogCancellation } from "./dialog-focus.mjs";
 import { invitationToken, InvitationsApi } from "./invitations.mjs";
 import { icon } from "./icons.mjs";
 import { categories, categoryClassifier, groupByCategory } from "./categories.mjs";
+import { utteranceParser } from "./utterance.mjs";
 
 forgetLegacyVault();
 let pendingInvitationToken = invitationToken(location), invitation = null;
@@ -52,7 +53,7 @@ let uiScope = new RunScope();
 const api = (path, options = {}) => request(path, { ...options, scope: uiScope });
 let importResources = null;
 function loadImportResources() {
-  if (!importResources) importResources = Promise.all([api("/assets/import-language.json"), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
+  if (!importResources) importResources = Promise.all([languagePacks(), api("/model-origins.json"), api("/v1/instance").catch(() => ({ ai: false }))])
     .catch(error => { importResources = null; throw error; });
   return importResources;
 }
@@ -72,12 +73,16 @@ let availableLocales = ["en"],
   lists = null,
   feed = null,
   syncState = "";
-// Grouping waits for the seeds; until then, or if they fail to load, the list stays one ungrouped section.
-let classify = null;
-request("/assets/category-seeds.json").then((seeds) => {
-  classify = categoryClassifier(seeds);
+// One read of the input-language packs feeds capture parsing, category grouping and imports. Until it succeeds the
+// capture box adds what was typed as one item and the list stays one ungrouped section; a later caller retries it.
+let classify = null, parseCapture = null, packsRequest = null;
+const languagePacks = () => packsRequest ??= request("/assets/input-language.json").then((packs) => {
+  classify = categoryClassifier(packs);
+  parseCapture = utteranceParser(packs);
   if (screen === "lists") renderLists();
-}).catch(() => {});
+  return packs;
+}).catch((error) => { packsRequest = null; throw error; });
+languagePacks().catch(() => {});
 const invitations = new InvitationsApi({ transport: api, csrf: () => account?.csrfToken });
 const t = (key, values = {}) => {
   let value = dictionary[key] ?? dictionary.invalid ?? key;
@@ -529,9 +534,13 @@ function renderLists() {
   captureInput.setAttribute("aria-label", t("addPlaceholder"));
   const capture = el("form", { class: "capture", onsubmit: (event) => {
     event.preventDefault();
-    const name = captureInput.value.trim();
+    const text = captureInput.value.trim();
     if (busy) return;
-    if (!name || name.length > 1000) {
+    if (!parseCapture) languagePacks().catch(() => {});
+    // Like the app: "2 bananas" is Bananas ×2 and "milk and eggs" is two rows, all sent as one change.
+    const items = text.length > 1000 ? [] : (parseCapture?.(text) ?? (text ? [{ name: text }] : []))
+      .map((item) => ({ ...item, quantity: item.quantity == null ? null : decimal(item.quantity), rawText: text }));
+    if (!items.length) {
       notice("invalidName", true);
       return;
     }
@@ -540,9 +549,9 @@ function renderLists() {
       try {
         const current = store.lists.get(id);
         requireThat(current, "not_found");
-        await change(id, "capture", captures(current.projection, [{ name }], Date.now())[0]);
+        report(await lists.send(id, captures(current.projection, items, Date.now()).map((payload) => intent(id, "capture", payload))));
       } catch (error) {
-        if (!captureInput.value) captureInput.value = name;
+        if (!captureInput.value) captureInput.value = text;
         throw error;
       }
     });
@@ -821,6 +830,8 @@ function quantityText({ quantity, unit }) {
   return unit === "PIECE" ? t("quantityPieces", { amount }) : unit === "PACK" ? t("quantityPacks", { amount })
     : t("quantityLabel", { amount, unit: t(unit) });
 }
+/** Like the app, a row starts with a capital; the stored name keeps the person's own casing. */
+const displayName = (name) => name.replace(/^\p{Ll}/u, (first) => first.toUpperCase());
 function itemNode(listId, row) {
   const checked = isChecked(row);
   const metadata = [];
@@ -831,7 +842,7 @@ function itemNode(listId, row) {
       "aria-label": t(checked ? "uncheckItem" : "checkItem", { name: row.facts.name }),
       onclick: () => act(() => change(listId, "check", check(row, !checked, Date.now()))) }, checked ? icon("check", 18) : null),
     el("div", { class: "item-info" },
-      el("div", { class: "item-name" }, row.facts.name),
+      el("div", { class: "item-name" }, displayName(row.facts.name)),
       metadata.length ? el("div", { class: "item-meta" }, metadata.join(" · ")) : null),
     row.facts.quantity == null ? null : el("span", { class: "quantity-badge" }, quantityText(row.facts)),
     button(icon("more"), () => editDialog(listId, row), "item-edit", { "aria-label": t("editItem", { name: row.facts.name }) }));
