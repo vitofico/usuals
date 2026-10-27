@@ -35,6 +35,33 @@ class ListsTest {
     }
     @After fun after() = database.close()
 
+    @Test fun membersReusingTheSamePurchaseKeepOneOriginalQuantity() = http {
+        val list = client.create(alice)
+        client.share(alice, list.id, bob)
+        fun reuse(kind: String = "reuse") = Intent(uuid(), list.id, kind, buildJsonObject {
+            put("proposedId", uuid()); put("key", "milk"); put("name", "Milk")
+            put("quantity", "2.0"); put("unit", "LITRE"); put("normalizerVersion", NORMALIZER_VERSION)
+        })
+        val commands = listOf(alice to reuse(), bob to reuse())
+        val replies = coroutineScope {
+            commands.map { (who, command) -> async {
+                val response = client.apply(who, list.id, command)
+                assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+                Wire.json.decodeFromString<IntentBatchResult>(response.bodyAsText())
+            } }.awaitAll()
+        }
+        assertThat(replies.map { it.results.single().outcome }).containsExactly("applied", "no_op")
+        val current = client.changes(bob).lists.single { it.id == list.id }.projection
+        assertThat(current.rows).hasSize(1)
+        assertThat(current.rows.values.single().facts.getValue("quantity").jsonPrimitive.content).isEqualTo("2.0")
+        assertThat(current.redirects).isEmpty()
+        assertThat(client.apply(carol, list.id, reuse()).status).isEqualTo(HttpStatusCode.NotFound)
+        val captured = client.apply(alice, list.id, reuse("capture"))
+        val merged = Wire.json.decodeFromString<IntentBatchResult>(captured.bodyAsText())
+        assertThat(merged.results.single().outcome).isEqualTo("merged")
+        assertThat(merged.list.projection.rows.values.single().facts.getValue("quantity").jsonPrimitive.content).isEqualTo("4.0")
+    }
+
     @Test fun listColorsAreSharedGuardedAndResettable() = http {
         val list = client.create(alice)
         client.share(alice, list.id, bob)

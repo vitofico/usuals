@@ -162,13 +162,20 @@ hierarchy while retaining semantic controls and visible focus states.
 
 ## Browser hierarchy
 
-The selected list is the page title. Its palette container carries a cropped
-collage on desktop and mobile, with no separate artwork or actions band. The
+The selected list is the page title. Its open heading carries a cropped
+collage on desktop and mobile, without a tinted rounded enclosure. Replay and
+History sit beside the title's controls and wrap below the title on narrow screens. The
 artwork is decorative and does not receive focus or intercept pointer input.
 A quiet Change list action opens list selection; List options contains the
 remaining list actions. The capture field
 and its labelled Add button are the clear next step. Picked-up rows have a
 counted disclosure and Finish shopping remains reachable without expanding it.
+
+Replay reviews factual recent purchases using the same eligibility and ordering
+as Android. History, favourites, shopping mode, store filtering, repeat settings,
+text sharing and move/copy actions are available from the list and item menus.
+Favourites and hidden Replay suggestions belong to the signed-in account and
+list in this browser; the server remains the authority for lists and purchases.
 
 Navigation shows Lists and Account. Appearance, language and the guided tour
 share Preferences, which keeps the mobile header to one small band. Account

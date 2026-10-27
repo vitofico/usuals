@@ -23,7 +23,7 @@ sessions and never shows or changes lists.
 
 A browser session slides to 30 days from its last use and a phone connection to
 180 days; both can be revoked, and disabling an account revokes all of them. The
-browser keeps no list data: it shows what the server returns and trusts the
+browser keeps no list replica: it shows what the server returns and trusts the
 JavaScript its origin serves. See the [browser boundary](../web/PROTOCOL.md) and
 [identity guide](sync/web-identity.md) for session, password and restore details.
 

@@ -69,6 +69,13 @@ is `{"projection":{"name":"Groceries"}}`.
 lock on the list, then answers 200 with `IntentBatchResult`: one `IntentResult`
 per intent and the list after the batch.
 
+`reuse` has the same validated payload as `capture`, but atomically leaves an
+existing unchecked canonical item unchanged. It returns `no_op` without a
+redirect or quantity increase when another member already added the item.
+History, favourites, review and browser list imports use it; ordinary capture retains its quantity
+merge behavior. Older servers reject the unknown kind, so a browser kept open
+across rollback cannot silently turn reuse into a quantity merge.
+
 - Every intent must have `listId` equal to `{id}`, else 400 `invalid` and nothing
   is applied.
 - Outcomes are `applied`, `merged`, `no_op`, `conflict`, `rejected` and
