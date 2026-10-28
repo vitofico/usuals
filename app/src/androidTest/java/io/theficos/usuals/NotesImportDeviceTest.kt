@@ -22,6 +22,8 @@ import io.theficos.usuals.ui.list.NoSpeechSource
 import io.theficos.usuals.ui.recipe.*
 import io.theficos.usuals.ui.theme.UsualsTheme
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -48,6 +50,7 @@ class NotesImportDeviceTest {
         val db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java).build()
         val viewModels = ViewModelStore()
         try {
+            db.listDao().insert(ListEntity(LOCAL_LIST_ID, ""))
             val items = ItemRepository(db)
             val history = HistoryRepository(db, items)
             val budget = ModelBudget(1)
@@ -56,7 +59,11 @@ class NotesImportDeviceTest {
             lateinit var vm: ListViewModel
             val note = "# Shopping\n☐ 2 l milk\n- [x] bread\n• 6 eggs"
             compose.runOnUiThread {
-                vm = ListViewModel(RepositoryItemStore(items), LocalUtteranceParser(), NoSpeechSource, recipeStore = store)
+                vm = ListViewModel(RepositoryItemStore(items), LocalUtteranceParser(), NoSpeechSource, recipeStore = store,
+                    historyStore = object : io.theficos.usuals.ui.history.ScopedHistoryStore,
+                        io.theficos.usuals.ui.history.HistoryStore by io.theficos.usuals.ui.history.NoHistoryStore {
+                        override fun observeShopping() = history.observeShopping()
+                    })
                 viewModels.put("notes-qa", vm)
                 compose.activity.setContent { UsualsTheme {
                     val state by vm.state.collectAsState()
@@ -84,9 +91,10 @@ class NotesImportDeviceTest {
             }
             compose.onNodeWithText(context.resources.getQuantityString(R.plurals.recipe_add, 3, 3)).performClick()
             compose.waitUntil(10_000) { vm.state.value.recipe == null }
-            assertEquals(setOf("milk", "bread", "eggs"), items.items().map { it.name }.toSet())
-            assertEquals(Quantity(2.0, MeasureUnit.LITRE), items.items().single { it.name == "milk" }.quantity)
-            assertEquals(Quantity.pieces(6), items.items().single { it.name == "eggs" }.quantity)
+            val saved = withTimeout(10_000) { items.observeItems().first { it.size == 3 } }
+            assertEquals(setOf("milk", "bread", "eggs"), saved.map { it.name }.toSet())
+            assertEquals(Quantity(2.0, MeasureUnit.LITRE), saved.single { it.name == "milk" }.quantity)
+            assertEquals(Quantity.pieces(6), saved.single { it.name == "eggs" }.quantity)
             assertEquals(0, budget.usedToday())
         } finally {
             compose.runOnUiThread { compose.activity.setContent { }; viewModels.clear() }

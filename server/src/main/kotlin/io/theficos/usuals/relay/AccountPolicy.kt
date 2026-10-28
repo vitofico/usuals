@@ -12,7 +12,8 @@ class AccountPolicy(private val db: Database, private val limits: AccountLimits,
         expect(header != null && header.length <= 128 && MessageDigest.isEqual(authorization, header.toByteArray()), "unauthenticated", 401)
     }
     fun put(user: String, update: AccountPolicyUpdate): AccountLimitView = db.transaction { c ->
-        expect(c.query("SELECT 1 FROM web_user WHERE id=? AND NOT disabled FOR UPDATE", id(user)) { Unit }.isNotEmpty(), "not_found", 404)
+        expect(c.query("SELECT 1 FROM web_user WHERE id=? AND NOT disabled FOR NO KEY UPDATE", id(user)) { Unit }.isNotEmpty(), "not_found", 404)
+        limits.lockMemberPolicy(c, user)
         val now = clock()
         expect(update.expiresAt > now && update.expiresAt <= now + 300000, "invalid_policy_expiry", 400)
         c.execute("INSERT INTO account_limit(user_id,max_owned_lists,max_list_members,fallback_owned_lists,fallback_list_members,expires_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET max_owned_lists=EXCLUDED.max_owned_lists,max_list_members=EXCLUDED.max_list_members,fallback_owned_lists=EXCLUDED.fallback_owned_lists,fallback_list_members=EXCLUDED.fallback_list_members,expires_at=EXCLUDED.expires_at",

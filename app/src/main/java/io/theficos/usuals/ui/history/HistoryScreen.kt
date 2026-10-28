@@ -110,7 +110,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
         if (uri != null) scope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val text = requireNotNull(resolver.openInputStream(uri)).bufferedReader().use { it.readText() }
+                    val text = requireNotNull(resolver.openInputStream(uri)).use(::readShoppingArchive)
                     vm.importJson(text)
                 }
             } catch (cancelled: CancellationException) { throw cancelled }

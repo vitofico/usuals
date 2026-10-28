@@ -64,3 +64,14 @@ test("transport times out stalled fetches, cancels oversized streams and stops w
   })), () => assert.rejects(request("/too-large", { max: 10 }), (error) => error.code === "too_large"));
   assert.equal(cancelled, true);
 });
+
+// These codes have dedicated recovery flows or translations in the browser.
+test("invitation and account errors retain their structured recovery code", async () => {
+  for (const [status, code] of [[410, "invitation_unavailable"], [403, "invitation_wrong_account"],
+    [401, "reauthentication_required"], [403, "email_verification_required"], [403, "invitation_required"],
+    [429, "invitation_resend_later"], [400, "invalid_email"], [409, "account_switch_unavailable"]]) {
+    await withFetch(async () => Response.json({ code }, { status }), () =>
+      assert.rejects(request("/api/invitations/context", { method: "POST", body: {}, status: 204 }),
+        error => error.code === code));
+  }
+});

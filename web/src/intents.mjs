@@ -75,8 +75,8 @@ export function rename(p, name) {
   return { name, expected: p.nameRevision ?? null };
 }
 // The reducer compares these facts with the stored row exactly, so only values whose JSON spelling survives a round trip go back.
-const required = ["key", "name", "quantity", "unit", "checkedAt"];
-const kept = [...required, "rawText", "note", "gtin", "store", "fromSuggestion", "addedBy"];
+const required = ["key", "name", "checkedAt"];
+const kept = [...required, "quantity", "unit", "rawText", "note", "gtin", "store", "fromSuggestion", "addedBy"];
 /** Moves the picked-up items into the list's purchase history as one trip. Null when nothing can be finished. */
 export function finish(p, now) {
   const picked = rows(p).filter((row) => isChecked(row) && required.every((f) => Object.hasOwn(row.facts, f)) &&

@@ -443,7 +443,14 @@ function invitationLanding() {
   const state = invitation.state;
   const dismiss = async () => { await invitations.dismiss(); invitation = null; history.replaceState(null, "", "/"); };
   const join = () => act(async () => {
-    const result = await invitations.accept();
+    let result;
+    try { result = await invitations.accept(); }
+    catch (error) {
+      if (error?.code === "reauthentication_required") invitation = { state: "reauthenticate" };
+      else if (error?.code === "invitation_unavailable") invitation = { state: "unavailable" };
+      else throw error;
+      return;
+    }
     if (result.list) { store.put(result.list); selected = result.list.id; }
     await dismiss(); finishTutorial();
     notice("invitationJoined");

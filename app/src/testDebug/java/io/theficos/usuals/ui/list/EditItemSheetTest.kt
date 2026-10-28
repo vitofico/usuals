@@ -41,6 +41,40 @@ class EditItemSheetTest {
         assertThat(saved!!.note).isEqualTo("lactose free")
     }
 
+    @Test fun `saving unrelated changes preserves the complete stored amount`() {
+        var saved: ItemEdit? = null
+        val quantity = Quantity(1.23456, MeasureUnit.KILOGRAM)
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("flour"), "Flour", quantity), false, { saved = it }, {}, {}) } }
+        compose.onNodeWithText("Name").performTextReplacement("bread flour")
+        compose.onNodeWithText("Save").performClick()
+        assertThat(saved!!.quantity).isEqualTo(quantity)
+    }
+
+    @Test fun `saving a tiny amount unchanged does not round it to zero`() {
+        var saved: ItemEdit? = null
+        val quantity = Quantity(0.0004, MeasureUnit.KILOGRAM)
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("spice"), "Spice", quantity), false, { saved = it }, {}, {}) } }
+        compose.onNodeWithText("Save").performClick()
+        assertThat(saved!!.quantity).isEqualTo(quantity)
+    }
+
+    @Test @Config(qualifiers = "ar-w411dp-h891dp")
+    fun `a quantity remains editable when the system uses different decimal symbols`() {
+        var saved: ItemEdit? = null
+        val quantity = Quantity(1.5, MeasureUnit.LITRE)
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk", quantity), false, { saved = it }, {}, {}) } }
+        compose.onNodeWithText("Save").assertIsEnabled().performClick()
+        assertThat(saved!!.quantity).isEqualTo(quantity)
+    }
+
+    @Test fun `decimal comma input remains accepted`() {
+        var saved: ItemEdit? = null
+        compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk"), false, { saved = it }, {}, {}) } }
+        compose.onNodeWithText("Quantity").performTextReplacement("1,23456")
+        compose.onNodeWithText("Save").performClick()
+        assertThat(saved!!.quantity).isEqualTo(Quantity(1.23456, MeasureUnit.PIECE))
+    }
+
     @Test fun `clearing the note saves none`() {
         var saved: ItemEdit? = null
         compose.setContent { UsualsTheme { EditItemSheet(ListRow(ItemId("milk"), "Milk", note = "for the cake", rawName = "milk"), false, { saved = it }, {}, {}) } }

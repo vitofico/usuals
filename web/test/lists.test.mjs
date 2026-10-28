@@ -52,6 +52,27 @@ test("replies update the store, a dropped list stays gone and an older feed page
   assert.equal(store.lists.get("a").projection.name, "shared again");
 });
 
+test("mutation replies survive an older reset page and their equal-sequence feed entry", () => {
+  for (const beforeFirstPage of [false, true]) {
+    const store = new ListStore();
+    if (beforeFirstPage) store.put(shared("new", 3));
+    store.apply(page("1.1", { reset: true, hasMore: true, lists: [shared("old", 1)] }));
+    if (!beforeFirstPage) store.put(shared("new", 3));
+    store.apply(page("1.2", { lists: [shared("other", 2)] }));
+    assert.equal(store.lists.get("new").seq, 3);
+    store.apply(page("1.3", { lists: [shared("new", 3)] }));
+    assert.equal(store.lists.get("new").seq, 3);
+  }
+});
+
+test("a stale removal in a reset cannot erase a newer mutation reply", () => {
+  const store = new ListStore();
+  store.apply(page("1.1", { reset: true, hasMore: true }));
+  store.put(shared("rejoined", 3));
+  store.apply(page("1.2", { removed: [{ id: "rejoined", seq: 2 }] }));
+  assert.equal(store.lists.get("rejoined").seq, 3);
+});
+
 function feedHarness(responses) {
   const calls = [], delays = [];
   let visible = true;
@@ -89,6 +110,37 @@ test("the feed starts with a reset, pages without waiting, then waits 25 seconds
   assert.deepEqual([...h.store.lists.keys()].sort(), ["a", "b"]);
   assert.deepEqual(h.events.slice(0, 2), ["syncing", "update"]);
   assert.equal(h.events[2], "synced");
+});
+
+test("idle feed timeouts update status without rerendering, including an initially empty account", async () => {
+  const h = feedHarness([page("1.0", { reset: true }), page("1.0"), page("1.4"), "hang"]);
+  h.feed.start();
+  for (let i = 0; i < 10 && h.calls.length < 4; i++) await tick();
+  h.feed.stop();
+  assert.equal(h.events.filter(event => event === "update").length, 1);
+  assert.equal(h.events.filter(event => event === "synced").length, 3);
+  assert.equal(h.store.cursor, "1.4", "unrelated changes still advance the cursor");
+});
+
+test("a leave discards an older in-flight feed but a later legitimate re-share appears", async () => {
+  let release;
+  const h = feedHarness([
+    page("1.7", { reset: true, lists: [shared("a", 7)] }),
+    () => new Promise(resolve => { release = resolve; }),
+    page("1.9", { removed: [{ id: "a", seq: 9 }] }),
+    page("1.10", { lists: [shared("a", 10, { name: "shared again" })] }),
+    "hang",
+  ]);
+  h.feed.start();
+  for (let i = 0; i < 10 && h.calls.length < 2; i++) await tick();
+  h.store.drop("a");
+  release(page("1.8", { lists: [shared("a", 8)] }));
+  for (let i = 0; i < 10 && h.calls.length < 5; i++) await tick();
+  h.feed.stop();
+  assert.equal(h.calls[2].query.get("cursor"), "1.7", "the discarded read never advances the cursor");
+  assert.equal(h.calls[2].query.get("wait"), "0");
+  assert.equal(h.store.lists.get("a").projection.name, "shared again");
+  assert.equal(h.events.filter(event => event === "update").length, 3, "the stale response never renders");
 });
 
 test("a hidden tab drops its waiting request and catches up without waiting when shown again", async () => {

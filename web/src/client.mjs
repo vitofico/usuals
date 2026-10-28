@@ -29,6 +29,14 @@ const allowedCodes = new Set([
   "invalid",
   "unavailable",
   "upgrade_required",
+  "invalid_email",
+  "invitation_unavailable",
+  "invitation_wrong_account",
+  "reauthentication_required",
+  "email_verification_required",
+  "invitation_required",
+  "invitation_resend_later",
+  "account_switch_unavailable",
   "ai_unavailable",
   "ai_budget",
   "ai_monthly_budget",
@@ -100,7 +108,7 @@ export async function request(
       offset += chunk.length;
     }
     if (![status].flat().includes(response.status)) {
-      // A 401 always means signed out, even when a proxy in front of the server answers it without a code.
+      // A bare 401 means signed out; a known structured code can instead request fresh verification.
       let code = response.status === 401 ? "unauthenticated" : "invalid";
       try {
         const value = JSON.parse(text.decode(bytes.subarray(0, 65536)));

@@ -19,7 +19,6 @@ dependencies {
     api(project(":core:model"))
     api(project(":core:parse"))
     implementation(libs.androidx.core.ktx)
-    implementation(libs.kotlinx.coroutines.android)
     api(libs.zxing.core)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
@@ -29,6 +28,4 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.truth)
     testImplementation(libs.robolectric)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.androidx.test.core)
 }

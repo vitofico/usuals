@@ -30,6 +30,10 @@ class AccountLimits(values: Map<String, AccountLimit> = emptyMap(), private val 
     }.singleOrNull()
     internal fun effective(c: Connection, user: String): AccountLimit? = dynamic(c, user)?.first ?: values[user] ?: defaultLimit
     internal fun ownedLists(c: Connection, user: String) = effective(c, user)?.maxOwnedLists ?: 500
+    /** Membership and policy writes share this lock without acquiring another account's row under a list lock. */
+    internal fun lockMemberPolicy(c: Connection, owner: String) {
+        c.query("SELECT pg_advisory_xact_lock(74052026,hashtext(?))", owner) { Unit }
+    }
     internal fun members(c: Connection, owner: String) = effective(c, owner)?.maxListMembers ?: 50
     internal fun view(c: Connection, user: String): AccountLimitView? {
         val dynamic = dynamic(c, user)

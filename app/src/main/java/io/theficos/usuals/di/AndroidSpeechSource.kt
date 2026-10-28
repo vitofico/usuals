@@ -36,12 +36,6 @@ import kotlinx.coroutines.flow.flowOn
  * hurts: another app holding the microphone, or a recognition service having a
  * bad moment, both ended dictation for the rest of the session.
  *
- * TODO: move the recogniser itself to `:capture` too, behind
- *  `SpeechCapture`, and keep the port. It still lives here because `:app` owns
- *  the list surface and the band needed a working microphone before `:capture`
- *  existed, not because a recogniser belongs in the dependency-injection
- *  package.
- *
  * Threading: `SpeechRecognizer` must be created, started and stopped on the
  * main thread. [listen] runs its whole body there through `flowOn`, and [stop]
  * is only ever called from the view model, which runs on the main dispatcher.

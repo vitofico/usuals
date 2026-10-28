@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import io.theficos.usuals.data.local.UsualsDatabase
 import io.theficos.usuals.llm.ModelImage
 import io.theficos.usuals.ui.history.ScopedHistoryStore
+import io.theficos.usuals.ui.history.HistoryStore.Companion.MAX_ARCHIVE_BYTES
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -39,5 +40,4 @@ internal class ReceiptHistoryStore(private val delegate: ScopedHistoryStore, pri
         val base = JsonObject(root - "receipts" + ("formatVersion" to JsonPrimitive(3))).toString()
         database.withTransaction { delegate.importJson(base); receipts.importPhotos(photos) }
     }
-    companion object { const val MAX_ARCHIVE_BYTES = 32 * 1024 * 1024 }
 }

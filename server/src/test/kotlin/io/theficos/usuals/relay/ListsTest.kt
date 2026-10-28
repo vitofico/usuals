@@ -17,6 +17,8 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
 import java.sql.Connection
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.nio.file.attribute.PosixFilePermissions
 
 class ListsTest {
@@ -289,6 +291,55 @@ class ListsTest {
             withContext(Dispatchers.IO) { Connections(db, f.relay, f.web).allowed(phone, bob.id) }
             assertThat(client.share(alice, list, bob).status).isEqualTo(HttpStatusCode.OK)
             phone.commit()
+        }
+    }
+
+    @Test fun sharingDoesNotWaitForTheOwnersPhoneAccountLockWhileHoldingItsList() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        val lists = Lists(f.relay, f.web.config)
+        val authorized = CompletableDeferred<Unit>()
+        val proceed = CountDownLatch(1)
+        coroutineScope {
+            val phone = async(Dispatchers.IO) {
+                lists.apply(AccountAccess(alice.id) { c ->
+                    assertThat(Connections(db, f.relay, f.web).caller(c, alice.bearer)).isEqualTo(alice.id)
+                    authorized.complete(Unit)
+                    check(proceed.await(10, TimeUnit.SECONDS)) { "phone was not released" }
+                }, list, IntentBatch(listOf(capture(list))))
+            }
+            try {
+                withTimeout(5000) { authorized.await() }
+                // The editor's browser reaches membership while the owner's phone retains its account row.
+                val share = client.send(HttpMethod.Post, "/api/lists/$list/members", bob,
+                    Wire.json.encodeToString(AddMember.serializer(), AddMember(carol.id)), cookie = true)
+                assertThat(share.status).isEqualTo(HttpStatusCode.OK)
+            } finally { proceed.countDown() }
+            assertThat(phone.await().list.members.map { it.id }).containsExactly(alice.id, bob.id, carol.id)
+            assertThat(client.changes(alice).lists.single().projection.rows.values.single().facts["name"]?.jsonPrimitive?.content).isEqualTo("Milk")
+        }
+    }
+
+    @Test fun targetPolicyUpdatesDoNotBlockItsMembershipForeignKey() = http {
+        val list = client.create(alice).id
+        val limits = f.web.config.accountLimits
+        val policy = AccountPolicy(db, limits, ByteArray(32)) { now }
+        database.pool.connection.use { gate ->
+            withContext(Dispatchers.IO) { limits.lockMemberPolicy(gate, carol.id) }
+            coroutineScope {
+                val updating = async(Dispatchers.IO) {
+                    policy.put(carol.id, AccountPolicyUpdate(AccountLimit(10, 10), AccountLimit(1, 1), now + 300000))
+                }
+                try {
+                    // The real policy writer has authorized and locked its account before waiting here.
+                    withContext(Dispatchers.IO) { awaitBlockedBy(gate) }
+                    val share = client.send(HttpMethod.Post, "/api/lists/$list/members", alice,
+                        Wire.json.encodeToString(AddMember.serializer(), AddMember(carol.id)), cookie = true)
+                    assertThat(share.status).isEqualTo(HttpStatusCode.OK)
+                } finally { withContext(Dispatchers.IO) { gate.rollback() } }
+                assertThat(updating.await().maxListMembers).isEqualTo(10)
+                assertThat(client.changes(carol).lists.single().id).isEqualTo(list)
+            }
         }
     }
 

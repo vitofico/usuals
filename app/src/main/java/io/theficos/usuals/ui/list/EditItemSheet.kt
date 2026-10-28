@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -22,17 +21,12 @@ import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.MeasureUnit
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.smart.Category
-import java.text.NumberFormat
 
 @Composable
 internal fun EditItemSheet(row: ListRow, busy: Boolean, onSave: (ItemEdit) -> Unit, onDismiss: () -> Unit, onRemove: (ItemId) -> Unit, onPin: (() -> Unit)? = null, onDefer: (() -> Unit)? = null, pinned: Boolean = false, onProductInfo: (() -> Unit)? = null, onTransfer: (() -> Unit)? = null) {
-    val context = LocalContext.current
     var name by rememberSaveable(row.id.value) { mutableStateOf(row.rawName) }
-    val initialAmount = remember(row.quantity, context.resources.configuration.locales[0]) { row.quantity?.let {
-        NumberFormat.getNumberInstance(context.resources.configuration.locales[0]).apply {
-            maximumFractionDigits = 3
-            isGroupingUsed = false
-        }.format(it.amount)
+    val initialAmount = remember(row.quantity) { row.quantity?.let {
+        java.math.BigDecimal.valueOf(it.amount).stripTrailingZeros().toPlainString()
     }.orEmpty() }
     var amount by rememberSaveable(row.id.value) { mutableStateOf(initialAmount) }
     var unit by rememberSaveable(row.id.value) { mutableStateOf(row.quantity?.unit ?: MeasureUnit.PIECE) }

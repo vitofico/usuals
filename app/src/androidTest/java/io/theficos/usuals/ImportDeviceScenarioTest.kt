@@ -54,7 +54,7 @@ class ImportDeviceScenarioTest {
                     markdown = ServiceLocator.markdownIngredients, files = ServiceLocator.recipeImportFiles)
                 lateinit var vm: ListViewModel
                 scenario.onActivity { activity ->
-                    vm = ListViewModel(ServiceLocator.itemStore, ServiceLocator.parser, ServiceLocator.speechSource, recipeStore = store)
+                    vm = ListViewModel(ServiceLocator.itemStore, ServiceLocator.parser, ServiceLocator.speechSource, recipeStore = store, historyStore = ServiceLocator.historyStore)
                     activity.setContent { io.theficos.usuals.ui.theme.UsualsTheme {
                         val state by vm.state.collectAsState()
                         state.recipe?.let { RecipeImportSheet(it, vm::onRecipeUrl, vm::onReadRecipe, vm::onRecipeModel,

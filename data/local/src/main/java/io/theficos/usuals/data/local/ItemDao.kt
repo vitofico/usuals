@@ -4,12 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ItemDao {
-    @Query("SELECT * FROM items WHERE listId = :listId AND deletedAt IS NULL ORDER BY position, createdAt, id")
-    fun observeActive(listId: String = LOCAL_LIST_ID): Flow<List<ItemEntity>>
     @Query("SELECT * FROM items WHERE listId = :listId AND deletedAt IS NULL ORDER BY position, createdAt, id")
     suspend fun active(listId: String = LOCAL_LIST_ID): List<ItemEntity>
     @Query("SELECT * FROM items WHERE listId = :listId AND id = :id")

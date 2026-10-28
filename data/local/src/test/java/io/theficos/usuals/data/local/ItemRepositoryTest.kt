@@ -89,8 +89,9 @@ class ItemRepositoryTest {
 
     @Test
     fun `a batch lands as one change, after the list, keeping ticked rows ticked`() = runTest {
+        db.listDao().insert(ListEntity(LOCAL_LIST_ID, ""))
         repo.add(ParsedItem("Pan"))
-        val ids = repo.addBatch(listOf(ParsedItem("Alici", Quantity.pieces(2), note = "sott'olio") to true, ParsedItem("Latte") to false))
+        val ids = repo.addBatch(listOf(ParsedItem("Alici", Quantity.pieces(2), note = "sott'olio") to true, ParsedItem("Latte") to false), repo.currentListId())
 
         assertThat(ids).hasSize(2)
         assertThat(names()).containsExactly("Pan", "Alici", "Latte").inOrder()
@@ -98,7 +99,24 @@ class ItemRepositoryTest {
         assertThat(visible()[1].checkedAt).isEqualTo(now)
         assertThat(visible()[1].quantity).isEqualTo(Quantity.pieces(2))
         assertThat(visible()[1].note).isEqualTo("sott'olio")
-        assertThat(repo.addBatch(emptyList())).isEmpty()
+        assertThat(repo.addBatch(emptyList(), repo.currentListId())).isEmpty()
+    }
+
+    @Test
+    fun `later batches cannot resurrect a list deleted after the first batch`() = runTest {
+        val lists = ListRepository(db)
+        val origin = lists.create("Groceries")
+        val other = lists.create("Other shopping")
+        repo.addBatch((1..100).map { ParsedItem("Item $it") to false }, origin)
+        LocalReplica(db).drop(origin)
+
+        assertThat(runCatching { repo.addBatch(listOf(ParsedItem("milk") to false), origin) }.exceptionOrNull())
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(lists.find(origin)).isNull()
+        assertThat(db.historyDao().allItems(origin)).isEmpty()
+        assertThat(db.syncDao().hasProjection(origin)).isFalse()
+        assertThat(lists.selected()).isEqualTo(other)
+        assertThat(repo.items(other)).isEmpty()
     }
 
     @Test
