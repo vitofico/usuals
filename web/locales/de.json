@@ -432,5 +432,16 @@
   "reviewAddedOne": "{count} Artikel hinzugefügt",
   "historyItemCountOne": "{count} Artikel",
   "saveFirst": "Speichere deine Änderungen, bevor du diese Aktion nutzt.",
-  "reviewFrequencyOne": "Beim letzten Einkauf ({count} von {total})"
+  "reviewFrequencyOne": "Beim letzten Einkauf ({count} von {total})",
+  "notificationsTitle": "Benachrichtigungen",
+  "notificationsEnabled": "Aktivität geteilter Listen anzeigen",
+  "notificationsItems": "Hinzugefügte Artikel",
+  "notificationsShops": "Abgeschlossene Einkäufe",
+  "notificationsHelp": "Standardmäßig ausgeschaltet. Dezente Hinweise zu Änderungen anderer Personen auf anderen Listen, während dieser Browser geöffnet ist. Kein Ton, keine Berechtigungsabfragen und keine Hintergrundmeldungen. Die Einstellungen gelten für dieses Konto in diesem Browser.",
+  "notificationItemsOne": "{count} Artikel auf einer anderen geteilten Liste hinzugefügt.",
+  "notificationItems": "{count} Artikel auf anderen geteilten Listen hinzugefügt.",
+  "notificationShopsOne": "{count} Einkauf auf einer anderen geteilten Liste abgeschlossen.",
+  "notificationShops": "{count} Einkäufe auf anderen geteilten Listen abgeschlossen.",
+  "notificationDismiss": "Schließen",
+  "notificationStorageUnavailable": "Dieser Browser konnte die Benachrichtigungseinstellungen nicht speichern."
 }

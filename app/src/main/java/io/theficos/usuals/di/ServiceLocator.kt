@@ -122,13 +122,16 @@ object ServiceLocator {
     val connectionClient by resettable { io.theficos.usuals.sync.ConnectionClient(syncState, relayTransport) }
 
     /** The account's lists on the server; see [ListSync]. */
-    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name), onForgotten = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { receiptFiles.clear() } }) }
+    val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name), onForgotten = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { receiptFiles.clear() } },
+        onActivity = { account, page, baseline -> sharedNotifications.receive(requireNotNull(notificationAccount(account)), page, baseline) },
+        onAccountChanged = { sharedNotifications.bind(notificationAccount(it)) }) }
     private val listSyncSchedulerField = resettable { ListSyncScheduler(context, listSync, database.syncDao().observeOutgoing()) }
     val listSyncScheduler by listSyncSchedulerField
     val shareStore by resettable { AccountShareStore(listRepository, listSync) }
     val itemRepository: ItemRepository by resettable { ItemRepository(database, replica = replica) }
 
     val historyRepository: HistoryRepository by resettable { HistoryRepository(database, itemRepository, replica = replica) }
+    val sharedNotifications by resettable { preferenceSharedNotifications(context).also { it.bind(notificationAccount(connectionClient.current())) } }
     val reminders by resettable { preferenceReminders(context) }
     val shoppingTools by resettable { preferenceShoppingTools(context) }
     val historyStore: HistoryStore by resettable { ReceiptHistoryStore(RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools), receiptStore, database, receiptImportFiles) }

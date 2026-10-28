@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
@@ -87,6 +88,8 @@ fun SettingsScreen(
     rowFacts: io.theficos.usuals.ui.product.RowFactsStore? = null,
     backgroundStyle: BackgroundStyle = BackgroundStyle.ARTWORK,
     onBackgroundStyleChange: (BackgroundStyle) -> Unit = {},
+    notifications: io.theficos.usuals.ui.notifications.SharedNotifications? = null,
+    reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
 ) {
     val state by vm.state.collectAsState()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -132,6 +135,7 @@ fun SettingsScreen(
                         state.account?.let { stringResource(R.string.settings_account_on, it.host) } ?: stringResource(R.string.settings_offline), onOpenAccount)
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsLink(stringResource(R.string.appearance_title), Icons.Outlined.Palette) { panel = "appearance" }
+                    if (notifications != null) SettingsLink(stringResource(R.string.notifications_title), Icons.Outlined.Notifications) { panel = "notifications" }
                     SettingsLink(stringResource(R.string.settings_privacy_title), Icons.Outlined.Shield) { panel = "privacy" }
                     // Flags come only from what lookup saved, so the list hides with it.
                     if (state.settings.scanLookupEnabled && rowFacts != null) {
@@ -148,9 +152,10 @@ fun SettingsScreen(
     panel?.let { selected ->
         AlertDialog(onDismissRequest = { panel = null },
             title = { Text(stringResource(when (selected) { "appearance" -> R.string.appearance_title; "privacy" -> R.string.settings_privacy_title
-                "allergens" -> R.string.row_facts_allergens; else -> R.string.settings_help })) },
+                "allergens" -> R.string.row_facts_allergens; "notifications" -> R.string.notifications_title; else -> R.string.settings_help })) },
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (selected) {
+                    "notifications" -> notifications?.let { io.theficos.usuals.ui.notifications.NotificationsPanel(it, reminders) }
                     "appearance" -> AppearanceSection(palette, onPaletteChange, backgroundStyle, onBackgroundStyleChange)
                     "allergens" -> rowFacts?.let { AllergensSection(it) }
                     "privacy" -> PrivacySection(state, vm::setScanLookup, vm::setBasketOverview, rowFacts)

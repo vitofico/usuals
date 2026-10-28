@@ -169,6 +169,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         database.syncDao().saveFeed(FeedEntity(cursor = page.cursor, resetting = resetting))
     }
     suspend fun cursor(): String? = database.syncDao().feed()?.cursor
+    suspend fun resetting(): Boolean = database.syncDao().feed()?.resetting == true
     /** The server gave this id to someone else: the same contents continue under a new id, as a list to create. */
     suspend fun copyAsNew(source: String): String = database.withTransaction {
         val original = requireNotNull(database.listDao().find(source))

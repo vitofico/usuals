@@ -9,8 +9,9 @@ import kotlinx.serialization.Serializable
  * [archived] says the list is archived for the caller: the owner archived it for everyone ([archivedByOwner]), or
  * the caller, an editor, archived it for themself. Only the owner restores a list the owner archived.
  */
+@Serializable data class ListActivity(val id: String, val kind: String, val count: Int, val at: Long)
 @Serializable data class SharedList(val id: String, val seq: Long, val role: String, val owner: Person, val members: List<Member>, val projection: Projection,
-    val archived: Boolean = false, val archivedByOwner: Boolean = false)
+    val archived: Boolean = false, val archivedByOwner: Boolean = false, val activity: List<ListActivity> = emptyList())
 @Serializable data class RemovedList(val id: String, val seq: Long)
 @Serializable data class ListChanges(val cursor: String, val reset: Boolean, val hasMore: Boolean, val lists: List<SharedList>, val removed: List<RemovedList>)
 @Serializable data class CreateList(val projection: Projection)

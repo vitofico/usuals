@@ -4,16 +4,21 @@ import io.theficos.usuals.model.NORMALIZER_VERSION
 import io.theficos.usuals.sync.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonUnquotedLiteral
 import java.sql.Connection
 
 // The wire shapes of SharedList, ListChanges and IntentBatchResult. The projection is the stored JSON passed
 // through as is, so a response never decodes a list (up to 7 MB) into objects a second time.
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable internal data class ListView(val id: String, val seq: Long, val role: String, val owner: Person, val members: List<Member>, val projection: JsonElement,
-    val archived: Boolean, val archivedByOwner: Boolean)
+    val archived: Boolean, val archivedByOwner: Boolean,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val activity: List<ListActivity> = emptyList())
 @Serializable internal data class ListPage(val cursor: String, val reset: Boolean, val hasMore: Boolean, val lists: List<ListView>, val removed: List<RemovedList>)
+@Serializable private data class StoredActivity(val id: String, val actor: String, val kind: String, val count: Int, val at: Long)
 @Serializable internal data class BatchView(val results: List<IntentResult>, val list: ListView)
 
 /** An authenticated account, and the check that it is still signed in, repeated inside each write transaction. */
@@ -66,7 +71,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             woken += current(c, list)
             val seq = next(c)
             if (owner == user) {
-                c.execute("UPDATE list SET projection=NULL,deleted_at=?,seq=? WHERE id=?", now, seq, id(list))
+                c.execute("UPDATE list SET projection=NULL,activity=NULL,deleted_at=?,seq=? WHERE id=?", now, seq, id(list))
                 c.execute("UPDATE list_member SET removed=? WHERE list_id=? AND removed IS NULL", seq, id(list))
                 c.execute("DELETE FROM email_invitation WHERE list_id=?", id(list))
             } else c.execute("UPDATE list SET seq=? WHERE id=?", seq, id(list))
@@ -85,15 +90,29 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val text = cipher.open(list, locked.sealed)
             val before = Wire.json.decodeFromString(Projection.serializer(), text.decodeToString())
             var projection = before
+            val addedActivity = ArrayList<StoredActivity>()
             val results = batch.intents.map { intent ->
-                reducer.apply(projection, intent).let { projection = it.projection; IntentResult(intent.id, it.outcome.name.lowercase()) }
+                reducer.apply(projection, intent).let { reduced ->
+                    val count = if (reduced.outcome != Outcome.APPLIED) 0 else when (intent.kind) {
+                        "capture", "reuse" -> (reduced.projection.rows.keys - projection.rows.keys).size
+                        "finish" -> reduced.projection.closes[intent.id]?.itemIds?.size ?: 0
+                        else -> 0
+                    }
+                    if (count > 0) addedActivity += StoredActivity(activityId(intent.id), access.user,
+                        if (intent.kind == "finish") "shop_finished" else "items_added", count, relay.auth.now())
+                    projection = reduced.projection
+                    IntentResult(intent.id, reduced.outcome.name.lowercase())
+                }
             }
             // The reducer returns its input unchanged only for resends and intents it cannot read: no new seq.
             if (projection === before) return@transaction BatchView(results, view(c, access.user, list, locked.seq, text))
             // The reducer's output from a stored list needs only the snapshot bounds, not a replay of its facts.
             val plain = SnapshotCodec.encode(projection, replay = false)
+            val cancelled = projection.cancelledCloses.mapTo(HashSet(), ::activityId)
+            val recent = (activity(c, list) + addedActivity).filterNot { it.kind == "shop_finished" && it.id in cancelled }.takeLast(64)
+            val sealedActivity = recent.takeIf { it.isNotEmpty() }?.let { cipher.sealActivity(list, Wire.json.encodeToString(it).toByteArray()) }
             val seq = next(c)
-            c.execute("UPDATE list SET projection=?,seq=? WHERE id=?", cipher.seal(list, plain), seq, id(list))
+            c.execute("UPDATE list SET projection=?,activity=?,seq=? WHERE id=?", cipher.seal(list, plain), sealedActivity, seq, id(list))
             members = current(c, list)
             BatchView(results, view(c, access.user, list, seq, plain))
         }
@@ -108,7 +127,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             expect(lock(c, access.user, list).role == "owner", "forbidden", 403)
             val members = current(c, list)
             val seq = next(c)
-            c.execute("UPDATE list SET projection=NULL,deleted_at=?,seq=? WHERE id=?", relay.auth.now(), seq, id(list))
+            c.execute("UPDATE list SET projection=NULL,activity=NULL,deleted_at=?,seq=? WHERE id=?", relay.auth.now(), seq, id(list))
             c.execute("UPDATE list_member SET removed=? WHERE list_id=? AND removed IS NULL", seq, id(list))
             c.execute("UPDATE email_invitation SET state='revoked',delivery='cancelled',mail_cipher=NULL WHERE list_id=? AND state='pending'", id(list))
             members
@@ -200,7 +219,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
     }
     private fun collaborators(c: Connection, first: String, second: String) = c.query("SELECT 1 FROM list_member a JOIN list_member b ON a.list_id=b.list_id WHERE a.user_id=? AND b.user_id=? AND a.removed IS NULL AND b.removed IS NULL LIMIT 1", id(first), id(second)) { Unit }.isNotEmpty()
 
-    fun changes(access: AccountAccess, cursor: String?, limit: Int): ListPage {
+    fun changes(access: AccountAccess, cursor: String?, limit: Int, includeActivity: Boolean = false): ListPage {
         expect(limit in 1..200)
         val after = cursor?.let {
             val seq = it.substringAfterLast('.', "").toLongOrNull()
@@ -223,7 +242,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val sealed = if (shown.isEmpty()) emptyMap() else c.query("SELECT id,projection FROM list WHERE id=ANY(?)", c.createArrayOf("uuid", shown.map { id(it.id) }.toTypedArray())) {
                 it.getObject(1).toString() to it.getBytes(2)
             }.toMap()
-            val views = views(c, access.user, shown.associate { it.id to (it.seq to cipher.open(it.id, sealed.getValue(it.id))) })
+            val views = views(c, access.user, shown.associate { it.id to (it.seq to cipher.open(it.id, sealed.getValue(it.id))) }, includeActivity)
             val hasMore = entries.size > page.size
             ListPage("$epoch.${if (hasMore) page.last().seq else top}", reset, hasMore, shown.map { views.getValue(it.id) },
                 page.filter { it.size == null }.map { RemovedList(it.id, it.seq) })
@@ -246,7 +265,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
     private fun next(c: Connection) = c.query("UPDATE list_counter SET seq=seq+1 RETURNING seq") { it.getLong(1) }.single()
     private fun view(c: Connection, user: String, list: String, seq: Long, plain: ByteArray) = views(c, user, mapOf(list to (seq to plain))).getValue(list)
     @OptIn(ExperimentalSerializationApi::class)
-    private fun views(c: Connection, user: String, lists: Map<String, Pair<Long, ByteArray>>): Map<String, ListView> {
+    private fun views(c: Connection, user: String, lists: Map<String, Pair<Long, ByteArray>>, includeActivity: Boolean = false): Map<String, ListView> {
         if (lists.isEmpty()) return emptyMap()
         val members = c.query("SELECT m.list_id,m.user_id,m.role,$NAME,u.email,m.archived,l.archived FROM list_member m JOIN web_user u ON u.id=m.user_id JOIN list l ON l.id=m.list_id " +
             "WHERE m.list_id=ANY(?) AND m.removed IS NULL ORDER BY m.role<>'owner',lower($NAME),m.user_id", c.createArrayOf("uuid", lists.keys.map(::id).toTypedArray())) {
@@ -257,9 +276,15 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val owner = rows.first { it.role == "owner" }
             val caller = rows.first { it.user == user }
             ListView(list, value.first, caller.role, Person(owner.user, owner.name, owner.email), rows.map { Member(it.user, it.name, it.role) },
-                JsonUnquotedLiteral(value.second.decodeToString()), caller.archived || caller.archivedByOwner, caller.archivedByOwner)
+                JsonUnquotedLiteral(value.second.decodeToString()), caller.archived || caller.archivedByOwner, caller.archivedByOwner,
+                if (includeActivity) activity(c, list).filter { it.actor != user }.map { ListActivity(it.id, it.kind, it.count, it.at) } else emptyList())
         }
     }
+    private fun activity(c: Connection, list: String): List<StoredActivity> =
+        c.query("SELECT activity FROM list WHERE id=?", id(list)) { it.getBytes(1) }.singleOrNull()
+            ?.let { Wire.json.decodeFromString<List<StoredActivity>>(cipher.openActivity(list, it).decodeToString()) }.orEmpty()
+    // Intent ids are client-controlled; hashes keep notification metadata bounded even for an oversized id.
+    private fun activityId(intent: String) = Wire.hash(intent.toByteArray())
     private class MemberRow(val list: String, val user: String, val role: String, val name: String, val email: String?, val archived: Boolean, val archivedByOwner: Boolean)
     private companion object {
         const val NAME = "coalesce(nullif(u.display_name,''),u.local_username,nullif(u.email,''),'')"

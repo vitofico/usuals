@@ -54,6 +54,28 @@ class ListSyncTest {
     private suspend fun add(list: String, name: String) { lists.select(list); items.add(ParsedItem(name)) }
     private suspend fun pending(list: String) = replica.pendingIntents(list, 1000).size
 
+    @Test fun activityIsCommittedAndInterruptedResetKeepsEveryPageQuiet() = runTest {
+        val observations = mutableListOf<Boolean>()
+        val observing = ListSync(lists, replica, server, connections, state, "Home", onActivity = { _, _, baseline ->
+            observations += baseline
+        })
+        val a = server.seed("A"); val b = server.seed("B"); val c = server.seed("C")
+        signIn(); observing.pull()
+        assertThat(observations.last()).isTrue()
+        server.capture(a, "Eggs"); observing.pull()
+        assertThat(observations.last()).isFalse()
+        server.restore(c); server.pageSize = 1
+        server.failChangesCall = server.calls.count { it == "changes" } + 2
+        assertThat(observing.pull()).isEqualTo(SyncStatus.OFFLINE)
+        assertThat(replica.resetting()).isTrue()
+        observations.clear()
+        observing.pull()
+        assertThat(observations).isNotEmpty()
+        assertThat(observations.all { it }).isTrue()
+        assertThat(replica.resetting()).isFalse()
+        assertThat(db.listDao().find(b)).isNotNull()
+    }
+
     @Test fun signingInUploadsEveryLocalListAsItIsShown() = runTest {
         val home = lists.create("Home"); add(home, "Milk")
         val camping = lists.create("Camping"); add(camping, "Tent"); add(camping, "Stove")

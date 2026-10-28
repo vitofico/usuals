@@ -6,6 +6,7 @@ import { normalize } from "./identity.mjs";
 import { listColors, listColor, colorChange } from "./list-colors.mjs";
 import { DAY, itemKey, historyTrips, reviewCandidates, addAgain, unchangedRow, guardedRemoval, ShoppingChoices } from "./shopping.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
+import { BrowserActivity, NotificationChoices } from "./notifications.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { qrMatrix } from "./qr.mjs";
 import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "./connect.mjs";
@@ -72,7 +73,9 @@ let availableLocales = ["en"],
   store = null,
   lists = null,
   feed = null,
-  syncState = "";
+  syncState = "",
+  notificationChoices = null,
+  activity = null;
 // One read of the input-language packs feeds capture parsing, category grouping and imports. Until it succeeds the
 // capture box adds what was typed as one item and the list stays one ungrouped section; a later caller retries it.
 let classify = null, parseCapture = null, packsRequest = null;
@@ -157,6 +160,8 @@ function setSync(state) {
 }
 const syncIcon = (state) => icon(state === "synced" ? "check" : state === "offline" ? "offline" : "sync");
 function startLists() {
+  notificationChoices = new NotificationChoices(localStore(), account.user.id);
+  activity = new BrowserActivity(notificationChoices);
   store = new ListStore();
   lists = new ListsApi({ store, csrf: () => account.csrfToken, transport: api });
   feed = new ListFeed({
@@ -164,6 +169,10 @@ function startLists() {
     onUpdate: () => {
       dialogRefresh?.();
       if (screen === "lists") renderLists();
+    },
+    onPage: (page, { live }) => {
+      const summary = activity.consume(page, { lists: store.lists, live, selected: screen === "lists" ? selected : null, visible: !document.hidden });
+      if (summary.items || summary.shops) showActivity(summary);
     },
     onStatus: setSync,
     onSignedOut: () => signedOut(),
@@ -176,7 +185,8 @@ async function leaveAccount(message = null) {
   feed?.stop();
   uiScope.stop();
   uiScope = new RunScope();
-  store = lists = feed = selected = null;
+  store = lists = feed = selected = notificationChoices = activity = null;
+  clearActivity();
   shoppingModes.clear(); storeFilters.clear();
   account = null;
   if (invitation && invitation.state !== "none") invitation = { state: "signin" };
@@ -293,10 +303,47 @@ function preferencesDialog() {
   openDialog(el("div", {}, el("h2", {}, t("quietPreferences")),
     el("div", { class: "menu-actions" },
       button(t("appearance"), appearanceDialog),
+      ...(account ? [button(t("notificationsTitle"), notificationsDialog)] : []),
       button(`${t("language")} · ${locale.toUpperCase()}`, languageDialog),
       button(t("tutorialReplay"), tutorialDialog)),
     paragraph("serverHeld", "helper"),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
+function clearActivity() {
+  $("activity-notice").hidden = true;
+  $("activity-notice").replaceChildren();
+}
+function showActivity(summary) {
+  const messages = [];
+  if (summary.items) messages.push(t(summary.items === 1 ? "notificationItemsOne" : "notificationItems", { count: summary.items }));
+  if (summary.shops) messages.push(t(summary.shops === 1 ? "notificationShopsOne" : "notificationShops", { count: summary.shops }));
+  $("activity-notice").replaceChildren(el("span", {}, messages.join(" ")),
+    button(t("notificationDismiss"), clearActivity, "text-button"));
+  $("activity-notice").hidden = false;
+}
+function notificationsDialog() {
+  if (!notificationChoices) return;
+  let settings = notificationChoices.read();
+  const error = el("p", { class: "helper", role: "status" });
+  const fields = {};
+  const choice = (key, text) => {
+    const input = fields[key] = el("input", { type: "checkbox", checked: settings[key], onchange: () => {
+      try {
+        settings = notificationChoices.configure({ [key]: input.checked });
+        clearActivity();
+        error.textContent = "";
+      } catch {
+        input.checked = settings[key];
+        error.textContent = t("notificationStorageUnavailable");
+      }
+      fields.itemsAdded.disabled = fields.shopsFinished.disabled = !settings.enabled;
+    } });
+    return el("label", { class: "check-row notification-choice" }, input, t(text));
+  };
+  const choices = [choice("enabled", "notificationsEnabled"), choice("itemsAdded", "notificationsItems"), choice("shopsFinished", "notificationsShops")];
+  fields.itemsAdded.disabled = fields.shopsFinished.disabled = !settings.enabled;
+  openDialog(el("div", {}, el("h2", {}, t("notificationsTitle")), paragraph("notificationsHelp", "helper"),
+    ...choices, error, el("div", { class: "button-row" }, button(t("close"), closeDialog))));
 }
 async function languageDialog() {
   const own = generation;
@@ -1365,7 +1412,8 @@ $("navigation").addEventListener("click", (event) => {
     render().catch(failure);
   }
 });
-document.addEventListener("visibilitychange", () => feed?.nudge());
+document.addEventListener("visibilitychange", () => { clearActivity(); feed?.nudge(); });
+window.addEventListener("storage", (event) => { if (event.key === null || event.key === notificationChoices?.key) clearActivity(); });
 window.addEventListener("online", () => feed?.nudge());
 $("dialog").addEventListener("cancel", (event) => {
   event.preventDefault();

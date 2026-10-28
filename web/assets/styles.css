@@ -971,3 +971,10 @@ dialog.pairing { max-width: 760px; }
   .pair-layout { display: flex; flex-direction: column; align-items: stretch; }
   .pair-instructions { order: -1; }
 }
+
+.activity-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.activity-notice[hidden] { display: none; }
+.activity-notice .text-button { flex-shrink: 0; }
+
+.notification-choice { min-height: 44px; align-items: center; }
+.notification-choice input { margin-top: 0; }

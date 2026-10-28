@@ -181,6 +181,14 @@ added can edit the list and add others; the owner can remove people or delete th
 list, and anyone else can leave it. Some server configurations also offer email
 invitations. Account and invitation options depend on the server you choose.
 
+Shared-list notifications start off. On Android, open **Settings > Notifications**
+to choose silent alerts for items added and shops finished by other people.
+Each type can be switched off, or disable shared alerts together. Delivery follows
+background sync, usually around 15 minutes and sometimes delayed by Android.
+There are no alerts while Usuals is open. The browser offers optional quiet
+in-app notices for other lists under **Preferences > Notifications**. These choices
+stay on the device and account. See the [notification design](docs/shared-list-notifications.md).
+
 <p align="center">
   <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Groceries in the Usuals browser app: list picker, quantities, category groups and capture field in Grove dark mode" width="100%"></a>
 </p>

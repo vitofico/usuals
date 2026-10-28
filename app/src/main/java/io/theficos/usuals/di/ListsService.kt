@@ -19,7 +19,7 @@ interface ListsService {
 /** Sends each request with the phone's credential; a missing one reads as a 401, like an expired one. */
 class HttpListsService(private val transport: RelayTransport, private val connection: () -> ServerConnection?) : ListsService {
     override suspend fun changes(cursor: String?, wait: Int): ListChanges =
-        call("GET", "/api/lists/changes?" + listOfNotNull(cursor?.let { "cursor=" + escape(it) }, "limit=50", "wait=$wait").joinToString("&"))
+        call("GET", "/api/lists/changes?" + listOfNotNull(cursor?.let { "cursor=" + escape(it) }, "limit=50", "wait=$wait", "activity=1").joinToString("&"))
     override suspend fun create(list: String, projection: Projection): SharedList =
         call("PUT", "/api/lists/${escape(list)}", Wire.json.encodeToString(CreateList.serializer(), CreateList(projection)))
     override suspend fun intents(list: String, intents: List<Intent>): IntentBatchResult =

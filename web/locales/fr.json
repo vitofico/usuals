@@ -432,5 +432,16 @@
   "reviewAddedOne": "{count} article ajouté",
   "historyItemCountOne": "{count} article",
   "saveFirst": "Enregistrez vos modifications avant cette action.",
-  "reviewFrequencyOne": "Lors de vos dernières courses ({count} sur {total})"
+  "reviewFrequencyOne": "Lors de vos dernières courses ({count} sur {total})",
+  "notificationsTitle": "Notifications",
+  "notificationsEnabled": "Afficher l’activité des listes partagées",
+  "notificationsItems": "Articles ajoutés",
+  "notificationsShops": "Courses terminées",
+  "notificationsHelp": "Désactivées par défaut. Des avis discrets pour les modifications d’autres personnes sur d’autres listes lorsque ce navigateur est ouvert. Aucun son, demande d’autorisation ou alerte en arrière-plan. Ces préférences restent liées à ce compte dans ce navigateur.",
+  "notificationItemsOne": "{count} article ajouté à une autre liste partagée.",
+  "notificationItems": "{count} articles ajoutés à d’autres listes partagées.",
+  "notificationShopsOne": "{count} session de courses terminée sur une autre liste partagée.",
+  "notificationShops": "{count} sessions de courses terminées sur d’autres listes partagées.",
+  "notificationDismiss": "Fermer",
+  "notificationStorageUnavailable": "Ce navigateur n’a pas pu enregistrer vos préférences de notifications."
 }

@@ -84,13 +84,14 @@ function feedHarness(responses) {
       () => reject(new Problem("locked")), { once: true }));
     return typeof next === "function" ? next(call) : next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
   };
-  const store = new ListStore(), events = [];
+  const store = new ListStore(), events = [], activityPages = [];
   const feed = new ListFeed({
     store, transport, visible: () => visible,
     delay: (ms, wake) => { delays.push({ ms, wake }); return () => {}; },
+    onPage: (page, options) => activityPages.push({ page, ...options }),
     onUpdate: () => events.push("update"), onStatus: (s) => events.push(s), onSignedOut: () => events.push("signed out"),
   });
-  return { feed, store, calls, delays, events, setVisible: (value) => { visible = value; } };
+  return { feed, store, calls, delays, events, activityPages, setVisible: (value) => { visible = value; } };
 }
 
 test("the feed starts with a reset, pages without waiting, then waits 25 seconds with its cursor", async () => {
@@ -105,7 +106,8 @@ test("the feed starts with a reset, pages without waiting, then waits 25 seconds
   h.feed.stop();
   assert.equal(h.calls[0].query.has("cursor"), false);
   assert.deepEqual(h.calls.map((c) => [c.query.get("cursor"), c.query.get("wait")]), [[null, "0"], ["1.2", "0"], ["1.3", "25"], ["1.3", "25"]]);
-  assert.ok(h.calls.every((c) => c.path.startsWith("/api/lists/changes?") && c.query.get("limit") === "20"));
+  assert.deepEqual(h.activityPages.map(({ live }) => live), [false, false, true], "activity waits until after baseline and pagination");
+  assert.ok(h.calls.every((c) => c.path.startsWith("/api/lists/changes?") && c.query.get("limit") === "20" && c.query.get("activity") === "1"));
   assert.ok(h.calls[2].options.timeoutMs > 25000);
   assert.deepEqual([...h.store.lists.keys()].sort(), ["a", "b"]);
   assert.deepEqual(h.events.slice(0, 2), ["syncing", "update"]);
@@ -158,6 +160,7 @@ test("a hidden tab drops its waiting request and catches up without waiting when
   for (let i = 0; i < 10 && h.calls.length < 4; i++) await tick();
   assert.deepEqual([h.calls[2].query.get("cursor"), h.calls[2].query.get("wait")], ["1.1", "0"]);
   assert.equal(h.store.lists.has("c"), true);
+  assert.deepEqual(h.activityPages.map(({ live }) => live), [false, false], "returning to the tab silently consumes catch-up activity");
   assert.equal(h.calls[3].query.get("wait"), "25");
   h.feed.stop();
 });
@@ -336,4 +339,23 @@ test("only the owner restores a list the owner archived; an editor restores thei
   assert.equal(archivedAction(shared("L", 1, { role: "owner", archived: true, archivedByOwner: true })), "restore");
   assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true })), "restore");
   assert.equal(archivedAction(shared("L", 1, { role: "editor", archived: true, archivedByOwner: true })), "leave");
+});
+
+test("activity pages reach observers even when a mutation already stored the same sequence", async () => {
+  let release;
+  const h = feedHarness([
+    page("1.1", { reset: true, lists: [shared("a", 1)] }),
+    () => new Promise(resolve => { release = resolve; }),
+    "hang",
+  ]);
+  h.feed.start();
+  for (let i = 0; i < 10 && h.calls.length < 2; i++) await tick();
+  h.store.put(shared("a", 2));
+  const activity = [{ id: "other-person", kind: "items_added", count: 1, at: 100 }];
+  release(page("1.2", { lists: [{ ...shared("a", 2), activity }] }));
+  for (let i = 0; i < 10 && h.calls.length < 3; i++) await tick();
+  h.feed.stop();
+  assert.equal(h.events.filter(event => event === "update").length, 1, "same-sequence feed needs no rerender");
+  assert.deepEqual(h.activityPages[1].page.lists[0].activity, activity, "raw opted-in feed metadata is still delivered");
+  assert.equal(h.activityPages[1].live, true);
 });

@@ -59,8 +59,8 @@ export class ListFeed {
   constructor({ store, transport = request, visible = () => !document.hidden, delay = (ms, wake) => {
     const timer = setTimeout(wake, ms);
     return () => clearTimeout(timer);
-  }, onUpdate = () => {}, onStatus = () => {}, onSignedOut = () => {} }) {
-    Object.assign(this, { store, transport, visible, delay, onUpdate, onStatus, onSignedOut });
+  }, onUpdate = () => {}, onStatus = () => {}, onSignedOut = () => {}, onPage = () => {} }) {
+    Object.assign(this, { store, transport, visible, delay, onUpdate, onStatus, onSignedOut, onPage });
   }
   start() {
     if (this.#running) return;
@@ -96,6 +96,7 @@ export class ListFeed {
       const query = new URLSearchParams();
       if (this.store.cursor) query.set("cursor", this.store.cursor);
       query.set("limit", String(PAGE));
+      query.set("activity", "1");
       query.set("wait", current ? "25" : "0");
       const removalGeneration = this.store.removalGeneration;
       try {
@@ -103,6 +104,7 @@ export class ListFeed {
         if (own !== this.#generation) return;
         if (removalGeneration !== this.store.removalGeneration) { current = false; continue; }
         const changed = this.store.apply(page);
+        this.onPage(page, { live: current && !page.reset && !page.hasMore });
         failures = 0;
         current = !page.hasMore;
         this.onStatus(current ? "synced" : "syncing");
