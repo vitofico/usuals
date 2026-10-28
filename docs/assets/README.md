@@ -22,28 +22,26 @@ colours rather than drawing replacement shapes.
 `palettes.svg` illustrates Plum, Grove and Tide with their light/dark colors.
 It is a palette comparison, not an application screenshot.
 
-The PNGs are unmodified screenshots from the local verification runs:
+The current README captures were made on 2026-10-28 from the local development
+checkout, including the pending interface changes. They are unaltered screenshots
+with synthetic shopping data; no private account, server address or credential
+appears. They do not assert that pending code is already in a published APK.
 
-- `android-list.png` and `android-list-dark.png`: the same six-item synthetic
-  Home list in the Android app, in Plum light and dark appearances. They show the
-  populated daily header, category groups, quantities and capture dock.
-- `android-product.png`: the saved Open Food Facts product record from an
-  earlier explicit lookup, displayed from the local demo fixture. Refreshing
-  this screenshot requires no network request. The screen includes its source,
-  saved date, ODbL credit and packaging reminder.
-- `web-editor.png`: the current browser list in Plum dark, using a local
-  synthetic account and grocery list. This example is a single-account list;
-  sharing is optional.
+- `readme-list-grove-light.png`: populated Market list, Grove, Artwork, light mode.
+- `readme-list-tide-dark.png`: the same list, Tide, Plain, dark mode.
+- `readme-shop-finished-dark.png`: completion actions after Finish shop.
+- `readme-history-dark.png`: saved purchases from that demo shop.
+- `web-editor.png`: current browser UI at 1440 × 1000 in Grove dark with Artwork.
 
-The list screenshots were copied byte-for-byte from the approved everyday
-identity verification: `native-after-plum-light.png`,
-`native-after-plum-dark.png` and `web-after-plum-dark-desktop.png`. The approved
-`2a57a14` UI is unchanged in the README refresh's `2861633` source base. The
-screenshots are not illustrations, mockups or altered composites. README widths
-only affect how they are displayed. The Android `<picture>` selects dark mode
-when the reader prefers it and falls back to light mode; explicit links expose
-both full-resolution images. The browser example is always the supplied dark
-frame.
+The native capture used the production app and its local database: create a
+separate demo list, add and edit groceries, check items, enter shopping mode,
+finish the shop and inspect History. Appearance choices were made through Settings.
+The browser used the current static client with deterministic synthetic account
+and list API responses, plus the actual generated input-language assets. Its
+capture verified Preferences → Appearance, changed palette/background through the
+real controls, and checked their persistence after reload with no page errors.
+This browser capture does not verify a live server connection or synchronization.
+All selected images were visually inspected.
 
-No customer account, invitation, server address or credential appears in these
-screenshots. Keep documentation screenshots free of private household data.
+The earlier `android-list*.png` and `android-product.png` remain historical assets.
+They are no longer used as current README interface screenshots.

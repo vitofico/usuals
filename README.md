@@ -22,14 +22,14 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/android-list-dark.png">
-    <img src="docs/assets/android-list.png" alt="Usuals on Android: groceries grouped by category, quantities, a History shortcut and capture controls" width="300">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-list-tide-dark.png">
+    <img src="docs/assets/readme-list-grove-light.png" alt="Usuals on Android: a populated Market list grouped by category, with History and capture controls" width="300">
   </picture>
 </p>
 
 <p align="center">
-  <em>Your everyday list, in light or dark.</em><br>
-  <a href="docs/assets/android-list.png">View light</a> · <a href="docs/assets/android-list-dark.png">View dark</a>
+  <em>The same shopping list: Grove with Artwork, or Tide with Plain.</em><br>
+  <a href="docs/assets/readme-list-grove-light.png">Grove light</a> · <a href="docs/assets/readme-list-tide-dark.png">Tide dark</a>
 </p>
 
 ## A little less to remember
@@ -42,6 +42,8 @@ and checkboxes remain easy to read.
 Choose **Plum**, **Grove** or **Tide** in **Settings > Appearance** on Android or
 **Preferences > Appearance** in the browser. Each follows your device's light or
 dark appearance; Android's choice also carries through to the widget.
+Choose **Artwork** for the layered-paper background or **Plain** for quiet
+surfaces, independently of the palette. Both choices stay on this device.
 [Preview the three palettes](docs/assets/palettes.svg).
 
 These everyday shopping tools are available on Android:
@@ -52,7 +54,7 @@ These everyday shopping tools are available on Android:
 | **Remember the last shop** | Finish a shop to save checked items as dated purchases. Keep unchecked rows open, undo a finish, search history and rebuy selected items. |
 | **Keep essentials coming** | Set explicit repeat rules, pin favourites and review past purchases in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
 | **Bring a recipe along** | Share a recipe link, review its ingredients and choose what to add. Existing list items are excluded; pantry staples and recent purchases start unticked. |
-| **Move through the shop** | Use shopping mode, store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. After finishing in shopping mode, open your chosen Wallet app. |
+| **Move through the shop** | Use [shopping mode](docs/assets/readme-shopping-dark.png), store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. After finishing in shopping mode, open your chosen Wallet app. |
 | **Keep receipts** | Attach a receipt photo to a finished shop, or read one with your optional image model, review the items and date, and save it into History. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
@@ -80,7 +82,7 @@ eight shops, frequency and time since purchase. Current items, purchases from th
 last 24 hours, muted or snoozed items and repeat-rule items are excluded.
 Inferred interval predictions remain disabled until replay over real household
 history beats both comparison baselines. The six-step first-run tour introduces
-this shortcut. Reopen it from **Settings > Help > Guided tour**.
+this shortcut. Reopen it from **Settings > Help and about > Guided tour**.
 
 To move an item, open its editor and choose **More actions > Move or copy to
 another list**. Choose an active list and whether to keep the original. The new
@@ -109,6 +111,14 @@ contents or initiating a payment. Undo remains available after returning.
 
 </details>
 
+<p align="center">
+  <a href="docs/assets/readme-shop-finished-dark.png"><img src="docs/assets/readme-shop-finished-dark.png" width="300" alt="Usuals after Finish shop: checked groceries have become purchases, with Undo, Add receipt and Open Wallet actions."></a>
+  &nbsp;&nbsp;
+  <a href="docs/assets/readme-history-dark.png"><img src="docs/assets/readme-history-dark.png" width="300" alt="The completed demo shop in History, with its purchased items, receipt action and selection controls for adding items again."></a>
+</p>
+
+<p align="center"><em>Finish the shop, then find its purchases in History. These are saved synthetic groceries in the running Android app.</em></p>
+
 ## Scan once. Know a little more.
 
 On Android, the scanner pauses after each accepted barcode. Choose **Scan next
@@ -123,7 +133,7 @@ records can be named manually.
 traces. Saved details remain available offline with a saved date, explicit
 refresh and source link. Community data can be incomplete or outdated; check the
 packaging for ingredients and allergens. Product data is credited to Open Food
-Facts under the ODbL. [View an example](docs/assets/android-product.png).
+Facts under the ODbL.
 
 ## Recipes, without the busywork
 
@@ -172,10 +182,10 @@ list, and anyone else can leave it. Some server configurations also offer email
 invitations. Account and invitation options depend on the server you choose.
 
 <p align="center">
-  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Groceries in the Usuals browser app: list picker, Add field, quantities and checkboxes in dark mode" width="100%"></a>
+  <a href="docs/assets/web-editor.png"><img src="docs/assets/web-editor.png" alt="Groceries in the Usuals browser app: list picker, quantities, category groups and capture field in Grove dark mode" width="100%"></a>
 </p>
 
-<p align="center"><em>The same account lists, from a larger screen.</em></p>
+<p align="center"><em>The current browser interface, populated with a synthetic account-list fixture.</em></p>
 
 | Part | What it does |
 | --- | --- |
@@ -235,7 +245,7 @@ server of your choice. Read the [privacy policy](PRIVACY.md) before enabling
 external services.
 
 The first launch includes a guided tour. Skip it whenever you like and reopen it
-from **Settings > Guided tour** on Android or **Preferences > Guided tour** in the
+from **Settings > Help and about > Guided tour** on Android or **Preferences > Guided tour** in the
 browser.
 
 To build Android, install Git and Docker, then run:
