@@ -782,10 +782,11 @@ dialog .lede {
 .list-heading-collage { position: absolute; z-index: -1; width: 340px; right: -28px; top: 50%; transform: translateY(-50%); }
 .list-title-row { display: contents; }
 .list-heading h1 { grid-area: 1 / 1; min-width: 0; margin: 0; font: normal clamp(34px, 4vw, 52px)/1.12 Georgia, "Times New Roman", serif; letter-spacing: -1.5px; }
-.list-title-trigger { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0; border: 0; background: none; color: var(--ink); text-align: left; font: inherit; letter-spacing: inherit; }
+.list-title-trigger { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; min-height: 48px; padding: 0 4px; margin-left: -4px; border: 0; border-radius: 12px; background: none; color: var(--ink); text-align: left; font: inherit; letter-spacing: inherit; }
+.list-title-trigger:focus-visible { outline-width: 2px; outline-offset: 2px; }
 .list-title-name { min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .list-chevron { display: inline-flex; flex-shrink: 0; color: var(--ink); }
-.list-summary { grid-area: 2 / 1; display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.list-summary { grid-area: 2 / 1; display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 .list-shortcuts { grid-area: 1 / 2; display: flex; align-items: center; }
 @media (max-width: 600px) {
   .list-heading h1 { grid-column: 1 / -1; }
