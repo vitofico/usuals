@@ -277,7 +277,9 @@ class Reducer(private val normalizer: Int = 1) {
                     conflict(candidate, row?.facts ?: JsonObject(emptyMap()))
                     continue
                 }
-                require(facts.keys.containsAll(setOf("key", "name", "quantity", "unit", "checkedAt")))
+                require(facts.keys.containsAll(setOf("key", "name", "checkedAt")))
+                // Valid captures can omit nullable quantity facts. A finish must still preserve any that exist.
+                require(listOf("quantity", "unit").all { it !in row.facts || it in facts })
                 require(facts["checkedAt"]?.jsonPrimitive?.longOrNull != null)
                 val purchase = JsonObject(facts.filterKeys { it in PURCHASE_FIELDS } + mapOf("id" to JsonPrimitive(target), "tripId" to JsonPrimitive(trip), "boughtAt" to facts.getValue("checkedAt")))
                 state = state.copy(purchases = state.purchases + (target to purchase))

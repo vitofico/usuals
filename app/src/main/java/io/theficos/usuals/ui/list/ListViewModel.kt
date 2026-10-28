@@ -506,10 +506,11 @@ class ListViewModel(
         val review = current.result as? RecipeLoad.Review ?: return
         if (current.busy || current.selected.isEmpty()) return
         val rows = review.rows.filterIndexed { index, _ -> index in current.selected }
+        val scope = shopping.value.listId
         // The sheet closes at once and rows appear batch by batch; closing or reopening the sheet does not stop it.
         screen.update { it.copy(recipe = null) }
         viewModelScope.launch {
-            try { recipeStore.add(rows) }
+            try { recipeStore.add(rows, scope) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { screen.update { it.copy(historyError = true) } }
         }

@@ -24,6 +24,7 @@ class ItemRepository(
         database.historyDao().observeShoppingInvalidations(androidx.sqlite.db.SimpleSQLiteQuery("SELECT 1")).map { database.withTransaction { versioned(scope) } }
     }
     suspend fun items(): List<Item> = database.withTransaction { versioned(listId()) }
+    suspend fun items(scope: String): List<Item> = database.withTransaction { versioned(scope) }
     private suspend fun versioned(scope: String): List<Item> {
         val state = replica.projection(scope)
         val preferenceRevisions = state.preferences.mapValues { it.value.string("revision") }
@@ -126,13 +127,13 @@ class ItemRepository(
      * Adds up to [IMPORT_BATCH] new rows, ticked or not, as one change. Capturing them one by one rewrites
      * the list snapshot once per row, which made a long note take seconds and hold the database meanwhile.
      */
-    suspend fun addBatch(rows: List<Pair<ParsedItem, Boolean>>): List<ItemId> = database.withTransaction {
+    suspend fun addBatch(rows: List<Pair<ParsedItem, Boolean>>, scope: String): List<ItemId> = database.withTransaction {
         require(rows.size <= IMPORT_BATCH)
         if (rows.isEmpty()) return@withTransaction emptyList()
-        val scope = listId()
+        require(database.listDao().find(scope)?.transferWritable() == true)
         val now = clock()
         val aliases = database.historyDao().aliases(scope).associate { it.fromKey to it.toKey }
-        val first = nextPosition()
+        val first = (dao.maxPosition(scope) ?: 0.0) + POSITION_STEP
         val entities = rows.mapIndexed { index, (parsed, checked) -> ItemEntity(newId(), parsed.name, parsed.name.trim(), Normalizer.normalize(parsed.name),
             parsed.quantity?.amount, parsed.quantity?.unit?.name, parsed.note, null, checked = checked, checkedAt = if (checked) now else null,
             position = first + index * POSITION_STEP, createdAt = now, updatedAt = now, listId = scope) }

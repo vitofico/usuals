@@ -138,8 +138,9 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
         expect(c.query("SELECT issuer,disabled FROM web_user WHERE id=?", id(target)) { config.accepts(it.getString(1)) && !it.getBoolean(2) }.singleOrNull() == true, "not_found", 404)
         if (role(c, target, list) != null) return view(c, viewer, list, locked.seq, cipher.open(list, locked.sealed))
         val owner = c.query("SELECT owner FROM list WHERE id=?", id(list)) { it.getObject(1).toString() }.single()
-        // The policy writer locks the same account row. A downgrade preserves existing members.
-        c.query("SELECT 1 FROM web_user WHERE id=? FOR UPDATE", id(owner)) { Unit }
+        // A policy downgrade preserves existing members. Do not lock the owner's account under this list:
+        // their phone may already hold that account row while waiting to edit the same list.
+        config.accountLimits.lockMemberPolicy(c, owner)
         expect(current(c, list).size < config.accountLimits.members(c, owner), "limit_reached", 409)
         c.execute("INSERT INTO list_member(list_id,user_id,role) VALUES (?,?,'editor') ON CONFLICT(list_id,user_id) DO UPDATE SET role='editor',removed=NULL,archived=false", id(list), id(target))
         val seq = next(c)

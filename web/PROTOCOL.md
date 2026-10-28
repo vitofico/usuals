@@ -56,10 +56,13 @@ never stops the app from starting.
   `seq` is newer. A `conflict` outcome shows the code recorded in
   `projection.conflicts[intentId]`; `rejected` and `upgrade_required` show their
   own notices. A 404 removes the list from the screen.
-- **Finish.** Only picked-up rows whose `key`, `name`, `quantity`, `unit` and
-  integer `checkedAt` are present are sent, with facts limited to strings,
-  booleans, null and that timestamp. The reducer compares facts exactly, and
-  JavaScript cannot keep the spelling of other JSON numbers.
+- **Finish.** Only picked-up rows whose `key`, `name` and safe integer
+  `checkedAt` are present are sent, with facts limited to strings, booleans,
+  null and that timestamp. `quantity` and `unit` are included exactly when
+  present in the stored row; the reducer rejects a finish that omits either
+  stored fact, including an explicit null. Valid quantityless captures may
+  omit these fields. The reducer compares facts exactly, and JavaScript cannot
+  keep the spelling of other JSON numbers.
 - **Lists.** `PUT /api/lists/{uuid}` with `{"projection": {"name": …}}` creates
   one (200 or 201); a 409 `list_exists` retries once with a new id.
   `DELETE /api/lists/{id}` deletes an owned list (204).

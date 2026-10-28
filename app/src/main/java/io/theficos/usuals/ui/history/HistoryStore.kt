@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 interface HistoryStore {
+    companion object { const val MAX_ARCHIVE_BYTES = 32 * 1024 * 1024 }
+
     suspend fun rebuy(rows: List<io.theficos.usuals.model.Purchase>, scope: String): Int = 0
     fun observe(): Flow<HistorySnapshot>
     suspend fun finish(onlyIds: Set<ItemId>? = null): FinishedTrip?

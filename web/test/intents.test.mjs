@@ -63,3 +63,17 @@ test("finishing sends picked-up items with facts that round-trip exactly, and un
   const sent = intent("L", "finish", payload);
   assert.deepEqual(undo(sent), { finishId: sent.id, tripId: payload.tripId });
 });
+
+
+test("finishing sparse quantityless rows preserves exactly the optional facts that exist", () => {
+  for (const optional of [{}, { quantity: null }, { unit: null }, { quantity: null, unit: null }]) {
+    const item = row("bread", { checked: true, checkedAt: 100 });
+    delete item.facts.quantity;
+    delete item.facts.unit;
+    Object.assign(item.facts, optional);
+    const payload = finish(projection([item]), 200);
+    assert.deepEqual(payload.rows[0].facts, { key: "bread", name: "bread", checkedAt: 100, ...optional });
+    assert.deepEqual(payload.rows[0].expectedFields, item.revisions);
+    assert.equal(payload.rows[0].expectedLifecycle, item.lifecycle);
+  }
+});

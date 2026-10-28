@@ -77,11 +77,12 @@ internal class RepositoryRecipeStore(
         catch (problem: ImportFailure) { RecipeLoad.Failed(importProblem = problem.problem) }
 
     /** Writes in bounded batches, each its own short transaction, so the list stays usable while a long note lands. */
-    override suspend fun add(rows: List<IngredientReview>) {
-        val facts = history.snapshot()
-        val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-        val present = items.items().map { ItemIdentity.key(it, aliases) }.toMutableSet()
-        val fresh = rows.filter { row -> ItemIdentity.resolve(Normalizer.normalize(row.item.name), aliases).let { it.isNotBlank() && present.add(it) } }
-        for (batch in fresh.chunked(ItemRepository.IMPORT_BATCH)) items.addBatch(batch.map { it.item to it.checked })
+    override suspend fun add(rows: List<IngredientReview>, scope: String) {
+        val fresh = items.transaction {
+            val aliases = history.snapshot(scope).aliases.associate { it.fromKey to it.toKey }
+            val present = items.items(scope).map { ItemIdentity.key(it, aliases) }.toMutableSet()
+            rows.filter { row -> ItemIdentity.resolve(Normalizer.normalize(row.item.name), aliases).let { it.isNotBlank() && present.add(it) } }
+        }
+        for (batch in fresh.chunked(ItemRepository.IMPORT_BATCH)) items.addBatch(batch.map { it.item to it.checked }, scope)
     }
 }

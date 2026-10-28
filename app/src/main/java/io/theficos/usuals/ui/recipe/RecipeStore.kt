@@ -28,7 +28,7 @@ interface RecipeStore {
     suspend fun photo(image: ModelImage): RecipeLoad = RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
     fun cameraUri(): String? = null
     fun releaseCamera(uri: String) = Unit
-    suspend fun add(rows: List<IngredientReview>)
+    suspend fun add(rows: List<IngredientReview>, scope: String)
 }
 
 interface RecipeImportFiles {
@@ -47,5 +47,5 @@ object NoRecipeImportFiles : RecipeImportFiles {
 object NoRecipeStore : RecipeStore {
     override suspend fun read(url: String) = RecipeLoad.Failed(RecipeProblem.UNREACHABLE)
     override suspend fun model(url: String, text: String) = RecipeLoad.Failed(modelProblem = RecipeModelProblem.NOT_CONFIGURED)
-    override suspend fun add(rows: List<IngredientReview>) = Unit
+    override suspend fun add(rows: List<IngredientReview>, scope: String) = Unit
 }

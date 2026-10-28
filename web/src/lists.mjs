@@ -10,32 +10,40 @@ export class ListStore {
   lists = new Map();
   cursor = null;
   #seqs = new Map();
-  #returned = null;
+  #returned = new Set();
+  removalGeneration = 0;
   /** An entry wins only when it is newer than what the store holds, whether it came from the feed or a reply. */
   #take(id, seq, list) {
-    if ((this.#seqs.get(id) ?? -Infinity) >= seq) return;
+    if ((this.#seqs.get(id) ?? -Infinity) >= seq) return false;
     this.#seqs.set(id, seq);
     if (list) this.lists.set(id, list);
     else this.lists.delete(id);
+    return true;
   }
-  put(list) { this.#take(list.id, list.seq, list); }
-  /** A list this account deleted or left: gone at once, and a feed page already in flight cannot bring it back. */
-  drop(id) { this.lists.delete(id); }
+  put(list) {
+    if (this.#take(list.id, list.seq, list)) this.#returned?.add(list.id);
+  }
+  /** The feed discards reads begun before a local removal, then catches up from its unchanged cursor. */
+  drop(id) { this.lists.delete(id); this.removalGeneration++; }
   apply(page) {
     // A reset (first read, or a server restored from a backup) starts a fresh sequence, so earlier ones no longer compare.
-    if (page.reset) { this.#seqs.clear(); this.#returned = new Set(); }
+    let changed = this.cursor === null || page.reset;
+    // Before the first page, mutation replies already belong to this feed's epoch. Preserve them too.
+    if (page.reset && this.cursor !== null) { this.#seqs.clear(); this.#returned = new Set(); }
     const entries = [...page.lists.map((l) => [l.id, l.seq, l]), ...page.removed.map((r) => [r.id, r.seq, null])]
       .sort((a, b) => a[1] - b[1]);
     for (const [id, seq, list] of entries) {
-      this.#take(id, seq, list);
-      if (list) this.#returned?.add(id);
+      changed = this.#take(id, seq, list) || changed;
+      if (this.lists.has(id)) this.#returned?.add(id);
       else this.#returned?.delete(id);
     }
     this.cursor = page.cursor;
     if (this.#returned && !page.hasMore) {
+      changed = true;
       for (const id of [...this.lists.keys()]) if (!this.#returned.has(id)) this.lists.delete(id);
       this.#returned = null;
     }
+    return changed;
   }
 }
 
@@ -89,14 +97,16 @@ export class ListFeed {
       if (this.store.cursor) query.set("cursor", this.store.cursor);
       query.set("limit", String(PAGE));
       query.set("wait", current ? "25" : "0");
+      const removalGeneration = this.store.removalGeneration;
       try {
         const page = await this.transport("/api/lists/changes?" + query, { scope, max: PAGE_MAX, timeoutMs: 35000 });
         if (own !== this.#generation) return;
-        this.store.apply(page);
+        if (removalGeneration !== this.store.removalGeneration) { current = false; continue; }
+        const changed = this.store.apply(page);
         failures = 0;
         current = !page.hasMore;
         this.onStatus(current ? "synced" : "syncing");
-        this.onUpdate();
+        if (changed) this.onUpdate();
       } catch (error) {
         if (own !== this.#generation || !scope.valid) continue;
         if (error?.code === "unauthenticated") {

@@ -35,9 +35,10 @@ class HistoryRepository(
     }
     fun observe(): Flow<HistorySnapshot> = observeShopping().map { it.history }
 
-    suspend fun snapshot(): HistorySnapshot = database.withTransaction {
-        HistorySnapshot(dao.trips(listId = listId()).map { it.domain() }, dao.purchases(listId = listId()).map { it.domain() },
-            dao.preferences(listId = listId()).map { it.domain() }, dao.aliases(listId = listId()).map { it.domain() })
+    suspend fun snapshot(): HistorySnapshot = database.withTransaction { snapshot(listId()) }
+    suspend fun snapshot(scope: String): HistorySnapshot = database.withTransaction {
+        HistorySnapshot(dao.trips(listId = scope).map { it.domain() }, dao.purchases(listId = scope).map { it.domain() },
+            dao.preferences(listId = scope).map { it.domain() }, dao.aliases(listId = scope).map { it.domain() })
     }
 
     suspend fun finish(onlyIds: Set<ItemId>? = null, versions: List<ItemVersion>? = null): FinishedTrip? = database.withTransaction {

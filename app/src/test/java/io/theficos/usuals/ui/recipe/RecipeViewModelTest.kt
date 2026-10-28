@@ -26,7 +26,7 @@ class RecipeViewModelTest {
                 reviews++
                 return RecipeLoad.Review("", null, null, parsed.map { IngredientReview(it.name, it.name, it, IngredientReason.NONE) })
             }
-            override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
+            override suspend fun add(rows: List<IngredientReview>, scope: String) { added = rows.map { it.item } }
         }
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onSharedText("leche, huevos y pan")
@@ -51,7 +51,7 @@ class RecipeViewModelTest {
                 received = text
                 return RecipeLoad.Review("", null, null, listOf(IngredientReview("milk", "2 l milk", ParsedItem("milk"), IngredientReason.NONE)))
             }
-            override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
+            override suspend fun add(rows: List<IngredientReview>, scope: String) { added = rows.map { it.item } }
         }
         val store = FakeItemStore()
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
@@ -80,7 +80,7 @@ class RecipeViewModelTest {
             IngredientReview("milk", "milk", ParsedItem("milk"), IngredientReason.ON_LIST))
         val recipe = object : RecipeStore by NoRecipeStore {
             override suspend fun read(url: String) = RecipeLoad.Review(url, "Soup", "4", rows)
-            override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
+            override suspend fun add(rows: List<IngredientReview>, scope: String) { added = rows.map { it.item } }
         }
         val store = FakeItemStore()
         val vm = ListViewModel(store, LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
@@ -100,7 +100,7 @@ class RecipeViewModelTest {
         val row = IngredientReview("onion", "onion", ParsedItem("onion"), IngredientReason.NONE, checked = true)
         val recipe = object : RecipeStore by NoRecipeStore {
             override suspend fun markdown(text: String, emojiQuantities: Boolean) = RecipeLoad.Review("", null, null, listOf(row))
-            override suspend fun add(rows: List<IngredientReview>) { release.await(); added = rows }
+            override suspend fun add(rows: List<IngredientReview>, scope: String) { release.await(); added = rows }
         }
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onSharedText("[x] onion\n[ ] leeks")
@@ -110,6 +110,31 @@ class RecipeViewModelTest {
         release.complete(Unit)
         assertThat(added).containsExactly(row)
     }
+    @Test fun `confirmed recipe keeps the source scope when selection changes before storage writes`() = runTest(main.dispatcher) {
+        val release = CompletableDeferred<Unit>()
+        val snapshots = kotlinx.coroutines.flow.MutableStateFlow(io.theficos.usuals.model.ShoppingSnapshot(listId = "groceries"))
+        var savedScope: String? = null
+        val row = IngredientReview("milk", "milk", ParsedItem("milk"), IngredientReason.NONE)
+        val recipe = object : RecipeStore by NoRecipeStore {
+            override suspend fun markdown(text: String, emojiQuantities: Boolean) = RecipeLoad.Review("", null, null, listOf(row))
+            override suspend fun add(rows: List<IngredientReview>, scope: String) {
+                release.await()
+                savedScope = scope
+            }
+        }
+        val history = object : io.theficos.usuals.ui.history.ScopedHistoryStore,
+            io.theficos.usuals.ui.history.HistoryStore by io.theficos.usuals.ui.history.NoHistoryStore {
+            override fun observeShopping() = snapshots
+        }
+        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe,
+            historyStore = history, compute = main.dispatcher)
+        vm.onSharedText("[ ] milk")
+        vm.onAddRecipe()
+        snapshots.value = io.theficos.usuals.model.ShoppingSnapshot(listId = "shared")
+        release.complete(Unit)
+        assertThat(savedScope).isEqualTo("groceries")
+    }
+
     @Test fun `the emoji quantity choice is remembered and rereads the note`() = runTest(main.dispatcher) {
         val choices = mutableListOf<Boolean>()
         val recipe = object : RecipeStore by NoRecipeStore {
@@ -151,7 +176,7 @@ class RecipeViewModelTest {
         val recipe = object : RecipeStore by NoRecipeStore {
             override suspend fun photoPreview(uri: String) = RecipeLoad.Photo(image)
             override suspend fun photo(image: io.theficos.usuals.llm.ModelImage): RecipeLoad { calls++; return RecipeLoad.Review("", null, null, listOf(row), true) }
-            override suspend fun add(rows: List<IngredientReview>) { added = rows.map { it.item } }
+            override suspend fun add(rows: List<IngredientReview>, scope: String) { added = rows.map { it.item } }
         }
         val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(false), recipeStore = recipe, compute = main.dispatcher)
         vm.onOpenRecipe(); vm.onRecipeSource(RecipeSource.PHOTO); vm.onRecipePhoto("content://test/photo")
