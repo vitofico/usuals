@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_shared">Shared-list notifications</string>
+    <string name="notifications_items">Items added</string>
+    <string name="notifications_shops">Shops finished</string>
+    <string name="notifications_help">Off by default. Silent updates from other people, grouped when this phone syncs in the background, usually about every 15 minutes. Android may delay delivery. No alerts while Usuals is open. Choices stay on this phone and account.</string>
+    <string name="notifications_sign_in">Sign in to enable shared-list notifications.</string>
+    <string name="notifications_channel">Shared-list activity</string>
+    <string name="notifications_activity_title">Shared list updated</string>
+    <string name="notifications_mixed_body">Items were added and a shop was finished.</string>
+    <plurals name="notifications_items_body">
+        <item quantity="one">%d item added by someone else.</item>
+        <item quantity="other">%d items added by other people.</item>
+    </plurals>
+    <plurals name="notifications_shops_body">
+        <item quantity="one">%d shop finished by someone else.</item>
+        <item quantity="other">%d shops finished by other people.</item>
+    </plurals>
+</resources>

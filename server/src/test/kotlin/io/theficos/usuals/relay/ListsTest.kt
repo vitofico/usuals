@@ -64,6 +64,125 @@ class ListsTest {
         assertThat(merged.list.projection.rows.values.single().facts.getValue("quantity").jsonPrimitive.content).isEqualTo("4.0")
     }
 
+    @Test fun sharedActivityIsServerAttributedBoundedAndRetrySafe() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        assertThat(client.changes(bob, activity = true).lists.single().activity).isEmpty()
+        val milk = capture(list)
+        val self = Wire.json.decodeFromString<IntentBatchResult>(client.apply(alice, list, milk).bodyAsText()).list
+        assertThat(self.activity).isEmpty()
+        val event = client.changes(bob, activity = true).lists.single().activity.single()
+        assertThat(event).isEqualTo(ListActivity(Wire.hash(milk.id.toByteArray()), "items_added", 1, now))
+        client.apply(alice, list, milk)
+        client.apply(alice, list, capture(list)) // A merged quantity is not a newly added row.
+        client.apply(alice, list, milk.copy(id = uuid(), kind = "unknown"))
+        assertThat(client.changes(bob, activity = true).lists.single().activity).containsExactly(event)
+        val reused = capture(list, "Bread").copy(kind = "reuse")
+        client.apply(alice, list, reused)
+        client.apply(alice, list, capture(list, "Bread").copy(kind = "reuse"))
+        assertThat(client.changes(bob, activity = true).lists.single().activity).hasSize(2)
+        val sent = (1..70).map { capture(list, "Item $it") }
+        assertThat(client.apply(alice, list, *sent.toTypedArray()).status).isEqualTo(HttpStatusCode.OK)
+        val recent = client.changes(bob, activity = true).lists.single().activity
+        assertThat(recent.map { it.id }).containsExactlyElementsIn(sent.takeLast(64).map { Wire.hash(it.id.toByteArray()) }).inOrder()
+        val stored = db.transaction { c -> c.query("SELECT activity FROM list WHERE id=?", id(list)) { it.getBytes(1) }.single() }
+        assertThat(stored.decodeToString()).doesNotContain(alice.id)
+        assertThat(stored.decodeToString()).doesNotContain("items_added")
+        assertThat(client.apply(carol, list, capture(list, "Eggs")).status).isEqualTo(HttpStatusCode.NotFound)
+        client.send(HttpMethod.Delete, "/api/lists/$list", alice)
+        assertThat(db.transaction { c -> c.query("SELECT activity FROM list WHERE id=?", id(list)) { it.getBytes(1) }.single() }).isNull()
+    }
+
+    @Test fun finishedShopActivityRequiresPurchasesAndUndoRetractsIt() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        client.apply(alice, list, capture(list))
+        var projection = client.changes(alice).lists.single().projection
+        val row = projection.rows.values.single()
+        val checked = Intent(uuid(), list, "check", buildJsonObject {
+            put("target", row.id); put("checked", true); put("checkedAt", now)
+            put("expected", buildJsonObject { put("check", row.revisions["check"]?.let(::JsonPrimitive) ?: JsonNull) })
+        })
+        client.apply(alice, list, checked)
+        projection = client.changes(alice).lists.single().projection
+        val ready = projection.rows.getValue(row.id)
+        val trip = uuid()
+        val finish = Intent(uuid(), list, "finish", buildJsonObject {
+            put("tripId", trip); put("closedAt", now)
+            put("rows", buildJsonArray { add(buildJsonObject {
+                put("id", ready.id); put("facts", ready.facts)
+                put("expectedLifecycle", ready.lifecycle?.let(::JsonPrimitive) ?: JsonNull)
+                put("expectedFields", buildJsonObject { ready.revisions.forEach { (field, revision) -> put(field, revision?.let(::JsonPrimitive) ?: JsonNull) } })
+            }) })
+        })
+        val undo = Intent(uuid(), list, "undo", buildJsonObject { put("finishId", finish.id); put("tripId", trip) })
+        val first = client.apply(alice, list, finish, undo)
+        assertThat(Wire.json.decodeFromString<IntentBatchResult>(first.bodyAsText()).results.map { it.outcome }).containsExactly("applied", "applied").inOrder()
+        assertThat(client.changes(bob, activity = true).lists.single().activity.map { it.kind }).containsExactly("items_added")
+        // A new finish after Undo has a new trip and intent id, and the restored row's lifecycle.
+        val restored = client.changes(alice).lists.single().projection.rows.getValue(row.id)
+        val next = finish.copy(id = uuid(), payload = buildJsonObject {
+            put("tripId", uuid()); put("closedAt", now)
+            put("rows", buildJsonArray { add(buildJsonObject {
+                put("id", restored.id); put("facts", restored.facts)
+                put("expectedLifecycle", restored.lifecycle?.let(::JsonPrimitive) ?: JsonNull)
+                put("expectedFields", buildJsonObject { restored.revisions.forEach { (field, revision) -> put(field, revision?.let(::JsonPrimitive) ?: JsonNull) } })
+            }) })
+        })
+        client.apply(alice, list, next)
+        client.apply(alice, list, next)
+        val activity = client.changes(bob, activity = true).lists.single().activity
+        assertThat(activity.map { it.kind }).containsExactly("items_added", "shop_finished").inOrder()
+        assertThat(activity.last().count).isEqualTo(1)
+        val undoNext = undo.copy(id = uuid(), payload = buildJsonObject {
+            put("finishId", next.id); put("tripId", next.payload.getValue("tripId"))
+        })
+        client.apply(alice, list, undoNext)
+        assertThat(client.changes(bob, activity = true).lists.single().activity.map { it.kind }).containsExactly("items_added")
+        val emptyFinish = Intent(uuid(), list, "finish", buildJsonObject { put("tripId", uuid()); put("closedAt", now); put("rows", JsonArray(emptyList())) })
+        client.apply(alice, list, emptyFinish)
+        assertThat(client.changes(bob, activity = true).lists.single().activity.map { it.kind }).containsExactly("items_added")
+    }
+
+    @Test fun activityKeyRotationUsesASeparateAuthenticatedContext() {
+        lateinit var list: String
+        lateinit var events: List<ListActivity>
+        http {
+            list = client.create(alice).id; client.share(alice, list, bob)
+            client.apply(alice, list, capture(list))
+            events = client.changes(bob, activity = true).lists.single().activity
+        }
+        val next = ListCipher(ByteArray(32) { 42 })
+        f.relay.cipher.rewrap(db, next)
+        next.check(db)
+        http(Relay(db, identity, f.auth, next)) { assertThat(client.changes(bob, activity = true).lists.single().activity).isEqualTo(events) }
+        db.transaction { it.execute("UPDATE list SET activity=projection WHERE id=?", id(list)) }
+        http(Relay(db, identity, f.auth, next)) {
+            assertThat(client.send(HttpMethod.Get, "/api/lists/changes?activity=1", bob).status).isEqualTo(HttpStatusCode.ServiceUnavailable)
+        }
+    }
+
+    @Test fun activityRequiresFeedOptInAndPreservesLegacyMutationReplies() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        client.apply(bob, list, capture(list))
+        val changed = client.apply(alice, list, capture(list, "Bread"))
+        assertThat(Wire.json.parseToJsonElement(changed.bodyAsText()).jsonObject.getValue("list").jsonObject.keys).doesNotContain("activity")
+        val legacy = client.send(HttpMethod.Get, "/api/lists/changes", alice)
+        assertThat(legacy.status).isEqualTo(HttpStatusCode.OK)
+        val entry = Wire.json.parseToJsonElement(legacy.bodyAsText()).jsonObject.getValue("lists").jsonArray.single().jsonObject
+        assertThat(entry.keys).doesNotContain("activity")
+        assertThat(client.changes(alice).lists.single().activity).isEmpty()
+        assertThat(client.changes(alice, activity = true).lists.single().activity.map { it.kind }).containsExactly("items_added")
+    }
+
+    @Test fun activityMigrationPreservesExistingLists() = http {
+        val existing = client.create(alice)
+        db.transaction { c -> c.execute("ALTER TABLE list DROP COLUMN activity"); c.execute("DELETE FROM schema_migration WHERE version=13") }
+        db.migrate(); db.checkSchema()
+        assertThat(client.changes(alice).lists.single()).isEqualTo(existing)
+    }
+
     @Test fun listColorsAreSharedGuardedAndResettable() = http {
         val list = client.create(alice)
         client.share(alice, list.id, bob)
@@ -103,8 +222,8 @@ class ListsTest {
         send(HttpMethod.Post, "/api/lists/$list/intents", who, Wire.json.encodeToString(IntentBatch.serializer(), IntentBatch(intents.toList())))
     private suspend fun HttpClient.share(who: Account, list: String, with: Account) =
         send(HttpMethod.Post, "/api/lists/$list/members", who, Wire.json.encodeToString(AddMember.serializer(), AddMember(with.id)))
-    private suspend fun HttpClient.changes(who: Account, cursor: String? = null, limit: Int? = null, wait: Int? = null): ListChanges {
-        val query = listOfNotNull(cursor?.let { "cursor=$it" }, limit?.let { "limit=$it" }, wait?.let { "wait=$it" }).joinToString("&")
+    private suspend fun HttpClient.changes(who: Account, cursor: String? = null, limit: Int? = null, wait: Int? = null, activity: Boolean = false): ListChanges {
+        val query = listOfNotNull(cursor?.let { "cursor=$it" }, limit?.let { "limit=$it" }, wait?.let { "wait=$it" }, if (activity) "activity=1" else null).joinToString("&")
         val response = send(HttpMethod.Get, "/api/lists/changes?$query", who)
         assertThat(response.status).isEqualTo(HttpStatusCode.OK)
         return Wire.json.decodeFromString(ListChanges.serializer(), response.bodyAsText())

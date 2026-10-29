@@ -1,5 +1,18 @@
 # Changelog
 
+## Quiet shared-list notifications
+
+- Choose optional silent Android alerts for items added and shops finished by
+  other people. Each type and the master switch start behind an explicit opt-in
+  in Settings, Notifications. The weekly reminder remains independently optional.
+- Group activity at the next background sync, suppress alerts while the app is
+  open and skip old activity and initial sync. Notification text omits shopping
+  details. Shared alerts can be disabled together or by type.
+- Offer optional, dismissible browser notices for other lists in Preferences,
+  Notifications, without background push or permission prompts.
+- Keep server activity encrypted, bounded and explicitly requested so older
+  Android releases remain compatible.
+
 ## Browser shopping tools
 
 - Remove the tinted rounded list-title enclosure and add Replay and History

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_shared">Notifications des listes partagées</string>
+    <string name="notifications_items">Articles ajoutés</string>
+    <string name="notifications_shops">Courses terminées</string>
+    <string name="notifications_help">Désactivées par défaut. Mises à jour silencieuses des autres personnes, regroupées lors de la synchronisation en arrière-plan, généralement toutes les 15 minutes. Android peut les retarder. Aucune alerte lorsque Usuals est ouvert. Ces choix restent sur ce téléphone et ce compte.</string>
+    <string name="notifications_sign_in">Connectez-vous pour activer les notifications des listes partagées.</string>
+    <string name="notifications_channel">Activité des listes partagées</string>
+    <string name="notifications_activity_title">Liste partagée mise à jour</string>
+    <string name="notifications_mixed_body">Des articles ont été ajoutés et des courses terminées.</string>
+    <plurals name="notifications_items_body">
+        <item quantity="one">Une autre personne a ajouté %d article.</item>
+        <item quantity="other">D’autres personnes ont ajouté %d articles.</item>
+    </plurals>
+    <plurals name="notifications_shops_body">
+        <item quantity="one">Une autre personne a terminé %d session de courses.</item>
+        <item quantity="other">D’autres personnes ont terminé %d sessions de courses.</item>
+    </plurals>
+</resources>

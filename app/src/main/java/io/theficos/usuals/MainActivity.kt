@@ -119,10 +119,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        ServiceLocator.sharedNotifications.foreground(true)
         ServiceLocator.listSyncScheduler.foreground(true)
     }
     override fun onStop() {
         ServiceLocator.listSyncScheduler.foreground(false)
+        ServiceLocator.sharedNotifications.foreground(false)
         super.onStop()
     }
     override fun onNewIntent(intent: Intent) {

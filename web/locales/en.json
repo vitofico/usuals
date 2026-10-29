@@ -432,5 +432,16 @@
   "reviewAddedOne": "{count} item added",
   "historyItemCountOne": "{count} item",
   "saveFirst": "Save your changes before using this action.",
-  "reviewFrequencyOne": "In your last shop ({count} of {total})"
+  "reviewFrequencyOne": "In your last shop ({count} of {total})",
+  "notificationsTitle": "Notifications",
+  "notificationsEnabled": "Show shared-list activity",
+  "notificationsItems": "Items added",
+  "notificationsShops": "Shops finished",
+  "notificationsHelp": "Off by default. Quiet notices for changes by other people on other lists, while this browser is open. No sound, permission prompts or background alerts. These choices stay with this account in this browser.",
+  "notificationItemsOne": "{count} item added on another shared list.",
+  "notificationItems": "{count} items added on other shared lists.",
+  "notificationShopsOne": "{count} shop finished on another shared list.",
+  "notificationShops": "{count} shops finished on other shared lists.",
+  "notificationDismiss": "Dismiss",
+  "notificationStorageUnavailable": "This browser could not save your notification preferences."
 }

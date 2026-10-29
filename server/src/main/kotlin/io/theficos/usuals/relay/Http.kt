@@ -152,6 +152,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                 get("changes") { run(admitted = false) {
                     call.privateResponse()
                     val cursor = call.request.queryParameters["cursor"]
+                    val includeActivity = call.request.queryParameters["activity"] == "1"
                     val limit = (call.request.queryParameters["limit"] ?: "100").toInt()
                     val wait = (call.request.queryParameters["wait"] ?: "0").toInt().also { expect(it in 0..25) }
                     val access = admit { call.accountAccess(mutation = false) }
@@ -160,7 +161,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
                     try {
                         suspend fun answer(always: Boolean) = admit {
                             val bytes = listWork.withPermit {
-                                lists.changes(access, cursor, limit).takeIf { always || it.reset || it.lists.isNotEmpty() || it.removed.isNotEmpty() }
+                                lists.changes(access, cursor, limit, includeActivity).takeIf { always || it.reset || it.lists.isNotEmpty() || it.removed.isNotEmpty() }
                                     ?.let { Wire.json.encodeToString(ListPage.serializer(), it).toByteArray() }
                             }
                             bytes?.let { call.respondBytes(it, ContentType.Application.Json) } != null

@@ -33,10 +33,14 @@ class ListCipher(private val key: ByteArray) {
     // This non-UUID context cannot collide with a list id; it uses the same managed at-rest key.
     internal fun sealMail(invitation: String, plain: ByteArray) = seal("mail/$invitation", plain)
     internal fun openMail(invitation: String, sealed: ByteArray) = open("mail/$invitation", sealed)
+    internal fun sealActivity(list: String, plain: ByteArray) = seal("activity/$list", plain)
+    internal fun openActivity(list: String, sealed: ByteArray) = open("activity/$list", sealed)
     /** Refuses to serve with a key that does not open the stored lists. */
     fun check(db: Database) = db.readSnapshot { c ->
         c.query("SELECT id,projection FROM list WHERE projection IS NOT NULL LIMIT 1") { it.getObject(1).toString() to it.getBytes(2) }
             .forEach { (list, sealed) -> check(runCatching { open(list, sealed) }.isSuccess) { "list_key_mismatch" } }
+        c.query("SELECT id,activity FROM list WHERE activity IS NOT NULL LIMIT 1") { it.getObject(1).toString() to it.getBytes(2) }
+            .forEach { (list, sealed) -> check(runCatching { openActivity(list, sealed) }.isSuccess) { "list_key_mismatch" } }
         c.query("SELECT id,mail_cipher FROM email_invitation WHERE mail_cipher IS NOT NULL LIMIT 1") { it.getObject(1).toString() to it.getBytes(2) }
             .forEach { (invitation, sealed) -> check(runCatching { openMail(invitation, sealed) }.isSuccess) { "list_key_mismatch" } }
     }
@@ -45,6 +49,9 @@ class ListCipher(private val key: ByteArray) {
         c.query("SELECT id FROM list WHERE projection IS NOT NULL ORDER BY id FOR UPDATE") { it.getObject(1).toString() }.forEach { list ->
             val sealed = c.query("SELECT projection FROM list WHERE id=?", id(list)) { it.getBytes(1) }.single()
             c.execute("UPDATE list SET projection=? WHERE id=?", next.seal(list, open(list, sealed)), id(list))
+        }
+        c.query("SELECT id,activity FROM list WHERE activity IS NOT NULL ORDER BY id FOR UPDATE") { it.getObject(1).toString() to it.getBytes(2) }.forEach { (list, sealed) ->
+            c.execute("UPDATE list SET activity=? WHERE id=?", next.sealActivity(list, openActivity(list, sealed)), id(list))
         }
         c.query("SELECT id,mail_cipher FROM email_invitation WHERE mail_cipher IS NOT NULL ORDER BY id FOR UPDATE") { it.getObject(1).toString() to it.getBytes(2) }.forEach { (invitation, sealed) ->
             c.execute("UPDATE email_invitation SET mail_cipher=? WHERE id=?", next.sealMail(invitation, openMail(invitation, sealed)), id(invitation))

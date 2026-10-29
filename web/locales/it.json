@@ -432,5 +432,16 @@
   "reviewAddedOne": "{count} articolo aggiunto",
   "historyItemCountOne": "{count} articolo",
   "saveFirst": "Salva le modifiche prima di usare questa azione.",
-  "reviewFrequencyOne": "Nella tua ultima spesa ({count} di {total})"
+  "reviewFrequencyOne": "Nella tua ultima spesa ({count} di {total})",
+  "notificationsTitle": "Notifiche",
+  "notificationsEnabled": "Mostra attività delle liste condivise",
+  "notificationsItems": "Articoli aggiunti",
+  "notificationsShops": "Spese concluse",
+  "notificationsHelp": "Disattivate per impostazione iniziale. Avvisi discreti per le modifiche di altre persone su altre liste mentre questo browser è aperto. Nessun suono, richiesta di permesso o avviso in background. Le preferenze restano per questo account in questo browser.",
+  "notificationItemsOne": "{count} articolo aggiunto su un’altra lista condivisa.",
+  "notificationItems": "{count} articoli aggiunti su altre liste condivise.",
+  "notificationShopsOne": "{count} spesa conclusa su un’altra lista condivisa.",
+  "notificationShops": "{count} spese concluse su altre liste condivise.",
+  "notificationDismiss": "Ignora",
+  "notificationStorageUnavailable": "Questo browser non ha potuto salvare le preferenze delle notifiche."
 }

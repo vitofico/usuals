@@ -158,7 +158,8 @@ fun UsualsApp(
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
                 palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts,
-                backgroundStyle = backgroundStyle, onBackgroundStyleChange = onBackgroundStyleChange)
+                backgroundStyle = backgroundStyle, onBackgroundStyleChange = onBackgroundStyleChange,
+                notifications = ServiceLocator.sharedNotifications, reminders = ServiceLocator.reminders)
         }
 
         composable(Routes.ADVANCED) {

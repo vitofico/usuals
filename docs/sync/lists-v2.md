@@ -21,6 +21,29 @@ each extended at most once a day.
 
 `GET /api/lists/changes?cursor=<cursor>&limit=<1..200>&wait=<0..25>`
 
+Clients may add `&activity=1` to receive a bounded `activity` array in each
+returned list. Without that explicit opt-in, list responses preserve the legacy
+field set. Mutation replies always omit `activity`, including when another member
+has recently changed the list. Empty activity arrays may be omitted, and clients
+must treat a missing array as empty. This keeps strict decoders in older Android
+releases compatible with the server.
+
+Activity entries have `id`, `kind`, `count` and `at` fields. The server derives the
+stable event ID from the accepted intent ID, sets `at` from its clock, and returns
+only events authored by other accounts. `items_added` records an explicit capture
+or reuse that creates a new row; quantity merges, automatic repeats and history
+imports do not emit it. `shop_finished` records a finish that writes purchases;
+Undo retracts its retained event, including within the same batch. `count` is the
+number of added rows or accepted purchases. At most 64 events per list are retained,
+encrypted under the managed list key with a separate authenticated context. The
+wire metadata contains no actor or shopping text.
+
+This is recent activity for optional, quiet client notifications, not a durable
+activity log. Clients baseline first reads, resets and newly encountered lists,
+consume events even while notification preferences are off, suppress foreground
+and archived-list alerts, and avoid replaying old events when alerts are enabled.
+
+
 Returns `ListChanges`. Every change to a list (an applied intent batch that
 changed its projection, a member added or removed) gives the list a new `seq`
 from one server-wide counter. Deleting a list, removing a member, or a member

@@ -35,7 +35,7 @@ class ConnectionTransportTest {
             val lists = HttpListsService(OkHttpRelayTransport(true)) { saved }
             assertThat(lists.changes("1.5 &x", wait = 25)).isEqualTo(ListChanges("2.7", reset = true, hasMore = false, lists = emptyList(), removed = emptyList()))
             val feed = requireNotNull(server.takeRequest(2, TimeUnit.SECONDS))
-            assertThat(feed.path).isEqualTo("/api/lists/changes?cursor=1.5%20%26x&limit=50&wait=25")
+            assertThat(feed.path).isEqualTo("/api/lists/changes?cursor=1.5%20%26x&limit=50&wait=25&activity=1")
             assertThat(feed.getHeader("Authorization")).isEqualTo("Bearer synthetic-token")
             val problem = runCatching { lists.create("list-1", Projection(name = "Home")) }.exceptionOrNull() as RelayProblem
             assertThat(problem.code to problem.status).isEqualTo("list_exists" to 409)

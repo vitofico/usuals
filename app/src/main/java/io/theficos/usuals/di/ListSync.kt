@@ -20,7 +20,9 @@ import kotlinx.coroutines.sync.withLock
  * bring back lists that signing out removed.
  */
 class ListSync(private val lists: ListRepository, private val replica: LocalReplica, private val service: ListsService,
-    private val connections: ConnectionClient, private val store: SyncStateStore, private val unnamed: String, private val onForgotten: suspend () -> Unit = {}) : AccountSession {
+    private val connections: ConnectionClient, private val store: SyncStateStore, private val unnamed: String, private val onForgotten: suspend () -> Unit = {},
+    private val onActivity: (ServerConnection, ListChanges, Boolean) -> Unit = { _, _, _ -> },
+    private val onAccountChanged: (ServerConnection?) -> Unit = {}) : AccountSession {
     private val pushing = Mutex()
     private val pulling = Mutex()
     private val writes = Mutex()
@@ -42,6 +44,7 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
     override suspend fun connected() {
         writes.withLock { replica.prepareSignIn() }
         signedIn.value = connections.current()
+        onAccountChanged(signedIn.value)
         mutable.value = SyncStatus.SYNCED
     }
 
@@ -72,6 +75,7 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
             onForgotten()
         }
         signedIn.value = null
+        onAccountChanged(null)
         mutable.value = SyncStatus.SYNCED
         return 0
     }
@@ -145,6 +149,7 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
     private suspend fun expire(token: String) {
         writes.withLock { if (connections.current()?.token == token) store.update { it.copy(connection = null) } }
         signedIn.value = connections.current()
+        onAccountChanged(signedIn.value)
     }
     private suspend fun <T> commit(token: String, block: suspend () -> T): T = writes.withLock {
         if (connections.current()?.token != token) throw AccountChanged()
@@ -208,9 +213,15 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
     }
     private suspend fun pullAll(token: String, wait: Int): SyncStatus {
         var first = true
+        var baseline = replica.cursor() == null || replica.resetting()
         do {
             val page = service.changes(replica.cursor(), if (first) wait else 0)
-            commit(token) { replica.applyPage(page) }
+            baseline = baseline || page.reset
+            commit(token) {
+                replica.applyPage(page)
+                // Activity failure must not turn a successfully committed list sync into an offline error.
+                runCatching { onActivity(requireNotNull(connections.current()), page, baseline) }
+            }
             first = false
         } while (page.hasMore)
         return SyncStatus.SYNCED

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications_title">Notifiche</string>
+    <string name="notifications_shared">Notifiche delle liste condivise</string>
+    <string name="notifications_items">Articoli aggiunti</string>
+    <string name="notifications_shops">Spese concluse</string>
+    <string name="notifications_help">Disattivate inizialmente. Aggiornamenti silenziosi di altre persone, raggruppati durante la sincronizzazione in background, di solito ogni 15 minuti. Android può ritardarli. Nessun avviso mentre Usuals è aperto. Le scelte restano su questo telefono e account.</string>
+    <string name="notifications_sign_in">Accedi per attivare le notifiche delle liste condivise.</string>
+    <string name="notifications_channel">Attività delle liste condivise</string>
+    <string name="notifications_activity_title">Lista condivisa aggiornata</string>
+    <string name="notifications_mixed_body">Sono stati aggiunti articoli ed è stata conclusa una spesa.</string>
+    <plurals name="notifications_items_body">
+        <item quantity="one">Un’altra persona ha aggiunto %d articolo.</item>
+        <item quantity="other">Altre persone hanno aggiunto %d articoli.</item>
+    </plurals>
+    <plurals name="notifications_shops_body">
+        <item quantity="one">Un’altra persona ha concluso %d spesa.</item>
+        <item quantity="other">Altre persone hanno concluso %d spese.</item>
+    </plurals>
+</resources>

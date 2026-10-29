@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notifications_shared">Benachrichtigungen für geteilte Listen</string>
+    <string name="notifications_items">Hinzugefügte Artikel</string>
+    <string name="notifications_shops">Abgeschlossene Einkäufe</string>
+    <string name="notifications_help">Anfangs ausgeschaltet. Stille Updates anderer Personen, gebündelt bei der Hintergrundsynchronisierung, meist etwa alle 15 Minuten. Android kann sie verzögern. Keine Hinweise, solange Usuals geöffnet ist. Die Auswahl gilt für dieses Telefon und Konto.</string>
+    <string name="notifications_sign_in">Melde dich an, um Benachrichtigungen für geteilte Listen zu aktivieren.</string>
+    <string name="notifications_channel">Aktivität geteilter Listen</string>
+    <string name="notifications_activity_title">Geteilte Liste aktualisiert</string>
+    <string name="notifications_mixed_body">Artikel wurden hinzugefügt und ein Einkauf abgeschlossen.</string>
+    <plurals name="notifications_items_body">
+        <item quantity="one">Eine andere Person hat %d Artikel hinzugefügt.</item>
+        <item quantity="other">Andere Personen haben %d Artikel hinzugefügt.</item>
+    </plurals>
+    <plurals name="notifications_shops_body">
+        <item quantity="one">Eine andere Person hat %d Einkauf abgeschlossen.</item>
+        <item quantity="other">Andere Personen haben %d Einkäufe abgeschlossen.</item>
+    </plurals>
+</resources>

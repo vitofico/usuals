@@ -432,5 +432,16 @@
   "reviewAddedOne": "{count} artículo añadido",
   "historyItemCountOne": "{count} artículo",
   "saveFirst": "Guarda los cambios antes de usar esta acción.",
-  "reviewFrequencyOne": "En tu última compra ({count} de {total})"
+  "reviewFrequencyOne": "En tu última compra ({count} de {total})",
+  "notificationsTitle": "Notificaciones",
+  "notificationsEnabled": "Mostrar actividad de listas compartidas",
+  "notificationsItems": "Artículos añadidos",
+  "notificationsShops": "Compras finalizadas",
+  "notificationsHelp": "Desactivadas de inicio. Avisos discretos de cambios de otras personas en otras listas mientras este navegador está abierto. Sin sonido, solicitudes de permiso ni avisos en segundo plano. Las preferencias se guardan para esta cuenta en este navegador.",
+  "notificationItemsOne": "{count} artículo añadido en otra lista compartida.",
+  "notificationItems": "{count} artículos añadidos en otras listas compartidas.",
+  "notificationShopsOne": "{count} compra finalizada en otra lista compartida.",
+  "notificationShops": "{count} compras finalizadas en otras listas compartidas.",
+  "notificationDismiss": "Descartar",
+  "notificationStorageUnavailable": "Este navegador no pudo guardar las preferencias de notificaciones."
 }
