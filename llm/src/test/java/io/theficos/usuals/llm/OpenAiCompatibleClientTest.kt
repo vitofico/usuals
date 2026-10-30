@@ -259,12 +259,13 @@ class OpenAiCompatibleClientTest {
         assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
     }
 
-    @Test fun `Anthropic requests omit temperature and reasoning effort`() = runTest {
+    @Test fun `Anthropic requests omit temperature, reasoning effort and response format`() = runTest {
         replyWith("""{"ok": 1}""")
         assertThat(client(kind = ProviderKind.ANTHROPIC).probe().supportsStructuredOutput).isTrue()
         val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
         assertThat(payload).doesNotContainKey("temperature")
         assertThat(payload).doesNotContainKey("reasoning_effort")
+        assertThat(payload).doesNotContainKey("response_format")
     }
 
     // ---- parsing ------------------------------------------------------------

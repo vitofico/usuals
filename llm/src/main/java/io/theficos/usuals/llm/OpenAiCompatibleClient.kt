@@ -146,7 +146,11 @@ class OpenAiCompatibleClient(
             if (config.kind == ProviderKind.OLLAMA) put("reasoning_effort", "none")
             put("max_tokens", maxTokens)
             put("messages", messages)
-            putJsonObject("response_format") { put("type", "json_object") }
+            // Anthropic accepts only strict json_schema here. The prompts already
+            // ask for JSON, and a fenced answer is unwrapped below.
+            if (config.kind != ProviderKind.ANTHROPIC) {
+                putJsonObject("response_format") { put("type", "json_object") }
+            }
         }
 
         val builder = Request.Builder()
