@@ -141,8 +141,8 @@ class OpenAiCompatibleClient(
         val payload = buildJsonObject {
             put("model", config.model)
             // Deterministic on purpose: the same recipe read twice should give
-            // the same items twice.
-            put("temperature", 0)
+            // the same items twice. Anthropic rejects this parameter.
+            if (config.kind != ProviderKind.ANTHROPIC) put("temperature", 0)
             if (config.kind == ProviderKind.OLLAMA) put("reasoning_effort", "none")
             put("max_tokens", maxTokens)
             put("messages", messages)

@@ -55,9 +55,9 @@ class OpenAiCompatibleClientTest {
         server.shutdown()
     }
 
-    private fun client(key: String? = apiKey): OpenAiCompatibleClient = OpenAiCompatibleClient(
+    private fun client(key: String? = apiKey, kind: ProviderKind = ProviderKind.OPENAI_COMPATIBLE): OpenAiCompatibleClient = OpenAiCompatibleClient(
         config = ProviderConfig(
-            kind = ProviderKind.OPENAI_COMPATIBLE,
+            kind = kind,
             label = "Prueba",
             baseUrl = server.url("/v1").toString(),
             model = "modelo-de-prueba",
@@ -101,6 +101,9 @@ class OpenAiCompatibleClientTest {
         assertThat(request.getHeader("User-Agent")).contains("Usuals")
         assertThat(body).contains("response_format")
         assertThat(body).contains("dos litros de leche")
+        val payload = Json.parseToJsonElement(body).jsonObject
+        assertThat(payload.getValue("temperature").jsonPrimitive.content).isEqualTo("0")
+        assertThat(payload).doesNotContainKey("reasoning_effort")
     }
 
     @Test
@@ -252,7 +255,16 @@ class OpenAiCompatibleClientTest {
         val local = OpenAiCompatibleClient(ProviderConfig.ollama("local", server.url("/v1").toString()))
         assertThat(local.probe().supportsStructuredOutput).isTrue()
         val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertThat(payload.getValue("temperature").jsonPrimitive.content).isEqualTo("0")
         assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
+    }
+
+    @Test fun `Anthropic requests omit temperature and reasoning effort`() = runTest {
+        replyWith("""{"ok": 1}""")
+        assertThat(client(kind = ProviderKind.ANTHROPIC).probe().supportsStructuredOutput).isTrue()
+        val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertThat(payload).doesNotContainKey("temperature")
+        assertThat(payload).doesNotContainKey("reasoning_effort")
     }
 
     // ---- parsing ------------------------------------------------------------
