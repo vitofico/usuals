@@ -55,7 +55,8 @@ These everyday shopping tools are available on Android:
 | **Keep essentials coming** | Set explicit repeat rules, pin favourites and review past purchases in short rounds. Quantity hints wait for a tap; similar names merge only with your approval. |
 | **Bring a recipe along** | Share a recipe link, review its ingredients and choose what to add. Existing list items are excluded; pantry staples and recent purchases start unticked. |
 | **Move through the shop** | Use [shopping mode](docs/assets/readme-shopping-dark.png), store filters and aisle order. Defer an item to the next finished shop, or opt into a weekly local reminder. After finishing in shopping mode, open your chosen Wallet app. |
-| **Keep receipts** | Attach a receipt photo to a finished shop, or read one with your optional image model, review the items and date, and save it into History. |
+| **Pack for an occasion** | Create a personal pack or save the current list, edit its items, then review selections and quantities each time you use it. Existing list items stay unchanged. |
+| **Keep receipts** | Attach a receipt photo to a finished shop, or read one with your optional image model, compare corrections with the original photo and zoom, and save reviewed items and dates into History. |
 | **Keep your history** | Import a dated past list, share a list as text, or export and import shopping data through Android's file picker. |
 
 Suggestions wait for your approval. Only repeat rules you set add items
@@ -93,16 +94,46 @@ available.
 </details>
 
 <details>
+<summary>Personal occasion packs</summary>
+
+Open **More options > Favourites > Occasion packs** on Android, or
+**List options > Occasion packs** in the browser. Create a pack from scratch or
+save the current list, where checked rows start unselected. Edit its name,
+items and details without changing the shopping list.
+
+**Review and add** opens a separate review each time. Choose items and adjust
+quantities for this use without changing the saved template. Checked and
+unchecked items already on the list, including aliases and rows hidden by a
+store filter, cannot be added again. An item added by someone else while you
+review keeps its quantity and details.
+
+Packs stay on this device for the current account; they do not sync between
+phone and browser. Android includes them in shopping-data exports; pack files
+can also be exchanged with the browser. Only the items you confirm enter the
+list and follow its usual synchronization. Local Android lists need no server.
+For account lists, Android verifies server support before queuing pack additions
+and can use previously verified support offline. See the
+[occasion pack guide](docs/occasion-packs.md) for ownership, transfer and older-server behavior.
+
+</details>
+
+<details>
 <summary>Receipts and Wallet</summary>
 
 In **History**, open **Import receipt photo** from the menu to read a receipt or
 enter its items yourself. When using server AI, update your Usuals server along with
 the app to enable receipt reading. Review the date, item names and quantities before
-saving the purchases and photo. Use **Add receipt** on an existing shop to keep
+saving the purchases and photo. Compare a correction with the original photo
+and open its zoom viewer while reviewing. Use **Add receipt** on an existing shop to keep
 a photo without model calls or duplicate purchases. Tap a photo to enlarge and
 zoom. Photos stay on this phone,
 travel in shopping-data exports and direct device transfers, and can be saved
 as individual JPEGs. They are not synced or shared with a list.
+
+Shopping mode keeps **Finish shop** reachable at the bottom. It records the
+displayed checked items as purchases, preserving rows outside the store filter
+and concurrent changes; **Undo** remains available. Normal list mode keeps its
+inline Finish action.
 
 After **Finish shop** in shopping mode, **Open Wallet** opens the app you chose.
 The first tap uses Android’s app picker. Change it under **Favourites > Shopping
@@ -143,7 +174,8 @@ directly on the phone without a model. Review the proposed items before adding;
 recipe imports avoid existing list items and preserve your review choices.
 
 The browser's **List options > Import list or recipe** also offers text, file and
-photo imports with review. An optional OpenAI-compatible model can read prose
+photo imports with review. An optional model using OpenAI-compatible Chat
+Completions, including Ollama and Anthropic-compatible endpoints, can read prose
 recipes or, with image support, photos of written lists. AI is off by default.
 Selecting a photo does not send it: you must request a read, its image check must
 succeed, and you review the result before adding items.

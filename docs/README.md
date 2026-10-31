@@ -15,6 +15,8 @@ detailed implementation spec.
 - [Distribution](distribution.md): verified APKs, signing, Obtainium and F-Droid.
 - [Privacy](../PRIVACY.md): device storage, optional requests, accounts and sharing.
 - [Security model](security-model.md): secrets, network paths and backup.
+- [Occasion packs](occasion-packs.md): personal templates, reviewed use, cross-client files and server compatibility.
+- [Shared-list notifications](shared-list-notifications.md): optional quiet activity, device/account choices and delivery limits.
 - [Providers](providers.md): optional model configuration.
 - [Server connection](server-connection.md): connecting a phone, sharing a list and server AI.
 - [Release checks](release-check.md): final local validation and distribution limits.

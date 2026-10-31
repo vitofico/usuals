@@ -135,6 +135,22 @@ boundary. Actual provider setup, secrets, network rules and deployment still
 require approval. The prior candidate at source6780245 is historical and does
 not contain browser or account support.
 
+## Client feature compatibility
+
+Ship compatible server support before using occasion packs with account lists.
+`/v1/instance` advertises `occasionPacks: true`; clients treat a missing field as
+unsupported. Android checks before queuing additions and caches verified support
+for offline use; the browser checks each use. Templates remain on their client,
+scoped to account and canonical server on Android, and account and list in the
+browser. Confirmed additions use the existing shared-list synchronization.
+See [occasion packs](../docs/occasion-packs.md) and the
+[list wire contract](../docs/sync/lists-v2.md).
+
+Quiet shared-list notifications depend on the server's transactional activity
+feed as well as client opt-in. Provider choices require the optional gateway
+configuration described in [provider setup](../docs/providers.md). These features
+do not change the deployment, backup or explicit operator approval requirements.
+
 ## Paid hosting boundary
 
 This package prepares the personal/pilot relay. It has no subscription billing,
