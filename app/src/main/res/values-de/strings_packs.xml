@@ -1,0 +1,35 @@
+<resources>
+    <string name="pack_title">Anlasspakete</string>
+    <string name="pack_local">Persönliche Pakete bleiben für das aktuelle Konto auf diesem Gerät. Sie sind in Datenexporten enthalten und werden nicht synchronisiert.</string>
+    <string name="pack_new">Neues Paket</string>
+    <string name="pack_from_list">Aktuelle Liste speichern</string>
+    <string name="pack_empty">Speichere ein Paket für ein Picknick, Besuch oder ein Wochenende unterwegs.</string>
+    <string name="pack_use">Prüfen und hinzufügen</string>
+    <string name="pack_edit">Paket bearbeiten</string>
+    <string name="pack_delete">Paket löschen</string>
+    <string name="pack_review">Paket prüfen</string>
+    <string name="pack_review_help">Wähle Artikel und passe Mengen für diese Verwendung an. Bereits vorhandene Artikel, auch abgehakte, werden übersprungen. Das gespeicherte Paket bleibt unverändert.</string>
+    <string name="pack_name">Paketname</string>
+    <string name="pack_quantity">Menge</string>
+    <string name="pack_edit_item">Artikel bearbeiten</string>
+    <string name="pack_remove_item">Aus Paket entfernen</string>
+    <string name="pack_add_item">Artikel hinzufügen</string>
+    <string name="pack_failed">Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.</string>
+    <string name="pack_add_selected">Auswahl hinzufügen</string>
+    <string name="pack_save">Speichern</string>
+    <string name="pack_cancel">Abbrechen</string>
+    <string name="pack_item_name">Artikelname</string>
+    <string name="pack_unit">Einheit: %1$s</string>
+    <string name="pack_note">Notizen</string>
+    <string name="pack_store">Geschäft</string>
+    <string name="pack_category_auto">Automatische Kategorie</string>
+    <string name="pack_export">Pakete exportieren</string>
+    <string name="pack_import">Pakete importieren</string>
+    <string name="receipt_compare">Vergleiche jede Zeile mit dem Originalfoto.</string>
+    <string name="receipt_correct_line">Zeile korrigieren</string>
+    <string name="finish_explained">Einkauf abschließen speichert abgehakte Artikel als Käufe. Danach kannst du dies rückgängig machen.</string>
+    <string name="pack_add_failed">Artikel konnten nicht hinzugefügt werden. Gemeinsame Listen benötigen einen Server mit Paketunterstützung. Prüfe Verbindung und Serverversion. Deine Auswahl bleibt erhalten.</string>
+    <string name="pack_use_named">%1$s prüfen und hinzufügen</string>
+    <string name="pack_edit_named">%1$s bearbeiten</string>
+    <string name="pack_delete_named">%1$s löschen</string>
+</resources>

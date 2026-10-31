@@ -1034,6 +1034,24 @@ class ListViewModel(
         updateShoppingTools { it.restore(scope, row.id.value) }
     }
 
+    suspend fun updatePacks(update: (io.theficos.usuals.ui.shopping.ShoppingToolsStore) -> Unit): Boolean = try {
+        withContext(background) { update(shoppingTools) }
+        true
+    } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) { false }
+
+    fun packOnList(row: io.theficos.usuals.ui.shopping.SavedShoppingItem): Boolean {
+        val snapshot = shopping.value
+        val aliases = snapshot.history.aliases.associate { it.fromKey to it.toKey }
+        val key = io.theficos.usuals.parse.ItemIdentity.key(row.name, Normalizer.normalize(row.name), row.gtin?.let(Gtin::parse), aliases)
+        return snapshot.items.any { io.theficos.usuals.parse.ItemIdentity.key(it, aliases) == key }
+    }
+    suspend fun addPack(rows: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Boolean = try {
+        smartStore.addPack(rows, scope)
+        true
+    } catch (cancelled: CancellationException) { throw cancelled }
+      catch (_: Exception) { false }
+
     fun onAddFavorite(item: io.theficos.usuals.ui.shopping.SavedShoppingItem) {
         val scope = shopping.value.listId
         viewModelScope.launch { try { smartStore.addAgain(listOf(item), scope) }
@@ -1153,6 +1171,7 @@ class ListViewModel(
         fun isDeferred(item: Item) = !item.checked && deferred[item.id.value] == (item.version?.lifecycle ?: item.createdAt.toString())
         return Listed(snapshot, ordered, presentation, memory, ListUiState(
             personal = personal,
+            packRows = ordered.map { toRow(it, presentation[it.id], memory) },
             favoritesOnList = personal.portable.favoritesOnList(ordered, facts),
             repeatSuggestionKeys = io.theficos.usuals.parse.ItemIdentity.preferences(facts.preferences,
                 facts.aliases.associate { it.fromKey to it.toKey }).filterValues { it.repeatEveryDays != null && !it.muted }.keys,

@@ -1,0 +1,35 @@
+<resources>
+    <string name="pack_title">Occasion packs</string>
+    <string name="pack_local">Personal packs stay on this device for the current account. They are included in data exports and do not sync.</string>
+    <string name="pack_new">New pack</string>
+    <string name="pack_from_list">Save current list</string>
+    <string name="pack_empty">Save a pack for a picnic, visitors or a weekend away.</string>
+    <string name="pack_use">Review and add</string>
+    <string name="pack_edit">Edit pack</string>
+    <string name="pack_delete">Delete pack</string>
+    <string name="pack_review">Review pack</string>
+    <string name="pack_review_help">Choose items and adjust quantities for this use. Items already on the list, including checked items, are skipped. The saved pack stays unchanged.</string>
+    <string name="pack_name">Pack name</string>
+    <string name="pack_quantity">Quantity</string>
+    <string name="pack_edit_item">Edit item</string>
+    <string name="pack_remove_item">Remove from pack</string>
+    <string name="pack_add_item">Add item</string>
+    <string name="pack_failed">Could not save these changes. Try again.</string>
+    <string name="pack_add_selected">Add selected</string>
+    <string name="pack_save">Save</string>
+    <string name="pack_cancel">Cancel</string>
+    <string name="pack_item_name">Item name</string>
+    <string name="pack_unit">Unit: %1$s</string>
+    <string name="pack_note">Notes</string>
+    <string name="pack_store">Store</string>
+    <string name="pack_category_auto">Automatic category</string>
+    <string name="pack_export">Export packs</string>
+    <string name="pack_import">Import packs</string>
+    <string name="receipt_compare">Compare each line with the original photo.</string>
+    <string name="receipt_correct_line">Correct line</string>
+    <string name="finish_explained">Finish shopping records checked items as purchases. You can Undo afterwards.</string>
+    <string name="pack_add_failed">Could not add these items. Shared lists need a server that supports occasion packs. Check the connection and server version, then try again. Your review is kept.</string>
+    <string name="pack_use_named">Review and add %1$s</string>
+    <string name="pack_edit_named">Edit %1$s</string>
+    <string name="pack_delete_named">Delete %1$s</string>
+</resources>

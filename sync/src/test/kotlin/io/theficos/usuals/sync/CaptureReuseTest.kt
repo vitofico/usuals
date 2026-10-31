@@ -48,4 +48,27 @@ class CaptureReuseTest {
         assertThat(removal.outcome).isEqualTo(Outcome.CONFLICT)
         assertThat(removal.projection.tombstones).isEmpty()
     }
+    @Test fun packsSkipConcurrentUncheckedAndCheckedRowsAndReplayWithoutChangingFacts() {
+        val first = reducer.apply(Projection(), capture("first")).projection
+        val pack = capture("pack").copy(kind = "pack", payload = JsonObject(capture("pack").payload +
+            mapOf("packCategory" to JsonPrimitive("PRODUCE"), "note" to JsonPrimitive("For visitors"), "store" to JsonPrimitive("Market"))))
+        val skipped = reducer.apply(first, pack)
+        assertThat(skipped.outcome).isEqualTo(Outcome.NO_OP)
+        assertThat(skipped.projection.rows).isEqualTo(first.rows)
+        assertThat(skipped.projection.preferences).isEmpty()
+        val checked = reducer.apply(first, Intent("checked", "home", "check", buildJsonObject {
+            put("target", "row-first"); put("expected", buildJsonObject { put("check", "first") })
+            put("checked", true); put("checkedAt", 100)
+        })).projection
+        val checkedSkip = reducer.apply(checked, pack)
+        assertThat(checkedSkip.outcome).isEqualTo(Outcome.NO_OP)
+        assertThat(checkedSkip.projection.rows).isEqualTo(checked.rows)
+        assertThat(reducer.apply(checkedSkip.projection, pack).outcome).isEqualTo(Outcome.NO_OP)
+        val added = reducer.apply(Projection(), pack)
+        assertThat(added.outcome).isEqualTo(Outcome.APPLIED)
+        assertThat(added.projection.rows.values.single().facts["note"]).isEqualTo(JsonPrimitive("For visitors"))
+        assertThat(added.projection.preferences.getValue("milk")["category"]).isEqualTo(JsonPrimitive("PRODUCE"))
+        assertThat(reducer.apply(added.projection, pack).projection.rows).hasSize(1)
+    }
+
 }

@@ -64,6 +64,57 @@ class ListsTest {
         assertThat(merged.list.projection.rows.values.single().facts.getValue("quantity").jsonPrimitive.content).isEqualTo("4.0")
     }
 
+    @Test fun concurrentPacksNotifyOnlyForInsertionAndPreserveSharedRowEdits() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        fun pack(category: String) = capture(list).let { command -> command.copy(kind = "pack", payload =
+            JsonObject(command.payload + mapOf("quantity" to JsonPrimitive("2.0"), "unit" to JsonPrimitive("LITRE"),
+                "packCategory" to JsonPrimitive(category)))) }
+        val commands = listOf(alice to pack("DAIRY"), bob to pack("PRODUCE"))
+        val replies = coroutineScope {
+            commands.map { (who, command) -> async {
+                val response = client.apply(who, list, command)
+                assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+                Wire.json.decodeFromString<IntentBatchResult>(response.bodyAsText())
+            } }.awaitAll()
+        }
+        assertThat(replies.map { it.results.single().outcome }).containsExactly("applied", "no_op")
+        val winner = commands[replies.indexOfFirst { it.results.single().outcome == "applied" }]
+        val observer = if (winner.first == alice) bob else alice
+        val inserted = client.changes(observer, activity = true).lists.single()
+        assertThat(inserted.projection.rows).hasSize(1)
+        assertThat(inserted.activity).containsExactly(ListActivity(Wire.hash(winner.second.id.toByteArray()), "items_added", 1, now))
+        val row = inserted.projection.rows.values.single()
+        fun edit(field: String, value: String) = Intent(uuid(), list, "edit", buildJsonObject {
+            put("target", row.id); put("changes", buildJsonObject { put(field, value) })
+            put("expected", buildJsonObject { put(field, row.revisions[field]?.let(::JsonPrimitive) ?: JsonNull) })
+        })
+        coroutineScope {
+            listOf(alice to edit("note", "For visitors"), bob to edit("store", "Market")).map { (who, command) -> async {
+                val response = client.apply(who, list, command)
+                assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+                assertThat(Wire.json.decodeFromString<IntentBatchResult>(response.bodyAsText()).results.single().outcome).isEqualTo("applied")
+            } }.awaitAll()
+        }
+        val check = Intent(uuid(), list, "check", buildJsonObject {
+            put("target", row.id); put("checked", true); put("checkedAt", now)
+            put("expected", buildJsonObject { put("check", row.revisions["check"]?.let(::JsonPrimitive) ?: JsonNull) })
+        })
+        assertThat(client.apply(alice, list, check).status).isEqualTo(HttpStatusCode.OK)
+        val beforeDuplicate = client.changes(observer, activity = true).lists.single()
+        assertThat(beforeDuplicate.projection.rows.getValue(row.id).facts["note"]).isEqualTo(JsonPrimitive("For visitors"))
+        assertThat(beforeDuplicate.projection.rows.getValue(row.id).facts["store"]).isEqualTo(JsonPrimitive("Market"))
+        val duplicate = pack("BAKERY")
+        val skipped = Wire.json.decodeFromString<IntentBatchResult>(client.apply(bob, list, duplicate).bodyAsText())
+        assertThat(skipped.results.single().outcome).isEqualTo("no_op")
+        client.apply(bob, list, duplicate)
+        val afterDuplicate = client.changes(observer, activity = true).lists.single()
+        assertThat(afterDuplicate.projection.rows).isEqualTo(beforeDuplicate.projection.rows)
+        assertThat(afterDuplicate.projection.preferences).isEqualTo(beforeDuplicate.projection.preferences)
+        assertThat(afterDuplicate.activity).isEqualTo(inserted.activity)
+        assertThat(client.apply(carol, list, pack("BAKERY")).status).isEqualTo(HttpStatusCode.NotFound)
+    }
+
     @Test fun sharedActivityIsServerAttributedBoundedAndRetrySafe() = http {
         val list = client.create(alice).id
         client.share(alice, list, bob)

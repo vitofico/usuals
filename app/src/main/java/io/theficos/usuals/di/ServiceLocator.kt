@@ -124,7 +124,7 @@ object ServiceLocator {
     /** The account's lists on the server; see [ListSync]. */
     val listSync by resettable { ListSync(listRepository, replica, HttpListsService(relayTransport, connectionClient::current), connectionClient, syncState, context.getString(R.string.household_fallback_name), onForgotten = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { receiptFiles.clear() } },
         onActivity = { account, page, baseline -> sharedNotifications.receive(requireNotNull(notificationAccount(account)), page, baseline) },
-        onAccountChanged = { sharedNotifications.bind(notificationAccount(it)) }) }
+        onAccountChanged = { sharedNotifications.bind(notificationAccount(it)); shoppingTools.bindPacks(notificationAccount(it)) }) }
     private val listSyncSchedulerField = resettable { ListSyncScheduler(context, listSync, database.syncDao().observeOutgoing()) }
     val listSyncScheduler by listSyncSchedulerField
     val shareStore by resettable { AccountShareStore(listRepository, listSync) }
@@ -133,7 +133,7 @@ object ServiceLocator {
     val historyRepository: HistoryRepository by resettable { HistoryRepository(database, itemRepository, replica = replica) }
     val sharedNotifications by resettable { preferenceSharedNotifications(context).also { it.bind(notificationAccount(connectionClient.current())) } }
     val reminders by resettable { preferenceReminders(context) }
-    val shoppingTools by resettable { preferenceShoppingTools(context) }
+    val shoppingTools by resettable { preferenceShoppingTools(context).also { it.bindPacks(notificationAccount(connectionClient.current())) } }
     val historyStore: HistoryStore by resettable { ReceiptHistoryStore(RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools), receiptStore, database, receiptImportFiles) }
     val promptMemory: PreferencePromptMemory by resettable { PreferencePromptMemory(context) }
     val captureMatchMemory: PreferenceCaptureMatchMemory by resettable { PreferenceCaptureMatchMemory(context) }
@@ -182,7 +182,8 @@ object ServiceLocator {
     val repeatOffers: RepeatOffers by resettable { RepeatOffers() }
     val similarItems: SimilarItems by resettable { SimilarItems(historyRanker) }
     val smartStore: SmartStore by resettable {
-        RepositorySmartStore(itemRepository, historyRepository, categoryClassifier, historyRanker, repeatPlanner, quantityHints, repeatOffers, similarItems, io.theficos.usuals.smart.ReviewRanker())
+        RepositorySmartStore(itemRepository, historyRepository, categoryClassifier, historyRanker, repeatPlanner, quantityHints, repeatOffers, similarItems, io.theficos.usuals.smart.ReviewRanker(),
+            packSupported = { scope -> database.listDao().find(scope)?.synced != true || connectionClient.supportsOccasionPacks() })
     }
 
     val productRateLimiter: OffRateLimiter by resettable { OffRateLimiter(OffRateLimiter.PRODUCT_READS_PER_MINUTE, OffRateLimiter.ONE_MINUTE_MILLIS) }

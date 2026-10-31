@@ -209,3 +209,12 @@ ServiceLocator. A successful finish records its list and whether shopping mode
 was active. The completion card offers Wallet for that finish and retains Undo.
 No payment SDK, new dependency, permission to read payment data or Room migration
 is needed.
+
+
+Occasion packs extend personal preference format 2 and portable shopping data
+without a Room migration. Android isolates templates by server/account and
+signed-out namespace; exports include the active namespace only. Browser packs
+are account/list-scoped local storage. The reviewed `pack` intent inserts only
+missing current-list identities and initializes category details atomically.
+See [occasion packs](occasion-packs.md) for capability gating, archive interchange
+and older-server behavior.

@@ -1,3 +1,4 @@
+import { validatePacks } from "./occasion-packs.mjs";
 import { canonical, rows, captures, isChecked } from "./intents.mjs";
 import { normalize } from "./identity.mjs";
 
@@ -55,8 +56,8 @@ export function reviewCandidates(p, now, muted = []) {
   }).sort((a, b) => b.shopCount - a.shopCount || a.boughtAt - b.boughtAt || compare(a.key, b.key));
 }
 /** Reusing history/favourites leaves existing unchecked quantities alone, including aliases. */
-export function addAgain(p, items, now) {
-  const aliases = p.aliases ?? {}, present = new Set(rows(p).filter((row) => !isChecked(row)).map((row) => itemKey(row.facts, aliases)));
+export function addAgain(p, items, now, includeChecked = false) {
+  const aliases = p.aliases ?? {}, present = new Set(rows(p).filter(row => includeChecked || !isChecked(row)).map((row) => itemKey(row.facts, aliases)));
   const fresh = items.filter((item) => {
     const key = itemKey(item, aliases);
     if (present.has(key)) return false;
@@ -89,11 +90,13 @@ export class ShoppingChoices {
         typeof item?.name === "string" && item.name.trim() && item.name.length <= 1000 &&
         (item.quantity == null || typeof item.quantity === "string" && Number.isFinite(Number(item.quantity)) && Number(item.quantity) >= 0) &&
         (item.quantity == null || ["PIECE", "PACK", "GRAM", "KILOGRAM", "MILLILITRE", "LITRE"].includes(item.unit))).slice(0, 500) : [],
+      ...(value?.packs ? { packs: validatePacks(value.packs) } : {}),
       muted: Array.isArray(value?.muted) ? value.muted.filter((key) => typeof key === "string").slice(0, 500) : [] };
-    } catch { return { favorites: [], muted: [] }; }
+    } catch { throw Object.assign(new Error(), { code: "shoppingStorageUnavailable" }); }
   }
   write(update) {
     const value = update(this.read());
+    if (value.packs) validatePacks(value.packs);
     try {
       if (!this.storage) throw new Error();
       this.storage.setItem(this.key, JSON.stringify(value));

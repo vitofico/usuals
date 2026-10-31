@@ -1,0 +1,35 @@
+<resources>
+    <string name="pack_title">Lots pour occasions</string>
+    <string name="pack_local">Les lots personnels restent sur cet appareil pour le compte actuel. Ils sont inclus dans les exportations et ne sont pas synchronisés.</string>
+    <string name="pack_new">Nouveau lot</string>
+    <string name="pack_from_list">Enregistrer la liste actuelle</string>
+    <string name="pack_empty">Enregistrez un lot pour un pique-nique, des invités ou un week-end.</string>
+    <string name="pack_use">Vérifier et ajouter</string>
+    <string name="pack_edit">Modifier le lot</string>
+    <string name="pack_delete">Supprimer le lot</string>
+    <string name="pack_review">Vérifier le lot</string>
+    <string name="pack_review_help">Choisissez les articles et ajustez les quantités pour cette utilisation. Les articles déjà présents, même cochés, sont ignorés. Le lot enregistré reste inchangé.</string>
+    <string name="pack_name">Nom du lot</string>
+    <string name="pack_quantity">Quantité</string>
+    <string name="pack_edit_item">Modifier l’article</string>
+    <string name="pack_remove_item">Retirer du lot</string>
+    <string name="pack_add_item">Ajouter un article</string>
+    <string name="pack_failed">Impossible d’enregistrer ces modifications. Réessayez.</string>
+    <string name="pack_add_selected">Ajouter la sélection</string>
+    <string name="pack_save">Enregistrer</string>
+    <string name="pack_cancel">Annuler</string>
+    <string name="pack_item_name">Nom de l’article</string>
+    <string name="pack_unit">Unité : %1$s</string>
+    <string name="pack_note">Notes</string>
+    <string name="pack_store">Magasin</string>
+    <string name="pack_category_auto">Catégorie automatique</string>
+    <string name="pack_export">Exporter les lots</string>
+    <string name="pack_import">Importer les lots</string>
+    <string name="receipt_compare">Comparez chaque ligne avec la photo originale.</string>
+    <string name="receipt_correct_line">Corriger la ligne</string>
+    <string name="finish_explained">Terminer les courses enregistre les articles cochés comme achats. Vous pouvez ensuite annuler.</string>
+    <string name="pack_add_failed">Impossible d’ajouter ces articles. Les listes partagées nécessitent un serveur compatible avec les lots. Vérifiez la connexion et la version du serveur. La vérification est conservée.</string>
+    <string name="pack_use_named">Vérifier et ajouter %1$s</string>
+    <string name="pack_edit_named">Modifier %1$s</string>
+    <string name="pack_delete_named">Supprimer %1$s</string>
+</resources>

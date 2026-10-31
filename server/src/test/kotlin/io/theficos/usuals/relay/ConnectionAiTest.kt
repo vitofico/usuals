@@ -179,6 +179,24 @@ class ConnectionAiTest {
         val accepted = client.post("/v1/ai/settings") { header(HttpHeaders.Cookie, cookie); header(HttpHeaders.Origin, f.origin); header("X-CSRF-Token", caller.csrf); contentType(ContentType.Application.Json); setBody("{}") }
         assertThat(accepted.status.value).isEqualTo(200)
     }
+    @Test fun configuredProviderKindsReachTheGatewayClientFactory() = runBlocking {
+        for (kind in listOf(ProviderKind.ANTHROPIC, ProviderKind.OLLAMA, ProviderKind.OPENAI_COMPATIBLE)) {
+            val built = mutableListOf<ProviderConfig>()
+            val profile = AiProvider("configured", "Configured", "https://models.example/v1", "text", "vision", kind = kind.name, keyEnv = "MODEL_KEY")
+            val configuration = AiConfiguration(listOf(profile), environment = mapOf("MODEL_KEY" to "synthetic-provider-key"))
+            val gateway = AiGateway(db, configuration, { now }) { config ->
+                built += config
+                object : LlmClient {
+                    override suspend fun probe() = ModelCapabilities(true, true, config.model)
+                    override suspend fun parseUtterance(utterance: String) = emptyList<ParsedItem>()
+                }
+            }
+            val settings = gateway.select(user, AiSelection("configured"))
+            gateway.execute(user, "probe", AiRequest(revision = settings.revision))
+            assertThat(built).containsExactly(ProviderConfig(kind, "Configured", profile.baseUrl, "text", false, "synthetic-provider-key"))
+        }
+    }
+
     private fun gateway(limit: Int = 20, keys: MutableList<String?> = mutableListOf()) = AiGateway(db,
         AiConfiguration(listOf(AiProvider("private", "Private", "http://ollama:11434/v1", "text", "vision", true)), wrappingKey = ByteArray(32) { 42 }, dailyLimit = limit), { now }) { config ->
         keys += config.apiKey

@@ -102,7 +102,7 @@ class QuietListScreenTest {
         assertThat(selected.value).isNull()
     }
 
-    @Test fun shopping_focuses_on_rows_and_keeps_finish_next_to_checked_items() {
+    @Test fun shopping_focuses_on_rows_and_keeps_one_finish_reachable() {
         var finished = 0
         var left = 0
         compose.setContent { UsualsTheme {
@@ -112,26 +112,47 @@ class QuietListScreenTest {
         } }
         compose.onNodeWithText("Shopping mode").assertIsDisplayed()
         compose.onNodeWithContentDescription("Review your usuals").assertDoesNotExist()
-        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Finish shop"))
-        compose.onNodeWithText("Finish shop").performClick()
+        compose.onAllNodesWithText("Finish shop").assertCountEquals(1)
+        compose.onNodeWithText("Finish shop").assertIsDisplayed().performClick()
         assertThat(finished).isEqualTo(1)
         compose.onNodeWithText("Leave shopping mode").performClick()
         assertThat(left).isEqualTo(1)
     }
 
+    @Test fun normal_mode_keeps_one_inline_finish_with_the_displayed_snapshot() {
+        val checked = listOf(ListRow(ItemId("bread"), "Bread", checked = true))
+        var finished: List<ListRow>? = null
+        compose.setContent { UsualsTheme {
+            ListContent(ListUiState(pending = listOf(row), checked = checked),
+                ListActions(onFinishShop = { error("Snapshot callback bypassed") },
+                    onFinishRows = { rows, _ -> finished = rows }))
+        } }
+        compose.onNodeWithTag("shopping_finish").assertDoesNotExist()
+        compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Finish shop"))
+        compose.onAllNodesWithText("Finish shop").assertCountEquals(1)
+        compose.onNodeWithText("Finish shop").performClick()
+        assertThat(finished).isEqualTo(checked)
+    }
+
     @Config(sdk = [33], qualifiers = "en-w320dp-h640dp")
     @Test fun large_text_shopping_controls_wrap_and_leave_groceries_reachable() {
         var left = false
+        val checked = listOf(ListRow(ItemId("bread"), "Bread", checked = true))
+        var finished: List<ListRow>? = null
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
-                UsualsTheme { ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row),
-                    personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true, onShoppingMode = { left = true })) }
+                UsualsTheme { ListContent(ListUiState(header = ListHeader("Groceries", 1), pending = listOf(row), checked = checked,
+                    personal = ShoppingPreferences(mode = true)), ListActions(shoppingMode = true, onShoppingMode = { left = true },
+                        onFinishShop = { error("Snapshot callback bypassed") }, onFinishRows = { rows, _ -> finished = rows })) }
             }
         }
         compose.onNodeWithText("Shopping mode").assertIsDisplayed()
         compose.onNodeWithTag(ShoppingListTag).performScrollToNode(hasText("Milk"))
         compose.onNodeWithText("Milk").assertIsDisplayed()
+        compose.onAllNodesWithText("Finish shop").assertCountEquals(1)
+        compose.onNodeWithText("Finish shop").assertIsDisplayed().performClick()
+        assertThat(finished).isEqualTo(checked)
         compose.onNodeWithText("Leave shopping mode").assertIsDisplayed().performClick()
         assertThat(left).isTrue()
     }

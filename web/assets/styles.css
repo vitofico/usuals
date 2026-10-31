@@ -978,3 +978,17 @@ dialog.pairing { max-width: 760px; }
 
 .notification-choice { min-height: 44px; align-items: center; }
 .notification-choice input { margin-top: 0; }
+
+.occasion-packs .pack-body { display: grid; gap: 16px; min-width: 0; }
+.pack-card { border: 1px solid var(--outline-variant, #ddd); border-radius: 16px; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.pack-card h3, .pack-card p, .pack-card .pack-selection { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+.pack-selection { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+.pack-selection input { width: 24px; height: 24px; flex-shrink: 0; }
+.pack-fields { display: grid; gap: 12px; }
+.pack-fields .field, .occasion-packs .field { max-width: 100%; min-width: 0; }
+.occasion-packs .label { display: grid; gap: 8px; }
+.finish-actions { flex-wrap: wrap; align-items: center; gap: 8px; }
+.finish-actions .helper { flex: 1 1 240px; }
+main[data-shopping="true"] .finish-actions { position: sticky; bottom: 12px; background: var(--paper, var(--surface)); border-radius: 16px; padding: 12px; }
+.review-original { display: grid; gap: 8px; margin-block: 16px; }
+.review-original .import-preview { max-height: 240px; width: 100%; object-fit: contain; }

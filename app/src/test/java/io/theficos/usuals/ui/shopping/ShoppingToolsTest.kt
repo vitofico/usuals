@@ -60,7 +60,7 @@ class ShoppingToolsTest {
         val broken = ShoppingToolsStore(read = { "not json" }, write = { error("must not write") })
         assertThat(broken.state.value.unavailable).isTrue()
         assertThrows(IllegalStateException::class.java) { broken.mode(true) }
-        val future = ShoppingToolsStore(read = { """{"version":2}""" })
+        val future = ShoppingToolsStore(read = { """{"version":3}""" })
         assertThat(future.state.value.unavailable).isTrue()
         val store = ShoppingToolsStore(write = { error("disk") })
         assertThrows(IllegalStateException::class.java) { store.mode(true) }
@@ -77,4 +77,49 @@ class ShoppingToolsTest {
         assertThrows(IllegalArgumentException::class.java) { store.pin(SavedShoppingItem("bad", "Milk", Double.NaN, "LITRE")) }
         assertThat(store.state.value.portable.favorites).hasSize(1)
     }
+    @Test fun `version one migrates and account packs remain isolated across restart and import`() {
+        var disk: String? = """{"version":1,"portable":{"favorites":[{"id":"fav","name":"Milk"}]}}"""
+        val store = ShoppingToolsStore(read = { disk }, write = { disk = it })
+        val pack = OccasionPack("picnic", "Picnic", listOf(SavedShoppingItem("bread", "Bread", 2.0, "PIECE", note = "wholemeal", category = Category.entries.first().name, store = "Market")))
+        store.savePack(pack)
+        store.bindPacks("server-a:alice")
+        assertThat(store.state.value.portable.packs).isEmpty()
+        store.importPortable(PortableShoppingPreferences(packs = listOf(pack.copy(name = "Visitors"))))
+        store.bindPacks("server-b:alice")
+        assertThat(store.state.value.portable.packs).isEmpty()
+        val restored = ShoppingToolsStore(read = { disk }, write = { disk = it })
+        restored.bindPacks("server-a:alice")
+        assertThat(restored.state.value.portable.packs.single().name).isEqualTo("Visitors")
+        restored.bindPacks(null)
+        assertThat(restored.state.value.portable.packs).containsExactly(pack)
+        restored.importPortable(PortableShoppingPreferences(packs = listOf(pack)))
+        assertThat(restored.state.value.portable.packs).hasSize(1)
+        assertThat(restored.state.value.portable.favorites.single().name).isEqualTo("Milk")
+        assertThat(restored.state.value.version).isEqualTo(2)
+    }
+    @Test fun `pack failures preserve saved templates and invalid imports never replace them`() {
+        val pack = OccasionPack("picnic", "Picnic", listOf(SavedShoppingItem("bread", "Bread")))
+        val store = ShoppingToolsStore()
+        store.savePack(pack)
+        assertThrows(IllegalArgumentException::class.java) { store.savePack(pack.copy(name = " ")) }
+        assertThrows(IllegalArgumentException::class.java) { store.importPortable(PortableShoppingPreferences(packs = listOf(pack.copy(name = "Changed")))) }
+        assertThrows(IllegalArgumentException::class.java) { store.savePack(pack.copy(items = List(201) { SavedShoppingItem("row$it", "Bread") })) }
+        assertThrows(IllegalArgumentException::class.java) { store.savePack(pack.copy(items = listOf(SavedShoppingItem("bad", "Bread", 1.0, "invented")))) }
+        assertThat(store.state.value.portable.packs).containsExactly(pack)
+        store.deletePack(pack.id)
+        assertThat(store.state.value.portable.packs).isEmpty()
+    }
+
+    @Test fun `import preflight includes retained account bounds before any facts are imported`() {
+        val store = ShoppingToolsStore()
+        repeat(100) { store.savePack(OccasionPack("pack$it", "Pack $it")) }
+        store.bindPacks("other-server:alice")
+        assertThrows(IllegalArgumentException::class.java) {
+            store.validateImport(PortableShoppingPreferences(packs = listOf(OccasionPack("new", "New"))))
+        }
+        assertThat(store.state.value.portable.packs).isEmpty()
+        store.bindPacks(null)
+        assertThat(store.state.value.portable.packs).hasSize(100)
+    }
+
 }
