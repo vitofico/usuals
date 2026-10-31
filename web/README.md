@@ -9,10 +9,11 @@ were added to, and the browser shows them as the server holds them: nothing is
 stored as a browser list replica, so there is nothing to unlock or restore. Your phone
 and this browser show the same lists because they read the same account.
 
-Personal favourites and hidden Replay suggestions are saved separately in this
-browser, scoped to your account and list. They are device choices, like the
+Personal occasion packs, favourites and hidden Replay suggestions are saved
+separately in this browser, scoped to your account and list. They are device choices, like the
 phone's personal shopping preferences, and do not sync with the phone. Clearing
 browser storage removes those choices; lists and purchases remain on the server.
+Use pack export/import to move templates deliberately between clients.
 
 ## Lists
 
@@ -25,8 +26,11 @@ appear. The selected list is the page heading. Select its name and chevron to sw
   like the phone; **Details** in an item's options sets its category for
   everyone on the list. Tick an item when it is in the basket;
   **Picked up** expands the items already in your basket.
-  **Finish shopping** moves them into the list's history, with
-  **Undo** while the notice is showing.
+  **Finish shopping** records all checked rows in the list as purchases,
+  including rows hidden by the store filter. Concurrent changes are guarded.
+  **Undo**, while the notice is showing, removes that finish's purchases and
+  restores its rows without overwriting later changes. Shopping mode keeps
+  Finish reachable in the checked section.
 - **···** next to an item opens its name and quantity. **Details** holds its
   note and store; **More item actions** holds removal, with a confirmation.
   **List options** holds
@@ -57,6 +61,35 @@ appear. The selected list is the page heading. Select its name and chevron to sw
   confirmed and the source is still unchanged. **Set repeat rule** edits the
   shared interval; due repeats are added by the connected phone.
 
+## Occasion packs
+
+Open **List options > Occasion packs** to create a new pack or save the current
+list. Checked rows start unselected when saving a list. Rename a pack, add or
+edit its items and details, or delete it without changing shopping rows.
+
+**Review and add** lets you select items and change quantities for this use;
+the saved template keeps its original quantities. Existing checked and unchecked
+items are unavailable, including aliases and items outside the current store
+filter. If someone adds an item while review is open, their row and quantity
+remain unchanged. Cancel leaves the list alone; failed additions keep the review
+open for retry.
+
+Templates stay in this browser for the current account and list. They do not
+sync with the phone or other browsers. Export/import pack files to transfer them
+explicitly, including to and from Android shopping-data exports. Confirmed list
+additions follow normal account synchronization. The browser checks server
+support before each use; an older or unreachable server leaves the review open.
+See [occasion packs](../docs/occasion-packs.md) for file limits and compatibility.
+
+## Quiet notifications
+
+**Preferences > Notifications** offers optional in-app notices for items added
+and shops finished by other people on other lists. The master switch and each
+type start off. There are no sounds, permission prompts or background browser
+alerts. Preferences stay with this account in this browser. See the
+[notification guide](../docs/shared-list-notifications.md) for Android's separate
+silent background alerts.
+
 ## Sharing
 
 **Share** opens one dialog:
@@ -68,8 +101,11 @@ appear. The selected list is the page heading. Select its name and chevron to sw
   once, with the same editing rights as you. They see it the next time their
   browser or phone checks in.
 
-There are no invitations, codes or links to send: sharing is between accounts on
-the same server. Only the owner can remove people or delete the list.
+Sharing is between accounts on the same server. When email invitations are
+enabled, Share also offers email invitation and resend controls; registration
+and admission depend on server policy. See the
+[email invitation guide](../docs/sync/email-invitations.md). Only the owner can
+remove people or delete the list.
 
 ## Connect a phone
 
@@ -108,7 +144,9 @@ appear again if that storage is cleared.
 
 **Import list or recipe** reads Markdown locally from text or a UTF-8 file, skips
 completed checkboxes and recipe instructions, and reviews the selected rows.
-Confirmation adds the new rows together. Items already on the list are left alone
+Photo review keeps the original visible beside editable names and quantities
+and offers the full prepared image for closer inspection. Confirmation adds
+the new rows together. Items already on the list are left alone
 rather than increasing their quantities.
 
 With server AI, **Read photo** performs a synthetic compatibility check and then

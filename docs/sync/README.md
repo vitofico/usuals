@@ -6,6 +6,8 @@ household protocol that came before was removed; its documents remain in Git his
 
 - [Decision](../decisions/ADR-0017-server-held-lists.md): why the server holds the lists and what that means for privacy.
 - [Lists v2](lists-v2.md): the wire contract for lists, the change feed, sharing and connecting a phone.
+- [Occasion packs](../occasion-packs.md): client-local templates, capability-gated additions and duplicate protection.
+- [Shared-list notifications](../shared-list-notifications.md): transactional activity and optional client alerts.
 - [Local foundation](local-foundation.md): how the phone keeps lists, history and pending changes in Room.
 - [Server](../../server/README.md): build, configuration and limits.
 - [Browser boundary](../../web/PROTOCOL.md): what the web app relies on.

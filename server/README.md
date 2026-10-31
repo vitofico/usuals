@@ -91,6 +91,18 @@ bumps the list sequence only when it changed something. Non-members get 404.
 Browser sessions slide to 30 days from use and phone sessions to 180 days, each
 renewed at most once a day.
 
+Reviewed occasion-pack additions use the `pack` intent, advertised by
+`occasionPacks: true` on `/v1/instance`. Under the same list lock, an existing
+checked or unchecked canonical item is skipped without changing its quantity or
+details; only a new row can initialize a missing category preference. Pack
+templates remain client-local and are never stored on this server. Clients must
+check support before sending additions. See [occasion packs](../docs/occasion-packs.md).
+
+Optional [shared-list activity](../docs/shared-list-notifications.md) is stored
+transactionally with list changes. New pack rows can produce item-added activity;
+skipped duplicates and retries do not. Activity feeds require client opt-in, and
+legacy mutation replies retain their existing shape.
+
 Requests have encoded limits before parsing, strict UTF-8/JSON and duplicate-key
 checks, bounded depth/nodes, a 15-second deadline and eight active request slots.
 A stored list is at most 7 MB encoded. Building list responses is limited to two
@@ -125,6 +137,10 @@ and [additive service API](../docs/server-services.openapi.json) cover native ac
 approval and the optional model gateway. A phone that claims a connection offer
 shown by a signed-in browser is approved at once. The gateway is disabled with no configured
 provider profiles, and its availability does not determine relay readiness.
+Profiles support OpenAI-compatible Chat Completions, including Ollama and
+Anthropic-compatible endpoints; configured provider kind and text/image models
+control request construction. Model use still requires explicit input submission
+and review.
 
 The optional [account policy and lifecycle interfaces](../docs/sync/account-policy-and-lifecycle.md)
 cover per-account limits, paginated export, fresh closure authorization and
