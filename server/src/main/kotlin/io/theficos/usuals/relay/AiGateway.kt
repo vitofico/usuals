@@ -27,7 +27,7 @@ class AiConfiguration(val profiles: List<AiProvider> = emptyList(), val default:
         require(wrappingKey == null || wrappingKey.size == 32)
         profiles.forEach { p ->
             require(p.id.matches(Regex("[a-z0-9-]{1,40}")) && p.label.length in 1..100 && p.model.length in 1..128 && p.imageModel.length in 1..128)
-            require(p.kind in setOf("OLLAMA", "OPENAI_COMPATIBLE"))
+            require(p.kind in setOf("ANTHROPIC", "OLLAMA", "OPENAI_COMPATIBLE"))
             val uri = URI(p.baseUrl)
             require(uri.host != null && uri.userInfo == null && uri.rawQuery == null && uri.rawFragment == null &&
                 (uri.scheme == "https" || uri.scheme == "http" && (p.isLocal || p.allowHttp)) && p.baseUrl.length <= 1024)

@@ -141,12 +141,16 @@ class OpenAiCompatibleClient(
         val payload = buildJsonObject {
             put("model", config.model)
             // Deterministic on purpose: the same recipe read twice should give
-            // the same items twice.
-            put("temperature", 0)
+            // the same items twice. Anthropic rejects this parameter.
+            if (config.kind != ProviderKind.ANTHROPIC) put("temperature", 0)
             if (config.kind == ProviderKind.OLLAMA) put("reasoning_effort", "none")
             put("max_tokens", maxTokens)
             put("messages", messages)
-            putJsonObject("response_format") { put("type", "json_object") }
+            // Anthropic accepts only strict json_schema here. The prompts already
+            // ask for JSON, and a fenced answer is unwrapped below.
+            if (config.kind != ProviderKind.ANTHROPIC) {
+                putJsonObject("response_format") { put("type", "json_object") }
+            }
         }
 
         val builder = Request.Builder()
