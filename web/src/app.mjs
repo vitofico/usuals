@@ -1,3 +1,4 @@
+import { occasionPacksDialog } from "./occasion-packs-dialog.mjs";
 import { requireThat, hash } from "./wire.mjs";
 import { RunScope, request } from "./client.mjs";
 import { ListStore, ListFeed, ListsApi, access, archivedAction, arrange, problem } from "./lists.mjs";
@@ -631,7 +632,7 @@ function renderLists() {
     el("details", { open: pickedOpen.get(id) || null, ontoggle: (event) => { pickedOpen.set(id, event.target.open); } },
       el("summary", {}, t("quietPicked", { count: picked.length })),
       el("ul", { class: "items" }, picked.map((r) => itemNode(id, r)))),
-    el("div", { class: "finish-actions" }, button(t("finishShopping"), () => act(() => finishShopping(id)), "secondary"))) : null;
+    el("div", { class: "finish-actions" }, el("p", { class: "helper" }, t("finish_explained")), button(t("finishShopping"), () => act(() => finishShopping(id)), "secondary"))) : null;
   const paper = el("section", { class: "paper list-paper", "aria-label": listName(list) },
     shopping ? null : capture,
     ...neededSections,
@@ -813,6 +814,23 @@ function saveFavorite(listId, row) {
     [...value.favorites, { key, name: row.facts.name, quantity: row.facts.quantity ?? null, unit: row.facts.unit ?? null,
       gtin: row.facts.gtin ?? null, store: row.facts.store ?? null }].slice(-500) }));
   closeDialog(); notice("favoriteSaved");
+}
+function packsDialog(listId) {
+  const owner = account?.user.id;
+  occasionPacksDialog({ el, button, t, openDialog, closeDialog, choices: choices(listId), act,
+    projection: () => account?.user.id === owner ? store?.lists.get(listId)?.projection : null,
+    add: async (items) => {
+      const info = await api("/v1/instance");
+      if (!info.occasionPacks) return false;
+      requireThat(account?.user.id === owner, "unauthenticated");
+      const p = store.lists.get(listId)?.projection; requireThat(p, "not_found");
+      const payloads = addAgain(p, items, Date.now(), true).map(payload => ({ ...payload,
+        packCategory: items.find(item => itemKey(item, p.aliases) === payload.key)?.category ?? null }));
+      if (!payloads.length) return true;
+      const reply = report(await lists.send(listId, payloads.map(payload => intent(listId, "pack", payload))));
+      if (problem(reply)) return false;
+      return true;
+    } });
 }
 function favoritesDialog(listId) {
   const content = el("div", {}, el("h2", {}, t("favoritesTitle")));
@@ -1022,6 +1040,7 @@ function listMenu(listId) {
       shoppingModes.has(listId) ? null : button(t("reviewTitle"), () => reviewDialog(listId)),
       button(t("historyTitle"), () => historyDialog(listId)),
       button(t("favoritesTitle"), () => favoritesDialog(listId)),
+      button(t("pack_title"), () => packsDialog(listId)),
       button(t(shoppingModes.has(listId) ? "shoppingStop" : "shoppingStart"), () => toggleShopping(listId)),
       listRows(list.projection).some(isChecked) ? button(t("finishShopping"), () => { closeDialog(); act(() => finishShopping(listId)); }) : null,
       button(t("share"), () => shareDialog(listId)),

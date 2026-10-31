@@ -36,6 +36,7 @@ fun ReceiptSheet(editor: ReceiptEditor) {
     val current = draft ?: return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var correctingLine by remember(current.id) { mutableStateOf<Int?>(null) }
     var viewingPhoto by remember(current.id) { mutableStateOf(false) }
     var capture by rememberSaveable(current.id) { mutableStateOf<String?>(null) }
     var photoRequest by rememberSaveable { mutableStateOf<String?>(null) }
@@ -68,6 +69,15 @@ fun ReceiptSheet(editor: ReceiptEditor) {
             try { withContext(Dispatchers.IO) { requireNotNull(context.contentResolver.openOutputStream(uri)).use { it.write(image.bytes()) } } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { editor.failed(ReceiptProblem.SAVE) }
+        }
+    }
+    correctingLine?.let { index ->
+        val lines = current.text?.lines().orEmpty()
+        if (index in lines.indices) current.image?.let { image ->
+            ReceiptLineCorrection(image, lines[index], { correctingLine = null }) { value ->
+                editor.text(lines.mapIndexed { i, line -> if (i == index) value else line }.joinToString("\n"))
+                correctingLine = null
+            }
         }
     }
     val saving by rememberUpdatedState(current.saving)
@@ -112,6 +122,11 @@ fun ReceiptSheet(editor: ReceiptEditor) {
                 }
                 current.text?.let { text ->
                     Text(stringResource(R.string.receipt_review_hint))
+                    Text(stringResource(R.string.receipt_compare))
+                    text.lines().forEachIndexed { index, line ->
+                        if (line.isNotBlank()) TextButton(onClick = { correctingLine = index }, enabled = !current.busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(line) }
+                    }
                     OutlinedTextField(text, editor::text, enabled = !current.busy, minLines = 3, maxLines = 8,
                         label = { Text(stringResource(R.string.receipt_items)) }, modifier = Modifier.fillMaxWidth().testTag("receipt_items"))
                 }
@@ -143,4 +158,25 @@ fun ReceiptSheet(editor: ReceiptEditor) {
             Spacer(Modifier.height(16.dp))
         }
     }
+}
+
+@Composable
+private fun ReceiptLineCorrection(image: io.theficos.usuals.llm.ModelImage, line: String,
+    onDismiss: () -> Unit, save: (String) -> Unit) {
+    var text by remember(line) { mutableStateOf(line) }
+    var fullImage by remember { mutableStateOf(false) }
+    val bitmap = remember(image) { image.bytes().let { BitmapFactory.decodeByteArray(it, 0, it.size) } }
+    DisposableEffect(bitmap) { onDispose { bitmap?.recycle() } }
+    if (fullImage && bitmap != null) ReceiptPhotoViewer(bitmap) { fullImage = false }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.receipt_correct_line)) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            bitmap?.let { original ->
+                Image(original.asImageBitmap(), stringResource(R.string.receipt_preview),
+                    Modifier.fillMaxWidth().heightIn(max = 220.dp).clickable(onClickLabel = stringResource(R.string.receipt_view)) { fullImage = true }, contentScale = ContentScale.Fit)
+                TextButton(onClick = { fullImage = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.receipt_view)) }
+            }
+            OutlinedTextField(text, { text = it.replace("\n", " ") }, label = { Text(stringResource(R.string.receipt_items)) }, modifier = Modifier.fillMaxWidth())
+        } },
+        confirmButton = { TextButton(onClick = { save(text) }) { Text(stringResource(R.string.pack_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.pack_cancel)) } })
 }

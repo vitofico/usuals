@@ -94,7 +94,7 @@ internal class Lists(private val relay: Relay, private val config: WebIdentityCo
             val results = batch.intents.map { intent ->
                 reducer.apply(projection, intent).let { reduced ->
                     val count = if (reduced.outcome != Outcome.APPLIED) 0 else when (intent.kind) {
-                        "capture", "reuse" -> (reduced.projection.rows.keys - projection.rows.keys).size
+                        "capture", "reuse", "pack" -> (reduced.projection.rows.keys - projection.rows.keys).size
                         "finish" -> reduced.projection.closes[intent.id]?.itemIds?.size ?: 0
                         else -> 0
                     }

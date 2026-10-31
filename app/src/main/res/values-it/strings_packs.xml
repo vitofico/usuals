@@ -1,0 +1,35 @@
+<resources>
+    <string name="pack_title">Gruppi per occasioni</string>
+    <string name="pack_local">I gruppi personali restano su questo dispositivo per l’account attuale. Sono inclusi nelle esportazioni e non vengono sincronizzati.</string>
+    <string name="pack_new">Nuovo gruppo</string>
+    <string name="pack_from_list">Salva la lista attuale</string>
+    <string name="pack_empty">Salva un gruppo per un picnic, ospiti o un fine settimana fuori.</string>
+    <string name="pack_use">Controlla e aggiungi</string>
+    <string name="pack_edit">Modifica gruppo</string>
+    <string name="pack_delete">Elimina gruppo</string>
+    <string name="pack_review">Controlla gruppo</string>
+    <string name="pack_review_help">Scegli gli articoli e modifica le quantità per questo utilizzo. Gli articoli già presenti, anche quelli spuntati, vengono saltati. Il gruppo salvato non cambia.</string>
+    <string name="pack_name">Nome del gruppo</string>
+    <string name="pack_quantity">Quantità</string>
+    <string name="pack_edit_item">Modifica articolo</string>
+    <string name="pack_remove_item">Rimuovi dal gruppo</string>
+    <string name="pack_add_item">Aggiungi articolo</string>
+    <string name="pack_failed">Impossibile salvare le modifiche. Riprova.</string>
+    <string name="pack_add_selected">Aggiungi selezionati</string>
+    <string name="pack_save">Salva</string>
+    <string name="pack_cancel">Annulla</string>
+    <string name="pack_item_name">Nome articolo</string>
+    <string name="pack_unit">Unità: %1$s</string>
+    <string name="pack_note">Note</string>
+    <string name="pack_store">Negozio</string>
+    <string name="pack_category_auto">Categoria automatica</string>
+    <string name="pack_export">Esporta gruppi</string>
+    <string name="pack_import">Importa gruppi</string>
+    <string name="receipt_compare">Confronta ogni riga con la foto originale.</string>
+    <string name="receipt_correct_line">Correggi riga</string>
+    <string name="finish_explained">Termina spesa registra gli articoli spuntati come acquisti. Puoi annullare dopo.</string>
+    <string name="pack_add_failed">Impossibile aggiungere gli articoli. Le liste condivise richiedono un server compatibile con i gruppi. Controlla la connessione e la versione del server. La revisione è conservata.</string>
+    <string name="pack_use_named">Controlla e aggiungi %1$s</string>
+    <string name="pack_edit_named">Modifica %1$s</string>
+    <string name="pack_delete_named">Elimina %1$s</string>
+</resources>

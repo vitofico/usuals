@@ -22,6 +22,8 @@ data class SavedShoppingItem(
     val unit: String? = null,
     val gtin: String? = null,
     val store: String? = null,
+    val note: String? = null,
+    val category: String? = null,
 ) {
     val quantity: Quantity? get() = amount?.let { Quantity(it, MeasureUnit.valueOf(requireNotNull(unit))) }
     fun matches(name: String, quantity: Quantity?, gtin: Gtin?, store: String?): Boolean =
@@ -33,6 +35,8 @@ data class SavedShoppingItem(
         unit?.let(MeasureUnit::valueOf)
         gtin?.let { require(Gtin.parse(it) != null) }
         require(store == null || store.length <= 80)
+        require(note == null || note.length <= 1000)
+        require(category == null || Category.entries.any { it.name == category })
     }
 }
 
@@ -46,14 +50,26 @@ fun PortableShoppingPreferences.favoritesOnList(items: List<Item>, history: Hist
 }
 
 @Serializable
+data class OccasionPack(val id: String, val name: String, val items: List<SavedShoppingItem> = emptyList()) {
+    fun validate() {
+        require(id.isNotBlank() && id.length <= 100 && name.isNotBlank() && name.length <= 100)
+        require(items.size <= 200 && items.distinctBy { it.id }.size == items.size)
+        items.forEach(SavedShoppingItem::validate)
+    }
+}
+
+@Serializable
 data class DeferredShoppingRows(val trips: Set<String> = emptySet(), val rows: Map<String, String> = emptyMap())
 
 @Serializable
 data class PortableShoppingPreferences(
     val favorites: List<SavedShoppingItem> = emptyList(),
     val orders: Map<String, List<String>> = emptyMap(),
+    val packs: List<OccasionPack> = emptyList(),
 ) {
     fun validate() {
+        require(packs.size <= 100 && packs.sumOf { it.items.size } <= 2000 && packs.distinctBy { it.id }.size == packs.size)
+        packs.forEach(OccasionPack::validate)
         require(favorites.size <= 500 && favorites.map { it.id }.distinct().size == favorites.size)
         favorites.forEach(SavedShoppingItem::validate)
         require(orders.size <= 200)
@@ -66,7 +82,9 @@ data class PortableShoppingPreferences(
 
 @Serializable
 data class ShoppingPreferences(
-    val version: Int = 1,
+    val version: Int = 2,
+    val packOwner: String = "local",
+    val otherPacks: Map<String, List<OccasionPack>> = emptyMap(),
     @kotlinx.serialization.Transient val unavailable: Boolean = false,
     val mode: Boolean = false,
     val keepAwake: Boolean = false,
@@ -85,17 +103,38 @@ class ShoppingToolsStore(
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val mutable = MutableStateFlow(runCatching {
         (read()?.let { json.decodeFromString<ShoppingPreferences>(it) } ?: ShoppingPreferences()).also {
-            require(it.version == 1); it.portable.validate()
+            require(it.version in 1..2); it.portable.validate()
+            val allPacks = it.otherPacks.values.flatten() + it.portable.packs
+            require(it.otherPacks.size <= 50 && allPacks.size <= 100 && allPacks.sumOf { pack -> pack.items.size } <= 2000)
+            require(it.packOwner !in it.otherPacks)
+            it.otherPacks.values.forEach { packs -> PortableShoppingPreferences(packs = packs).validate() }
         }
     }.getOrElse { ShoppingPreferences(unavailable = true) })
     val state = mutable.asStateFlow()
 
     @Synchronized private fun change(update: (ShoppingPreferences) -> ShoppingPreferences) {
         check(!mutable.value.unavailable)
-        val next = update(mutable.value)
+        val next = update(mutable.value).copy(version = 2)
+        if (next == mutable.value) return
         next.portable.validate()
+        require(next.otherPacks.size <= 50)
+        val allPacks = next.otherPacks.values.flatten() + next.portable.packs
+        require(allPacks.size <= 100 && allPacks.sumOf { it.items.size } <= 2000)
+        next.otherPacks.values.forEach { PortableShoppingPreferences(packs = it).validate() }
         write(json.encodeToString(next))
         mutable.value = next
+    }
+    fun bindPacks(account: String?) {
+      if (mutable.value.unavailable) return
+      try { change { current ->
+        val owner = account ?: "local"
+        require(owner.length <= 100)
+        if (current.packOwner == owner) current else current.copy(packOwner = owner,
+            portable = current.portable.copy(packs = current.otherPacks[owner].orEmpty()),
+            otherPacks = (current.otherPacks - owner) + (current.packOwner to current.portable.packs))
+      } } catch (_: Exception) {
+          mutable.value = mutable.value.copy(unavailable = true, portable = mutable.value.portable.copy(packs = emptyList()))
+      }
     }
     fun mode(enabled: Boolean) = change { it.copy(mode = enabled) }
     fun keepAwake(enabled: Boolean) = change { it.copy(keepAwake = enabled) }
@@ -104,6 +143,12 @@ class ShoppingToolsStore(
     fun pin(item: SavedShoppingItem) = change {
         if (it.portable.favorites.any { old -> old.id == item.id }) it
         else it.copy(portable = it.portable.copy(favorites = it.portable.favorites + item))
+    }
+    fun savePack(pack: OccasionPack) = change {
+        it.copy(portable = it.portable.copy(packs = it.portable.packs.filterNot { old -> old.id == pack.id } + pack))
+    }
+    fun deletePack(id: String) = change {
+        it.copy(portable = it.portable.copy(packs = it.portable.packs.filterNot { pack -> pack.id == id }))
     }
     fun unpin(id: String) = change { it.copy(portable = it.portable.copy(favorites = it.portable.favorites.filterNot { row -> row.id == id })) }
     fun order(store: String, order: List<Category>) = change {
@@ -124,13 +169,33 @@ class ShoppingToolsStore(
             if (current != null && trips.any { trip -> trip !in current.trips }) it.copy(deferred = it.deferred - scope) else it
         }
     }
-    fun importPortable(value: PortableShoppingPreferences) = change {
+    /** Run before importing shopping facts, including limits retained for other accounts. */
+    fun validateImport(value: PortableShoppingPreferences) {
+        val current = mutable.value
+        check(!current.unavailable)
         value.validate()
+        val favorites = current.portable.favorites.associateBy { it.id }
+        require(value.favorites.none { row -> favorites[row.id]?.let { it != row } == true })
+        val packs = current.portable.packs.associateBy { it.id }
+        require(value.packs.none { pack -> packs[pack.id]?.let { it != pack } == true })
+        val merged = PortableShoppingPreferences(
+            current.portable.favorites + value.favorites.filter { it.id !in favorites },
+            value.orders + current.portable.orders,
+            current.portable.packs + value.packs.filter { it.id !in packs })
+        merged.validate()
+        val allPacks = current.otherPacks.values.flatten() + merged.packs
+        require(allPacks.size <= 100 && allPacks.sumOf { it.items.size } <= 2000)
+    }
+    fun importPortable(value: PortableShoppingPreferences) = change {
+        validateImport(value)
         val existing = it.portable.favorites.associateBy { row -> row.id }
         require(value.favorites.none { row -> existing[row.id]?.let { saved -> saved != row } == true })
+        val packs = it.portable.packs.associateBy { pack -> pack.id }
+        require(value.packs.none { pack -> packs[pack.id]?.let { saved -> saved != pack } == true })
         it.copy(portable = PortableShoppingPreferences(
             it.portable.favorites + value.favorites.filter { row -> row.id !in existing },
             value.orders + it.portable.orders,
+            it.portable.packs + value.packs.filter { pack -> pack.id !in packs },
         ))
     }
 }

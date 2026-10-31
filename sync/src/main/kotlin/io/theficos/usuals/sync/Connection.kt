@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable data class ServiceError(val code: String)
-@Serializable data class InstanceInfo(val version: Int = 1, val name: String, val server: ServerInfo, val accounts: Boolean, val ai: Boolean)
+@Serializable data class InstanceInfo(val version: Int = 1, val name: String, val server: ServerInfo, val accounts: Boolean, val ai: Boolean, val occasionPacks: Boolean = false)
 @Serializable data class ConnectStart(val device: DeviceKeys, val verifierHash: String, val offer: OfferClaim? = null)
 /** The secret from a signed-in browser's QR; it lets that account, not this phone's browser, approve the connection. */
 @Serializable data class OfferClaim(val id: String, val secret: String) {
@@ -61,6 +61,16 @@ fun serverOrigin(link: String): String {
 class ConnectionClient(private val store: SyncStateStore, private val transport: RelayTransport, private val clock: () -> Long = System::currentTimeMillis) {
     fun current() = store.read().connection
     fun pending() = store.read().connecting
+    suspend fun supportsOccasionPacks(): Boolean {
+        val connection = current() ?: return false
+        if (connection.info.occasionPacks) return true
+        val (_, info) = discover(connection.origin)
+        require(info.server.serverId == connection.info.server.serverId)
+        store.update { state ->
+            if (state.connection == connection) state.copy(connection = connection.copy(info = info)) else state
+        }
+        return current()?.let { it.origin == connection.origin && it.userId == connection.userId && it.info.occasionPacks } == true
+    }
     suspend fun discover(link: String): Pair<String, InstanceInfo> {
         val origin = serverOrigin(link)
         val info = call<InstanceInfo>(origin, "GET", "/v1/instance")

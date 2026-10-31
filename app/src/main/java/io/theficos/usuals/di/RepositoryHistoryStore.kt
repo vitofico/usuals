@@ -36,15 +36,17 @@ class RepositoryHistoryStore(
     override suspend fun importJson(text: String) {
         require(text.toByteArray().size <= 10 * 1024 * 1024)
         val root = json.parseToJsonElement(text).jsonObject
+        if (root.containsKey("occasionPacks")) {
+            val packs = json.decodeFromJsonElement<List<OccasionPack>>(root.getValue("occasionPacks"))
+            requireNotNull(tools).importPortable(PortableShoppingPreferences(packs = packs))
+            return
+        }
         if (root["formatVersion"]?.jsonPrimitive?.intOrNull != 3) { repository.importJson(text); return }
         val personal = requireNotNull(tools)
         check(!personal.state.value.unavailable)
         val portable = json.decodeFromJsonElement<PortableShoppingPreferences>(root.getValue("personalShopping"))
         portable.validate()
-        val current = personal.state.value.portable
-        val ids = current.favorites.associateBy { it.id }
-        require(portable.favorites.none { row -> ids[row.id]?.let { it != row } == true })
-        PortableShoppingPreferences(current.favorites + portable.favorites.filter { it.id !in ids }, portable.orders + current.orders).validate()
+        personal.validateImport(portable)
         repository.importJson(JsonObject(root - "personalShopping" + ("formatVersion" to JsonPrimitive(2))).toString())
         personal.importPortable(portable)
     }

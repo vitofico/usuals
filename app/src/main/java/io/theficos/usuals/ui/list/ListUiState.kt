@@ -58,6 +58,7 @@ data class ListUiState(
     val lastScan: io.theficos.usuals.ui.scan.ScanResult? = null,
     val stores: List<String> = emptyList(),
     val selectedStore: String? = null,
+    val packRows: List<ListRow> = emptyList(),
     val personal: io.theficos.usuals.ui.shopping.ShoppingPreferences = io.theficos.usuals.ui.shopping.ShoppingPreferences(),
     val favoritesOnList: Set<String> = emptySet(),
     val deferred: List<ListRow> = emptyList(),

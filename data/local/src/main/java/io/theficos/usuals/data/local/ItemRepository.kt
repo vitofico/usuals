@@ -102,7 +102,7 @@ class ItemRepository(
         rawText: String = parsed.name, fromSuggestion: Boolean = false, store: String? = null): ItemId =
         addAll(listOf(NewItem(parsed, addedBy, gtin, rawText, fromSuggestion, store))).single()
     /** Each row is its own capture for sync, merging into an open row of its key, but the list is rewritten once. */
-    suspend fun addAll(rows: List<NewItem>): List<ItemId> = database.withTransaction {
+    suspend fun addAll(rows: List<NewItem>, reuse: Boolean = false, includeChecked: Boolean = false): List<ItemId> = database.withTransaction {
         if (rows.isEmpty()) return@withTransaction emptyList()
         val now = clock()
         val scope = listId()
@@ -112,13 +112,15 @@ class ItemRepository(
             proposed to ItemEntity(proposed, new.rawText, parsed.name.trim(), Normalizer.normalize(parsed.name),
                 parsed.quantity?.amount, parsed.quantity?.unit?.name, parsed.note, new.gtin?.value,
                 fromSuggestion = new.fromSuggestion, store = new.store, position = first + index * POSITION_STEP, addedBy = new.addedBy?.value,
-                createdAt = now, updatedAt = now, listId = scope).facts(aliases)
+                createdAt = now, updatedAt = now, listId = scope).facts(aliases).let { facts ->
+                    if (reuse && includeChecked && new.category != null) JsonObject(facts + ("packCategory" to JsonPrimitive(new.category))) else facts
+                }
         }
-        val results = replica.submitAll(scope, "capture", facts.map { (proposed, row) -> JsonObject(row + ("proposedId" to JsonPrimitive(proposed))) })
+        val results = replica.submitAll(scope, if (reuse && includeChecked) "pack" else if (reuse) "reuse" else "capture", facts.map { (proposed, row) -> JsonObject(row + ("proposedId" to JsonPrimitive(proposed))) })
         facts.zip(results) { (proposed, row), result ->
-            require(result.outcome in setOf(Outcome.APPLIED, Outcome.MERGED, Outcome.CONFLICT))
+            require(result.outcome in setOf(Outcome.APPLIED, Outcome.MERGED, Outcome.CONFLICT, Outcome.NO_OP))
             // An incompatible amount remains a visible conflict beside the existing row.
-            ItemId(requireNotNull(if (result.outcome == Outcome.CONFLICT) result.projection.rows.values.firstOrNull {
+            ItemId(requireNotNull(if (result.outcome in setOf(Outcome.CONFLICT, Outcome.NO_OP)) result.projection.rows.values.firstOrNull {
                 !it.archived && it.facts.string("key") == row.string("key")
             }?.id else result.projection.redirects[proposed] ?: proposed))
         }
@@ -420,4 +422,4 @@ class ItemRepository(
 
 /** One row to capture, as [ItemRepository.add] takes it. */
 data class NewItem(val parsed: ParsedItem, val addedBy: MemberId? = null, val gtin: Gtin? = null,
-    val rawText: String = parsed.name, val fromSuggestion: Boolean = false, val store: String? = null)
+    val rawText: String = parsed.name, val fromSuggestion: Boolean = false, val store: String? = null, val category: String? = null)

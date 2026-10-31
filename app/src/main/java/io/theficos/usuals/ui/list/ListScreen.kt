@@ -97,6 +97,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -269,6 +270,7 @@ fun ListScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var toolsOpen by rememberSaveable { mutableStateOf(false) }
+    var packsOpen by rememberSaveable { mutableStateOf(false) }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val view = androidx.compose.ui.platform.LocalView.current
     var reminderOpen by rememberSaveable { mutableStateOf(false) }
@@ -276,7 +278,12 @@ fun ListScreen(
     state.basket?.let { io.theficos.usuals.ui.basket.BasketOverviewSheet(it, vm::onDismissBasket) }
     if (toolsOpen) io.theficos.usuals.ui.shopping.ShoppingToolsSheet(state.personal, state.selectedStore,
         vm::updateShoppingTools, vm::onAddFavorite, { toolsOpen = false },
-        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } }, alreadyAdded = state.favoritesOnList, onChooseWallet = onChooseWallet)
+        onReminder = vm.reminders?.let { { toolsOpen = false; reminderOpen = true } }, alreadyAdded = state.favoritesOnList, onChooseWallet = onChooseWallet,
+        onPacks = { toolsOpen = false; packsOpen = true })
+    if (packsOpen) key(state.directory.selected, state.personal.packOwner) {
+        io.theficos.usuals.ui.shopping.OccasionPacksSheet(state.personal, state.packRows, vm::packOnList,
+            vm::updatePacks, { vm.addPack(it, state.directory.selected) }, { packsOpen = false })
+    }
     var microphoneAsked by rememberSaveable { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner, vm) {
@@ -555,7 +562,15 @@ fun ListContent(
 
           }
             SnackbarHost(removalSnackbar, Modifier.fillMaxWidth().testTag("swipe_removal_snackbar"))
-            CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
+            if (state.personal.mode && state.checked.isNotEmpty()) {
+                Surface(color = MaterialTheme.colorScheme.surface) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                        Text(stringResource(R.string.finish_explained), style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) }, enabled = !state.busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("shopping_finish")) { Text(stringResource(R.string.finish_shop)) }
+                    }
+                }
+            } else CaptureBand(capture = state.capture, actions = actions.copy(onMuteAutocomplete = { memory ->
                 if (memory.key in state.repeatSuggestionKeys) repeatToMute = memory
                 else actions.onMuteAutocomplete(memory)
             }), autocomplete = state.autocomplete)
@@ -834,10 +849,13 @@ private fun ItemList(
                     onClick = actions.onToggleCheckedSection,
                 )
             }
-            item(key = "finish-shop") {
-                TextButton(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) },
-                    enabled = !state.busy, modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Text(stringResource(R.string.finish_shop))
+            if (!state.personal.mode) item(key = "finish-shop") {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Text(stringResource(R.string.finish_explained), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { actions.onFinishRows?.invoke(state.checked, null) ?: actions.onFinishShop(null) },
+                        enabled = !state.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text(stringResource(R.string.finish_shop))
+                    }
                 }
             }
             if (state.checkedExpanded) {

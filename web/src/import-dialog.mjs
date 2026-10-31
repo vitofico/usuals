@@ -25,6 +25,8 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const review = el("section", { hidden: true }), reviewList = el("ul", { class: "import-review" });
   const reviewHeading = el("h3", { tabindex: -1 }, t("importReviewTitle"));
   const reviewHelp = el("p", { class: "helper" });
+  const reviewPhoto = el("a", { target: "_blank", rel: "noopener", class: "review-original", hidden: true },
+    el("span", {}, t("receipt_compare")));
   const textPane = el("section", { hidden: true }), recipeText = el("textarea", { class: "field", rows: 8, maxlength: 30000, "aria-label": t("importRecipeText") });
   const markdownPane = el("section"), photoPane = el("section", { hidden: true });
   const controls = el("div", { class: "source-choices", role: "group", "aria-label": t("importSource") });
@@ -49,6 +51,13 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   function update() {
     const reviewing = rows.length > 0 || !review.hidden;
     reviewHelp.textContent = t(mode === "markdown" ? "importMarkdownReviewHelp" : "importReviewHelp");
+    if (reviewing && mode === "photo" && blobUrl) {
+      reviewPhoto.hidden = false; reviewPhoto.href = blobUrl;
+      if (preview.parentNode !== reviewPhoto) reviewPhoto.prepend(preview);
+    } else {
+      reviewPhoto.hidden = true;
+      if (preview.parentNode !== photoPane) photoPane.append(preview);
+    }
     controls.hidden = reviewing; markdownPane.hidden = reviewing || mode !== "markdown"; photoPane.hidden = reviewing || mode !== "photo";
     textPane.hidden = reviewing || mode !== "text";
     sourceButtons.forEach((node, i) => { node.className = `source-choice${sources[i] === mode ? " active" : ""}`; node.setAttribute("aria-pressed", String(sources[i] === mode)); });
@@ -86,10 +95,17 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
     reviewList.replaceChildren(...rows.map((row, index) => {
       const checkbox = el("input", { type: "checkbox", checked: selected.has(index), ...(row.existing ? { "data-existing": "true", disabled: true } : {}),
         onchange: () => { if (checkbox.checked) selected.add(index); else selected.delete(index); update(); } });
+      const correction = mode === "photo" ? el("details", { class: "receipt-line-correction" },
+        el("summary", {}, t("receipt_correct_line")),
+        el("a", { href: blobUrl, target: "_blank", rel: "noopener" }, t("receipt_compare")),
+        el("label", { class: "label" }, t("name"), el("input", { class: "field", value: row.name, maxlength: 500,
+          oninput: event => { row.name = event.target.value; row.key = canonical(normalize(row.name), projection()?.aliases ?? {}); } })),
+        el("label", { class: "label" }, t("quantity"), el("input", { class: "field", type: "number", min: 0, step: "any", value: row.quantity ?? "",
+          oninput: event => { row.quantity = event.target.value === "" ? null : Number(event.target.value); if (row.quantity !== null && !row.unit) row.unit = "PIECE"; } }))) : null;
       return el("li", {}, el("label", { class: "check-row" }, checkbox, el("span", {}, el("strong", {}, row.name),
         row.quantity === null ? null : el("span", { class: "helper" }, t("quantityLabel", { amount: row.quantity, unit: t(row.unit) })),
         row.original.trim() === row.name.trim() ? null : el("span", { class: "helper" }, row.original),
-        row.existing ? el("span", { class: "helper" }, t("importAlreadyOnList")) : null)));
+        row.existing ? el("span", { class: "helper" }, t("importAlreadyOnList")) : null)), correction);
     }));
     empty.hidden = rows.length > 0; review.hidden = false; stopCamera(); update();
     reviewHeading.focus({ preventScroll: true }); dialog.scrollTop = 0;
@@ -147,6 +163,8 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
       const p = projection();
       if (!current() || !p) return;
       // An item someone added meanwhile is left alone rather than having its quantity raised.
+      requireThat(rows.filter((row, index) => selected.has(index)).every(row => row.name.trim() && row.name.length <= 500 &&
+        (row.quantity === null || Number.isFinite(row.quantity) && row.quantity >= 0)), "importFailed");
       const added = present(p), items = rows.filter((row, index) => selected.has(index) && !added.has(row.key)).map(row => ({
         key: row.key, name: row.name, rawText: row.original.slice(0, 1000), note: row.note,
         quantity: row.quantity === null ? null : decimal(row.quantity), unit: row.unit,
@@ -155,7 +173,7 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
       if (current()) { closeDialog(); await finished(); }
     } finally { committing = false; }
   }), "primary");
-  review.append(reviewHeading, reviewHelp, reviewList, empty);
+  review.append(reviewHeading, reviewHelp, reviewPhoto, reviewList, empty);
   const readText = server ? button(t("importRecipeText"), () => run(async () => { await showReview(await model.text(recipeText.value)); }), "primary") : null;
   recipeText.addEventListener("input", update);
   if (server) textPane.append(el("p", {}, t("importRecipeTextHelp")), textServerDescription,

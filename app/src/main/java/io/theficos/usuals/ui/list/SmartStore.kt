@@ -15,6 +15,7 @@ interface SmartStore {
     suspend fun addReviewed(key: String, scope: String, now: Long): ReviewAddResult = ReviewAddResult.Unavailable
     suspend fun muteReviewed(key: String, scope: String, now: Long): Boolean = false
     suspend fun undoReviewed(version: ItemVersion): Boolean = false
+    suspend fun addPack(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = addAgain(items, scope)
     suspend fun addAgain(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = 0
     fun confirmedName(name: String, history: HistorySnapshot, active: List<Item>): String? = null
     fun nameMatches(name: String, history: HistorySnapshot, active: List<Item>): List<io.theficos.usuals.smart.NameMatch> = emptyList()

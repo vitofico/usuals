@@ -470,4 +470,24 @@ class RepositorySmartStoreTest {
         assertThat(items.items().single().quantity).isEqualTo(Quantity.pieces(5))
         assertThat(history.snapshot().aliases).isEmpty()
     }
+    @Test fun `packs preserve details skip checked aliases and retries and leave existing preferences alone`() = runTest {
+        val scope = items.currentListId()
+        history.saveAlias(ItemAlias("whole milk", "milk"))
+        val milk = items.add(ParsedItem("milk", Quantity.pieces(3)))
+        items.setChecked(milk, true)
+        val rows = listOf(
+            io.theficos.usuals.ui.shopping.SavedShoppingItem("milk", "whole milk", 8.0, "LITRE", note = "Skip", category = "PRODUCE"),
+            io.theficos.usuals.ui.shopping.SavedShoppingItem("bread", "Bread", 2.0, "PACK", store = "Market", note = "For visitors", category = "PRODUCE"))
+        assertThat(smart.addPack(rows, scope)).isEqualTo(1)
+        assertThat(smart.addPack(rows, scope)).isEqualTo(0)
+        assertThat(items.items()).hasSize(2)
+        assertThat(items.items().first { it.id == milk }.quantity).isEqualTo(Quantity.pieces(3))
+        val bread = items.items().first { it.name == "Bread" }
+        assertThat(bread.note).isEqualTo("For visitors")
+        assertThat(bread.store).isEqualTo("Market")
+        assertThat(bread.quantity).isEqualTo(Quantity(2.0, MeasureUnit.PACK))
+        assertThat(history.snapshot().preferences.first { it.key == "bread" }.category).isEqualTo("PRODUCE")
+        assertThat(history.snapshot().preferences.none { it.key == "milk" && it.category != null }).isTrue()
+    }
+
 }

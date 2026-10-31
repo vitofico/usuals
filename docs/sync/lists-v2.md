@@ -261,3 +261,17 @@ Keeping the existing projection envelope lets older clients read and preserve th
 JSON without understanding the accent. Servers need this reducer to accept new
 color commands. Android caches the color in schema 10 and includes it in list
 backup manifests; copying a list keeps its color with fresh revision lineage.
+
+
+## Reviewed occasion packs
+
+An instance advertises `occasionPacks: true` on `/v1/instance` when it accepts
+`pack` intents. Missing capability means unsupported. A `pack` has the same row
+facts as `capture`, with optional `packCategory`. Unlike `reuse`, it returns
+`no_op` for any alive canonical identity, including checked rows. It never
+increases quantities or changes existing row details. On insertion only, an
+absent canonical category preference can be initialized atomically; an existing
+category or repeat rule is preserved. Repeated intent ids retain normal reducer
+idempotence. Unknown kinds are terminal `rejected` results. Deploy support on the
+server before clients use this command; clients gate account-list writes on the
+capability. Pack definitions remain local and do not enter list projections.

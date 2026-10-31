@@ -157,4 +157,28 @@ class ConnectionTest {
         ConnectionClient(store, transport) { 30000 }.requestBytes("GET", "/v1/ai/settings")
         assertThat(sent).isEqualTo("synthetic-token")
     }
+    @Test fun occasionPackCapabilityDefaultsOffRefreshesTheSameServerAndWorksOfflineOnceKnown() = runBlocking {
+        val store = Store(); val pending = pending()
+        val connection = ServerConnection(pending.origin, pending.info, "alice", "token", 20000)
+        store.state = ClientState(connection = connection)
+        var supported = false; var requests = 0
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                requests++
+                assertThat(path).isEqualTo("/v1/instance")
+                return WireResponse(200, Wire.json.encodeToString(InstanceInfo.serializer(), pending.info.copy(occasionPacks = supported)).toByteArray())
+            }
+        }
+        val client = ConnectionClient(store, transport)
+        assertThat(client.supportsOccasionPacks()).isFalse()
+        supported = true
+        assertThat(client.supportsOccasionPacks()).isTrue()
+        assertThat(requests).isEqualTo(2)
+        assertThat(ConnectionClient(store, object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = error("offline")
+        }).supportsOccasionPacks()).isTrue()
+        store.state = ClientState()
+        assertThat(client.supportsOccasionPacks()).isFalse()
+    }
+
 }

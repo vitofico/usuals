@@ -37,6 +37,7 @@ fun ShoppingToolsSheet(
     onReminder: (() -> Unit)? = null,
     alreadyAdded: Set<String> = emptySet(),
     onChooseWallet: (() -> Unit)? = null,
+    onPacks: (() -> Unit)? = null,
 ) {
     var infoOpen by rememberSaveable { mutableStateOf(false) }
     var preferencesOpen by rememberSaveable { mutableStateOf(false) }
@@ -57,6 +58,7 @@ fun ShoppingToolsSheet(
                     preferences.portable.favorites.forEach { favorite ->
                         FavoriteRow(favorite, favorite.id in alreadyAdded, onAdd) { update { it.unpin(favorite.id) } }
                     }
+                    onPacks?.let { TextButton(onClick = it, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.pack_title)) } }
                     HorizontalDivider()
                     DisclosureSection(stringResource(R.string.quiet_shopping_preferences), preferencesOpen, { preferencesOpen = it }) {
                         Choice(R.string.shopping_mode, preferences.mode) { enabled -> update { it.mode(enabled) } }

@@ -22,6 +22,7 @@ class RepositorySmartStore(
     private val offers: RepeatOffers = RepeatOffers(),
     private val similar: SimilarItems = SimilarItems(ranker),
     private val reviewRanker: ReviewRanker = ReviewRanker(),
+    private val packSupported: suspend (String) -> Boolean = { true },
 ) : SmartStore {
     private val maintenance = Mutex()
     override fun review(now: Long, history: HistorySnapshot, active: List<Item>) = reviewRanker.rank(now, history, active)
@@ -65,19 +66,25 @@ class RepositorySmartStore(
             true
         }
     }
-    override suspend fun addAgain(rows: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = maintenance.withLock {
+    override suspend fun addAgain(rows: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int = reuseRows(rows, scope, false)
+    override suspend fun addPack(items: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String): Int {
+        check(packSupported(scope))
+        return reuseRows(items, scope, true)
+    }
+    private suspend fun reuseRows(rows: List<io.theficos.usuals.ui.shopping.SavedShoppingItem>, scope: String, includeChecked: Boolean): Int = maintenance.withLock {
         items.transaction {
             require(items.currentListId() == scope)
             val facts = history.snapshot()
             val aliases = facts.aliases.associate { it.fromKey to it.toKey }
-            val active = items.items().filterNot { it.checked }.map { ItemIdentity.key(it, aliases) }.toMutableSet()
+            val active = items.items().filter { includeChecked || !it.checked }.map { ItemIdentity.key(it, aliases) }.toMutableSet()
             val fresh = rows.mapNotNull { row ->
                 row.validate()
                 val gtin = row.gtin?.let(Gtin::parse)
                 val key = ItemIdentity.key(row.name, Normalizer.normalize(row.name), gtin, aliases)
-                if (active.add(key)) NewItem(ParsedItem(row.name, row.quantity), gtin = gtin, store = row.store) else null
+                if (active.add(key)) NewItem(ParsedItem(row.name, row.quantity, row.note), gtin = gtin, store = row.store, category = if (includeChecked) row.category else null) else null
             }
-            items.addAll(fresh).size
+            val added = items.addAll(fresh, reuse = true, includeChecked = includeChecked).size
+            added
         }
     }
 

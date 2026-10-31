@@ -1,5 +1,16 @@
 # Changelog
 
+## Occasion packs and shopping polish
+
+- Save personal occasion packs from the current list or create them from scratch.
+  Review selections and quantities before use; checked and unchecked duplicates
+  stay unchanged, including concurrent shared-list additions.
+- Keep packs local to the current account, include them in Android data exports,
+  and exchange pack files with the browser. Shared use requires a supporting server.
+- Compare receipt corrections with the original photo, keep shopping completion
+  reachable and explain that Finish records checked purchases with Undo.
+- Translate the new flows in English, Spanish, Italian, French and German.
+
 ## Quiet shared-list notifications
 
 - Choose optional silent Android alerts for items added and shops finished by

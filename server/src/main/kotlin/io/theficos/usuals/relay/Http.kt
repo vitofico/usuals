@@ -111,7 +111,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             post("purge") { run { call.privateResponse(); call.lifecycleAuth(); call.json(lifecycle.purgeIdentity(call.routeId("id"), call.routeId("requestId"))) } }
         }
 
-        get("/v1/instance") { call.privateResponse(); call.json(InstanceInfo(name = "Usuals", server = relay.identity.info(), accounts = webIdentity != null, ai = webIdentity != null && ai.configuration.profiles.isNotEmpty())) }
+        get("/v1/instance") { call.privateResponse(); call.json(InstanceInfo(name = "Usuals", server = relay.identity.info(), occasionPacks = true, accounts = webIdentity != null, ai = webIdentity != null && ai.configuration.profiles.isNotEmpty())) }
         if (webIdentity != null && connections != null) {
             post("/v1/connect") { run { call.privateResponse(); call.json(connections.start(call.body(4096), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
             post("/api/connect/offers") { run { call.privateResponse(); call.json(connections.offer(call.webCaller(webIdentity), call.body(1024))) } }
