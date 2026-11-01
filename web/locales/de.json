@@ -476,5 +476,16 @@
   "pack_add_failed": "Artikel konnten nicht hinzugefügt werden. Gemeinsame Listen benötigen einen Server mit Paketunterstützung. Prüfe Verbindung und Serverversion. Deine Auswahl bleibt erhalten.",
   "pack_use_named": "{name} prüfen und hinzufügen",
   "pack_edit_named": "{name} bearbeiten",
-  "pack_delete_named": "{name} löschen"
+  "pack_delete_named": "{name} löschen",
+  "stats_title": "Einkaufsstatistik",
+  "stats_hide": "Statistik ausblenden",
+  "stats_scope": "Für diese Liste, aus gespeicherten Einkäufen. Importierte Einkäufe zählen mit.",
+  "stats_shops": "Gespeicherte Einkäufe: {count}",
+  "stats_purchases": "Erfasste Artikel: {count}",
+  "stats_different": "Verschiedene Artikel: {count}",
+  "stats_usuals": "Deine letzten üblichen Artikel",
+  "stats_window": "Aus bis zu 8 zuletzt gespeicherten Einkäufen ({count} vorhanden).",
+  "stats_frequency": "In {count} von {total} Einkäufen",
+  "stats_last_bought": "Zuletzt gekauft: {date}",
+  "stats_empty": "Schließe einen Einkauf ab oder importiere ihn, um deine Gewohnheiten zu sehen."
 }

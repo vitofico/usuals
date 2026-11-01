@@ -32,6 +32,7 @@ export function reviewCandidates(p, now, muted = []) {
     .filter((trip) => trip.closedAt <= now)
     .sort((a, b) => b.closedAt - a.closedAt || compare(a.id, b.id)).slice(0, 8);
   if (!trips.length) return [];
+  const weights = new Map(trips.map((trip, index) => [trip.id, trips.length - index]));
   const ids = new Set(trips.map((trip) => trip.id)), aliases = p.aliases ?? {};
   const excluded = new Set([...rows(p).map((row) => itemKey(row.facts, aliases)), ...muted.map((key) => canonical(key, aliases))]);
   const preferences = new Map();
@@ -52,8 +53,9 @@ export function reviewCandidates(p, now, muted = []) {
         (preference?.snoozedUntil != null && trips[0].closedAt <= preference.snoozedUntil) ||
         (shopCount < 2 && (trips.length >= 3 || !items.some((item) => item.tripId === trips[0].id)))) return [];
     const latest = items.sort((a, b) => b.boughtAt - a.boughtAt || compare(a.id, b.id))[0];
-    return latest.boughtAt > now - DAY ? [] : [{ ...latest, key, shopCount, windowSize: trips.length }];
-  }).sort((a, b) => b.shopCount - a.shopCount || a.boughtAt - b.boughtAt || compare(a.key, b.key));
+    const recentShopScore = [...new Set(items.map(item => item.tripId))].reduce((score, id) => score + weights.get(id), 0);
+    return latest.boughtAt > now - DAY ? [] : [{ ...latest, key, shopCount, windowSize: trips.length, recentShopScore }];
+  }).sort((a, b) => b.shopCount - a.shopCount || b.recentShopScore - a.recentShopScore || a.boughtAt - b.boughtAt || compare(a.key, b.key));
 }
 /** Reusing history/favourites leaves existing unchecked quantities alone, including aliases. */
 export function addAgain(p, items, now, includeChecked = false) {

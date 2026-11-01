@@ -14,7 +14,7 @@ class ReviewRankerTest {
         } })
     }
 
-    @Test fun `frequency then elapsed time then key order the review`() {
+    @Test fun `frequency then recent shop coverage then elapsed time and key order the review`() {
         val facts = history(1 to listOf("milk", "bread", "eggs", "soap"), 8 to listOf("milk", "bread", "eggs"),
             15 to listOf("milk", "bread"), 22 to listOf("milk"))
         val result = ranker.rank(30 * day, facts, emptyList())
@@ -24,7 +24,12 @@ class ReviewRankerTest {
         val tied = history(1 to listOf("bread", "apple"), 8 to listOf("bread", "apple"))
         assertThat(ranker.rank(20 * day, tied, emptyList()).map { it.key }).containsExactly("apple", "bread").inOrder()
         val age = history(1 to listOf("eggs", "milk"), 8 to listOf("eggs"), 15 to listOf("milk"))
-        assertThat(ranker.rank(30 * day, age, emptyList()).map { it.name }).containsExactly("eggs", "milk").inOrder()
+        assertThat(ranker.rank(30 * day, age, emptyList()).map { it.name }).containsExactly("milk", "eggs").inOrder()
+        val coverage = history(1 to listOf("old", "old"), 8 to listOf("old"), 15 to listOf("old"),
+            22 to listOf("new"), 29 to listOf("new"))
+        assertThat(ranker.rank(40 * day, coverage, emptyList()).map { it.name }).containsExactly("old", "new").inOrder()
+        val equalCoverage = history(1 to listOf("a"), 8 to listOf("b"), 15 to listOf("b"), 22 to listOf("a"))
+        assertThat(ranker.rank(40 * day, equalCoverage, emptyList()).map { it.name }).containsExactly("b", "a").inOrder()
     }
 
     @Test fun `aliases deduplicate trips and checked rows also exclude candidates`() {

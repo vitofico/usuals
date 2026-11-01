@@ -3,6 +3,8 @@ package io.theficos.usuals.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.theficos.usuals.model.HistorySnapshot
+import io.theficos.usuals.smart.ShoppingStats
+import io.theficos.usuals.smart.shoppingStats
 import io.theficos.usuals.ui.basket.BasketOverview
 import io.theficos.usuals.ui.basket.BasketSource
 import kotlinx.coroutines.CancellationException
@@ -24,7 +26,8 @@ enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY
 data class HistoryUiState(val history: HistorySnapshot = HistorySnapshot(), val notice: HistoryNotice? = null,
     val scope: String = "", val query: String = "", val selected: Set<String> = emptySet(), val added: Int = 0,
     /** Basket overview per trip id, empty while the overview is off. */
-    val baskets: Map<String, BasketOverview> = emptyMap(), val receiptIds: Set<String> = emptySet())
+    val baskets: Map<String, BasketOverview> = emptyMap(), val receiptIds: Set<String> = emptySet(),
+    val stats: ShoppingStats = ShoppingStats())
 
 class HistoryViewModel(
     private val store: HistoryStore,
@@ -39,12 +42,12 @@ class HistoryViewModel(
     private val selected = MutableStateFlow(Selection())
     private var rebuying = false
     private val added = MutableStateFlow(0)
-    private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>, val receipts: Set<String>)
+    private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>, val receipts: Set<String>, val stats: ShoppingStats)
     private val source = (if (store is ScopedHistoryStore) store.observeShopping().map { it.listId to it.history }
         else store.observe().map { "" to it }).let { changes -> combine(changes, receipts.revision) { value, _ -> value } }
-        .map { (scope, history) -> Sourced(scope, history, baskets(history), try { receipts.ids(scope) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptySet() }) }
+        .map { (scope, history) -> Sourced(scope, history, baskets(history), try { receipts.ids(scope) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptySet() }, shoppingStats(clock(), history)) }
     val state: StateFlow<HistoryUiState> = combine(source, notice, query, selected, added) { source, message, text, ids, count ->
-        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets, source.receipts)
+        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets, source.receipts, source.stats)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HistoryUiState())
 
     val receipt = ReceiptEditor(viewModelScope, receipts, ::today, zone) { scope -> if (state.value.scope == scope) notice.value = HistoryNotice.RECEIPT_SAVED }
