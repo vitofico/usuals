@@ -476,5 +476,16 @@
   "pack_add_failed": "Impossible d’ajouter ces articles. Les listes partagées nécessitent un serveur compatible avec les lots. Vérifiez la connexion et la version du serveur. La vérification est conservée.",
   "pack_use_named": "Vérifier et ajouter {name}",
   "pack_edit_named": "Modifier {name}",
-  "pack_delete_named": "Supprimer {name}"
+  "pack_delete_named": "Supprimer {name}",
+  "stats_title": "Statistiques des courses",
+  "stats_hide": "Masquer les statistiques",
+  "stats_scope": "Pour cette liste, selon les courses enregistrées. Les courses importées sont incluses.",
+  "stats_shops": "Courses enregistrées : {count}",
+  "stats_purchases": "Articles enregistrés : {count}",
+  "stats_different": "Articles différents : {count}",
+  "stats_usuals": "Vos habituels récents",
+  "stats_window": "Sur les 8 dernières courses enregistrées au maximum ({count} disponibles).",
+  "stats_frequency": "Dans {count} courses sur {total}",
+  "stats_last_bought": "Dernier achat : {date}",
+  "stats_empty": "Terminez ou importez des courses pour voir vos habitudes."
 }

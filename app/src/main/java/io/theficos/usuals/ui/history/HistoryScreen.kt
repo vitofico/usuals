@@ -83,6 +83,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var pastOpen by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
+    var statsOpen by rememberSaveable(state.scope) { mutableStateOf(false) }
     var infoOpen by rememberSaveable { mutableStateOf(false) }
     var pasted by rememberSaveable { mutableStateOf("") }
     var date by rememberSaveable { mutableStateOf(vm.today()) }
@@ -170,6 +171,36 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().testTag("history_list").padding(padding).padding(horizontal = 20.dp),
         ) {
+            item {
+                TextButton(onClick = { statsOpen = !statsOpen }, modifier = Modifier.testTag("shopping_stats_toggle")) {
+                    Text(stringResource(if (statsOpen) R.string.stats_hide else R.string.stats_title))
+                }
+            }
+            if (statsOpen) {
+                item {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.stats_scope), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.stats_shops, state.stats.shopCount), modifier = Modifier.testTag("stats_shops"))
+                        Text(stringResource(R.string.stats_purchases, state.stats.purchaseCount), modifier = Modifier.testTag("stats_purchases"))
+                        Text(stringResource(R.string.stats_different, state.stats.differentItems), modifier = Modifier.testTag("stats_different"))
+                        if (state.stats.shopCount == 0) Text(stringResource(R.string.stats_empty))
+                        if (state.stats.usuals.isNotEmpty()) {
+                            Text(stringResource(R.string.stats_usuals), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.stats_window, state.stats.recentShopCount), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                itemsIndexed(state.stats.usuals, key = { _, item -> "stat:${item.key}" }) { _, item ->
+                    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(item.name, style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.stats_frequency, item.shopCount, state.stats.recentShopCount),
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.stats_last_bought, formatter.format(Instant.ofEpochMilli(item.lastBoughtAt))),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             item {
                 OutlinedTextField(value = state.query, onValueChange = vm::search, singleLine = true,
                     label = { Text(stringResource(R.string.history_search)) }, modifier = Modifier.fillMaxWidth())

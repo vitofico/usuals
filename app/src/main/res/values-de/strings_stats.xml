@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Einkaufsstatistik</string>
+    <string name="stats_hide">Statistik ausblenden</string>
+    <string name="stats_scope">Für diese Liste, aus gespeicherten Einkäufen. Importierte Einkäufe zählen mit.</string>
+    <string name="stats_shops">Gespeicherte Einkäufe: %1$d</string>
+    <string name="stats_purchases">Erfasste Artikel: %1$d</string>
+    <string name="stats_different">Verschiedene Artikel: %1$d</string>
+    <string name="stats_usuals">Deine letzten üblichen Artikel</string>
+    <string name="stats_window">Aus bis zu 8 zuletzt gespeicherten Einkäufen (%1$d vorhanden).</string>
+    <string name="stats_frequency">In %1$d von %2$d Einkäufen</string>
+    <string name="stats_last_bought">Zuletzt gekauft: %1$s</string>
+    <string name="stats_empty">Schließe einen Einkauf ab oder importiere ihn, um deine Gewohnheiten zu sehen.</string>
+</resources>

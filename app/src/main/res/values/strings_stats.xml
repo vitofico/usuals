@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Shopping stats</string>
+    <string name="stats_hide">Hide shopping stats</string>
+    <string name="stats_scope">For this list, from saved shops. Imported shops count too.</string>
+    <string name="stats_shops">Saved shops: %1$d</string>
+    <string name="stats_purchases">Items recorded: %1$d</string>
+    <string name="stats_different">Different items: %1$d</string>
+    <string name="stats_usuals">Your recent usuals</string>
+    <string name="stats_window">Based on up to 8 recent saved shops (%1$d available).</string>
+    <string name="stats_frequency">In %1$d of %2$d shops</string>
+    <string name="stats_last_bought">Last bought %1$s</string>
+    <string name="stats_empty">Finish or import a shop to see your shopping patterns.</string>
+</resources>

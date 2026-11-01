@@ -476,5 +476,16 @@
   "pack_add_failed": "Impossibile aggiungere gli articoli. Le liste condivise richiedono un server compatibile con i gruppi. Controlla la connessione e la versione del server. La revisione è conservata.",
   "pack_use_named": "Controlla e aggiungi {name}",
   "pack_edit_named": "Modifica {name}",
-  "pack_delete_named": "Elimina {name}"
+  "pack_delete_named": "Elimina {name}",
+  "stats_title": "Statistiche della spesa",
+  "stats_hide": "Nascondi statistiche",
+  "stats_scope": "Per questa lista, dalle spese salvate. Sono incluse anche quelle importate.",
+  "stats_shops": "Spese salvate: {count}",
+  "stats_purchases": "Articoli registrati: {count}",
+  "stats_different": "Articoli diversi: {count}",
+  "stats_usuals": "I tuoi soliti recenti",
+  "stats_window": "In base a un massimo di 8 spese recenti salvate ({count} disponibili).",
+  "stats_frequency": "In {count} spese su {total}",
+  "stats_last_bought": "Ultimo acquisto: {date}",
+  "stats_empty": "Termina o importa una spesa per vedere le tue abitudini."
 }

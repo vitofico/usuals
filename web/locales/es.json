@@ -476,5 +476,16 @@
   "pack_add_failed": "No se pudieron añadir estos artículos. Las listas compartidas necesitan un servidor compatible con packs. Comprueba la conexión y la versión del servidor. La revisión se conserva.",
   "pack_use_named": "Revisar y añadir {name}",
   "pack_edit_named": "Editar {name}",
-  "pack_delete_named": "Eliminar {name}"
+  "pack_delete_named": "Eliminar {name}",
+  "stats_title": "Estadísticas de compras",
+  "stats_hide": "Ocultar estadísticas",
+  "stats_scope": "Para esta lista, según las compras guardadas. También incluye las importadas.",
+  "stats_shops": "Compras guardadas: {count}",
+  "stats_purchases": "Artículos registrados: {count}",
+  "stats_different": "Artículos distintos: {count}",
+  "stats_usuals": "Tus habituales recientes",
+  "stats_window": "Según hasta 8 compras recientes guardadas ({count} disponibles).",
+  "stats_frequency": "En {count} de {total} compras",
+  "stats_last_bought": "Última compra: {date}",
+  "stats_empty": "Finaliza o importa una compra para ver tus hábitos."
 }

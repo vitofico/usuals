@@ -13,6 +13,21 @@ class HistoryViewModelTest {
     private fun vm(store: FakeHistoryStore) = HistoryViewModel(store,
         { Instant.parse("2026-10-15T12:00:00Z").toEpochMilli() }, ZoneId.of("UTC"))
 
+    @Test fun `statistics follow the selected history and do not change with search`() = runTest(main.dispatcher) {
+        val history = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)),
+            purchases = listOf(io.theficos.usuals.model.Purchase(io.theficos.usuals.model.ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1)))
+        val snapshots = kotlinx.coroutines.flow.MutableStateFlow(io.theficos.usuals.model.ShoppingSnapshot("home", history = history))
+        val store = object : ScopedHistoryStore, HistoryStore by FakeHistoryStore() { override fun observeShopping() = snapshots }
+        val vm = HistoryViewModel(store, clock = { 100 })
+        assertThat(vm.state.value.stats.shopCount).isEqualTo(1)
+        vm.search("no match")
+        assertThat(vm.state.value.stats.purchaseCount).isEqualTo(1)
+        snapshots.value = io.theficos.usuals.model.ShoppingSnapshot("other")
+        assertThat(vm.state.value.stats).isEqualTo(io.theficos.usuals.smart.ShoppingStats())
+        snapshots.value = io.theficos.usuals.model.ShoppingSnapshot("home", history = history.copy(trips = emptyList(), purchases = emptyList()))
+        assertThat(vm.state.value.stats.usuals).isEmpty()
+    }
+
     @Test fun `history selections are scoped and a rebuy retains the tapped destination`() = runTest(main.dispatcher) {
         val purchase = io.theficos.usuals.model.Purchase(io.theficos.usuals.model.ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1)
         val snapshots = kotlinx.coroutines.flow.MutableStateFlow(io.theficos.usuals.model.ShoppingSnapshot(listId = "home",
