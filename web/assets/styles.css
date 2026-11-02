@@ -801,6 +801,11 @@ main[data-shopping="true"] .item { min-height: 84px; }
 .review-card { border: 1px solid var(--line); border-radius: 18px; padding: 20px; margin-block: 16px; }
 .review-card h3 { font: 32px/1.2 Georgia, serif; overflow-wrap: anywhere; }
 .history-trip { padding-block: 12px; border-bottom: 1px solid var(--line); }
+.shopping-stats { margin-block: 12px 20px; border-bottom: 1px solid var(--line); }
+.shopping-stats-body { padding-block: 4px 16px; overflow-wrap: anywhere; }
+.shopping-stats-body > p { margin-block: 8px; }
+.shopping-usual { margin-block: 16px; }
+.shopping-usual h4, .shopping-usual p { margin-block: 6px; }
 .history-trip summary { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px 0; min-height: 48px; cursor: pointer; }
 .history-item { gap: 12px; }
 .history-item .item-meta { display: block; }

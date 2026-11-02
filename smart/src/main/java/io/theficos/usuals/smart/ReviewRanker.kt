@@ -4,7 +4,7 @@ import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.ItemIdentity
 
 data class ReviewCandidate(val key: String, val name: String, val lastBoughtAt: Long,
-    val shopCount: Int, val windowSize: Int, val gtin: Gtin? = null)
+    val shopCount: Int, val windowSize: Int, val gtin: Gtin? = null, val recentShopScore: Int = 0)
 
 /** A factual history review. Inferred purchase intervals remain separately gated. */
 class ReviewRanker {
@@ -16,6 +16,7 @@ class ReviewRanker {
         val present = active.map { ItemIdentity.key(it, aliases) }.toSet()
         val preferences = ItemIdentity.preferences(history.preferences, aliases)
         val ids = trips.map { it.id }.toSet()
+        val weights = trips.mapIndexed { index, trip -> trip.id to (trips.size - index) }.toMap()
         return history.purchases.filter { it.tripId in ids && it.boughtAt <= now }
             .groupBy { ItemIdentity.purchaseKey(it, aliases) }.mapNotNull { (key, purchases) ->
                 val pref = preferences[key]
@@ -25,7 +26,9 @@ class ReviewRanker {
                 if (count < 2 && (trips.size >= 3 || purchases.none { it.tripId == trips.first().id })) return@mapNotNull null
                 val latest = purchases.sortedWith(compareByDescending<Purchase> { it.boughtAt }.thenBy { it.id.value }).first()
                 if (latest.boughtAt > now - RepeatPlanner.DAY_MILLIS) return@mapNotNull null
-                ReviewCandidate(key, latest.name, latest.boughtAt, count, trips.size, latest.gtin)
-            }.sortedWith(compareByDescending<ReviewCandidate> { it.shopCount }.thenBy { it.lastBoughtAt }.thenBy { it.key })
+                val recentScore = purchases.map { it.tripId }.distinct().sumOf { weights.getValue(it) }
+                ReviewCandidate(key, latest.name, latest.boughtAt, count, trips.size, latest.gtin, recentScore)
+            }.sortedWith(compareByDescending<ReviewCandidate> { it.shopCount }.thenByDescending { it.recentShopScore }
+                .thenBy { it.lastBoughtAt }.thenBy { it.key })
     }
 }

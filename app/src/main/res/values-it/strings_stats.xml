@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Statistiche della spesa</string>
+    <string name="stats_hide">Nascondi statistiche</string>
+    <string name="stats_scope">Per questa lista, dalle spese salvate. Sono incluse anche quelle importate.</string>
+    <string name="stats_shops">Spese salvate: %1$d</string>
+    <string name="stats_purchases">Articoli registrati: %1$d</string>
+    <string name="stats_different">Articoli diversi: %1$d</string>
+    <string name="stats_usuals">I tuoi soliti recenti</string>
+    <string name="stats_window">In base a un massimo di 8 spese recenti salvate (%1$d disponibili).</string>
+    <string name="stats_frequency">In %1$d spese su %2$d</string>
+    <string name="stats_last_bought">Ultimo acquisto: %1$s</string>
+    <string name="stats_empty">Termina o importa una spesa per vedere le tue abitudini.</string>
+</resources>

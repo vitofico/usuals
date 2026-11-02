@@ -79,11 +79,16 @@ Tap the **Replay** arrow beside History above the Android list for
 **Add** saves immediately; **Skip** affects only this review. **Undo last choice**
 restores a skipped card or removes an unchanged item added by this review. Close
 whenever you like, or choose **Review more** at the end. Ranking uses the last
-eight shops, frequency and time since purchase. Current items, purchases from the
+eight shops: frequency, recent-shop coverage for ties, then time since purchase. Current items, purchases from the
 last 24 hours, muted or snoozed items and repeat-rule items are excluded.
 Inferred interval predictions remain disabled until replay over real household
 history beats both comparison baselines. The six-step first-run tour introduces
 this shortcut. Reopen it from **Settings > Help and about > Guided tour**.
+
+In **History**, open the collapsed **Shopping stats** section for saved-shop,
+recorded-item and different-item totals, plus your five most frequent recent
+usuals. Counts belong to the selected list and include imported shops. The same
+section is available in browser History. [How stats are counted](docs/shopping-stats.md).
 
 To move an item, open its editor and choose **More actions > Move or copy to
 another list**. Choose an active list and whether to keep the original. The new

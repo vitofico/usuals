@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Statistiques des courses</string>
+    <string name="stats_hide">Masquer les statistiques</string>
+    <string name="stats_scope">Pour cette liste, selon les courses enregistrées. Les courses importées sont incluses.</string>
+    <string name="stats_shops">Courses enregistrées : %1$d</string>
+    <string name="stats_purchases">Articles enregistrés : %1$d</string>
+    <string name="stats_different">Articles différents : %1$d</string>
+    <string name="stats_usuals">Vos habituels récents</string>
+    <string name="stats_window">Sur les 8 dernières courses enregistrées au maximum (%1$d disponibles).</string>
+    <string name="stats_frequency">Dans %1$d courses sur %2$d</string>
+    <string name="stats_last_bought">Dernier achat : %1$s</string>
+    <string name="stats_empty">Terminez ou importez des courses pour voir vos habitudes.</string>
+</resources>

@@ -6,6 +6,7 @@ import { rows as listRows, isChecked, intent, captures, check, edit, remove, ren
 import { normalize } from "./identity.mjs";
 import { listColors, listColor, colorChange } from "./list-colors.mjs";
 import { DAY, itemKey, historyTrips, reviewCandidates, addAgain, unchangedRow, guardedRemoval, ShoppingChoices } from "./shopping.mjs";
+import { shoppingStatsSection } from "./shopping-stats.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
 import { BrowserActivity, NotificationChoices } from "./notifications.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
@@ -700,11 +701,13 @@ async function reuseItems(listId, items) {
   if (!problem(reply)) notice("itemsReused", false, { count: reply.results.filter((result) => result.outcome === "applied").length });
 }
 function historyDialog(listId) {
+  const stats = shoppingStatsSection({ el, t, locale });
   const search = el("input", { id: "history-search", class: "field", type: "search", placeholder: t("historySearch"), oninput: draw });
   const results = el("div", { class: "history-trips" });
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   function draw() {
     const list = store.lists.get(listId);
+    stats.update(list?.projection ?? {}, Date.now());
     const trips = list ? historyTrips(list.projection, search.value) : [];
     results.replaceChildren(...(trips.length ? trips.map((trip, index) => el("details", { class: "history-trip", open: index === 0 || null },
       el("summary", {}, date.format(trip.closedAt), el("span", { class: "helper" }, t(trip.items.length === 1 ? "historyItemCountOne" : "historyItemCount", { count: trip.items.length }))),
@@ -716,7 +719,7 @@ function historyDialog(listId) {
       : [paragraph("historyEmpty", "helper")]));
   }
   openDialog(el("div", {}, el("h2", {}, t("historyTitle")),
-    el("label", { for: search.id, class: "label" }, t("historySearch")), search, results,
+    stats.element, el("label", { for: search.id, class: "label" }, t("historySearch")), search, results,
     el("div", { class: "button-row" }, button(t("close"), closeDialog))), null, draw);
   draw();
 }

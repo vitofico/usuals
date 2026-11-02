@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Estadísticas de compras</string>
+    <string name="stats_hide">Ocultar estadísticas</string>
+    <string name="stats_scope">Para esta lista, según las compras guardadas. También incluye las importadas.</string>
+    <string name="stats_shops">Compras guardadas: %1$d</string>
+    <string name="stats_purchases">Artículos registrados: %1$d</string>
+    <string name="stats_different">Artículos distintos: %1$d</string>
+    <string name="stats_usuals">Tus habituales recientes</string>
+    <string name="stats_window">Según hasta 8 compras recientes guardadas (%1$d disponibles).</string>
+    <string name="stats_frequency">En %1$d de %2$d compras</string>
+    <string name="stats_last_bought">Última compra: %1$s</string>
+    <string name="stats_empty">Finaliza o importa una compra para ver tus hábitos.</string>
+</resources>

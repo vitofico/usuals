@@ -476,5 +476,16 @@
   "pack_add_failed": "Could not add these items. Shared lists need a server that supports occasion packs. Check the connection and server version, then try again. Your review is kept.",
   "pack_use_named": "Review and add {name}",
   "pack_edit_named": "Edit {name}",
-  "pack_delete_named": "Delete {name}"
+  "pack_delete_named": "Delete {name}",
+  "stats_title": "Shopping stats",
+  "stats_hide": "Hide shopping stats",
+  "stats_scope": "For this list, from saved shops. Imported shops count too.",
+  "stats_shops": "Saved shops: {count}",
+  "stats_purchases": "Items recorded: {count}",
+  "stats_different": "Different items: {count}",
+  "stats_usuals": "Your recent usuals",
+  "stats_window": "Based on up to 8 recent saved shops ({count} available).",
+  "stats_frequency": "In {count} of {total} shops",
+  "stats_last_bought": "Last bought {date}",
+  "stats_empty": "Finish or import a shop to see your shopping patterns."
 }

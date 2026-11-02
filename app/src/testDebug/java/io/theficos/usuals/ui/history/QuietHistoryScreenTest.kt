@@ -56,6 +56,19 @@ class QuietHistoryScreenTest {
     }
     @After fun clear() { compose.runOnIdle { models.clear() } }
 
+    @Test fun `shopping statistics are collapsed and independent of purchase search`() {
+        val vm = render()
+        compose.onNodeWithTag("stats_shops").assertDoesNotExist()
+        compose.onNodeWithTag("shopping_stats_toggle").performClick()
+        compose.onNodeWithTag("stats_shops").assertTextEquals("Saved shops: 1")
+        compose.onNodeWithTag("stats_purchases").assertTextEquals("Items recorded: 1")
+        compose.onNodeWithTag("stats_different").assertTextEquals("Different items: 1")
+        compose.runOnIdle { vm.search("nothing matches") }
+        compose.onNodeWithTag("stats_purchases").assertTextEquals("Items recorded: 1")
+        compose.onNodeWithTag("shopping_stats_toggle").performClick()
+        compose.onNodeWithTag("stats_shops").assertDoesNotExist()
+    }
+
     @Test fun `shops appear directly and management is behind history options`() {
         render()
         compose.onNodeWithText("Milk").assertIsDisplayed()
