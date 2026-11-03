@@ -53,6 +53,24 @@ class ConnectionAiTest {
         val device = SyncCrypto.device(); val verifier = randomToken()
         return Triple(connections.start(ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32))), "test"), verifier, device)
     }
+    @Test fun nativeAccountIdentityIsPrivateFreshAndIndependentOfLists() = testApplication {
+        val (ticket, verifier) = ticket(); connections.approve(caller, ticket.id)
+        connections.complete(ticket.id, ConnectFinish(ticket.pollToken, verifier), "test")
+        val token = connectionToken(ticket.id, verifier, ticket.pollToken)
+        db.transaction { it.execute("UPDATE web_user SET local_username='synthetic-user' WHERE id=?", id(user)) }
+        application { relayModule(f.relay, webIdentity = web) }
+        assertThat(client.get("/v1/connection/account").status.value).isEqualTo(401)
+        assertThat(client.get("/v1/connection/account") { header(HttpHeaders.Cookie, "__Host-usuals-session=$cookieToken") }.status.value).isEqualTo(401)
+        val response = client.get("/v1/connection/account") { bearerAuth(token) }
+        assertThat(response.status.value).isEqualTo(200)
+        assertThat(response.headers[HttpHeaders.CacheControl]).contains("no-store")
+        val account = Wire.json.decodeFromString(ConnectionAccount.serializer(), response.bodyAsText())
+        assertThat(account).isEqualTo(ConnectionAccount(user, "Synthetic", "synthetic-user"))
+        db.transaction { it.execute("UPDATE web_user SET display_name='Updated name' WHERE id=?", id(user)) }
+        assertThat(connections.account(token).label).isEqualTo("Updated name")
+        connections.logout(token)
+        assertThat(client.get("/v1/connection/account") { bearerAuth(token) }.status.value).isEqualTo(401)
+    }
     @Test fun handoffIsBoundToVerifierAndExactKeysAndRetriesDoNotCreateMoreSessions() {
         val (ticket, verifier, device) = ticket()
         assertThat(connections.view(caller, ticket.id).fingerprint).isEqualTo(connectionFingerprint(f.identity.serverId, ticket.id, device.publicKeys))

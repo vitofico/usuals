@@ -19,6 +19,7 @@ import { invitationToken, InvitationsApi } from "./invitations.mjs";
 import { icon } from "./icons.mjs";
 import { categories, categoryClassifier, groupByCategory } from "./categories.mjs";
 import { utteranceParser } from "./utterance.mjs";
+import { accountName, accountLogin } from "./account-identity.mjs";
 
 forgetLegacyVault();
 let pendingInvitationToken = invitationToken(location), invitation = null;
@@ -448,6 +449,15 @@ async function render() {
   setSync(syncState);
   $("main").dataset.view = view;
   $("section-label").textContent = t(view === "admin" ? "admin" : view === "account" ? "account" : "lists");
+  const accountButton = document.querySelector('[data-view="account"]');
+  const name = accountName(account?.user);
+  accountButton.classList.toggle("named-account", !!name);
+  accountButton.replaceChildren(
+    el("span", { class: "nav-icon", "aria-hidden": "true" }, "○"),
+    el("span", { class: "nav-account-copy" },
+      name ? el("span", { class: "nav-account-name" }, name) : null,
+      el("span", { class: "nav-account-label" }, t("account"))));
+  accountButton.title = name ? `${name} · ${location.host}` : t("account");
   for (const n of document.querySelectorAll(".nav-button[data-view]")) {
     n.classList.toggle("active", n.dataset.view === view);
     if (n.dataset.view === view) n.setAttribute("aria-current", "page");
@@ -1217,7 +1227,7 @@ function emailSharingDialog(listId = null) {
 const date = (n) => Number.isFinite(n)
   ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(n)
   : t("dateUnknown");
-const accountLabel = (user) => user.displayName || user.username || user.email || user.subject;
+const accountLabel = (user) => accountName(user) || t("account");
 function clearConnectionRequest() {
   pendingConnectionId = null;
   try { sessionStorage.removeItem("usuals-connect-request"); } catch {}
@@ -1324,11 +1334,12 @@ async function serverSettingsDialog() {
 }
 async function renderAccount(own) {
   const user = account.user;
-  const label = accountLabel(user), detail = user.username || user.email || user.subject;
+  const label = accountLabel(user), detail = accountLogin(user);
   const identity = el("section", { class: "account-identity" },
     el("p", { class: "eyebrow" }, t("signedInAs")),
     el("p", { class: "account-name" }, label),
     detail && detail !== label ? el("p", { class: "account-detail" }, detail) : null,
+    el("p", { class: "account-detail" }, location.host),
     user.admin ? el("span", { class: "badge" }, t("administrator")) : null);
   const load = (path, field) => api(path).then((value) => value[field]).catch((e) => {
     if (own === generation) failure(e);

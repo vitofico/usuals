@@ -125,6 +125,10 @@ A phone can also sign in without a computer at hand: it opens this site with
 
 ## Account and AI
 
+The **Account** navigation entry shows your display name, username or verified
+email while signed in. The account page also shows your login name and server,
+so you can check which account is open before sharing a list.
+
 **Account** shows **Connect a phone** first. Named sections below it hold
 **AI assistance**, **Password and sign out**, and **Active sessions**. Password
 changes are available for local accounts. Administrators get

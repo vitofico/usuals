@@ -2,6 +2,7 @@ package io.theficos.usuals.ui.settings
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -32,6 +33,17 @@ import org.junit.Test
 class SettingsKeyStateTest {
 
     private val dispatcher = StandardTestDispatcher()
+
+    @Test fun `cached account stays visible while an offline identity refresh waits`() = runTest(dispatcher) {
+        val pending = CompletableDeferred<Unit>()
+        val summary = AccountSummary("usuals.example.org", "Vito")
+        val subject = SettingsViewModel(scope = this, worker = dispatcher, accountSummary = { summary }, refreshAccount = { pending.await() })
+        subject.loadIfNeeded(); advanceUntilIdle()
+        assertThat(subject.state.value.account).isEqualTo(summary)
+        assertThat(subject.state.value.loaded).isTrue()
+        pending.complete(Unit); advanceUntilIdle()
+        assertThat(subject.state.value.account).isEqualTo(summary)
+    }
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -144,7 +156,7 @@ class SettingsKeyStateTest {
         val subject = SettingsViewModel(scope = this, worker = dispatcher, accountSummary = { summary })
         subject.loadIfNeeded(); advanceUntilIdle()
         subject.setScanLookup(true); advanceUntilIdle()
-        summary = AccountSummary("usuals.example.org")
+        summary = AccountSummary("usuals.example.org", "Vito")
         subject.loadIfNeeded(); advanceUntilIdle()
         assertThat(subject.state.value.account).isEqualTo(summary)
         assertThat(subject.state.value.settings.scanLookupEnabled).isTrue()

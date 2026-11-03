@@ -122,6 +122,7 @@ fun Application.relayModule(relay: Relay, operations: RelayMetrics = RelayMetric
             post("/api/connections/{id}/revoke") { run { call.privateResponse(); connections.revoke(call.webCaller(webIdentity), call.routeId("id")); call.json(ConnectResult(false)) } }
             post("/v1/connect/{id}/complete") { run { call.privateResponse(); call.json(connections.complete(call.routeId("id"), call.body(2048), ingress.client(call.request.local.remoteHost, call.request.headers.getAll("X-Forwarded-For").orEmpty()))) } }
             post("/v1/connection/logout") { run { call.privateResponse(); call.json(connections.logout(call.bearer())) } }
+            get("/v1/connection/account") { run { call.privateResponse(); call.json(connections.account(call.bearer())) } }
             get("/v1/ai/settings") { run { call.privateResponse(); call.json(ai.settings(call.accountAccess(mutation = false).user)) } }
             post("/v1/ai/settings") { run { call.privateResponse(); val access = call.accountAccess(); call.json(ai.select(access.user, call.body(8192), access.verify)) } }
             for (action in listOf("probe", "probe-image", "text", "image")) post("/v1/ai/$action") {

@@ -33,12 +33,8 @@ class ListSync(private val lists: ListRepository, private val replica: LocalRepl
     val status: StateFlow<SyncStatus> = mutable.asStateFlow()
 
     override suspend fun expired() = connections.current() == null && lists.all().any { it.synced }
-    override suspend fun name(): String? {
-        val me = connections.current()?.userId ?: return null
-        return lists.all().firstNotNullOfOrNull { list ->
-            list.members?.let { runCatching { Wire.json.decodeFromString<List<Member>>(it) }.getOrNull() }?.firstOrNull { it.id == me }?.name
-        }
-    }
+    override suspend fun name(): String? = connections.current()?.let { saved -> saved.account?.takeIf { it.id == saved.userId }?.label }
+    override suspend fun refresh() { connections.refreshAccount() }
 
     /** The connect flow approved this phone: every list on it is offered to the account, the feed starts over. */
     override suspend fun connected() {

@@ -19,6 +19,11 @@ import kotlinx.serialization.json.decodeFromJsonElement
 }
 @Serializable data class ConnectResult(val approved: Boolean, val userId: String? = null, val expiresAt: Long? = null)
 @Serializable data class ConnectView(val id: String, val fingerprint: String, val expiresAt: Long)
+@Serializable data class ConnectionAccount(val id: String, val displayName: String = "", val username: String? = null, val email: String? = null) {
+    val label get() = listOf(displayName, username, email).firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotEmpty) }
+    val login get() = listOf(username, email).firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotEmpty) }
+    override fun toString() = "ConnectionAccount([redacted])"
+}
 /** [offered] attempts wait for the browser whose QR was scanned instead of a sign-in on this phone. */
 @Serializable data class PendingConnection(val origin: String, val info: InstanceInfo, val ticket: ConnectTicket, val verifier: String, val device: DeviceSecrets,
     val offered: Boolean = false) {
@@ -26,7 +31,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
     val fingerprint get() = connectionFingerprint(info.server.serverId, ticket.id, device.publicKeys)
     override fun toString() = "PendingConnection([redacted])"
 }
-@Serializable data class ServerConnection(val origin: String, val info: InstanceInfo, val userId: String, val token: String, val expiresAt: Long, val aiEnabled: Boolean = false, val aiRevision: String? = null) {
+@Serializable data class ServerConnection(val origin: String, val info: InstanceInfo, val userId: String, val token: String, val expiresAt: Long, val aiEnabled: Boolean = false, val aiRevision: String? = null, val account: ConnectionAccount? = null) {
     override fun toString() = "ServerConnection([redacted])"
 }
 @Serializable data class AiProfileView(val id: String, val label: String, val model: String, val imageModel: String, val isLocal: Boolean, val baseUrl: String = "")
@@ -61,6 +66,24 @@ fun serverOrigin(link: String): String {
 class ConnectionClient(private val store: SyncStateStore, private val transport: RelayTransport, private val clock: () -> Long = System::currentTimeMillis) {
     fun current() = store.read().connection
     fun pending() = store.read().connecting
+    /** Cached only with this credential. Older servers and offline use retain a previously known name. */
+    suspend fun refreshAccount(): ConnectionAccount? {
+        val saved = current() ?: return null
+        fun same(current: ServerConnection?) = current?.let { it.origin == saved.origin && it.userId == saved.userId && it.token == saved.token } == true
+        try {
+            val account = request<ConnectionAccount>("GET", "/v1/connection/account", expected = saved)
+            require(account.id == saved.userId)
+            store.update { state ->
+                if (same(state.connection)) state.copy(connection = state.connection?.copy(account = account)) else state
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (failure: Exception) {
+            if (failure is RelayProblem && failure.status in setOf(401, 403)) store.update { state ->
+                if (same(state.connection)) state.copy(connection = state.connection?.copy(account = null)) else state
+            }
+        }
+        return current()?.takeIf(::same)?.account?.takeIf { it.id == saved.userId }
+    }
     suspend fun supportsOccasionPacks(): Boolean {
         val connection = current() ?: return false
         if (connection.info.occasionPacks) return true
