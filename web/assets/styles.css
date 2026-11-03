@@ -172,6 +172,11 @@ a {
   font-weight: 400;
   text-align: center;
 }
+.nav-button[data-view] { min-width: 0; }
+.nav-account-copy { min-width: 0; display: grid; gap: 2px; }
+.nav-account-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.named-account .nav-account-label { color: var(--muted); font-size: 11px; font-weight: 400; }
+.account-identity .account-name, .account-identity .account-detail { overflow-wrap: anywhere; }
 .rail-bottom {
   margin-top: auto;
   padding-top: 32px;

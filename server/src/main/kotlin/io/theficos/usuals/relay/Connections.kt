@@ -115,5 +115,11 @@ class Connections(private val db: Database, private val relay: Relay, private va
         expect(c.execute("UPDATE native_session SET revoked=true WHERE ticket=? AND user_id=?", id(ticket), id(caller.user.id)) == 1, "not_found", 404)
     }
     fun logout(token: String) = db.transaction { c -> caller(c, token); c.execute("UPDATE native_session SET revoked=true WHERE hash=?", digest(token)); ConnectResult(false) }
+    fun account(token: String): ConnectionAccount = db.transaction { c ->
+        val user = caller(c, token)
+        c.query("SELECT display_name,local_username,email FROM web_user WHERE id=?", id(user)) {
+            ConnectionAccount(user, it.getString(1), it.getString(2), it.getString(3))
+        }.single()
+    }
     private companion object { const val SESSION = 180L * 86400000 }
 }

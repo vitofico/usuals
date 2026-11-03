@@ -132,7 +132,9 @@ fun SettingsScreen(
             } else {
                 SectionCard {
                     SettingsLink(stringResource(R.string.account_title), Icons.Outlined.AccountCircle,
-                        state.account?.let { stringResource(R.string.settings_account_on, it.host) } ?: stringResource(R.string.settings_offline), onOpenAccount)
+                        state.account?.let { account -> account.name?.takeIf(String::isNotBlank)?.let {
+                            stringResource(R.string.account_signed_in_as, it) + "\n" + account.host
+                        } ?: stringResource(R.string.settings_account_on, account.host) } ?: stringResource(R.string.settings_offline), onOpenAccount)
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsLink(stringResource(R.string.appearance_title), Icons.Outlined.Palette) { panel = "appearance" }
                     if (notifications != null) SettingsLink(stringResource(R.string.notifications_title), Icons.Outlined.Notifications) { panel = "notifications" }

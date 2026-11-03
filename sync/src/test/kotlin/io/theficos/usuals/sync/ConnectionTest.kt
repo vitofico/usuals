@@ -13,6 +13,68 @@ class ConnectionTest {
         override fun read() = ClientState.decode(Wire.json.encodeToString(ClientState.serializer(), state))
         override fun update(change: (ClientState) -> ClientState) = change(read()).also { state = it }
     }
+    @Test fun accountLabelsIgnoreBlanksAndNeverUseTheOpaqueId() {
+        assertThat(ConnectionAccount("opaque", " Vito ", "vito").label).isEqualTo("Vito")
+        assertThat(ConnectionAccount("opaque", " \t", " vito ").label).isEqualTo("vito")
+        assertThat(ConnectionAccount("opaque", "", " ", "vito@example.org").label).isEqualTo("vito@example.org")
+        assertThat(ConnectionAccount("opaque").label).isNull()
+        assertThat(ConnectionAccount("opaque", "Vito", "vito").login).isEqualTo("vito")
+    }
+    @Test fun ownIdentityNeedsNoListsAndIsCachedOnlyWithItsCredential() = runBlocking {
+        val store = Store()
+        store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "alice", "token", 20000))
+        val account = ConnectionAccount("alice", "Alice", "alice")
+        var status = 200
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                assertThat(origin).isEqualTo("https://usuals.example")
+                assertThat(method).isEqualTo("GET")
+                assertThat(path).isEqualTo("/v1/connection/account")
+                assertThat(token).isEqualTo("token")
+                return WireResponse(status, if (status == 200) Wire.json.encodeToString(ConnectionAccount.serializer(), account).toByteArray() else "{\"code\":\"unavailable\"}".toByteArray())
+            }
+        }
+        val client = ConnectionClient(store, transport)
+        assertThat(client.refreshAccount()).isEqualTo(account)
+        status = 503
+        assertThat(ConnectionClient(store, transport).refreshAccount()).isEqualTo(account)
+        assertThat(client.current().toString()).doesNotContain("Alice")
+        status = 401
+        assertThat(client.refreshAccount()).isNull()
+        assertThat(client.current()?.account).isNull()
+        store.state = ClientState()
+        assertThat(client.refreshAccount()).isNull()
+    }
+    @Test fun olderServersKeepWorkingWithoutAccountMetadata() = runBlocking {
+        val store = Store()
+        store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "alice", "token", 20000))
+        val client = ConnectionClient(store, object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int) =
+                WireResponse(404, "{\"code\":\"not_found\"}".toByteArray())
+        })
+        assertThat(client.refreshAccount()).isNull()
+        assertThat(client.current()?.userId).isEqualTo("alice")
+    }
+    @Test fun lateIdentityCannotRestoreNamesAfterSignOutOrAccountChanges() = runBlocking {
+        for (replacement in listOf(null,
+            ServerConnection("https://usuals.example", pending().info, "alice", "new-token", 20000),
+            ServerConnection("https://other.example", pending().info, "alice", "token", 20000))) {
+            val store = Store()
+            store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "alice", "token", 20000))
+            val started = CompletableDeferred<Unit>(); val answer = CompletableDeferred<WireResponse>()
+            val client = ConnectionClient(store, object : RelayTransport {
+                override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                    started.complete(Unit); return answer.await()
+                }
+            })
+            val response = async { client.refreshAccount() }
+            started.await()
+            store.state = ClientState(connection = replacement)
+            answer.complete(WireResponse(200, Wire.json.encodeToString(ConnectionAccount.serializer(), ConnectionAccount("alice", "Private Alice")).toByteArray()))
+            assertThat(response.await()).isNull()
+            assertThat(client.current()).isEqualTo(replacement)
+        }
+    }
     @Test fun chosenOriginIsStrictAndConnectionLinksCarryNoCredentials() {
         assertThat(serverOrigin("https://usuals.example/connect")).isEqualTo("https://usuals.example")
         assertThat(serverOrigin("usuals://connect#" + Wire.encode("https://usuals.example".toByteArray()))).isEqualTo("https://usuals.example")

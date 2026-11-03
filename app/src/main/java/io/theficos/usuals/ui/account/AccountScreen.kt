@@ -142,6 +142,9 @@ private fun SignedIn(state: AccountState, vm: AccountViewModel, onSignOut: () ->
     LaunchedEffect(saved.token) { vm.loadAi() }
     SectionCard {
         Text(state.name?.let { stringResource(R.string.account_signed_in_as, it) } ?: stringResource(R.string.account_signed_in), style = MaterialTheme.typography.titleLarge)
+        saved.account?.takeIf { it.id == saved.userId }?.login?.takeIf { it != state.name }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+        }
         Text(saved.info.name, style = MaterialTheme.typography.bodyMedium)
         Text(saved.origin, style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(saved.origin))) }) { Text(stringResource(R.string.settings_server_account)) }

@@ -43,8 +43,8 @@ data class SettingsUiState(
     val account: AccountSummary? = null,
 )
 
-/** What the Settings row says about the account: the host of the server it is on. */
-data class AccountSummary(val host: String)
+/** The current account's human-readable name and server, never a list owner's name. */
+data class AccountSummary(val host: String, val name: String? = null)
 
 /**
  * Settings, and the screen where invariant 8 is discharged.
@@ -68,6 +68,7 @@ class SettingsViewModel(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     private val worker: CoroutineDispatcher = Dispatchers.Default,
     private val accountSummary: () -> AccountSummary? = { null },
+    private val refreshAccount: suspend () -> Unit = {},
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -83,6 +84,9 @@ class SettingsViewModel(
         scope.launch {
             val account = withContext(worker) { runCatching { accountSummary() }.getOrNull() }
             _state.update { it.copy(account = account) }
+            withContext(worker) { refreshAccount() }
+            val refreshed = withContext(worker) { runCatching { accountSummary() }.getOrNull() }
+            _state.update { it.copy(account = refreshed) }
         }
         if (_state.value.loaded) return
         scope.launch {

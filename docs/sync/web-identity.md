@@ -87,6 +87,13 @@ The user object contains `id`, `issuer`, `subject`, `displayName`, optional
 milliseconds. The durable account ID and issuer/subject do not change. Lists and
 their members bind to the account ID, never to an email.
 
+Phones read their own display name, optional local username and verified email
+from `GET /v1/connection/account` using the phone's bearer credential. This
+private, uncached response identifies that credential's account without needing
+any lists. The phone keeps the last known identity with the credential for
+offline display and clears it on sign-out. Older servers may return 404; the
+phone still works and shows the server without inventing an account name.
+
 All identity mutations require an exact `Origin` header and `X-CSRF-Token` from
 `/api/me`. Unauthenticated local login and activation instead require the token
 from `/auth/local/challenge` plus its matching cookie. That challenge is one-use

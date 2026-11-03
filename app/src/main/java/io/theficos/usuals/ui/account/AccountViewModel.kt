@@ -8,13 +8,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 /** What the account screen needs from the sync engine, so it can be replaced in tests. */
 interface AccountSession {
     /** True when lists on this phone belong to an account whose server stopped accepting this phone. */
     suspend fun expired(): Boolean
-    /** The signed-in person's name as the server reported it, once a list has synced. */
+    /** The signed-in person's own account label, including accounts without lists. */
     suspend fun name(): String?
+    suspend fun refresh() {}
     suspend fun connected()
     suspend fun signOut(force: Boolean): Int
 }
@@ -22,6 +24,7 @@ interface AccountSession {
 class AccountViewModel(private val connection: ConnectionClient, private val session: AccountSession) : ViewModel() {
     private val mutable = MutableStateFlow(AccountState())
     val state = mutable.asStateFlow()
+    private var identityRefresh: Job? = null
 
     fun load() = work { reload() }
     fun field(value: String) = mutable.update { it.copy(origin = value.take(512), problem = null) }
@@ -68,9 +71,20 @@ class AccountViewModel(private val connection: ConnectionClient, private val ses
         reload()
     }
     private suspend fun reload() {
+        identityRefresh?.cancel()
+        publish()
+        if (connection.current() != null) identityRefresh = viewModelScope.launch(Dispatchers.IO) {
+            try { session.refresh(); publish() }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { }
+        }
+    }
+    private suspend fun publish() {
         val saved = connection.current()
-        mutable.update { it.copy(connection = saved, connecting = connection.pending(), expired = saved == null && session.expired(),
-            name = if (saved == null) null else session.name()) }
+        val name = if (saved == null) null else session.name()
+        val current = connection.current()
+        mutable.update { it.copy(connection = current, connecting = connection.pending(), expired = current == null && session.expired(),
+            name = name.takeIf { current?.token == saved?.token && current?.origin == saved?.origin }) }
     }
     private fun work(quiet: Boolean = false, block: suspend () -> Unit) {
         if (state.value.busy) return

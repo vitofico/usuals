@@ -80,7 +80,12 @@ object UsualsViewModelFactories {
                 modelProbe = ServiceLocator.modelProbe,
                 budget = ServiceLocator.modelBudget,
                 info = ServiceLocator.appInfo,
-                accountSummary = { ServiceLocator.connectionClient.current()?.let { AccountSummary(java.net.URI(it.origin).host) } },
+                accountSummary = {
+                    val client = ServiceLocator.connectionClient
+                    client.current()?.let { saved -> AccountSummary(java.net.URI(saved.origin).rawAuthority,
+                        saved.account?.takeIf { it.id == saved.userId }?.label) }
+                },
+                refreshAccount = { ServiceLocator.connectionClient.refreshAccount() },
             )
         }
     }
@@ -90,6 +95,7 @@ object UsualsViewModelFactories {
 private object AccountWiring : AccountSession {
     override suspend fun expired() = ServiceLocator.listSync.expired()
     override suspend fun name() = ServiceLocator.listSync.name()
+    override suspend fun refresh() = ServiceLocator.listSync.refresh()
     override suspend fun connected() { ServiceLocator.listSync.connected(); ServiceLocator.listSyncScheduler.request() }
     override suspend fun signOut(force: Boolean) = ServiceLocator.listSync.signOut(force)
 }
