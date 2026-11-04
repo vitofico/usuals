@@ -45,4 +45,10 @@
     <string name="share_list">Send as text</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
+    <string name="history_delete">Delete shop</string>
+    <string name="history_delete_title">Delete shop from %1$s?</string>
+    <string name="history_delete_help">This removes the shop, its purchases and any saved receipt photo. On shared lists, the shop is removed for everyone. Your current list stays unchanged. This cannot be undone.</string>
+    <string name="history_deleted">Shop deleted from history.</string>
+    <string name="history_delete_unsupported">Update your Usuals server to delete saved shops.</string>
+    <string name="history_shop_options">Shop options</string>
 </resources>

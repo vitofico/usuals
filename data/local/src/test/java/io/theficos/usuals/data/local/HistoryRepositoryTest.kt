@@ -91,6 +91,40 @@ class HistoryRepositoryTest {
         assertThat(items.find(milk)!!.checkedAt).isEqualTo(now)
     }
 
+    @Test fun `delete removes finished and imported shops without changing the active list`() = runTest {
+        database.listDao().insert(ListEntity(LOCAL_LIST_ID, "Groceries"))
+        val milk = items.add(ParsedItem("milk"))
+        items.setChecked(milk, true)
+        val finished = history.finish()!!
+        val imported = history.importPast(listOf(ParsedItem("eggs")), now - 1000)!!
+        items.add(ParsedItem("bread"))
+        val current = items.items()
+        val scope = database.listDao().selected()
+        val archive = history.exportJson()
+        assertThat(history.deleteTrip(finished.trip.id, scope)).isTrue()
+        assertThat(history.undo(finished.trip.id)).isFalse()
+        assertThat(history.snapshot().trips.map { it.id }).containsExactly(imported.trip.id)
+        assertThat(history.snapshot().purchases.map { it.name }).containsExactly("eggs")
+        assertThat(items.items()).isEqualTo(current)
+        history.importJson(archive)
+        assertThat(history.snapshot().trips.map { it.id }).containsExactly(imported.trip.id)
+        assertThat(history.deleteTrip(imported.trip.id, scope)).isTrue()
+        assertThat(history.snapshot().trips).isEmpty()
+        assertThat(history.snapshot().purchases).isEmpty()
+        assertThat(items.items()).isEqualTo(current)
+        assertThat(history.exportJson()).doesNotContain("\"tripId\"")
+    }
+
+    @Test fun `delete pins the displayed list and cannot remove a shop after switching lists`() = runTest {
+        val imported = history.importPast(listOf(ParsedItem("eggs")), now)!!
+        val source = database.listDao().selected()
+        database.listDao().insert(ListEntity("other", "Other"))
+        ListRepository(database).select("other")
+        assertThat(history.deleteTrip(imported.trip.id, source)).isFalse()
+        assertThat(history.snapshot(source).trips).hasSize(1)
+        assertThat(history.snapshot().trips).isEmpty()
+    }
+
     @Test fun `removal records no purchase and finish reaps old tombstones`() = runTest {
         val deleted = items.add(ParsedItem("deleted"))
         items.delete(deleted)

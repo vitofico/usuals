@@ -315,7 +315,7 @@ class LocalReplica(private val database: UsualsDatabase, private val reducer: Re
         for ((id, trip) in after.trips) if (trip != before.trips[id]) history.insertTrip(TripEntity(id, trip.getValue("closedAt").jsonPrimitive.long, scope))
         val purchases = after.purchases.filter { (id, facts) -> facts != before.purchases[id] }
         history.insertPurchases(purchases.map { (id, facts) -> facts.purchase(id, scope) })
-        history.saveSharedPreferences(after.preferences.filter { (key, value) -> key != ListAppearance.KEY && value != before.preferences[key] }.map { (key, value) ->
+        history.saveSharedPreferences(after.preferences.filter { (key, value) -> key !in setOf(ListAppearance.KEY, HistoryDeletion.KEY) && value != before.preferences[key] }.map { (key, value) ->
             SharedPreferenceEntity(scope, key, value.string("category"), value["repeatEveryDays"]?.jsonPrimitive?.intOrNull)
         })
         history.saveAliases(after.aliases.filter { (key, value) -> value != before.aliases[key] }.map { ItemAliasEntity(it.key, it.value, scope) })

@@ -27,7 +27,7 @@ class ItemRepository(
     suspend fun items(scope: String): List<Item> = database.withTransaction { versioned(scope) }
     private suspend fun versioned(scope: String): List<Item> {
         val state = replica.projection(scope)
-        val preferenceRevisions = state.preferences.mapValues { it.value.string("revision") }
+        val preferenceRevisions = state.preferences.filterKeys { it != HistoryDeletion.KEY }.mapValues { it.value.string("revision") }
         return dao.active(scope).map { entity -> entity.toItem().also { item ->
             state.rows[entity.id]?.let { row -> item.version = ItemVersion(scope, entity.id, row.revisions, row.lifecycle,
                 state.aliasRevision, state.aliases, preferenceRevisions, row.facts.toString()) }

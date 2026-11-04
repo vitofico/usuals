@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable data class ServiceError(val code: String)
+@Serializable data class InstanceCapabilities(val serverId: String, val historyDeletion: Boolean = false)
 @Serializable data class InstanceInfo(val version: Int = 1, val name: String, val server: ServerInfo, val accounts: Boolean, val ai: Boolean, val occasionPacks: Boolean = false)
 @Serializable data class ConnectStart(val device: DeviceKeys, val verifierHash: String, val offer: OfferClaim? = null)
 /** The secret from a signed-in browser's QR; it lets that account, not this phone's browser, approve the connection. */
@@ -31,7 +32,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
     val fingerprint get() = connectionFingerprint(info.server.serverId, ticket.id, device.publicKeys)
     override fun toString() = "PendingConnection([redacted])"
 }
-@Serializable data class ServerConnection(val origin: String, val info: InstanceInfo, val userId: String, val token: String, val expiresAt: Long, val aiEnabled: Boolean = false, val aiRevision: String? = null, val account: ConnectionAccount? = null) {
+@Serializable data class ServerConnection(val origin: String, val info: InstanceInfo, val userId: String, val token: String, val expiresAt: Long, val aiEnabled: Boolean = false, val aiRevision: String? = null, val account: ConnectionAccount? = null, val historyDeletion: Boolean = false) {
     override fun toString() = "ServerConnection([redacted])"
 }
 @Serializable data class AiProfileView(val id: String, val label: String, val model: String, val imageModel: String, val isLocal: Boolean, val baseUrl: String = "")
@@ -93,6 +94,17 @@ class ConnectionClient(private val store: SyncStateStore, private val transport:
             if (state.connection == connection) state.copy(connection = connection.copy(info = info)) else state
         }
         return current()?.let { it.origin == connection.origin && it.userId == connection.userId && it.info.occasionPacks } == true
+    }
+    suspend fun supportsHistoryDeletion(): Boolean {
+        val connection = current() ?: return false
+        if (connection.historyDeletion) return true
+        val capabilities = try { call<InstanceCapabilities>(connection.origin, "GET", "/v1/capabilities") }
+            catch (failure: RelayProblem) { if (failure.status == 404) return false else throw failure }
+        require(capabilities.serverId == connection.info.server.serverId)
+        store.update { state ->
+            if (state.connection == connection) state.copy(connection = connection.copy(historyDeletion = capabilities.historyDeletion)) else state
+        }
+        return current()?.let { it.origin == connection.origin && it.userId == connection.userId && it.token == connection.token && it.historyDeletion } == true
     }
     suspend fun discover(link: String): Pair<String, InstanceInfo> {
         val origin = serverOrigin(link)

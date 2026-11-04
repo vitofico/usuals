@@ -74,6 +74,17 @@ class RepositoryReceiptStoreTest {
             assertThat(f.history.snapshot().trips).isEmpty()
         }
     }
+    @Test fun deleting_a_shop_prunes_its_local_receipt_and_excludes_it_from_exports() = runTest {
+        Fixture().use { f ->
+            f.list("groceries")
+            val trip = f.store.save("groceries", null, image(), "milk", 1_700_000_000_000)
+            assertThat(f.files.has("groceries", trip)).isTrue()
+            assertThat(f.archive.deleteTrip(trip, "groceries")).isTrue()
+            assertThat(f.store.ids("groceries")).isEmpty()
+            assertThat(f.files.has("groceries", trip)).isFalse()
+            assertThat(Json.parseToJsonElement(f.archive.exportJson()).jsonObject.getValue("receipts").jsonArray).isEmpty()
+        }
+    }
     @Test fun archive_round_trip_keeps_photos_and_invalid_receipt_is_rejected_before_import() = runTest {
         Fixture().use { source -> Fixture().use { destination ->
             source.list("groceries")

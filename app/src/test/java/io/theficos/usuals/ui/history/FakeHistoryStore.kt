@@ -12,6 +12,14 @@ class FakeHistoryStore : HistoryStore by NoHistoryStore {
     var fail = false
     var undone: String? = null
     var pasted: Pair<String, Long>? = null
+    var deletions = 0
+    override suspend fun deleteTrip(tripId: String, scope: String): Boolean {
+        deletions++
+        gate?.await()
+        if (fail) throw IllegalStateException()
+        data.value = data.value.copy(trips = data.value.trips.filterNot { it.id == tripId }, purchases = data.value.purchases.filterNot { it.tripId == tripId })
+        return true
+    }
     override fun observe() = data
     override suspend fun finish(onlyIds: Set<ItemId>?): FinishedTrip {
         finishCalls++

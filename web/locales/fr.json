@@ -487,5 +487,10 @@
   "stats_window": "Sur les 8 dernières courses enregistrées au maximum ({count} disponibles).",
   "stats_frequency": "Dans {count} courses sur {total}",
   "stats_last_bought": "Dernier achat : {date}",
-  "stats_empty": "Terminez ou importez des courses pour voir vos habitudes."
+  "stats_empty": "Terminez ou importez des courses pour voir vos habitudes.",
+  "historyDelete": "Supprimer les courses",
+  "historyDeleteTitle": "Supprimer les courses du {date} ?",
+  "historyDeleteHelp": "Les courses, leurs achats et la photo du ticket seront supprimés. Dans les listes partagées, les courses sont supprimées pour tout le monde. Votre liste actuelle reste inchangée. Cette action est irréversible.",
+  "historyDeleteUnsupported": "Mettez à jour votre serveur Usuals pour supprimer les courses enregistrées.",
+  "historyDeleteFailed": "Impossible de supprimer ces courses. Réessayez."
 }

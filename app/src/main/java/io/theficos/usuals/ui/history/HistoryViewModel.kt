@@ -22,7 +22,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 
-enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY_LIST, FAILED, REBOUGHT, RECEIPT_SAVED }
+enum class HistoryNotice { IMPORTED, EXPORTED, INVALID_FILE, INVALID_DATE, EMPTY_LIST, FAILED, REBOUGHT, RECEIPT_SAVED, DELETED, DELETE_UNSUPPORTED }
 data class HistoryUiState(val history: HistorySnapshot = HistorySnapshot(), val notice: HistoryNotice? = null,
     val scope: String = "", val query: String = "", val selected: Set<String> = emptySet(), val added: Int = 0,
     /** Basket overview per trip id, empty while the overview is off. */
@@ -41,13 +41,15 @@ class HistoryViewModel(
     private data class Selection(val scope: String = "", val ids: Set<String> = emptySet())
     private val selected = MutableStateFlow(Selection())
     private var rebuying = false
+    private var deleting = false
     private val added = MutableStateFlow(0)
     private class Sourced(val scope: String, val history: HistorySnapshot, val baskets: Map<String, BasketOverview>, val receipts: Set<String>, val stats: ShoppingStats)
     private val source = (if (store is ScopedHistoryStore) store.observeShopping().map { it.listId to it.history }
         else store.observe().map { "" to it }).let { changes -> combine(changes, receipts.revision) { value, _ -> value } }
         .map { (scope, history) -> Sourced(scope, history, baskets(history), try { receipts.ids(scope) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptySet() }, shoppingStats(clock(), history)) }
     val state: StateFlow<HistoryUiState> = combine(source, notice, query, selected, added) { source, message, text, ids, count ->
-        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty(), count, source.baskets, source.receipts, source.stats)
+        val existing = source.history.purchases.mapTo(mutableSetOf()) { it.id.value }
+        HistoryUiState(source.history, message, source.scope, text, ids.takeIf { it.scope == source.scope }?.ids.orEmpty().intersect(existing), count, source.baskets, source.receipts, source.stats)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HistoryUiState())
 
     val receipt = ReceiptEditor(viewModelScope, receipts, ::today, zone) { scope -> if (state.value.scope == scope) notice.value = HistoryNotice.RECEIPT_SAVED }
@@ -94,6 +96,21 @@ class HistoryViewModel(
     }
 
     fun today(): String = Instant.ofEpochMilli(clock()).atZone(zone).toLocalDate().toString()
+    fun deleteTrip(tripId: String, scope: String) {
+        val current = state.value
+        if (deleting || current.scope != scope || current.history.trips.none { it.id == tripId }) return
+        deleting = true
+        notice.value = null
+        viewModelScope.launch {
+            try {
+                val deleted = store.deleteTrip(tripId, scope)
+                if (state.value.scope == scope) notice.value = if (deleted) HistoryNotice.DELETED else HistoryNotice.FAILED
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: HistoryDeletionUnsupported) { if (state.value.scope == scope) notice.value = HistoryNotice.DELETE_UNSUPPORTED }
+            catch (_: Exception) { if (state.value.scope == scope) notice.value = HistoryNotice.FAILED }
+            finally { deleting = false }
+        }
+    }
     fun dismissNotice() { notice.value = null }
     fun fileFailed() { notice.value = HistoryNotice.FAILED }
 

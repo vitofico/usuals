@@ -146,6 +146,7 @@ class Reducer(private val normalizer: Int = 1) {
                 "delete" -> delete()
                 "finish" -> finish()
                 "undo" -> undo()
+                "delete_trip" -> deleteTrip()
                 "alias" -> alias()
                 "preference" -> preference()
                 "list_name" -> renameList()
@@ -270,6 +271,7 @@ class Reducer(private val normalizer: Int = 1) {
         }
         private fun finish(): Outcome {
             val trip = p.text("tripId")
+            if (HistoryDeletion.contains(state, trip)) return Outcome.NO_OP
             require(trip !in state.trips && state.closes.values.none { it.tripId == trip })
             val accepted = mutableListOf<String>()
             var stale = false
@@ -317,6 +319,19 @@ class Reducer(private val normalizer: Int = 1) {
                     }
                 }
             }
+            return Outcome.APPLIED
+        }
+        private fun deleteTrip(): Outcome {
+            require(p.keys == setOf("tripId"))
+            val trip = p.text("tripId")
+            require(trip.isNotBlank() && trip.length <= 500)
+            if (trip !in state.trips) return Outcome.NO_OP
+            val closes = state.closes.filterValues { it.tripId == trip }.keys
+            state = HistoryDeletion.record(state.copy(
+                trips = state.trips - trip,
+                purchases = state.purchases.filterValues { it.text("tripId") != trip },
+                cancelledCloses = state.cancelledCloses + closes,
+            ), trip, id)
             return Outcome.APPLIED
         }
         private fun repeat(): Outcome {
@@ -386,7 +401,7 @@ class Reducer(private val normalizer: Int = 1) {
         }
         private fun preference(): Outcome {
             val key = p.text("key")
-            require(key != ListAppearance.KEY)
+            require(key !in setOf(ListAppearance.KEY, HistoryDeletion.KEY))
             val current = state.preferences[key] ?: JsonObject(emptyMap())
             if (current["revision"].stringOrNull() != p["expected"].stringOrNull()) return conflict(p.obj("changes"), current)
             val changes = p.obj("changes")
@@ -417,9 +432,11 @@ class Reducer(private val normalizer: Int = 1) {
         private fun import(): Outcome {
             require(p.keys.all { it in setOf("rows", "purchases", "trips") })
             val patches = (p["rows"] as? JsonArray).orEmpty().map { it.jsonObject }
-            val purchases = (p["purchases"] as? JsonArray).orEmpty().map { it.jsonObject }
-            val trips = (p["trips"] as? JsonArray).orEmpty().map { it.jsonObject }
-            require(patches.size + purchases.size + trips.size <= 100)
+            val allPurchases = (p["purchases"] as? JsonArray).orEmpty().map { it.jsonObject }
+            val allTrips = (p["trips"] as? JsonArray).orEmpty().map { it.jsonObject }
+            require(patches.size + allPurchases.size + allTrips.size <= 100)
+            val purchases = allPurchases.filterNot { HistoryDeletion.contains(state, it.text("tripId")) }
+            val trips = allTrips.filterNot { HistoryDeletion.contains(state, it.text("id")) }
             require(purchases.map { it.text("id") }.distinct().size == purchases.size)
             require(patches.map { it.text("id") }.distinct().size == patches.size)
             for (patch in patches) {

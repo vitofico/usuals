@@ -487,5 +487,10 @@
   "stats_window": "Based on up to 8 recent saved shops ({count} available).",
   "stats_frequency": "In {count} of {total} shops",
   "stats_last_bought": "Last bought {date}",
-  "stats_empty": "Finish or import a shop to see your shopping patterns."
+  "stats_empty": "Finish or import a shop to see your shopping patterns.",
+  "historyDelete": "Delete shop",
+  "historyDeleteTitle": "Delete shop from {date}?",
+  "historyDeleteHelp": "This removes the shop, its purchases and any saved receipt photo. On shared lists, the shop is removed for everyone. Your current list stays unchanged. This cannot be undone.",
+  "historyDeleteUnsupported": "Update your Usuals server to delete saved shops.",
+  "historyDeleteFailed": "Could not delete this shop. Try again."
 }

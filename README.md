@@ -90,6 +90,13 @@ recorded-item and different-item totals, plus your five most frequent recent
 usuals. Counts belong to the selected list and include imported shops. The same
 section is available in browser History. [How stats are counted](docs/shopping-stats.md).
 
+Remove a saved shop from **History > Shop options > Delete shop** on Android,
+or **Delete shop** inside a shop in browser History. Confirm the date before
+deleting. This removes the whole shop, all its purchases and any local receipt
+photo, without changing the current list. On shared lists it removes the shop
+for everyone. Deletion cannot be undone. Account lists need a server that
+supports history deletion; Android remembers verified support for offline use.
+
 To move an item, open its editor and choose **More actions > Move or copy to
 another list**. Choose an active list and whether to keep the original. The new
 row is unchecked and keeps its details. Moves between account lists confirm the

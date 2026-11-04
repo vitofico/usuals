@@ -48,4 +48,10 @@
     <string name="share_list">Envoyer en texte</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
+    <string name="history_delete">Supprimer les courses</string>
+    <string name="history_delete_title">Supprimer les courses du %1$s ?</string>
+    <string name="history_delete_help">Les courses, leurs achats et la photo du ticket seront supprimés. Dans les listes partagées, les courses sont supprimées pour tout le monde. Votre liste actuelle reste inchangée. Cette action est irréversible.</string>
+    <string name="history_deleted">Courses supprimées de l’historique.</string>
+    <string name="history_delete_unsupported">Mettez à jour votre serveur Usuals pour supprimer les courses enregistrées.</string>
+    <string name="history_shop_options">Options des courses</string>
 </resources>

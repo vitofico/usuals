@@ -37,6 +37,36 @@ class ListsTest {
     }
     @After fun after() = database.close()
 
+    @Test fun editorsCanDeleteAShopForAllMembersAndOldImportsCannotReviveIt() = http {
+        val list = client.create(alice).id
+        client.share(alice, list, bob)
+        client.apply(alice, list, capture(list, "Bread"))
+        val trip = uuid(); val purchase = uuid()
+        val imported = Intent(uuid(), list, "import", buildJsonObject {
+            put("trips", buildJsonArray { add(buildJsonObject { put("id", trip); put("closedAt", now) }) })
+            put("purchases", buildJsonArray { add(buildJsonObject {
+                put("id", purchase); put("tripId", trip); put("key", "milk"); put("name", "Milk"); put("boughtAt", now)
+            }) })
+        })
+        client.apply(alice, list, imported)
+        val before = client.changes(alice).lists.single().projection
+        val deletion = Intent(uuid(), list, "delete_trip", buildJsonObject { put("tripId", trip) })
+        assertThat(client.apply(carol, list, deletion).status).isEqualTo(HttpStatusCode.NotFound)
+        client.apply(bob, list, deletion)
+        client.apply(bob, list, deletion)
+        client.apply(alice, list, imported.copy(id = uuid()))
+        val aliceView = client.changes(alice).lists.single().projection
+        val bobView = client.changes(bob).lists.single().projection
+        assertThat(aliceView).isEqualTo(bobView)
+        assertThat(aliceView.trips).isEmpty()
+        assertThat(aliceView.purchases).isEmpty()
+        assertThat(aliceView.rows).isEqualTo(before.rows)
+        assertThat(HistoryDeletion.contains(aliceView, trip)).isTrue()
+        val capabilities = Wire.json.decodeFromString(InstanceCapabilities.serializer(), client.get("/v1/capabilities").bodyAsText())
+        assertThat(capabilities.historyDeletion).isTrue()
+        assertThat(capabilities.serverId).isEqualTo(identity.serverId)
+    }
+
     @Test fun membersReusingTheSamePurchaseKeepOneOriginalQuantity() = http {
         val list = client.create(alice)
         client.share(alice, list.id, bob)

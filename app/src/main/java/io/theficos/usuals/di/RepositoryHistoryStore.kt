@@ -15,6 +15,7 @@ class RepositoryHistoryStore(
     private val parser: UtteranceParser,
     private val smart: SmartStore,
     private val tools: ShoppingToolsStore? = null,
+    private val deletionSupported: suspend (String) -> Boolean = { true },
 ) : ScopedHistoryStore {
     private val json = Json { encodeDefaults = true }
     override suspend fun rebuy(rows: List<io.theficos.usuals.model.Purchase>, scope: String): Int = smart.addAgain(rows.map {
@@ -25,6 +26,10 @@ class RepositoryHistoryStore(
     override suspend fun finish(onlyIds: Set<ItemId>?) = smart.finish(onlyIds)
     override suspend fun finishVersions(versions: List<io.theficos.usuals.model.ItemVersion>, onlyIds: Set<io.theficos.usuals.model.ItemId>?) = smart.finishVersions(versions, onlyIds)
     override suspend fun undo(tripId: String) = smart.undo(tripId)
+    override suspend fun deleteTrip(tripId: String, scope: String): Boolean {
+        if (!deletionSupported(scope)) throw io.theficos.usuals.ui.history.HistoryDeletionUnsupported()
+        return repository.deleteTrip(tripId, scope)
+    }
     override suspend fun exportJson(): String {
         val base = repository.exportJson()
         val personal = tools ?: return base
