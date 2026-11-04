@@ -17,6 +17,7 @@ object SnapshotCodec {
     }
     private fun validate(p: Projection, replay: Boolean) {
         ListAppearance.validate(p)
+        HistoryDeletion.validate(p)
         require(p.rows.size <= 20000 && p.purchases.size <= 20000 && p.trips.size <= 20000 && p.aliases.size <= 20000 && p.name.length <= 100)
         fun validId(value: String) = value.isNotBlank() && value.length <= 500
         require(p.rows.all { (id,row) -> validId(id) && row.id == id })

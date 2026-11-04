@@ -85,6 +85,7 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
     var statsOpen by rememberSaveable(state.scope) { mutableStateOf(false) }
     var infoOpen by rememberSaveable { mutableStateOf(false) }
+    var deletingTrip by remember(state.scope) { mutableStateOf<String?>(null) }
     var pasted by rememberSaveable { mutableStateOf("") }
     var date by rememberSaveable { mutableStateOf(vm.today()) }
     val locale = LocalConfiguration.current.locales[0]
@@ -94,6 +95,15 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
     val purchases = remember(state.history.purchases, state.query) {
         val matches = historyMatcher(state.query)
         state.history.purchases.filter { matches(it.name) }.groupBy { it.tripId }
+    }
+    state.history.trips.firstOrNull { it.id == deletingTrip }?.let { trip ->
+        AlertDialog(onDismissRequest = { deletingTrip = null },
+            title = { Text(stringResource(R.string.history_delete_title, formatter.format(Instant.ofEpochMilli(trip.closedAt)))) },
+            text = { Text(stringResource(R.string.history_delete_help)) },
+            confirmButton = { TextButton(onClick = { vm.deleteTrip(trip.id, state.scope); deletingTrip = null }) {
+                Text(stringResource(R.string.history_delete), color = MaterialTheme.colorScheme.error)
+            } },
+            dismissButton = { TextButton(onClick = { deletingTrip = null }) { Text(stringResource(R.string.edit_cancel)) } })
     }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
@@ -219,6 +229,8 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                         HistoryNotice.INVALID_DATE -> R.string.history_invalid_date
                         HistoryNotice.EMPTY_LIST -> R.string.history_empty_import
                         HistoryNotice.FAILED -> R.string.history_failed
+                        HistoryNotice.DELETED -> R.string.history_deleted
+                        HistoryNotice.DELETE_UNSUPPORTED -> R.string.history_delete_unsupported
                     }, stringResource(R.string.app_name)))
                     TextButton(onClick = vm::dismissNotice) { Text(stringResource(R.string.history_dismiss)) }
                 }
@@ -235,7 +247,17 @@ fun HistoryScreen(vm: HistoryViewModel, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     Column(Modifier.fillMaxWidth().tripSlice(first = true, last = false).padding(start = 20.dp, end = 20.dp, top = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(formatter.format(Instant.ofEpochMilli(trip.closedAt)), style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text(formatter.format(Instant.ofEpochMilli(trip.closedAt)), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            var options by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { options = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.history_shop_options)) }
+                                DropdownMenu(expanded = options, onDismissRequest = { options = false }) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.history_delete), color = MaterialTheme.colorScheme.error) },
+                                        onClick = { options = false; deletingTrip = trip.id })
+                                }
+                            }
+                        }
                         Text(pluralStringResource(R.plurals.history_item_count, rows.size, rows.size),
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         state.baskets[trip.id]?.let { io.theficos.usuals.ui.basket.BasketTripSummary(it) }

@@ -48,4 +48,10 @@
     <string name="share_list">Invia come testo</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
+    <string name="history_delete">Elimina spesa</string>
+    <string name="history_delete_title">Eliminare la spesa del %1$s?</string>
+    <string name="history_delete_help">La spesa, i suoi acquisti e la foto dello scontrino verranno eliminati. Nelle liste condivise, la spesa viene eliminata per tutti. La lista attuale resta invariata. Questa azione non può essere annullata.</string>
+    <string name="history_deleted">Spesa eliminata dalla cronologia.</string>
+    <string name="history_delete_unsupported">Aggiorna il server Usuals per eliminare le spese salvate.</string>
+    <string name="history_shop_options">Opzioni della spesa</string>
 </resources>

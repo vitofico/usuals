@@ -38,8 +38,7 @@ class QuietHistoryScreenTest {
     private var effectiveFontScale = 1f
     private val snapshot = HistorySnapshot(trips = listOf(Trip("trip", 1_000_000)),
         purchases = listOf(Purchase(ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1_000_000)))
-    private fun render(fontScale: Float = 1f): HistoryViewModel {
-        val store = object : HistoryStore by NoHistoryStore { override fun observe() = flowOf(snapshot) }
+    private fun render(fontScale: Float = 1f, store: HistoryStore = object : HistoryStore by NoHistoryStore { override fun observe() = flowOf(snapshot) }): HistoryViewModel {
         val vm = HistoryViewModel(store, clock = { 1_000_000 })
         models.put("history-quiet", vm)
         compose.setContent {
@@ -55,6 +54,25 @@ class QuietHistoryScreenTest {
         return vm
     }
     @After fun clear() { compose.runOnIdle { models.clear() } }
+
+    @Test fun `deleting a shop requires confirmation and removes selected purchases`() {
+        val store = FakeHistoryStore().also { it.data.value = snapshot }
+        val vm = render(store = store)
+        compose.onNodeWithContentDescription("Milk").performClick()
+        compose.onNodeWithContentDescription("Shop options").performClick()
+        compose.onNodeWithText("Delete shop").performClick()
+        assertThat(store.deletions).isEqualTo(0)
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Milk").assertExists()
+        compose.onNodeWithContentDescription("Shop options").performClick()
+        compose.onNodeWithText("Delete shop").performClick()
+        compose.onNodeWithText("Delete shop").performClick()
+        compose.waitUntil(10_000) { vm.state.value.history.trips.isEmpty() }
+        compose.onNodeWithText("Milk").assertDoesNotExist()
+        compose.onNodeWithText("Add selected (1)").assertDoesNotExist()
+        compose.onNodeWithText("Shop deleted from history.").assertExists()
+        assertThat(store.deletions).isEqualTo(1)
+    }
 
     @Test fun `shopping statistics are collapsed and independent of purchase search`() {
         val vm = render()

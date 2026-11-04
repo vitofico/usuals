@@ -48,4 +48,10 @@
     <string name="share_list">Enviar como texto</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
+    <string name="history_delete">Eliminar compra</string>
+    <string name="history_delete_title">¿Eliminar la compra del %1$s?</string>
+    <string name="history_delete_help">Se eliminarán la compra, sus artículos y la foto del recibo guardada. En las listas compartidas, la compra se elimina para todos. Tu lista actual no cambia. Esta acción no se puede deshacer.</string>
+    <string name="history_deleted">Compra eliminada del historial.</string>
+    <string name="history_delete_unsupported">Actualiza tu servidor Usuals para eliminar compras guardadas.</string>
+    <string name="history_shop_options">Opciones de la compra</string>
 </resources>

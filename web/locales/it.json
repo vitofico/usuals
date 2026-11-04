@@ -487,5 +487,10 @@
   "stats_window": "In base a un massimo di 8 spese recenti salvate ({count} disponibili).",
   "stats_frequency": "In {count} spese su {total}",
   "stats_last_bought": "Ultimo acquisto: {date}",
-  "stats_empty": "Termina o importa una spesa per vedere le tue abitudini."
+  "stats_empty": "Termina o importa una spesa per vedere le tue abitudini.",
+  "historyDelete": "Elimina spesa",
+  "historyDeleteTitle": "Eliminare la spesa del {date}?",
+  "historyDeleteHelp": "La spesa, i suoi acquisti e la foto dello scontrino verranno eliminati. Nelle liste condivise, la spesa viene eliminata per tutti. La lista attuale resta invariata. Questa azione non può essere annullata.",
+  "historyDeleteUnsupported": "Aggiorna il server Usuals per eliminare le spese salvate.",
+  "historyDeleteFailed": "Impossibile eliminare questa spesa. Riprova."
 }

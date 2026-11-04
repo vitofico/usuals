@@ -7,6 +7,13 @@ field names. Errors are `{"code":"<code>"}` with the HTTP status listed.
 
 ## Authentication
 
+`GET /v1/capabilities` is public and returns `{"serverId":"...","historyDeletion":true}`
+on servers supporting saved-shop deletion. A missing route or false capability
+means unsupported. This separate response keeps `/v1/instance` readable by older
+clients that strictly decode its existing fields. Android binds cached support
+to the connected credential and server identity, so verified devices can queue
+deletions offline.
+
 Every route below accepts either:
 
 - a phone: `Authorization: Bearer <native credential>` from the connect flow, or
@@ -75,6 +82,19 @@ The counter is advanced while holding a lock on one row, so a reader never sees 
 higher `seq` committed before a lower one.
 
 ## Lists
+
+The `delete_trip` intent takes only `{"tripId":"..."}`. Owners and editors may
+remove a saved shop and all its purchases for everyone. Active rows and repeat
+rules are unchanged, and the original Finish undo cannot restore the shop.
+Imported shops and shops older than the resend horizon can also be removed.
+Deleting an absent shop is a no-op. The reducer retains deleted trip IDs in
+`preferences["usuals:deleted-trips"]`, mapping each to its deletion intent ID.
+This metadata preserves the existing projection envelope, is excluded from
+item preferences and shopping archives, and prevents a stale finish or import
+from recreating the deleted shop after a restart or resend-horizon expiry.
+Snapshot validation checks its bounds and disallows trips or purchases that
+refer to deleted shops. Saved receipt photos remain device-local and are
+pruned when the corresponding history is read or exported.
 
 `PUT /api/lists/{id}` with `CreateList` creates a list owned by the caller with
 that projection (validated as a snapshot, at most 7 MB encoded). A new empty list

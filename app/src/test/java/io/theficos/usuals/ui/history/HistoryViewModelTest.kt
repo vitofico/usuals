@@ -13,6 +13,49 @@ class HistoryViewModelTest {
     private fun vm(store: FakeHistoryStore) = HistoryViewModel(store,
         { Instant.parse("2026-10-15T12:00:00Z").toEpochMilli() }, ZoneId.of("UTC"))
 
+    @Test fun `deletion clears selections and stats and prevents duplicate requests`() = runTest(main.dispatcher) {
+        val store = FakeHistoryStore()
+        store.data.value = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)),
+            purchases = listOf(io.theficos.usuals.model.Purchase(io.theficos.usuals.model.ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1)))
+        val vm = vm(store)
+        vm.select("milk")
+        vm.deleteTrip("trip", "other")
+        assertThat(store.deletions).isEqualTo(0)
+        store.gate = kotlinx.coroutines.CompletableDeferred()
+        vm.deleteTrip("trip", ""); vm.deleteTrip("trip", "")
+        assertThat(store.deletions).isEqualTo(1)
+        store.gate!!.complete(Unit)
+        assertThat(vm.state.value.selected).isEmpty()
+        assertThat(vm.state.value.stats.shopCount).isEqualTo(0)
+        assertThat(vm.state.value.notice).isEqualTo(HistoryNotice.DELETED)
+    }
+
+    @Test fun `failed deletion preserves the shop and selection for retry`() = runTest(main.dispatcher) {
+        val store = FakeHistoryStore()
+        store.data.value = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)),
+            purchases = listOf(io.theficos.usuals.model.Purchase(io.theficos.usuals.model.ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1)))
+        val vm = vm(store); vm.select("milk"); store.fail = true
+        vm.deleteTrip("trip", "")
+        assertThat(vm.state.value.notice).isEqualTo(HistoryNotice.FAILED)
+        assertThat(vm.state.value.selected).containsExactly("milk")
+        assertThat(vm.state.value.history.trips).hasSize(1)
+        store.fail = false; vm.deleteTrip("trip", "")
+        assertThat(vm.state.value.history.trips).isEmpty()
+    }
+
+    @Test fun `unsupported server leaves history intact and asks for an update`() = runTest(main.dispatcher) {
+        val fake = FakeHistoryStore()
+        fake.data.value = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)))
+        val store = object : HistoryStore by fake {
+            override suspend fun deleteTrip(tripId: String, scope: String): Boolean = throw HistoryDeletionUnsupported()
+        }
+        val vm = HistoryViewModel(store)
+        vm.deleteTrip("trip", "")
+        assertThat(vm.state.value.notice).isEqualTo(HistoryNotice.DELETE_UNSUPPORTED)
+        assertThat(vm.state.value.history.trips).hasSize(1)
+        assertThat(fake.deletions).isEqualTo(0)
+    }
+
     @Test fun `statistics follow the selected history and do not change with search`() = runTest(main.dispatcher) {
         val history = io.theficos.usuals.model.HistorySnapshot(trips = listOf(io.theficos.usuals.model.Trip("trip", 1)),
             purchases = listOf(io.theficos.usuals.model.Purchase(io.theficos.usuals.model.ItemId("milk"), "trip", "milk", "Milk", boughtAt = 1)))

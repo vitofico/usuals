@@ -9,7 +9,8 @@ The three totals describe all saved shops, recorded purchase entries and
 different item identities. An entry is one saved shopping row; quantities such
 as litres, packs and individual pieces are not added together. Confirmed aliases
 count as one different item. Imported shops count, and undoing a finished shop
-removes its contribution. Current checked or unchecked rows do not count until
+removes its contribution. Deleting a saved shop also removes its contribution
+and updates purchase-based suggestions. Current checked or unchecked rows do not count until
 the shop is finished.
 
 **Your recent usuals** shows up to five items from the last eight saved shops,

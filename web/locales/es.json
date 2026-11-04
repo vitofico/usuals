@@ -487,5 +487,10 @@
   "stats_window": "Según hasta 8 compras recientes guardadas ({count} disponibles).",
   "stats_frequency": "En {count} de {total} compras",
   "stats_last_bought": "Última compra: {date}",
-  "stats_empty": "Finaliza o importa una compra para ver tus hábitos."
+  "stats_empty": "Finaliza o importa una compra para ver tus hábitos.",
+  "historyDelete": "Eliminar compra",
+  "historyDeleteTitle": "¿Eliminar la compra del {date}?",
+  "historyDeleteHelp": "Se eliminarán la compra, sus artículos y la foto del recibo guardada. En las listas compartidas, la compra se elimina para todos. Tu lista actual no cambia. Esta acción no se puede deshacer.",
+  "historyDeleteUnsupported": "Actualiza tu servidor Usuals para eliminar compras guardadas.",
+  "historyDeleteFailed": "No se pudo eliminar esta compra. Inténtalo de nuevo."
 }

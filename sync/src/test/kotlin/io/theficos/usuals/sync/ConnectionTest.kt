@@ -219,6 +219,30 @@ class ConnectionTest {
         ConnectionClient(store, transport) { 30000 }.requestBytes("GET", "/v1/ai/settings")
         assertThat(sent).isEqualTo("synthetic-token")
     }
+    @Test fun historyDeletionIsUnavailableOnOldServersAndCachedOnlyForTheSameConnection() = runBlocking {
+        val store = Store(); val pending = pending()
+        store.state = ClientState(connection = ServerConnection(pending.origin, pending.info, "alice", "token", 20000))
+        var supported = false; var missing = true
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                assertThat(path).isEqualTo("/v1/capabilities")
+                if (missing) return WireResponse(404, "{}".toByteArray())
+                return WireResponse(200, Wire.json.encodeToString(InstanceCapabilities.serializer(), InstanceCapabilities(pending.info.server.serverId, supported)).toByteArray())
+            }
+        }
+        val client = ConnectionClient(store, transport)
+        assertThat(client.supportsHistoryDeletion()).isFalse()
+        missing = false
+        assertThat(client.supportsHistoryDeletion()).isFalse()
+        supported = true
+        assertThat(client.supportsHistoryDeletion()).isTrue()
+        assertThat(ConnectionClient(store, object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse = error("offline")
+        }).supportsHistoryDeletion()).isTrue()
+        store.state = ClientState()
+        assertThat(client.supportsHistoryDeletion()).isFalse()
+    }
+
     @Test fun occasionPackCapabilityDefaultsOffRefreshesTheSameServerAndWorksOfflineOnceKnown() = runBlocking {
         val store = Store(); val pending = pending()
         val connection = ServerConnection(pending.origin, pending.info, "alice", "token", 20000)

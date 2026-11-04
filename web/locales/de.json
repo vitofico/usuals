@@ -487,5 +487,10 @@
   "stats_window": "Aus bis zu 8 zuletzt gespeicherten Einkäufen ({count} vorhanden).",
   "stats_frequency": "In {count} von {total} Einkäufen",
   "stats_last_bought": "Zuletzt gekauft: {date}",
-  "stats_empty": "Schließe einen Einkauf ab oder importiere ihn, um deine Gewohnheiten zu sehen."
+  "stats_empty": "Schließe einen Einkauf ab oder importiere ihn, um deine Gewohnheiten zu sehen.",
+  "historyDelete": "Einkauf löschen",
+  "historyDeleteTitle": "Einkauf vom {date} löschen?",
+  "historyDeleteHelp": "Der Einkauf, seine Käufe und das gespeicherte Belegfoto werden gelöscht. Bei geteilten Listen wird der Einkauf für alle gelöscht. Deine aktuelle Liste bleibt unverändert. Dies kann nicht rückgängig gemacht werden.",
+  "historyDeleteUnsupported": "Aktualisiere deinen Usuals-Server, um gespeicherte Einkäufe zu löschen.",
+  "historyDeleteFailed": "Dieser Einkauf konnte nicht gelöscht werden. Versuche es erneut."
 }

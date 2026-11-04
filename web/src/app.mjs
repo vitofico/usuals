@@ -6,6 +6,7 @@ import { rows as listRows, isChecked, intent, captures, check, edit, remove, ren
 import { normalize } from "./identity.mjs";
 import { listColors, listColor, colorChange } from "./list-colors.mjs";
 import { DAY, itemKey, historyTrips, reviewCandidates, addAgain, unchangedRow, guardedRemoval, ShoppingChoices } from "./shopping.mjs";
+import { deleteShopDialog } from "./history-delete.mjs";
 import { shoppingStatsSection } from "./shopping-stats.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
 import { BrowserActivity, NotificationChoices } from "./notifications.mjs";
@@ -710,13 +711,15 @@ async function reuseItems(listId, items) {
   const reply = report(await lists.send(listId, payloads.map((payload) => intent(listId, "reuse", payload))));
   if (!problem(reply)) notice("itemsReused", false, { count: reply.results.filter((result) => result.outcome === "applied").length });
 }
-function historyDialog(listId) {
+function historyDialog(listId, query = "") {
+  const owner = account?.user.id;
+  const current = () => account?.user.id === owner ? store.lists.get(listId) : null;
   const stats = shoppingStatsSection({ el, t, locale });
-  const search = el("input", { id: "history-search", class: "field", type: "search", placeholder: t("historySearch"), oninput: draw });
+  const search = el("input", { id: "history-search", class: "field", type: "search", value: query, placeholder: t("historySearch"), oninput: draw });
   const results = el("div", { class: "history-trips" });
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   function draw() {
-    const list = store.lists.get(listId);
+    const list = current();
     stats.update(list?.projection ?? {}, Date.now());
     const trips = list ? historyTrips(list.projection, search.value) : [];
     results.replaceChildren(...(trips.length ? trips.map((trip, index) => el("details", { class: "history-trip", open: index === 0 || null },
@@ -725,7 +728,17 @@ function historyDialog(listId) {
         el("div", { class: "item-info" }, el("span", { class: "item-name" }, item.name),
           item.quantity == null ? null : el("span", { class: "item-meta" }, quantityText(item))),
         button(t("quietAdd"), () => act(() => reuseItems(listId, [item])), "text-button", { "aria-label": t("addNamed", { name: item.name }) })))),
-      button(t("historyAddThese"), () => act(() => reuseItems(listId, trip.items)), "secondary")))
+      el("div", { class: "button-row" }, button(t("historyAddThese"), () => act(() => reuseItems(listId, trip.items)), "secondary"),
+        button(t("historyDelete"), () => deleteShopDialog({ el, button, t, openDialog, closeDialog,
+          date: date.format(trip.closedAt), exists: () => !!current()?.projection.trips?.[trip.id],
+          back: () => { if (current()) historyDialog(listId, search.value); else closeDialog(); },
+          remove: async () => {
+            const info = await api("/v1/capabilities", { status: [200, 404] });
+            if (!info.historyDeletion) return "unsupported";
+            requireThat(current(), "not_found");
+            const reply = await change(listId, "delete_trip", { tripId: trip.id });
+            return problem(reply) ? "failed" : "deleted";
+          } }), "danger"))))
       : [paragraph("historyEmpty", "helper")]));
   }
   openDialog(el("div", {}, el("h2", {}, t("historyTitle")),

@@ -72,6 +72,11 @@ class HistoryRepository(
         replica.submit("undo") { _, _ -> buildJsonObject { put("finishId", close.key); put("tripId", tripId) } }.outcome == Outcome.APPLIED
     }
 
+    suspend fun deleteTrip(tripId: String, scope: String): Boolean = database.withTransaction {
+        if (listId() != scope || database.listDao().find(scope)?.archived != false) return@withTransaction false
+        replica.submitTo(scope, "delete_trip", buildJsonObject { put("tripId", tripId) }).outcome in setOf(Outcome.APPLIED, Outcome.NO_OP)
+    }
+
     suspend fun importPast(parsed: List<ParsedItem>, boughtAt: Long): FinishedTrip? = database.withTransaction {
         if (parsed.isEmpty()) return@withTransaction null
         val trip = TripEntity(newId(), boughtAt, listId())

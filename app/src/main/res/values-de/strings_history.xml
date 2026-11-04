@@ -45,4 +45,10 @@
     <string name="share_list">Als Text senden</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>
+    <string name="history_delete">Einkauf löschen</string>
+    <string name="history_delete_title">Einkauf vom %1$s löschen?</string>
+    <string name="history_delete_help">Der Einkauf, seine Käufe und das gespeicherte Belegfoto werden gelöscht. Bei geteilten Listen wird der Einkauf für alle gelöscht. Deine aktuelle Liste bleibt unverändert. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="history_deleted">Einkauf aus dem Verlauf gelöscht.</string>
+    <string name="history_delete_unsupported">Aktualisiere deinen Usuals-Server, um gespeicherte Einkäufe zu löschen.</string>
+    <string name="history_shop_options">Einkaufsoptionen</string>
 </resources>

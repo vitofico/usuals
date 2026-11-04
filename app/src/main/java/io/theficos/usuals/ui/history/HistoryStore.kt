@@ -17,6 +17,7 @@ interface HistoryStore {
     suspend fun finish(onlyIds: Set<ItemId>? = null): FinishedTrip?
     suspend fun finishVersions(versions: List<io.theficos.usuals.model.ItemVersion>, onlyIds: Set<ItemId>? = null): FinishedTrip? = finish(onlyIds)
     suspend fun undo(tripId: String): Boolean
+    suspend fun deleteTrip(tripId: String, scope: String): Boolean
     suspend fun exportJson(): String
     suspend fun importJson(text: String)
     suspend fun importPast(text: String, date: Long): FinishedTrip?
@@ -36,10 +37,13 @@ object NoHistoryStore : HistoryStore {
     override fun observe() = flowOf(HistorySnapshot())
     override suspend fun finish(onlyIds: Set<ItemId>?) = null
     override suspend fun undo(tripId: String) = false
+    override suspend fun deleteTrip(tripId: String, scope: String) = false
     override suspend fun exportJson() = ""
     override suspend fun importJson(text: String) = Unit
     override suspend fun importPast(text: String, date: Long) = null
 }
+
+class HistoryDeletionUnsupported : IllegalStateException()
 
 interface PromptMemory {
     fun claim(type: String, batch: String): Boolean

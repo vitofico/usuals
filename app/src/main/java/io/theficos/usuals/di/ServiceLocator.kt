@@ -134,7 +134,8 @@ object ServiceLocator {
     val sharedNotifications by resettable { preferenceSharedNotifications(context).also { it.bind(notificationAccount(connectionClient.current())) } }
     val reminders by resettable { preferenceReminders(context) }
     val shoppingTools by resettable { preferenceShoppingTools(context).also { it.bindPacks(notificationAccount(connectionClient.current())) } }
-    val historyStore: HistoryStore by resettable { ReceiptHistoryStore(RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools), receiptStore, database, receiptImportFiles) }
+    val historyStore: HistoryStore by resettable { ReceiptHistoryStore(RepositoryHistoryStore(historyRepository, parser, smartStore, shoppingTools,
+        deletionSupported = { scope -> database.listDao().find(scope)?.synced != true || connectionClient.supportsHistoryDeletion() }), receiptStore, database, receiptImportFiles) }
     val promptMemory: PreferencePromptMemory by resettable { PreferencePromptMemory(context) }
     val captureMatchMemory: PreferenceCaptureMatchMemory by resettable { PreferenceCaptureMatchMemory(context) }
 
