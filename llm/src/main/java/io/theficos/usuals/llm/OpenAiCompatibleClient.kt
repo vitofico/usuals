@@ -143,8 +143,11 @@ class OpenAiCompatibleClient(
             // Deterministic on purpose: the same recipe read twice should give
             // the same items twice. Anthropic rejects this parameter.
             if (config.kind != ProviderKind.ANTHROPIC) put("temperature", 0)
-            if (config.kind == ProviderKind.OLLAMA) put("reasoning_effort", "none")
-            put("max_tokens", maxTokens)
+            val terra = config.kind == ProviderKind.OPENAI_COMPATIBLE &&
+                (config.model == "gpt-6.1-terra" || config.model.startsWith("gpt-6.1-terra-"))
+            if (config.kind == ProviderKind.OLLAMA || terra) put("reasoning_effort", "none")
+            // Terra budgets completion tokens, including reasoning, under the new name.
+            put(if (terra) "max_completion_tokens" else "max_tokens", maxTokens)
             put("messages", messages)
             // Anthropic accepts only strict json_schema here. The prompts already
             // ask for JSON, and a fenced answer is unwrapped below.
