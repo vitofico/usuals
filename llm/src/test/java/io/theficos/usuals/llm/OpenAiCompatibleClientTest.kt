@@ -259,6 +259,20 @@ class OpenAiCompatibleClientTest {
         assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
     }
 
+    @Test fun `GPT 6 Terra uses completion budget and skips reasoning for structured extraction`() = runTest {
+        replyWith("""{"ok": 1}""")
+        val terra = OpenAiCompatibleClient(ProviderConfig(
+            ProviderKind.OPENAI_COMPATIBLE, "Terra", server.url("/v1").toString(),
+            "gpt-6.1-terra", false, apiKey,
+        ))
+        assertThat(terra.probe().supportsStructuredOutput).isTrue()
+        val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertThat(payload).doesNotContainKey("max_tokens")
+        assertThat(payload.getValue("max_completion_tokens").jsonPrimitive.content.toInt()).isGreaterThan(0)
+        assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
+        assertThat(payload.getValue("temperature").jsonPrimitive.content).isEqualTo("0")
+    }
+
     @Test fun `Anthropic requests omit temperature, reasoning effort and response format`() = runTest {
         replyWith("""{"ok": 1}""")
         assertThat(client(kind = ProviderKind.ANTHROPIC).probe().supportsStructuredOutput).isTrue()
