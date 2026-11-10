@@ -13,11 +13,20 @@ export function writePalette(id, storage) {
 }
 
 export const backgroundStyles = Object.freeze(["plain", "artwork"]);
+const compactModeKey = "usuals-compact-mode";
 const backgroundKey = "usuals-background-style";
 export const backgroundStyleId = (id) => backgroundStyles.includes(id) ? id : "artwork";
 
 export function readBackgroundStyle(storage) {
   try { return backgroundStyleId(storage.getItem(backgroundKey)); } catch { return "artwork"; }
+}
+
+export function readCompactMode(storage) {
+  try { return storage.getItem(compactModeKey) === "true"; } catch { return false; }
+}
+
+export function writeCompactMode(enabled, storage) {
+  try { storage.setItem(compactModeKey, String(enabled)); } catch { /* The live choice still works without storage. */ }
 }
 
 export function writeBackgroundStyle(id, storage) {

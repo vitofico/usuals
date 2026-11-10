@@ -93,6 +93,7 @@ data class ShoppingPreferences(
     val emojiQuantities: Boolean = false,
     val portable: PortableShoppingPreferences = PortableShoppingPreferences(),
     val deferred: Map<String, DeferredShoppingRows> = emptyMap(),
+    val compactMode: Boolean = false,
 )
 
 /** Personal view choices never alter shared facts or purchase history. */
@@ -136,6 +137,7 @@ class ShoppingToolsStore(
           mutable.value = mutable.value.copy(unavailable = true, portable = mutable.value.portable.copy(packs = emptyList()))
       }
     }
+    fun toggleCompactMode() = change { it.copy(compactMode = !it.compactMode) }
     fun mode(enabled: Boolean) = change { it.copy(mode = enabled) }
     fun keepAwake(enabled: Boolean) = change { it.copy(keepAwake = enabled) }
     fun haptics(enabled: Boolean) = change { it.copy(haptics = enabled) }

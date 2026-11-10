@@ -7,6 +7,18 @@ import io.theficos.usuals.smart.Category
 import io.theficos.usuals.model.*
 
 class ShoppingToolsTest {
+    @Test fun `compact mode defaults off in existing preferences and survives restart`() {
+        var disk = """{"version":2,"mode":true}"""
+        val store = ShoppingToolsStore(read = { disk }, write = { disk = it })
+        assertThat(store.state.value.compactMode).isFalse()
+        store.toggleCompactMode()
+        val restored = ShoppingToolsStore(read = { disk }, write = { disk = it })
+        assertThat(restored.state.value.compactMode).isTrue()
+        assertThat(restored.state.value.mode).isTrue()
+        restored.toggleCompactMode()
+        assertThat(ShoppingToolsStore(read = { disk }).state.value.compactMode).isFalse()
+    }
+
     @Test fun `favourites already open follow canonical identity while checked items can be added again`() {
         val gtin = requireNotNull(Gtin.parse("4006381333931"))
         val preferences = PortableShoppingPreferences(favorites = listOf(
