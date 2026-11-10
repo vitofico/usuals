@@ -8,7 +8,7 @@ import { listColors, listColor, colorChange } from "./list-colors.mjs";
 import { DAY, itemKey, historyTrips, reviewCandidates, addAgain, unchangedRow, guardedRemoval, ShoppingChoices } from "./shopping.mjs";
 import { deleteShopDialog } from "./history-delete.mjs";
 import { shoppingStatsSection } from "./shopping-stats.mjs";
-import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle } from "./appearance.mjs";
+import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle, readCompactMode, writeCompactMode } from "./appearance.mjs";
 import { BrowserActivity, NotificationChoices } from "./notifications.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
 import { qrMatrix } from "./qr.mjs";
@@ -45,6 +45,8 @@ function localStore() {
 }
 let palette = readPalette(localStore());
 let backgroundStyle = readBackgroundStyle(localStore());
+let compactMode = readCompactMode(localStore());
+document.documentElement.dataset.compactList = String(compactMode);
 let tutorialSeen = tutorialCompleted(localStore()), tutorialActive = false;
 function applyAppearance() {
   document.documentElement.dataset.palette = palette;
@@ -1069,6 +1071,12 @@ function listMenu(listId) {
       button(t("pack_title"), () => packsDialog(listId)),
       button(t(shoppingModes.has(listId) ? "shoppingStop" : "shoppingStart"), () => toggleShopping(listId)),
       listRows(list.projection).some(isChecked) ? button(t("finishShopping"), () => { closeDialog(); act(() => finishShopping(listId)); }) : null,
+      button([t("compactMode"), compactMode ? el("span", { "aria-hidden": "true" }, "✓") : null], () => {
+        compactMode = !compactMode;
+        writeCompactMode(compactMode, localStore());
+        document.documentElement.dataset.compactList = String(compactMode);
+        closeDialog();
+      }, "secondary", { "aria-pressed": compactMode }),
       button(t("share"), () => shareDialog(listId)),
       button(t("shareText"), () => shareTextDialog(listId)),
       button(t("newList"), newListDialog),

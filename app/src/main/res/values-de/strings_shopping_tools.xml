@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="compact_mode">Kompaktmodus</string>
     <string name="shopping_start">Einkauf starten</string>
     <string name="shopping_stop">Einkaufsmodus beenden</string>
     <string name="shopping_mode">Einkaufsmodus</string>

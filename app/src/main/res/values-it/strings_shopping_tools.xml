@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="compact_mode">Modalità compatta</string>
     <string name="shopping_start">Inizia la spesa</string>
     <string name="shopping_stop">Esci dalla modalità spesa</string>
     <string name="shopping_mode">Modalità spesa</string>

@@ -121,6 +121,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -152,6 +153,7 @@ data class ListActions(
     val onRestoreDeferred: (ListRow) -> Unit = {},
     val onShoppingTools: () -> Unit = {},
     val onShoppingMode: () -> Unit = {},
+    val onToggleCompactMode: () -> Unit = {},
     val onCaptureStart: () -> Unit = {},
     val onCaptureEnd: () -> Unit = {},
     val onType: () -> Unit = {},
@@ -322,6 +324,7 @@ fun ListScreen(
             shoppingMode = state.personal.mode,
             onShoppingTools = { toolsOpen = true },
             onShoppingMode = { vm.updateShoppingTools { it.mode(!it.state.value.mode) } },
+            onToggleCompactMode = { vm.updateShoppingTools { it.toggleCompactMode() } },
             onPin = vm::onPin, onDefer = vm::onDefer, onRestoreDeferred = vm::onRestoreDeferred,
             onCaptureStart = {
                 val granted = ContextCompat.checkSelfPermission(
@@ -533,6 +536,7 @@ fun ListContent(
                 busy = state.busy || state.matchingBusy || state.capture != CaptureState.Idle,
                 actions = actions,
                 compact = typing != null || state.personal.mode,
+                compactMode = state.personal.compactMode,
                 typing = typing != null,
                 showReview = !state.personal.mode && state.reviewCandidates.isNotEmpty(),
                 onFinish = state.checked.takeIf { it.isNotEmpty() }?.let { rows ->
@@ -603,7 +607,7 @@ private fun ShoppingModeBar(onStop: () -> Unit) {
 }
 
 @Composable
-private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, typing: Boolean, showReview: Boolean, onFinish: (() -> Unit)?) {
+private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compact: Boolean, compactMode: Boolean, typing: Boolean, showReview: Boolean, onFinish: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
         .clip(RoundedCornerShape(20.dp))) {
@@ -634,7 +638,7 @@ private fun ListHeaderBar(header: ListHeader, directory: ListDirectory, busy: Bo
                     Icon(Icons.Outlined.History, stringResource(R.string.history_title), Modifier.size(22.dp))
                 }
                 Box(Modifier.background(colors.surface, CircleShape)) {
-                    ListMenu(header, directory, busy, actions, onFinish)
+                    ListMenu(header, directory, busy, actions, compactMode, onFinish)
                 }
             }
         }
@@ -662,7 +666,7 @@ private fun StoreFilter(stores: List<String>, selected: String?, onSelect: (Stri
 
 /** Secondary list actions stay available without competing with capture and grocery rows. */
 @Composable
-private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, onFinish: (() -> Unit)?) {
+private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compactMode: Boolean, onFinish: (() -> Unit)?) {
     var open by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf(false) }
     // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
@@ -684,6 +688,15 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             DropdownMenuItem(text = { Text(stringResource(R.string.history_title)) }, onClick = { open = false; actions.onOpenHistory() })
             DropdownMenuItem(text = { Text(stringResource(R.string.shopping_favorites)) }, onClick = { open = false; actions.onShoppingTools() })
             DropdownMenuItem(text = { Text(stringResource(if (actions.shoppingMode) R.string.shopping_stop else R.string.shopping_start)) }, onClick = { open = false; actions.onShoppingMode() })
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.compact_mode)) },
+                trailingIcon = if (compactMode) ({ Icon(Icons.Rounded.Check, null) }) else null,
+                modifier = Modifier.semantics {
+                    role = Role.Checkbox
+                    toggleableState = if (compactMode) ToggleableState.On else ToggleableState.Off
+                },
+                onClick = { open = false; actions.onToggleCompactMode() },
+            )
             onFinish?.let { finish -> DropdownMenuItem(text = { Text(stringResource(R.string.finish_shop)) }, onClick = { open = false; finish() }) }
             HorizontalDivider()
             DropdownMenuItem(text = { Text(stringResource(R.string.list_share)) }, onClick = { open = false; actions.onShareList() })
@@ -761,10 +774,12 @@ private fun EmptyInstruction() {
 }
 
 @Composable
-private fun CategoryHeader(category: Category, count: Int, color: io.theficos.usuals.model.ListColor?) {
+private fun CategoryHeader(category: Category, count: Int, color: io.theficos.usuals.model.ListColor?, compactMode: Boolean) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val accent = categoryAccent(category, dark)
-    Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 28.dp, top = 18.dp, bottom = 10.dp),
+    Row(Modifier.fillMaxWidth().padding(
+        start = 24.dp, end = 28.dp, top = if (compactMode) 8.dp else 18.dp, bottom = if (compactMode) 4.dp else 10.dp,
+    ),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(28.dp).background(accent.copy(alpha = 0.08f), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center) {
@@ -796,6 +811,7 @@ private fun ItemList(
     partial: String,
     actions: ListActions,
 ) {
+    val compactMode = state.personal.compactMode
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag(ShoppingListTag),
         contentPadding = PaddingValues(top = 6.dp, bottom = 18.dp),
@@ -809,10 +825,11 @@ private fun ItemList(
         }
         state.pending.groupBy { it.category }.toSortedMap(compareBy { state.personal.portable.categoryOrder(state.selectedStore).indexOf(it) }).forEach { (category, rows) ->
             item(key = "category:${category.name}") {
-                CategoryHeader(category, rows.size, state.directory.lists.firstOrNull { it.id == state.directory.selected }?.color)
+                CategoryHeader(category, rows.size,
+                    state.directory.lists.firstOrNull { it.id == state.directory.selected }?.color, compactMode)
             }
             itemsIndexed(rows, key = { _, row -> "item:${row.id.value}" }) { index, row ->
-                RemovableItemRow(row, actions, RoundedCornerShape(
+                RemovableItemRow(row, actions, compactMode, RoundedCornerShape(
                     topStart = if (index == 0) 16.dp else 0.dp, topEnd = if (index == 0) 16.dp else 0.dp,
                     bottomStart = if (index == rows.lastIndex) 16.dp else 0.dp,
                     bottomEnd = if (index == rows.lastIndex) 16.dp else 0.dp), divider = index < rows.lastIndex)
@@ -863,6 +880,7 @@ private fun ItemList(
                     RemovableItemRow(
                         row = row,
                         actions = actions,
+                        compactMode = compactMode,
                     )
                 }
             }
@@ -872,7 +890,7 @@ private fun ItemList(
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun RemovableItemRow(row: ListRow, actions: ListActions, shape: Shape = RoundedCornerShape(16.dp), divider: Boolean = false) {
+private fun RemovableItemRow(row: ListRow, actions: ListActions, compactMode: Boolean, shape: Shape = RoundedCornerShape(16.dp), divider: Boolean = false) {
     key(row.id, row.version ?: row) {
         val current by rememberUpdatedState(actions)
         val dismiss = rememberSwipeToDismissBoxState(confirmValueChange = { value ->
@@ -887,7 +905,7 @@ private fun RemovableItemRow(row: ListRow, actions: ListActions, shape: Shape = 
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer))
         }) {
             Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
-                ItemRow(row, actions, divider)
+                ItemRow(row, actions, divider, compactMode)
             }
         }
     }
@@ -900,6 +918,7 @@ private fun ItemRow(
     row: ListRow,
     actions: ListActions,
     divider: Boolean,
+    compactMode: Boolean,
 ) {
     val checkLabel = stringResource(
         if (row.checked) R.string.item_uncheck else R.string.item_check,
@@ -909,7 +928,7 @@ private fun ItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = if (actions.shoppingMode) 84.dp else 64.dp)
+            .heightIn(min = when { compactMode -> 48.dp; actions.shoppingMode -> 84.dp; else -> 64.dp })
             .semantics { toggleableState = if (row.checked) ToggleableState.On else ToggleableState.Off }
             .combinedClickable(
                 role = Role.Checkbox,
@@ -924,7 +943,7 @@ private fun ItemRow(
                     end = androidx.compose.ui.geometry.Offset(size.width - 16.dp.toPx(), size.height),
                     strokeWidth = 1.dp.toPx())
             }
-            .padding(horizontal = 18.dp, vertical = 15.dp),
+            .padding(horizontal = 18.dp, vertical = if (compactMode) 4.dp else 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.padding(end = 14.dp).size(24.dp)

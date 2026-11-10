@@ -46,6 +46,31 @@ class QuietListScreenTest {
         }
     }
 
+    @Test fun compact_mode_reduces_row_height_and_keeps_rows_actionable() {
+        val compactMode = mutableStateOf(false)
+        var checked = false
+        compose.setContent { UsualsTheme {
+            ListContent(ListUiState(pending = listOf(row.copy(note = "Whole milk")),
+                personal = ShoppingPreferences(compactMode = compactMode.value)), ListActions(
+                onToggleCompactMode = { compactMode.value = !compactMode.value },
+                onCheckedChange = { _, value -> checked = value }))
+        } }
+        val milk = compose.onNodeWithText("Milk")
+        fun rowHeight() = milk.getUnclippedBoundsInRoot().let { it.bottom - it.top }
+        val standardHeight = rowHeight()
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Compact mode").performScrollTo().assertIsOff().performClick()
+        val compactHeight = rowHeight()
+        assertThat(compactHeight.value).isLessThan(standardHeight.value)
+        milk.assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithText("Whole milk").assertIsDisplayed()
+        milk.performClick()
+        assertThat(checked).isTrue()
+        compose.onNodeWithContentDescription("More options").performClick()
+        compose.onNodeWithText("Compact mode").performScrollTo().assertIsOn().performClick()
+        assertThat(rowHeight()).isEqualTo(standardHeight)
+    }
+
     @Test fun review_is_a_quiet_single_action() {
         var opened = 0
         compose.setContent {

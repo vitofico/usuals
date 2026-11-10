@@ -1,7 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { palettes, paletteId, readPalette, writePalette, backgroundStyleId, readBackgroundStyle, writeBackgroundStyle } from "../src/appearance.mjs";
+import { palettes, paletteId, readPalette, writePalette, backgroundStyleId, readBackgroundStyle, writeBackgroundStyle, readCompactMode, writeCompactMode } from "../src/appearance.mjs";
+
+test("compact mode defaults off and persists independently of the palette", () => {
+  const values = new Map();
+  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
+  assert.equal(readCompactMode(storage), false);
+  writeCompactMode(true, storage);
+  writePalette("grove", storage);
+  assert.equal(readCompactMode(storage), true);
+  writeCompactMode(false, storage);
+  assert.equal(readCompactMode(storage), false);
+  assert.equal(readCompactMode(null), false);
+  assert.doesNotThrow(() => writeCompactMode(true, null));
+});
 
 test("background artwork defaults on and a deliberate plain choice survives palette changes and reloads", () => {
   const values = new Map();
