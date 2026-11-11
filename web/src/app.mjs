@@ -11,6 +11,7 @@ import { shoppingStatsSection } from "./shopping-stats.mjs";
 import { palettes, readPalette, writePalette, backgroundStyles, readBackgroundStyle, writeBackgroundStyle, readCompactMode, writeCompactMode } from "./appearance.mjs";
 import { BrowserActivity, NotificationChoices } from "./notifications.mjs";
 import { tutorialCompleted, completeTutorial } from "./tutorial.mjs";
+import { WhatsNewStatus, compactModeUpdate, latestUpdate } from "./whats-new.mjs";
 import { qrMatrix } from "./qr.mjs";
 import { connectLink, connectAppLink, parseConnectLink, connectionCode } from "./connect.mjs";
 import { importDialog } from "./import-dialog.mjs";
@@ -46,6 +47,8 @@ function localStore() {
 let palette = readPalette(localStore());
 let backgroundStyle = readBackgroundStyle(localStore());
 let compactMode = readCompactMode(localStore());
+const whatsNewStatus = new WhatsNewStatus(localStore());
+let whatsNewReturnView = "list";
 document.documentElement.dataset.compactList = String(compactMode);
 let tutorialSeen = tutorialCompleted(localStore()), tutorialActive = false;
 function applyAppearance() {
@@ -175,6 +178,7 @@ function startLists() {
     onUpdate: () => {
       dialogRefresh?.();
       if (screen === "lists") renderLists();
+      if (screen === "whats-new") updateWhatsNewCompactAction();
     },
     onPage: (page, { live }) => {
       const summary = activity.consume(page, { lists: store.lists, live, selected: screen === "lists" ? selected : null, visible: !document.hidden });
@@ -306,14 +310,54 @@ async function localeLoad(language) {
   $("navigation").setAttribute("aria-label", t("navigation"));
 }
 function preferencesDialog() {
+  const unread = whatsNewStatus.isUnread(latestUpdate);
+  const canOpenWhatsNew = !connectionDone && !pendingConnect && (!invitation || invitation.state === "none") && !connectionApprovalPending();
   openDialog(el("div", {}, el("h2", {}, t("quietPreferences")),
     el("div", { class: "menu-actions" },
       button(t("appearance"), appearanceDialog),
       ...(account ? [button(t("notificationsTitle"), notificationsDialog)] : []),
       button(`${t("language")} · ${locale.toUpperCase()}`, languageDialog),
-      button(t("tutorialReplay"), tutorialDialog)),
+      button(t("tutorialReplay"), tutorialDialog),
+      canOpenWhatsNew ? button([t("whatsNewTitle"), unread ? el("span", { class: "whats-new-dot", "aria-hidden": "true" }) : null], () => {
+        if (view !== "whats-new") whatsNewReturnView = view;
+        view = "whats-new";
+        closeDialog(false);
+        clearNotice();
+        render().then(() => $("whats-new-heading")?.focus()).catch(failure);
+      }, "secondary", { "aria-label": unread ? t("whatsNewUnreadLabel") : null }) : null),
     paragraph("serverHeld", "helper"),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+}
+function updateWhatsNewCompactAction() {
+  const action = $("whats-new-compact-action");
+  const hadFocus = action === document.activeElement;
+  action.hidden = !(account && store?.cursor && [...store.lists.values()].some((list) => !list.archived));
+  if (action.hidden && hadFocus) $("whats-new-heading").focus();
+}
+function renderWhatsNew() {
+  screen = "whats-new";
+  whatsNewStatus.markSeen(latestUpdate);
+  const back = button(`← ${t("quietPreferences")}`, () => {
+    view = whatsNewReturnView;
+    render().then(() => { $("preferences").focus(); preferencesDialog(); }).catch(failure);
+  }, "text-button");
+  const findCompact = button(t("whatsNewCompactAction"), () => {
+    view = "list";
+    render().then(() => {
+      const menuButton = $("list-menu-button");
+      if (menuButton) {
+        menuButton.focus();
+        listMenu(selected, { focusCompact: true });
+      } else $("main").focus();
+    }).catch(failure);
+  }, "text-button", { id: "whats-new-compact-action" });
+  const entry = (group, titleKey, body, action) => el("section", { class: "whats-new-entry" },
+    el("h2", { class: "eyebrow" }, t(group)), el("h3", {}, t(titleKey)), paragraph(body, "helper"), action);
+  $("content").replaceChildren(el("div", { class: "whats-new-page" },
+    back, el("h1", { id: "whats-new-heading", tabindex: "-1" }, t("whatsNewTitle")),
+    entry("whatsNewLatest", "whatsNewCompactTitle", "whatsNewCompactBody", findCompact),
+    entry("whatsNewEarlier", "whatsNewNotificationsTitle", "whatsNewNotificationsBody")));
+  updateWhatsNewCompactAction();
 }
 function clearActivity() {
   $("activity-notice").hidden = true;
@@ -446,12 +490,13 @@ function welcome() {
       paragraph(config?.emailInvitations ? "emailSignInText" : config?.localEnabled ? "localSignInText" : "signInText", "helper")),
     brandCollage("welcome-art"));
 }
+const connectionApprovalPending = () => account && pendingConnectionId && ticketPattern.test(pendingConnectionId);
 async function render() {
   const own = generation;
   screen = null;
   setSync(syncState);
   $("main").dataset.view = view;
-  $("section-label").textContent = t(view === "admin" ? "admin" : view === "account" ? "account" : "lists");
+  $("section-label").textContent = t(view === "admin" ? "admin" : view === "account" ? "account" : view === "whats-new" ? "whatsNewTitle" : "lists");
   const accountButton = document.querySelector('[data-view="account"]');
   const name = accountName(account?.user);
   accountButton.classList.toggle("named-account", !!name);
@@ -487,12 +532,13 @@ async function render() {
     $("content").replaceChildren(invitationLanding());
     return;
   }
-  if (!account) {
-    $("content").replaceChildren(welcome());
+  if (connectionApprovalPending()) {
+    await renderConnectionApproval(own, pendingConnectionId);
     return;
   }
-  if (pendingConnectionId && ticketPattern.test(pendingConnectionId)) {
-    await renderConnectionApproval(own, pendingConnectionId);
+  if (view === "whats-new") return renderWhatsNew();
+  if (!account) {
+    $("content").replaceChildren(welcome());
     return;
   }
   if (view === "account") return renderAccount(own);
@@ -666,7 +712,7 @@ function renderLists() {
           listSyncLabel(),
           shopping ? null : button(icon("replay"), () => reviewDialog(id), "list-shortcut", { "aria-label": t("reviewTitle"), title: t("reviewTitle"), id: "review-shortcut" }),
           button(icon("history"), () => historyDialog(id), "list-shortcut", { "aria-label": t("historyTitle"), title: t("historyTitle"), id: "history-shortcut" }),
-          button(icon("more"), () => listMenu(id), "list-shortcut", { "aria-haspopup": "dialog",
+          button(icon("more"), () => listMenu(id), "list-shortcut", { id: "list-menu-button", "aria-haspopup": "dialog",
             "aria-label": t("quietListOptionsFor", { name: listName(list) }), title: t("quietListOptions") }))),
       el("p", { class: "list-summary" }, el("span", {}, t("itemCount", { count: allItems.filter((row) => !isChecked(row)).length })),
         el("span", {}, t(people.length > 1 ? "sharedTitle" : "justYou")))),
@@ -1059,10 +1105,19 @@ function nameDialog(heading, initial, save) {
 function newListDialog() {
   nameDialog("newList", "", async (name) => { selected = (await lists.create(name)).id; });
 }
-function listMenu(listId) {
+function listMenu(listId, { focusCompact = false } = {}) {
   const list = store.lists.get(listId);
   if (!list) return;
   const values = { name: listName(list) };
+  const compactIsNew = latestUpdate === compactModeUpdate && !compactMode && !whatsNewStatus.compactModeDiscovered;
+  const compactToggle = button([t("compactMode"), compactIsNew ? el("span", { class: "whats-new-badge" }, t("whatsNewBadge")) : null,
+    compactMode ? el("span", { "aria-hidden": "true" }, "✓") : null], () => {
+    compactMode = !compactMode;
+    writeCompactMode(compactMode, localStore());
+    whatsNewStatus.markCompactModeDiscovered();
+    document.documentElement.dataset.compactList = String(compactMode);
+    closeDialog();
+  }, "secondary", { "aria-pressed": compactMode });
   openDialog(el("div", {}, el("h2", {}, listName(list)),
     el("div", { class: "menu-actions" },
       shoppingModes.has(listId) ? null : button(t("reviewTitle"), () => reviewDialog(listId)),
@@ -1071,12 +1126,7 @@ function listMenu(listId) {
       button(t("pack_title"), () => packsDialog(listId)),
       button(t(shoppingModes.has(listId) ? "shoppingStop" : "shoppingStart"), () => toggleShopping(listId)),
       listRows(list.projection).some(isChecked) ? button(t("finishShopping"), () => { closeDialog(); act(() => finishShopping(listId)); }) : null,
-      button([t("compactMode"), compactMode ? el("span", { "aria-hidden": "true" }, "✓") : null], () => {
-        compactMode = !compactMode;
-        writeCompactMode(compactMode, localStore());
-        document.documentElement.dataset.compactList = String(compactMode);
-        closeDialog();
-      }, "secondary", { "aria-pressed": compactMode }),
+      compactToggle,
       button(t("share"), () => shareDialog(listId)),
       button(t("shareText"), () => shareTextDialog(listId)),
       button(t("newList"), newListDialog),
@@ -1092,6 +1142,7 @@ function listMenu(listId) {
         ? button(t("deleteList"), () => messageDialog("deleteListTitle", "deleteListText", () => lists.delete(listId), values), "danger")
         : button(t("leaveList"), () => messageDialog("leaveListTitle", "leaveListText", () => lists.leave(listId, account.user.id), values), "danger")),
     el("div", { class: "button-row" }, button(t("close"), closeDialog))));
+  if (focusCompact) compactToggle.focus();
 }
 function listColorDialog(listId) {
   const list = store.lists.get(listId);

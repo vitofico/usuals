@@ -1004,3 +1004,11 @@ dialog.pairing { max-width: 760px; }
 main[data-shopping="true"] .finish-actions { position: sticky; bottom: 12px; background: var(--paper, var(--surface)); border-radius: 16px; padding: 12px; }
 .review-original { display: grid; gap: 8px; margin-block: 16px; }
 .review-original .import-preview { max-height: 240px; width: 100%; object-fit: contain; }
+
+.whats-new-page { display: grid; gap: 20px; max-width: 640px; }
+.whats-new-page > button, .whats-new-entry > button { justify-self: start; }
+.whats-new-page h1, .whats-new-entry h3, .whats-new-entry p { margin: 0; }
+.whats-new-entry { display: grid; gap: 8px; }
+.whats-new-entry + .whats-new-entry { border-top: 1px solid var(--outline-variant); padding-top: 20px; }
+.whats-new-dot { display: inline-block; inline-size: 7px; block-size: 7px; margin-inline-start: 8px; border-radius: 50%; background: currentColor; vertical-align: middle; }
+.whats-new-badge { margin-inline-start: 8px; color: var(--primary); font-size: 0.75em; font-weight: 700; }

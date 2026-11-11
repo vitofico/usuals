@@ -87,4 +87,17 @@ class PreferenceSettingsStoreTest {
         assertThat(reopened.declined("groceries", "bananna", "bandana")).isFalse()
     }
 
+    @Test
+    fun release_notes_read_state_and_feature_discovery_persist_independently() = runTest {
+        val store = PreferenceSettingsStore(context)
+        assertThat(store.whatsNewSeen.value).isNull()
+        store.markWhatsNewSeen("compact-list-mode")
+        assertThat(store.compactModeDiscovered.value).isFalse()
+        store.markCompactModeDiscovered()
+        store.save(AppSettings())
+
+        val reopened = PreferenceSettingsStore(context)
+        assertThat(reopened.whatsNewSeen.value).isEqualTo("compact-list-mode")
+        assertThat(reopened.compactModeDiscovered.value).isTrue()
+    }
 }

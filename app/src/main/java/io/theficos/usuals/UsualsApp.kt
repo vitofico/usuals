@@ -33,6 +33,9 @@ import io.theficos.usuals.ui.scan.ScanNameSheet
 import io.theficos.usuals.ui.scan.rememberBarcodeCamera
 import io.theficos.usuals.ui.settings.SettingsScreen
 import io.theficos.usuals.ui.settings.SettingsViewModel
+import io.theficos.usuals.ui.settings.WhatsNewScreen
+import io.theficos.usuals.ui.settings.COMPACT_MODE_UPDATE
+import io.theficos.usuals.ui.settings.LATEST_UPDATE
 import io.theficos.usuals.ui.theme.AppPalette
 import io.theficos.usuals.ui.theme.BackgroundStyle
 
@@ -45,6 +48,7 @@ object Routes {
     const val LIST = "list"
     const val SETTINGS = "settings"
     const val ADVANCED = "advanced-settings"
+    const val WHATS_NEW = "whats-new"
     const val SCAN = "scan"
     const val HISTORY = "history"
     const val ACCOUNT = "account"
@@ -58,7 +62,7 @@ object Routes {
      * nothing, so their buttons navigated to a destination that popped itself
      * before drawing a frame, while every unit test stayed green.
      */
-    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, ACCOUNT, ADVANCED)
+    val ALL: List<String> = listOf(LIST, SETTINGS, SCAN, HISTORY, ACCOUNT, ADVANCED, WHATS_NEW)
 }
 
 /**
@@ -109,6 +113,7 @@ fun UsualsApp(
     var receiptScope by rememberSaveable { mutableStateOf<String?>(null) }
     var receiptTrip by rememberSaveable { mutableStateOf<String?>(null) }
     var sharing by rememberSaveable { mutableStateOf<String?>(null) }
+    var openCompactModeMenu by rememberSaveable { mutableStateOf(false) }
     // A camera refusal, remembered above the scan destination. Design section
     // 12 says to fall back to typed entry and not to re-prompt, and the scan
     // screen cannot keep that promise on its own: pressing back pops its entry
@@ -135,6 +140,8 @@ fun UsualsApp(
         modifier = if (touring) Modifier.clearAndSetSemantics {} else Modifier) {
 
         composable(Routes.LIST) {
+            val settings = ServiceLocator.settingsStore
+            val compactModeDiscovered by settings.compactModeDiscovered.collectAsStateWithLifecycle()
             ListScreen(
                 vm = listViewModel,
                 onOpenScan = { navController.navigate(Routes.SCAN) },
@@ -147,19 +154,37 @@ fun UsualsApp(
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 sharedText = sharedText?.takeIf { accountLink == null },
                 onSharedTextConsumed = onSharedTextConsumed,
+                openCompactModeMenu = openCompactModeMenu,
+                onCompactModeMenuOpened = { openCompactModeMenu = false },
+                compactModeIsNew = LATEST_UPDATE == COMPACT_MODE_UPDATE && !compactModeDiscovered,
+                onCompactModeDiscovered = settings::markCompactModeDiscovered,
             )
         }
 
         composable(Routes.SETTINGS) {
             val factory = remember(settingsViewModelFactory) { settingsViewModelFactory() }
             val vm: SettingsViewModel = viewModel(factory = factory)
+            val seen by ServiceLocator.settingsStore.whatsNewSeen.collectAsStateWithLifecycle()
             SettingsScreen(vm = vm, onBack = { navController.popBackStack() },
                 onOpenTutorial = { tutorialSession++; tutorialRequested = true },
                 onOpenAccount = { navController.navigate(Routes.ACCOUNT) },
                 onOpenAdvanced = { navController.navigate(Routes.ADVANCED) },
+                onOpenWhatsNew = { navController.navigate(Routes.WHATS_NEW) { launchSingleTop = true } },
+                whatsNewUnread = seen != LATEST_UPDATE,
                 palette = palette, onPaletteChange = onPaletteChange, rowFacts = rowFacts,
                 backgroundStyle = backgroundStyle, onBackgroundStyleChange = onBackgroundStyleChange,
                 notifications = ServiceLocator.sharedNotifications, reminders = ServiceLocator.reminders)
+        }
+
+        composable(Routes.WHATS_NEW) {
+            LaunchedEffect(Unit) { ServiceLocator.settingsStore.markWhatsNewSeen(LATEST_UPDATE) }
+            WhatsNewScreen(
+                onBack = { navController.popBackStack() },
+                onFindCompactMode = {
+                    openCompactModeMenu = true
+                    navController.popBackStack(Routes.LIST, inclusive = false)
+                },
+            )
         }
 
         composable(Routes.ADVANCED) {

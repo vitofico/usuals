@@ -3,6 +3,9 @@
 package io.theficos.usuals.ui.settings
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Shield
@@ -90,6 +94,8 @@ fun SettingsScreen(
     onBackgroundStyleChange: (BackgroundStyle) -> Unit = {},
     notifications: io.theficos.usuals.ui.notifications.SharedNotifications? = null,
     reminders: io.theficos.usuals.ui.shopping.ReminderController? = null,
+    onOpenWhatsNew: (() -> Unit)? = null,
+    whatsNewUnread: Boolean = false,
 ) {
     val state by vm.state.collectAsState()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -134,7 +140,7 @@ fun SettingsScreen(
                     SettingsLink(stringResource(R.string.account_title), Icons.Outlined.AccountCircle,
                         state.account?.let { account -> account.name?.takeIf(String::isNotBlank)?.let {
                             stringResource(R.string.account_signed_in_as, it) + "\n" + account.host
-                        } ?: stringResource(R.string.settings_account_on, account.host) } ?: stringResource(R.string.settings_offline), onOpenAccount)
+                        } ?: stringResource(R.string.settings_account_on, account.host) } ?: stringResource(R.string.settings_offline), onClick = onOpenAccount)
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsLink(stringResource(R.string.appearance_title), Icons.Outlined.Palette) { panel = "appearance" }
                     if (notifications != null) SettingsLink(stringResource(R.string.notifications_title), Icons.Outlined.Notifications) { panel = "notifications" }
@@ -144,6 +150,10 @@ fun SettingsScreen(
                         SettingsLink(stringResource(R.string.row_facts_allergens), Icons.Outlined.WarningAmber) { panel = "allergens" }
                     }
                     SettingsLink(stringResource(R.string.settings_help), Icons.AutoMirrored.Outlined.HelpOutline) { panel = "help" }
+                    onOpenWhatsNew?.let {
+                        SettingsLink(stringResource(R.string.whats_new_title), Icons.Outlined.NewReleases,
+                            unread = whatsNewUnread, onClick = it)
+                    }
                 }
                 CaptureMatchingSection(state, vm::setAutomaticMatching)
             }
@@ -173,14 +183,17 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsLink(label: String, icon: ImageVector, supporting: String? = null, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
+private fun SettingsLink(label: String, icon: ImageVector, supporting: String? = null, unread: Boolean = false, onClick: () -> Unit) {
+    val unreadDescription = if (unread) stringResource(R.string.whats_new_unread) else null
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick)
+        .semantics { unreadDescription?.let { stateDescription = it } }.padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
             supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+        if (unread) Box(Modifier.size(7.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
         Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

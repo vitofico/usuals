@@ -154,6 +154,9 @@ data class ListActions(
     val onShoppingTools: () -> Unit = {},
     val onShoppingMode: () -> Unit = {},
     val onToggleCompactMode: () -> Unit = {},
+    val openCompactModeMenu: Boolean = false,
+    val onCompactModeMenuOpened: () -> Unit = {},
+    val compactModeIsNew: Boolean = false,
     val onCaptureStart: () -> Unit = {},
     val onCaptureEnd: () -> Unit = {},
     val onType: () -> Unit = {},
@@ -268,6 +271,10 @@ fun ListScreen(
     onOpenWallet: () -> Unit = {},
     onChooseWallet: () -> Unit = {},
     onOpenReceipt: (String) -> Unit = {},
+    openCompactModeMenu: Boolean = false,
+    onCompactModeMenuOpened: () -> Unit = {},
+    compactModeIsNew: Boolean = false,
+    onCompactModeDiscovered: () -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -324,7 +331,13 @@ fun ListScreen(
             shoppingMode = state.personal.mode,
             onShoppingTools = { toolsOpen = true },
             onShoppingMode = { vm.updateShoppingTools { it.mode(!it.state.value.mode) } },
-            onToggleCompactMode = { vm.updateShoppingTools { it.toggleCompactMode() } },
+            onToggleCompactMode = {
+                vm.updateShoppingTools { it.toggleCompactMode() }
+                onCompactModeDiscovered()
+            },
+            openCompactModeMenu = openCompactModeMenu,
+            onCompactModeMenuOpened = onCompactModeMenuOpened,
+            compactModeIsNew = compactModeIsNew,
             onPin = vm::onPin, onDefer = vm::onDefer, onRestoreDeferred = vm::onRestoreDeferred,
             onCaptureStart = {
                 val granted = ContextCompat.checkSelfPermission(
@@ -669,6 +682,13 @@ private fun StoreFilter(stores: List<String>, selected: String?, onSelect: (Stri
 private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean, actions: ListActions, compactMode: Boolean, onFinish: (() -> Unit)?) {
     var open by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf(false) }
+    LaunchedEffect(actions.openCompactModeMenu, busy) {
+        if (actions.openCompactModeMenu && !busy) {
+            managing = false
+            open = true
+            actions.onCompactModeMenuOpened()
+        }
+    }
     // Each dialog keeps the list it was opened for: sync can change the selection while it is open.
     var coloring by remember { mutableStateOf<NamedList?>(null) }
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
@@ -689,7 +709,15 @@ private fun ListMenu(header: ListHeader, directory: ListDirectory, busy: Boolean
             DropdownMenuItem(text = { Text(stringResource(R.string.shopping_favorites)) }, onClick = { open = false; actions.onShoppingTools() })
             DropdownMenuItem(text = { Text(stringResource(if (actions.shoppingMode) R.string.shopping_stop else R.string.shopping_start)) }, onClick = { open = false; actions.onShoppingMode() })
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.compact_mode)) },
+                text = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.compact_mode))
+                        if (actions.compactModeIsNew && !compactMode) {
+                            Text(stringResource(R.string.whats_new_badge), style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                },
                 trailingIcon = if (compactMode) ({ Icon(Icons.Rounded.Check, null) }) else null,
                 modifier = Modifier.semantics {
                     role = Role.Checkbox

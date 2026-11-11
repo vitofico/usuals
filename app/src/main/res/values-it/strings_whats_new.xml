@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="whats_new_title">Novità</string>
+    <string name="whats_new_unread">Novità non lette</string>
+    <string name="whats_new_latest">Ultime novità</string>
+    <string name="whats_new_earlier">In precedenza</string>
+    <string name="whats_new_badge">Nuovo</string>
+    <string name="whats_new_compact_title">Visualizza più articoli sullo schermo</string>
+    <string name="whats_new_compact_body">La modalità compatta riduce lo spazio tra gli articoli delle liste. La trovi nel menu della lista.</string>
+    <string name="whats_new_compact_action">Trova la modalità compatta</string>
+    <string name="whats_new_notifications_title">Ricevi aggiornamenti sulle liste condivise</string>
+    <string name="whats_new_notifications_body">Attiva le notifiche per sapere quando qualcuno aggiunge articoli o termina la spesa.</string>
+</resources>
