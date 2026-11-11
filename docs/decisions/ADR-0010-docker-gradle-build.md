@@ -50,7 +50,7 @@ has drifted from.
   changes it. Onboarding is `git clone` then `scripts/dgradle test`.
 - ✅ F-Droid reproducibility becomes tractable, because the toolchain versions are
   a file rather than a recollection.
-- ⚠️ The first run builds the image, roughly five minutes, longer under Rosetta.
+- ⚠️ The first run pulls the published image, or builds it when the Dockerfile is not on main yet: roughly five minutes, longer under Rosetta.
   The script says so before it starts, which is the difference between a wait and
   a hang.
 - ⚠️ Docker is a hard prerequisite. A contributor who cannot run Docker cannot
