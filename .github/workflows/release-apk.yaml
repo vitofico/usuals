@@ -79,13 +79,13 @@ jobs:
             --fetch-existing app-release.apk --destination app/build/outputs/apk/release/app-release.apk >> "$GITHUB_OUTPUT"
       - name: Check a manually selected source
         if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true' && inputs.source == ''
-        run: scripts/dgradle verifyReleaseTools test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
+        run: scripts/retry-gradle-download scripts/dgradle verifyReleaseTools test lint --no-daemon --no-watch-fs --no-parallel --max-workers=2
       - name: Build a separate clean unsigned release without signing material
         if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing != 'true'
-        run: scripts/dgradle verifyReleaseTools :app:clean :app:assembleRelease --no-build-cache --no-daemon --no-watch-fs --no-parallel --max-workers=2
+        run: scripts/retry-gradle-download scripts/dgradle verifyReleaseTools :app:clean :app:assembleRelease --no-build-cache --no-daemon --no-watch-fs --no-parallel --max-workers=2
       - name: Prepare tools for verification of an existing APK
         if: steps.plan.outputs.ready == 'true' && steps.existing.outputs.existing == 'true'
-        run: scripts/dgradle help --no-daemon --no-watch-fs --no-parallel --max-workers=2
+        run: scripts/retry-gradle-download scripts/dgradle help --no-daemon --no-watch-fs --no-parallel --max-workers=2
       - name: Restore runner ownership of Docker build outputs
         if: steps.plan.outputs.ready == 'true'
         run: sudo chown -R "$(id -u):$(id -g)" app/build
