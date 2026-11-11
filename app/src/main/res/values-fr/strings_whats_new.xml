@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="whats_new_title">Nouveautés</string>
+    <string name="whats_new_unread">Nouveautés non lues</string>
+    <string name="whats_new_latest">Récent</string>
+    <string name="whats_new_earlier">Précédemment</string>
+    <string name="whats_new_badge">Nouveau</string>
+    <string name="whats_new_compact_title">Affichez plus d’articles à l’écran</string>
+    <string name="whats_new_compact_body">Le mode compact réduit l’espace entre les articles de vos listes. Vous le trouverez dans le menu de la liste.</string>
+    <string name="whats_new_compact_action">Trouver le mode compact</string>
+    <string name="whats_new_notifications_title">Suivez l’activité des listes partagées</string>
+    <string name="whats_new_notifications_body">Activez les notifications pour savoir quand quelqu’un ajoute des articles ou termine ses courses.</string>
+</resources>

@@ -72,6 +72,24 @@ class PreferenceSettingsStore(
         }
     }
 
+    private val whatsNewSeenState = MutableStateFlow(prefs.getString("whats_new_seen", null))
+    val whatsNewSeen = whatsNewSeenState.asStateFlow()
+
+    fun markWhatsNewSeen(update: String) {
+        if (whatsNewSeenState.value == update) return
+        prefs.edit().putString("whats_new_seen", update).apply()
+        whatsNewSeenState.value = update
+    }
+
+    private val compactModeDiscoveredState = MutableStateFlow(prefs.getBoolean("compact_mode_discovered", false))
+    val compactModeDiscovered = compactModeDiscoveredState.asStateFlow()
+
+    fun markCompactModeDiscovered() {
+        if (compactModeDiscoveredState.value) return
+        prefs.edit().putBoolean("compact_mode_discovered", true).apply()
+        compactModeDiscoveredState.value = true
+    }
+
     fun dailyCallCeiling(): Int = prefs.getInt(KEY_DAILY_CALL_CEILING, AppSettings.DEFAULT_DAILY_CALL_CEILING).coerceAtLeast(0)
 
     override suspend fun load(): AppSettings {

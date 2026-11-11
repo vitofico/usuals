@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="whats_new_title">Was ist neu?</string>
+    <string name="whats_new_unread">Ungelesene Neuerungen</string>
+    <string name="whats_new_latest">Aktuell</string>
+    <string name="whats_new_earlier">Früher</string>
+    <string name="whats_new_badge">Neu</string>
+    <string name="whats_new_compact_title">Mehr Artikel auf dem Bildschirm</string>
+    <string name="whats_new_compact_body">Der Kompaktmodus verringert den Abstand zwischen den Artikeln deiner Listen. Du findest ihn im Listenmenü.</string>
+    <string name="whats_new_compact_action">Kompaktmodus finden</string>
+    <string name="whats_new_notifications_title">Über geteilte Listen auf dem Laufenden bleiben</string>
+    <string name="whats_new_notifications_body">Aktiviere Benachrichtigungen, um zu erfahren, wenn jemand Artikel hinzufügt oder einen Einkauf abschließt.</string>
+</resources>
