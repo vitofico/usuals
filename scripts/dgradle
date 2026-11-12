@@ -6,8 +6,8 @@
 #   scripts/dgradle :agent:test
 #   scripts/dgradle :app:assembleDebug
 #
-# Host JDK and Android SDK are not required. The image is built on first use,
-# and rebuilt whenever the Dockerfile changes.
+# Host JDK and Android SDK are not required. The image is pulled on first use,
+# or built when no published image matches the Dockerfile.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
@@ -31,6 +31,7 @@ else
   DOCKERFILE_SHA=$(sha256sum "$ROOT/Dockerfile" | cut -c1-12)
 fi
 IMAGE="usuals-build:$DOCKERFILE_SHA"
+PUBLISHED_IMAGE="ghcr.io/vitofico/usuals-build:$DOCKERFILE_SHA"
 
 # Different checkouts must not share writable Gradle caches: Gradle's lock-owner
 # communication cannot cross Docker PID/network namespaces. Serialize builds of
@@ -43,9 +44,16 @@ fi
 GRADLE_CACHE="usuals-gradle-cache-$WORKSPACE_SHA"
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-  echo "[dgradle] building $IMAGE under linux/amd64 (Rosetta on Apple Silicon, ~5 min)…"
-  # Base images are pinned by digest. A changed toolchain gets a new local tag.
-  docker build --pull --platform linux/amd64 -t "$IMAGE" -t usuals-build:latest "$ROOT"
+  # .github/workflows/build-image.yaml publishes the image of every Dockerfile
+  # that reaches main, so a CI job does not depend on apt and the Android SDK
+  # servers answering. A Dockerfile that is not on main yet is built here.
+  if docker pull --quiet --platform linux/amd64 "$PUBLISHED_IMAGE" >&2 2>/dev/null; then
+    docker tag "$PUBLISHED_IMAGE" "$IMAGE"
+  else
+    echo "[dgradle] building $IMAGE under linux/amd64 (Rosetta on Apple Silicon, ~5 min)…"
+    # Base images are pinned by digest. A changed toolchain gets a new local tag.
+    docker build --pull --platform linux/amd64 -t "$IMAGE" -t usuals-build:latest "$ROOT"
+  fi
 fi
 
 # Only allocate a TTY when stdin is one, which keeps the script usable from

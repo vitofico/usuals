@@ -1,0 +1,35 @@
+name: build-image
+# Publishes the build image scripts/dgradle pulls, tagged by the Dockerfile's
+# hash. A tag is written once and never replaced.
+on:
+  push:
+    branches: [main]
+    paths: [Dockerfile, .github/workflows/build-image.yaml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-image
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/vitofico/usuals-build:$(sha256sum Dockerfile | cut -c1-12)"
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            echo "$image is already published."
+            exit 0
+          fi
+          docker build --pull --platform linux/amd64 \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            -t "$image" .
+          docker push "$image"
