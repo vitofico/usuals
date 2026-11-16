@@ -4,7 +4,7 @@
 # image, so a contributor needs neither a host JDK nor an Android SDK, and CI
 # and a laptop compile the same bytes. Borrowed from quire, where the same
 # arrangement is what makes F-Droid reproducible-build checks tractable.
-FROM --platform=linux/amd64 node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS web-tests
+FROM --platform=linux/amd64 node:24.22.3-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS web-tests
 FROM --platform=linux/amd64 eclipse-temurin:21-jdk-jammy@sha256:742daacb9316be4b6fc60258f6e4ac2a11882f6c597373c92290a57bfad0d2e0
 
 ARG ANDROID_CMDLINE_TOOLS_VERSION=11076708
