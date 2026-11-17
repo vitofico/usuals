@@ -41,10 +41,6 @@
         <item quantity="many">¿Guardar estos %1$d artículos marcados anteriormente como una compra?</item>
     </plurals>
     <string name="history_not_now">Ahora no</string>
-    <string name="history_still_needed">¿Todavía lo necesitas?</string>
-    <string name="history_carry_over">Estos artículos llevan varias compras pendientes: %1$s</string>
-    <string name="history_keep">Conservar</string>
-    <string name="history_remove">Eliminar</string>
     <string name="share_list">Enviar como texto</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>

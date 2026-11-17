@@ -38,10 +38,6 @@
         <item quantity="other">File these %1$d older checked items as a shop?</item>
     </plurals>
     <string name="history_not_now">Not now</string>
-    <string name="history_still_needed">Still needed?</string>
-    <string name="history_carry_over">These items have stayed open across several shops: %1$s</string>
-    <string name="history_keep">Keep</string>
-    <string name="history_remove">Remove</string>
     <string name="share_list">Send as text</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>

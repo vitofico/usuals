@@ -135,7 +135,6 @@ sealed interface CaptureState {
 sealed interface ListPrompt {
     data object AllChecked : ListPrompt
     data class Stale(val ids: Set<ItemId>) : ListPrompt
-    data class CarryOver(val ids: Set<ItemId>, val names: List<String>) : ListPrompt
 }
 
 data class CaptureMatchChoice(val incoming: Item, val usual: ItemMemory)

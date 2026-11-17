@@ -242,7 +242,6 @@ data class ListActions(
     val onDismissPrompt: () -> Unit = {},
     val onDismissFinished: () -> Unit = {},
     val onDismissHistoryError: () -> Unit = {},
-    val onRemoveItems: (Set<ItemId>) -> Unit = {},
     val onClearItems: () -> Unit = {},
 )
 
@@ -447,7 +446,6 @@ fun ListScreen(
             onDismissPrompt = vm::onDismissPrompt,
             onDismissFinished = vm::onDismissFinished,
             onDismissHistoryError = vm::onDismissHistoryError,
-            onRemoveItems = vm::onRemoveItems,
             onClearItems = vm::onClearItems,
         ),
         modifier = modifier,
@@ -1285,25 +1283,21 @@ private fun HistoryCompletion(choice: ItemMemory, actions: ListActions) {
 private fun ListHistoryDialogs(state: ListUiState, actions: ListActions) {
     val prompt = state.prompt
     if (prompt != null) {
+        val onlyIds = (prompt as? ListPrompt.Stale)?.ids
         AlertDialog(
             onDismissRequest = actions.onDismissPrompt,
-            title = { Text(stringResource(if (prompt is ListPrompt.CarryOver) R.string.history_still_needed else R.string.finish_shop_question)) },
+            title = { Text(stringResource(R.string.finish_shop_question)) },
             text = { Text(when (prompt) {
                 ListPrompt.AllChecked -> stringResource(R.string.finish_shop_all_checked)
                 is ListPrompt.Stale -> pluralStringResource(R.plurals.history_stale_question, prompt.ids.size, prompt.ids.size)
-                is ListPrompt.CarryOver -> stringResource(R.string.history_carry_over, prompt.names.joinToString(", "))
             }) },
             confirmButton = {
                 TextButton(onClick = {
-                    if (prompt is ListPrompt.CarryOver) actions.onDismissPrompt()
-                    else actions.onFinishRows?.invoke(state.checked, (prompt as? ListPrompt.Stale)?.ids) ?: actions.onFinishShop((prompt as? ListPrompt.Stale)?.ids)
-                }) { Text(stringResource(if (prompt is ListPrompt.CarryOver) R.string.history_keep else R.string.finish_shop)) }
+                    actions.onFinishRows?.invoke(state.checked, onlyIds) ?: actions.onFinishShop(onlyIds)
+                }) { Text(stringResource(R.string.finish_shop)) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    if (prompt is ListPrompt.CarryOver) actions.onRemoveItems(prompt.ids) else actions.onDismissPrompt()
-                }) { Text(stringResource(when (prompt) {
-                    is ListPrompt.CarryOver -> R.string.history_remove
+                TextButton(onClick = actions.onDismissPrompt) { Text(stringResource(when (prompt) {
                     is ListPrompt.Stale -> R.string.history_not_now
                     ListPrompt.AllChecked -> R.string.finish_shop_keep_open
                 })) }

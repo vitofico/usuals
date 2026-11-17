@@ -766,17 +766,7 @@ class ListViewModel(
             stale.isNotEmpty() && claimPrompt("stale", staleBatch) -> ListPrompt.Stale(stale.map { it.id }.toSet())
             stale.isNotEmpty() -> null
             current.isNotEmpty() && current.all { it.checked } && claimPrompt("all_checked", batch) -> ListPrompt.AllChecked
-            else -> {
-                val carried = current.filter { !it.checked }.filter { item ->
-                    val count = history.trips.count { it.closedAt >= item.createdAt }
-                    count >= 3 && count % 3 == 0
-                }
-                val signature = carried.sortedBy { it.id.value }.joinToString("|") { it.id.value } + "::" +
-                    history.trips.map { it.id }.sorted().joinToString("|")
-                if (carried.isNotEmpty() && claimPrompt("carry_over", signature)) {
-                    ListPrompt.CarryOver(carried.map { it.id }.toSet(), carried.map { it.name })
-                } else null
-            }
+            else -> null
         }
         if (next != null) screen.update { it.copy(prompt = next) }
     }
@@ -812,11 +802,6 @@ class ListViewModel(
             catch (_: Exception) { screen.update { it.copy(busy = false, historyError = true) } }
             refreshPrompts(shopping.value.items, shopping.value.history)
         }
-    }
-
-    fun onRemoveItems(ids: Set<ItemId>) {
-        onDismissPrompt()
-        viewModelScope.launch { store.removeAll(ids.map { it to null }) }
     }
 
     /** Empties the list. Purchase history stays, so the usuals are still suggested. */
