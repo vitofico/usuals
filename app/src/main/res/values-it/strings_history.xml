@@ -41,10 +41,6 @@
         <item quantity="many">Registrare questi %1$d articoli spuntati in precedenza come una spesa?</item>
     </plurals>
     <string name="history_not_now">Non ora</string>
-    <string name="history_still_needed">Serve ancora?</string>
-    <string name="history_carry_over">Questi articoli sono rimasti in lista per diverse spese: %1$s</string>
-    <string name="history_keep">Conserva</string>
-    <string name="history_remove">Rimuovi</string>
     <string name="share_list">Invia come testo</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>

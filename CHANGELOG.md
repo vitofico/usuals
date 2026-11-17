@@ -1,5 +1,10 @@
 # Changelog
 
+## Shopping list reminders
+
+- Remove the automatic "Still needed?" popup for unchecked items carried across
+  completed shops. Items stay on the list until you choose to remove them.
+
 ## Occasion packs and shopping polish
 
 - Save personal occasion packs from the current list or create them from scratch.

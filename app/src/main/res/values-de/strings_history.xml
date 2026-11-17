@@ -38,10 +38,6 @@
         <item quantity="other">Diese %1$d früher abgehakten Artikel als Einkauf speichern?</item>
     </plurals>
     <string name="history_not_now">Jetzt nicht</string>
-    <string name="history_still_needed">Noch benötigt?</string>
-    <string name="history_carry_over">Diese Artikel sind seit mehreren Einkäufen offen: %1$s</string>
-    <string name="history_keep">Behalten</string>
-    <string name="history_remove">Entfernen</string>
     <string name="share_list">Als Text senden</string>
     <string name="share_open_item">☐ %1$s %2$s</string>
     <string name="share_checked_item">☑ %1$s %2$s</string>

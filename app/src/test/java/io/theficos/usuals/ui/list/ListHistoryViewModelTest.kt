@@ -63,23 +63,23 @@ class ListHistoryViewModelTest {
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    @Test fun `three shops since an item was added trigger a carry-over question`() = runTest(main.dispatcher) {
-        val items = FakeItemStore(listOf(item("milk", "milk", createdAt = 1000)))
+    @Test fun `items carried across completed shops stay on the list without a dialog`() = runTest(main.dispatcher) {
+        val pending = item("milk", "milk", createdAt = 1000)
+        val items = FakeItemStore(listOf(pending))
         val history = FakeHistoryStore()
         val viewModel = vm(items, history)
-        history.data.value = HistorySnapshot(trips = listOf(Trip("old", 900), Trip("a", 1100), Trip("b", 1200)))
-        runCurrent()
-        assertThat(viewModel.state.value.prompt).isNull()
-        history.data.value = history.data.value.copy(trips = history.data.value.trips + Trip("c", 1300))
-        runCurrent()
-        val prompt = viewModel.state.value.prompt as ListPrompt.CarryOver
-        assertThat(prompt.names).containsExactly("milk")
-        viewModel.onDismissPrompt()
-        viewModel.onOpened()
-        assertThat(viewModel.state.value.prompt).isNull()
-        history.data.value = history.data.value.copy(trips = history.data.value.trips + Trip("d", 1400))
-        runCurrent()
-        assertThat(viewModel.state.value.prompt).isNull()
+        for (count in listOf(3, 6)) {
+            val trips = (1..count).map { Trip("shop-$it", pending.createdAt + it * 100L) }
+            history.data.value = HistorySnapshot(trips = trips)
+            runCurrent()
+            assertThat(viewModel.state.value.prompt).isNull()
+            assertThat(viewModel.state.value.pending.map { it.id }).containsExactly(pending.id)
+        }
+
+        val reopened = vm(items, history)
+        reopened.onOpened()
+        assertThat(reopened.state.value.prompt).isNull()
+        assertThat(reopened.state.value.pending.map { it.id }).containsExactly(pending.id)
     }
 
     @Test fun `double finish is serialized and Undo targets the returned trip`() = runTest(main.dispatcher) {
