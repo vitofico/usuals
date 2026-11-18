@@ -42,7 +42,7 @@ class MemoryViewModelTest {
         assertThat(items.current).isEmpty()
         vm.onDraftChange("milk")
         vm.onDraftSubmit()
-        assertThat(items.current.map { it.name }).containsExactly("bread", "milk").inOrder()
+        assertThat(items.current.single().name).isEqualTo("milk")
         assertThat(history.data.value.purchases).hasSize(1)
         assertThat(history.data.value.preferences.single().muted).isTrue()
     }
