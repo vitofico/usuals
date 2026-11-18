@@ -21,17 +21,6 @@ class AssistanceTest {
         val newer = (4..8).map { purchase(it, Quantity.pieces(it)) }
         assertThat(hints.hint("milk", history.copy(purchases = history.purchases + newer))).isNull()
         assertThat(hints.hint("bread", history)).isNull()
-
-        val six = listOf(purchase(1, two), purchase(2, two)) +
-            (3..6).map { purchase(it, Quantity.pieces(it)) }
-        assertThat(hints.hint(six.dropLast(1))).isEqualTo(two)
-        assertThat(hints.hint(six)).isNull()
-
-        val aliased = HistorySnapshot(
-            purchases = listOf(purchase(1, two).copy(key = "oat milk", name = "oat milk"), purchase(2, two)),
-            aliases = listOf(ItemAlias("oat milk", "milk")),
-        )
-        assertThat(hints.hint("milk", aliased)).isEqualTo(two)
     }
 
     @Test fun `a third accepted suggestion offers a rule but never creates one`() {

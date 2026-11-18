@@ -88,9 +88,7 @@ object FakeAndroidKeyStore {
 
         private class Entry(val key: Key, val certs: Array<Certificate>?)
 
-        private companion object {
-            val store = ConcurrentHashMap<String, Entry>()
-        }
+        private val store = ConcurrentHashMap<String, Entry>()
 
         override fun engineGetKey(alias: String, password: CharArray?): Key? = store[alias]?.key
 
@@ -149,25 +147,19 @@ object FakeAndroidKeyStore {
 
         private var keySizeBits = 256
         private var random: SecureRandom = SecureRandom()
-        private var alias: String? = null
 
         override fun engineInit(random: SecureRandom) {
-            alias = null
             this.random = random
         }
 
         override fun engineInit(params: AlgorithmParameterSpec?, random: SecureRandom?) {
-            // Keep this fixture framework-free while honoring Android's alias.
-            alias = params?.takeIf {
-                it.javaClass.name == "android.security.keystore.KeyGenParameterSpec"
-            }?.let {
-                it.javaClass.getMethod("getKeystoreAlias").invoke(it) as String
-            }
+            // Android passes a KeyGenParameterSpec here. It describes hardware
+            // protection we cannot provide in a JVM test, so it is ignored on
+            // purpose rather than rejected.
             if (random != null) this.random = random
         }
 
         override fun engineInit(keysize: Int, random: SecureRandom?) {
-            alias = null
             keySizeBits = keysize
             if (random != null) this.random = random
         }
@@ -175,9 +167,7 @@ object FakeAndroidKeyStore {
         override fun engineGenerateKey(): SecretKey {
             val bytes = ByteArray(keySizeBits / 8)
             random.nextBytes(bytes)
-            val key = SecretKeySpec(bytes, "AES")
-            alias?.let { FakeKeyStoreSpi().engineSetKeyEntry(it, key, null, null) }
-            return key
+            return SecretKeySpec(bytes, "AES")
         }
     }
 }

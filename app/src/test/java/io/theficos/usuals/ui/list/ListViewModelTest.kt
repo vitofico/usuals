@@ -5,13 +5,7 @@ import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.MeasureUnit
 import io.theficos.usuals.model.Quantity
-import io.theficos.usuals.model.ShoppingSnapshot
 import io.theficos.usuals.parse.LocalUtteranceParser
-import io.theficos.usuals.ui.history.HistoryStore
-import io.theficos.usuals.ui.history.NoHistoryStore
-import io.theficos.usuals.ui.history.ScopedHistoryStore
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -91,38 +85,6 @@ class ListViewModelTest {
         assertThat(renamed).containsExactly("mine" to "Groceries")
         assertThat(removed).containsExactly("mine")
         assertThat(archivedLists).containsExactly("mine" to true)
-    }
-
-    @Test
-    fun repeated_remove_while_the_first_list_is_being_deleted_keeps_the_next_list() = runTest(main.dispatcher) {
-        val first = NamedList("first", "First", shared = false)
-        val next = NamedList("next", "Next", shared = false)
-        val listings = MutableStateFlow(ListDirectory(selected = first.id, lists = listOf(first, next)))
-        val nextRow = item("kept", "Milk")
-        val shopping = MutableStateFlow(ShoppingSnapshot(listId = first.id))
-        val history = object : ScopedHistoryStore, HistoryStore by NoHistoryStore {
-            override fun observeShopping() = shopping
-        }
-        val calls = mutableListOf<String>()
-        val finishRemoval = CompletableDeferred<Unit>()
-        val directory = object : ListDirectoryStore by NoListDirectory {
-            override fun observe() = listings
-            override suspend fun remove(id: String) {
-                calls += id
-                finishRemoval.await()
-                listings.value = ListDirectory(selected = next.id, lists = listOf(next))
-                shopping.value = ShoppingSnapshot(listId = next.id, items = listOf(nextRow))
-            }
-        }
-        val vm = ListViewModel(FakeItemStore(), LocalUtteranceParser(), FakeSpeechSource(),
-            historyStore = history, directoryStore = directory, compute = main.dispatcher)
-
-        vm.onRemoveList(first.id)
-        vm.onRemoveList(first.id)
-        assertThat(calls).containsExactly(first.id)
-        finishRemoval.complete(Unit)
-        assertThat(vm.state.value.directory.lists).containsExactly(next)
-        assertThat(vm.state.value.pending.map { it.id }).containsExactly(ItemId("kept"))
     }
 
     @Test

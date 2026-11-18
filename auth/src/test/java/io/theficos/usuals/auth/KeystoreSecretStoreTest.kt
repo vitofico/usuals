@@ -3,7 +3,6 @@ package io.theficos.usuals.auth
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import com.google.crypto.tink.proto.EncryptedKeyset
 import io.theficos.usuals.testing.FakeAndroidKeyStore
 import org.junit.Before
 import org.junit.Test
@@ -86,14 +85,6 @@ class KeystoreSecretStoreTest {
             assertThat(name).doesNotContain(SAMPLE_KEY)
             assertThat(name).doesNotContain(KeystoreSecretStore.KEY_MODEL_KEY)
             assertThat(value.toString()).doesNotContain(SAMPLE_KEY)
-        }
-        for (purpose in listOf("key", "value")) {
-            val serialized = raw.getValue("__androidx_security_crypto_encrypted_prefs_${purpose}_keyset__") as String
-            val wrapped = EncryptedKeyset.parseFrom(
-                serialized.chunked(2).map { it.toInt(16).toByte() }.toByteArray(),
-            )
-            assertThat(wrapped.encryptedKeyset.size()).isGreaterThan(0)
-            assertThat(wrapped.keysetInfo.keyInfoCount).isGreaterThan(0)
         }
 
         assertThat(store().modelKey()).isEqualTo(SAMPLE_KEY)

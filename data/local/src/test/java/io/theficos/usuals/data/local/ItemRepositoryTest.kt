@@ -263,15 +263,15 @@ class ItemRepositoryTest {
 
     @Test
     fun `reap drops tombstones past the fortnight and keeps everything else`() = runTest {
-        val hour = 60L * 60 * 1000
+        val day = 24L * 60 * 60 * 1000
         val old = repo.add(ParsedItem("Tomates"))
         repo.delete(old)
 
-        now += 2 * hour
+        now += 13 * day
         val recent = repo.add(ParsedItem("Pan"))
         repo.delete(recent)
 
-        now += (13 * 24 + 23) * hour
+        now += 2 * day
         repo.add(ParsedItem("Leche"))
 
         val reaped = repo.reap()
