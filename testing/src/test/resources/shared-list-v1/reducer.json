@@ -1220,6 +1220,141 @@
       }
     },
     {
+      "id": "capture-converts-gram",
+      "initial": {
+        "rows": [
+          {
+            "id": "flour",
+            "key": "flour",
+            "name": "flour",
+            "quantity": "1.0",
+            "unit": "KILOGRAM",
+            "checked": false,
+            "lifecycle": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "flour",
+          "name": "flour",
+          "quantity": "500.0",
+          "unit": "GRAM",
+          "gtin": "4006381333931",
+          "store": "Market"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.flour.quantity": "1.5",
+          "rows.flour.unit": "KILOGRAM",
+          "rows.flour.gtin": "4006381333931",
+          "rows.flour.store": "Market",
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "merged"
+        }
+      }
+    },
+    {
+      "id": "capture-converts-millilitre",
+      "initial": {
+        "rows": [
+          {
+            "id": "milk",
+            "key": "milk",
+            "name": "milk",
+            "quantity": "1.0",
+            "unit": "LITRE",
+            "checked": false,
+            "lifecycle": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "capture",
+          "proposedId": "second",
+          "key": "milk",
+          "name": "milk",
+          "quantity": "250.0",
+          "unit": "MILLILITRE",
+          "gtin": "4006381333931",
+          "store": "Market"
+        }
+      ],
+      "expected": {
+        "facts": {
+          "rows.milk.quantity": "1.25",
+          "rows.milk.unit": "LITRE",
+          "rows.milk.gtin": "4006381333931",
+          "rows.milk.store": "Market",
+          "activeRowCount": 1
+        },
+        "outcomes": {
+          "a": "merged"
+        }
+      }
+    },
+    {
+      "id": "import-is-atomic-when-third-row-is-invalid",
+      "initial": {
+        "rows": [
+          {
+            "id": "existing",
+            "key": "salt",
+            "name": "Salt",
+            "lifecycle": "genesis"
+          }
+        ]
+      },
+      "operations": [
+        {
+          "id": "a",
+          "kind": "import",
+          "rows": [
+            {
+              "id": "milk",
+              "facts": {
+                "key": "milk",
+                "name": "milk"
+              }
+            },
+            {
+              "id": "tea",
+              "facts": {
+                "key": "tea",
+                "name": "tea"
+              }
+            },
+            {
+              "id": "invalid",
+              "facts": {
+                "key": "invalid",
+                "name": " "
+              }
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "facts": {
+          "activeRowCount": 1,
+          "rows.existing.name": "Salt",
+          "rows.milk.name": null,
+          "rows.tea.name": null
+        },
+        "outcomes": {
+          "a": "rejected"
+        }
+      }
+    },
+    {
       "id": "immutable-purchase-import",
       "initial": {
         "rows": [],
