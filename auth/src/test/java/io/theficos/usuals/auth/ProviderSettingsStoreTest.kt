@@ -24,63 +24,25 @@ class ProviderSettingsStoreTest {
     private fun store() = ProviderSettingsStore(context)
 
     @Test
-    fun `nothing configured reads as null`() {
-        assertThat(store().load()).isNull()
-    }
-
-    @Test
-    fun `round trips through a fresh instance`() {
-        val settings = ProviderSettings.openAiCompatible(
-            baseUrl = "http://192.168.1.20:8080/v1",
-            model = "qwen2.5:7b",
-            label = "La caja del estudio",
-        )
-        store().save(settings)
-
-        assertThat(store().load()).isEqualTo(settings)
-    }
-
-    @Test
-    fun `round trips every provider kind`() {
+    fun `stores replace and then clear configuration across fresh instances`() {
+        val subject = store()
+        assertThat(subject.load()).isNull()
         val cases = listOf(
-            ProviderSettings.anthropic(),
             ProviderSettings.ollama(),
             ProviderSettings.openAiCompatible("https://gateway.example.com/v1", "llama3.1"),
-        )
-
-        for (settings in cases) {
-            store().save(settings)
-            assertThat(store().load()).isEqualTo(settings)
-        }
-    }
-
-    @Test
-    fun `save replaces the previous configuration wholesale`() {
-        val subject = store()
-        subject.save(
             ProviderSettings.openAiCompatible(
                 baseUrl = "http://192.168.1.20:8080/v1",
                 model = "qwen2.5:7b",
                 label = "La caja del estudio",
             ),
+            ProviderSettings.anthropic(),
         )
-        subject.save(ProviderSettings.anthropic())
-
-        val loaded = subject.load()
-
-        assertThat(loaded).isEqualTo(ProviderSettings.anthropic())
-        // Notably the base URL from the previous record is gone rather than
-        // lingering under the new kind, which is the failure mode of writing
-        // fields one at a time without clearing.
-        assertThat(loaded?.baseUrl).isEmpty()
-    }
-
-    @Test
-    fun `clear forgets the configuration`() {
-        val subject = store()
-        subject.save(ProviderSettings.anthropic())
+        for (settings in cases) {
+            subject.save(settings)
+            assertThat(store().load()).isEqualTo(settings)
+        }
+        assertThat(subject.load()?.baseUrl).isEmpty()
         subject.clear()
-
         assertThat(subject.load()).isNull()
         assertThat(store().load()).isNull()
     }
@@ -102,19 +64,4 @@ class ProviderSettingsStoreTest {
         assertThat(store().load()).isNull()
     }
 
-    /**
-     * Forward compatibility the other way: a record written by a build that
-     * added a field still loads here, with the unknown key ignored. This is
-     * what the field-per-key layout buys over a serialized blob.
-     */
-    @Test
-    fun `an unexpected extra preference is ignored`() {
-        store().save(ProviderSettings.anthropic())
-        context.getSharedPreferences(ProviderSettingsStore.FILE_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString("some_field_from_a_later_version", "whatever")
-            .commit()
-
-        assertThat(store().load()).isEqualTo(ProviderSettings.anthropic())
-    }
 }

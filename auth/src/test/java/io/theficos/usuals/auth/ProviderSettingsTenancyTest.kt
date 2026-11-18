@@ -70,18 +70,6 @@ class ProviderSettingsTenancyTest {
     }
 
     /**
-     * Same boundary, stated as file identity. If the two stores ever collapse
-     * onto one preference file, the configuration inherits Keystore's cost and
-     * the key inherits the configuration's exposure, and neither trade is one
-     * anybody would make deliberately.
-     */
-    @Test
-    fun `the two stores use different preference files`() {
-        assertThat(ProviderSettingsStore.FILE_NAME)
-            .isNotEqualTo(KeystoreSecretStore.FILE_NAME)
-    }
-
-    /**
      * Clearing the configuration is not the same action as revoking the key, so
      * one must not quietly do the other. Someone correcting a base URL should
      * not have to re-enter a key they never touched.

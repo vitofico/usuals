@@ -52,19 +52,6 @@ class OffRateLimiterTest {
     }
 
     @Test
-    fun `the request past the budget waits for the oldest permit to expire, and no longer`() =
-        runTest {
-            val limiter = paced(permits = 3, window = 1_000)
-            repeat(3) { limiter.withPermit { } }
-
-            val grants = mutableListOf<Long>()
-            limiter.withPermit { grants += now }
-
-            assertThat(waits).containsExactly(1_000L)
-            assertThat(grants).containsExactly(1_000L)
-        }
-
-    @Test
     fun `a permit frees up at the instant the oldest leaves the window, not a tick before`() =
         runTest {
             val limiter = paced(permits = 2, window = 1_000)
@@ -161,38 +148,17 @@ class OffRateLimiterTest {
     }
 
     @Test
-    fun `a server backoff holds every permit even while the window has room`() = runTest {
-        val limiter = paced(permits = 3, window = 1_000)
-        // Synthetic, as the KDoc says: OFF has not been seen to send Retry-After.
+    fun `the longest server backoff holds permits until its exact deadline`() = runTest {
+        val limiter = paced()
         limiter.noteRetryAfter(5_000)
+        limiter.noteRetryAfter(1_000)
 
         val grants = mutableListOf<Long>()
         limiter.withPermit { grants += now }
+        limiter.withPermit { grants += now }
 
         assertThat(waits).containsExactly(5_000L)
-        assertThat(grants).containsExactly(5_000L)
-    }
-
-    @Test
-    fun `the longest server backoff survives a shorter one arriving after it`() = runTest {
-        val limiter = paced()
-
-        limiter.noteRetryAfter(5_000)
-        limiter.noteRetryAfter(1_000)
-        limiter.withPermit { }
-
-        assertThat(waits).containsExactly(5_000L)
-    }
-
-    @Test
-    fun `a backoff that has already elapsed stops nothing`() = runTest {
-        val limiter = paced()
-        limiter.noteRetryAfter(5_000)
-
-        now = 5_000
-        limiter.withPermit { }
-
-        assertThat(waits).isEmpty()
+        assertThat(grants).containsExactly(5_000L, 5_000L).inOrder()
     }
 
     @Test

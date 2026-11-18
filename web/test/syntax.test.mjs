@@ -4,8 +4,10 @@ import { readdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const directory = new URL("../src/", import.meta.url);
+// These modules are imported by the behavioral suites in this directory.
+const exercised = new Set(["history-delete.mjs", "intents.mjs", "connect.mjs", "wire.mjs", "lists.mjs"]);
 for (const name of await readdir(directory))
-  if (name.endsWith(".mjs"))
+  if (name.endsWith(".mjs") && !exercised.has(name))
     test(`packaged module parses: ${name}`, () => {
       const result = spawnSync(
         process.execPath,

@@ -1,6 +1,7 @@
 package io.theficos.usuals.smart
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.theficos.usuals.model.*
 import io.theficos.usuals.parse.InputLanguage
 import io.theficos.usuals.parse.InputLanguages
@@ -14,25 +15,24 @@ class SmartTest {
     private fun item(name: String, gtin: Gtin? = null) = Item(ItemId("active"), name, name,
         Normalizer.normalize(name), gtin = gtin, createdAt = 0, updatedAt = 0)
 
-    @Test fun `fresh English and Spanish words group without history`() {
+    @Test fun `category seeds classify names across input languages`() {
         val classifier = CategoryClassifier(InputLanguages.available)
-        for (word in listOf("milk", "yoghurt", "leche", "yogur", "queso")) {
-            assertThat(classifier.classify(word)).isEqualTo(Category.DAIRY)
+        val namesByCategory = mapOf(
+            Category.DAIRY to listOf("milk", "yoghurt", "leche", "yogur", "queso", "latte", "lait", "Milch"),
+            Category.PRODUCE to listOf("tomatoes", "manzanas", "zanahorias", "bananas", "mele", "pommes", "Äpfel"),
+            Category.BAKERY to listOf("bread", "pane", "pain", "Brot"),
+            Category.HOUSEHOLD to listOf("lavavajillas", "carta igienica", "papier toilette", "Toilettenpapier"),
+            Category.DRINKS to listOf("apple juice"),
+            Category.PERSONAL_CARE to listOf("hand cream"),
+            Category.FROZEN to listOf("frozen peas"),
+            Category.OTHER to listOf("unknown item"),
+        )
+        for ((category, names) in namesByCategory) {
+            for (name in names) {
+                assertWithMessage("category for %s", name).that(classifier.classify(name)).isEqualTo(category)
+            }
         }
-        for (word in listOf("tomatoes", "manzanas", "zanahorias", "bananas")) {
-            assertThat(classifier.classify(word)).isEqualTo(Category.PRODUCE)
-        }
-        assertThat(classifier.classify("bread")).isEqualTo(Category.BAKERY)
-        assertThat(classifier.classify("lavavajillas")).isEqualTo(Category.HOUSEHOLD)
-    }
-
-    @Test fun `specific phrases beat component words and overrides beat every seed`() {
-        val classifier = CategoryClassifier(InputLanguages.available)
-        assertThat(classifier.classify("apple juice")).isEqualTo(Category.DRINKS)
-        assertThat(classifier.classify("hand cream")).isEqualTo(Category.PERSONAL_CARE)
-        assertThat(classifier.classify("frozen peas")).isEqualTo(Category.FROZEN)
         assertThat(classifier.classify("milk", "HOUSEHOLD")).isEqualTo(Category.HOUSEHOLD)
-        assertThat(classifier.classify("unknown item")).isEqualTo(Category.OTHER)
     }
 
     @Test fun `only a whole produce seed name is fresh produce`() {
@@ -51,19 +51,15 @@ class SmartTest {
         assertThat(CategoryClassifier(listOf(pack)).classify("latte")).isEqualTo(Category.DAIRY)
     }
 
-    @Test fun `repeat adds milk on day 21 and not day 20`() {
-        val history = HistorySnapshot(purchases = listOf(purchase("milk", "milk", 0)),
-            preferences = listOf(ItemPreference("milk", repeatEveryDays = 21)))
+    @Test fun `repeat rules respect the day boundary and active items`() {
+        val preference = ItemPreference("milk", repeatEveryDays = 21)
+        val noPurchases = HistorySnapshot(preferences = listOf(preference))
+        val bought = noPurchases.copy(purchases = listOf(purchase("milk", "milk", 0)))
         val planner = RepeatPlanner()
-        assertThat(planner.due(21 * day - 1, history, emptyList())).isEmpty()
-        assertThat(planner.due(21 * day, history, emptyList())).containsExactly(RepeatItem("milk", "milk"))
-    }
-
-    @Test fun `a repeat rule needs no learned history and never duplicates an active item`() {
-        val history = HistorySnapshot(preferences = listOf(ItemPreference("milk", repeatEveryDays = 21)))
-        val planner = RepeatPlanner()
-        assertThat(planner.due(0, history, emptyList())).containsExactly(RepeatItem("milk", "milk"))
-        assertThat(planner.due(30 * day, history, listOf(item("milk")))).isEmpty()
+        assertThat(planner.due(21 * day - 1, bought, emptyList())).isEmpty()
+        assertThat(planner.due(21 * day, bought, emptyList())).containsExactly(RepeatItem("milk", "milk"))
+        assertThat(planner.due(0, noPurchases, emptyList())).containsExactly(RepeatItem("milk", "milk"))
+        assertThat(planner.due(30 * day, noPurchases, listOf(item("milk")))).isEmpty()
     }
 
     @Test fun `confirmed aliases suppress duplicate repeats and combine autocomplete counts`() {

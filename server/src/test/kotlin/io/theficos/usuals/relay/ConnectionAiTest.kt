@@ -200,8 +200,12 @@ class ConnectionAiTest {
     @Test fun configuredProviderKindsReachTheGatewayClientFactory() = runBlocking {
         for (kind in listOf(ProviderKind.ANTHROPIC, ProviderKind.OLLAMA, ProviderKind.OPENAI_COMPATIBLE)) {
             val built = mutableListOf<ProviderConfig>()
-            val profile = AiProvider("configured", "Configured", "https://models.example/v1", "text", "vision", kind = kind.name, keyEnv = "MODEL_KEY")
-            val configuration = AiConfiguration(listOf(profile), environment = mapOf("MODEL_KEY" to "synthetic-provider-key"))
+            val configuration = AiConfiguration.fromEnvironment(mapOf("MODEL_KEY" to "synthetic-provider-key", "USUALS_AI_PROFILES" to """
+                [{"id":"configured","label":"Configured","baseUrl":"https://models.example/v1","model":"text",
+                  "imageModel":"vision","kind":"${kind.name}","keyEnv":"MODEL_KEY"}]
+            """.trimIndent()))
+            val profile = configuration.profiles.single()
+            assertThat(profile.imageModel).isEqualTo("vision")
             val gateway = AiGateway(db, configuration, { now }) { config ->
                 built += config
                 object : LlmClient {
@@ -213,6 +217,24 @@ class ConnectionAiTest {
             gateway.execute(user, "probe", AiRequest(revision = settings.revision))
             assertThat(built).containsExactly(ProviderConfig(kind, "Configured", profile.baseUrl, "text", false, "synthetic-provider-key"))
         }
+        val cloud = AiProvider("cloud", "Cloud", "http://models.example/v1", "model")
+        for ((profile, valid) in listOf(
+            cloud.copy(kind = "UNKNOWN", baseUrl = "https://models.example/v1") to false,
+            cloud to false,
+            cloud.copy(baseUrl = "https://models.example/v1") to true,
+            cloud.copy(isLocal = true) to true,
+            cloud.copy(baseUrl = "ftp://models.example/v1", allowHttp = true) to false,
+        )) {
+            if (valid) AiConfiguration(listOf(profile))
+            else assertThrows(IllegalArgumentException::class.java) { AiConfiguration(listOf(profile)) }
+        }
+        val proxy = AiConfiguration.fromEnvironment(mapOf("USUALS_AI_PROFILES" to """
+            [{"id":"cluster","label":"Ollama cloud","baseUrl":"http://ollama.ollama.svc.cluster.local:11434/v1",
+              "model":"cloud-model","kind":"OLLAMA","isLocal":false,"allowHttp":true}]
+        """.trimIndent())).profiles.single().view()
+        assertThat(proxy.isLocal).isFalse()
+        assertThat(proxy.baseUrl).isEqualTo("http://ollama.ollama.svc.cluster.local:11434/v1")
+
     }
 
     private fun gateway(limit: Int = 20, keys: MutableList<String?> = mutableListOf()) = AiGateway(db,

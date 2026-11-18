@@ -22,9 +22,6 @@ object Normalizer {
         return kept.joinToString(" ") { singularize(it) }
     }
 
-    fun tokens(raw: String): List<String> =
-        normalize(raw).split(' ').filter { it.isNotEmpty() }
-
     private fun singularize(word: String): String {
         if (word.length < 4 || word in grammar.pluralExceptions) return word
         for ((pattern, replacement) in grammar.pluralRules) {
