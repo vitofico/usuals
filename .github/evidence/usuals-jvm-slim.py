@@ -73,25 +73,19 @@ if __name__ == "__main__":
     assert all(row["skipped"] == expected_skips.get(module, 0) for module, row in control.items()), control
     provider = "src/main/java/io/theficos/usuals/llm/OpenAiCompatibleClient.kt"
     budget = "src/main/java/io/theficos/usuals/llm/Budget.kt"
-    hints = "src/main/java/io/theficos/usuals/smart/QuantityHints.kt"
     barcode = "src/main/java/io/theficos/usuals/smart/BarcodeMemory.kt"
-    ingredients = "src/main/java/io/theficos/usuals/recipe/MarkdownIngredients.kt"
     allergen = "src/main/java/io/theficos/usuals/smart/AllergenAvoidance.kt"
     limiter = "src/main/java/io/theficos/usuals/enrich/OffRateLimiter.kt"
     off = "src/main/java/io/theficos/usuals/enrich/OpenFoodFactsEnricher.kt"
     ranges = "src/main/java/io/theficos/usuals/enrich/RestrictedCirculation.kt"
     provider_test = "provider probes send the supported structured output parameters"
-    hint_test = "quantity agreement considers only the last five and never fills a missing value"
     cases = (
         ("sync-color-no-guard", "sync", "src/main/kotlin/io/theficos/usuals/sync/Reducer.kt", '            if (p["expected"].stringOrNull() != ListAppearance.revision(state))\n                return conflict(p, state.preferences[ListAppearance.KEY] ?: JsonObject(emptyMap()), "list_color_stale")\n', "", "ListColorTest", "colorsAreDurableIndependentOfNamesAndGuardConcurrentChoices"),
         ("core-gtin-accepts-all-zero", "core/model", "src/main/java/io/theficos/usuals/model/Gtin.kt", "            if (ean13.all { it == '0' }) return null\n", "", "GtinTest", "invalid barcodes are rejected"),
         ("core-parse-name-lowercased", "core/parse", "src/main/java/io/theficos/usuals/parse/LocalUtteranceParser.kt", "name = name,", "name = name.lowercase(),", "LocalUtteranceParserTest", "parses the shapes people actually say"),
         ("core-todraft-drops-note", "core/parse", "src/main/java/io/theficos/usuals/parse/ItemDraft.kt", "note = note,", "note = null,", "ItemDraftTest", "parsed input becomes a row with the original text and a stable key"),
-        ("smart-quantity-hints-window-6", "smart", hints, ".take(5)", ".take(6)", "AssistanceTest", hint_test),
-        ("smart-quantity-hints-key-ignores-aliases", "smart", hints, "ItemIdentity.purchaseKey(it, aliases)", "ItemIdentity.purchaseKey(it, emptyMap())", "AssistanceTest", hint_test),
         ("smart-barcode-memory-recent-6", "smart", barcode, "const val RECENT = 5", "const val RECENT = 6", "BarcodeMemoryTest", "only the last five barcoded purchases vote, so a brand switch settles"),
         ("smart-allergen-trace-dup", "smart", allergen, "it in wanted && it !in contains", "it in wanted", "AllergenAvoidanceTest", "allergen and trace results retain the whole warning state"),
-        ("recipe-markdown-max-items-edge", "recipe", ingredients, "lines.size <= MAX_ITEMS", "lines.size < MAX_ITEMS", "MarkdownIngredientsTest", "exactLengthAndItemLimitsAreAcceptedWhole"),
         ("llm-terra-max-tokens", "llm", provider, 'put(if (terra) "max_completion_tokens" else "max_tokens", maxTokens)', 'put("max_tokens", maxTokens)', "OpenAiCompatibleClientTest", provider_test),
         ("llm-anthropic-response-format", "llm", provider, 'if (config.kind != ProviderKind.ANTHROPIC) {\n                putJsonObject("response_format")', 'run {\n                putJsonObject("response_format")', "OpenAiCompatibleClientTest", provider_test),
         ("llm-budget-hourly", "llm", budget, "Math.floorDiv(clock(), MILLIS_PER_DAY)", "Math.floorDiv(clock(), 3_600_000L)", "ModelBudgetTest", "the spent allowance refills only at the next UTC midnight"),

@@ -181,9 +181,9 @@ class OpenFoodFactsEnricherTest {
             val nutriScore: NutriScore? = null,
         )
         val cases = listOf(
-            Tags(""""nutriscore_grade":"b","nova_group":2"""", nutriScore = NutriScore.B),
-            Tags(""""allergens_tags":[],"additives_tags":[]"""", allergens = emptyList(), additives = emptyList()),
-            Tags(""""traces_tags":[]"""", traces = emptyList()),
+            Tags(""""nutriscore_grade":"b","nova_group":2""", nutriScore = NutriScore.B),
+            Tags(""""allergens_tags":[],"additives_tags":[]""", allergens = emptyList(), additives = emptyList()),
+            Tags(""""traces_tags":[]""", traces = emptyList()),
             Tags(""""traces_tags":[null,123]"""),
             Tags(""""ingredients_text":42"""),
         )
