@@ -12,6 +12,7 @@ import io.theficos.usuals.ui.settings.SettingsScreen
 import io.theficos.usuals.ui.settings.SettingsViewModel
 import io.theficos.usuals.ui.theme.UsualsTheme
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +27,7 @@ class AccountIdentityScreenTest {
 
     @Test fun settingsShowTheCurrentPersonAndServerAndForgetThemOnSignOut() {
         var account: AccountSummary? = AccountSummary("usuals.example.org:8443", "Vito")
-        val vm = SettingsViewModel(accountSummary = { account })
+        val vm = SettingsViewModel(worker = Dispatchers.Main.immediate, accountSummary = { account })
         var opened = false
         compose.setContent { UsualsTheme { SettingsScreen(vm, {}, onOpenAccount = { opened = true }) } }
         val identity = compose.activity.getString(R.string.account_signed_in_as, "Vito") + "\nusuals.example.org:8443"
@@ -39,7 +40,7 @@ class AccountIdentityScreenTest {
     }
 
     @Test fun accountWithoutAHumanReadableNameShowsTheServer() {
-        val vm = SettingsViewModel(accountSummary = { AccountSummary("usuals.example.org", "  ") })
+        val vm = SettingsViewModel(worker = Dispatchers.Main.immediate, accountSummary = { AccountSummary("usuals.example.org", "  ") })
         compose.setContent { UsualsTheme { SettingsScreen(vm, {}) } }
         compose.onNodeWithText(compose.activity.getString(R.string.settings_account_on, "usuals.example.org")).assertIsDisplayed()
     }
