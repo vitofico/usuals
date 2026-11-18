@@ -83,6 +83,7 @@ if __name__ == "__main__":
     provider_test = "provider probes send the supported structured output parameters"
     hint_test = "quantity agreement considers only the last five and never fills a missing value"
     cases = (
+        ("sync-color-no-guard", "sync", "src/main/kotlin/io/theficos/usuals/sync/Reducer.kt", '            if (p["expected"].stringOrNull() != ListAppearance.revision(state))\n                return conflict(p, state.preferences[ListAppearance.KEY] ?: JsonObject(emptyMap()), "list_color_stale")\n', "", "ListColorTest", "colorsAreDurableIndependentOfNamesAndGuardConcurrentChoices"),
         ("core-gtin-accepts-all-zero", "core/model", "src/main/java/io/theficos/usuals/model/Gtin.kt", "            if (ean13.all { it == '0' }) return null\n", "", "GtinTest", "invalid barcodes are rejected"),
         ("core-parse-name-lowercased", "core/parse", "src/main/java/io/theficos/usuals/parse/LocalUtteranceParser.kt", "name = name,", "name = name.lowercase(),", "LocalUtteranceParserTest", "parses the shapes people actually say"),
         ("core-todraft-drops-note", "core/parse", "src/main/java/io/theficos/usuals/parse/ItemDraft.kt", "note = note,", "note = null,", "ItemDraftTest", "parsed input becomes a row with the original text and a stable key"),

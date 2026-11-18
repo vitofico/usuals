@@ -29,6 +29,12 @@ MUTANTS = [
     ("finish-ignores-displayed-versions", FINISH, "ui/list/ListScreen.kt",
      "vm.onFinishShop(ids, rows.mapNotNull { it.version }.takeIf { it.size == rows.size })",
      "vm.onFinishShop(ids)"),
+    ("finish-view-model-ignores-displayed-versions", FINISH, "ui/list/ListViewModel.kt",
+     "if (versions == null) historyStore.finish(onlyIds) else historyStore.finishVersions(versions, onlyIds)",
+     "historyStore.finish(onlyIds)"),
+    ("duplicate-list-removal-not-blocked", REMOVE, "ui/list/ListViewModel.kt",
+     "if (screen.value.busy || screen.value.matchingBusy || captureLock.isLocked || screen.value.capture != CaptureState.Idle) return",
+     "if (screen.value.matchingBusy || captureLock.isLocked || screen.value.capture != CaptureState.Idle) return"),
     ("solo-list-marked-shared", ROSTER, "di/RepositoryListDirectory.kt", "people(list) > 1", "people(list) > 0"),
     ("oldest-purchased-spelling", SCAN, "di/RepositoryScanStore.kt",
      ".maxByOrNull { it.boughtAt }", ".minByOrNull { it.boughtAt }"),
@@ -74,7 +80,12 @@ def run(label, selectors, failed_selector=None):
     else:
         failure = cases[failed_selector].find("failure")
         if (completed.returncode == 0 or failures != {failed_selector} or failure is None
-                or not failure.attrib.get("type", "").endswith("AssertionError")):
+                or failure.attrib.get("type", "") not in {
+                    "java.lang.AssertionError",
+                    "org.junit.ComparisonFailure",
+                    "com.google.common.truth.AssertionErrorWithFacts",
+                    "com.google.common.truth.ComparisonFailureWithFacts",
+                }):
             raise AssertionError(f"{label}: expected assertion failure in {failed_selector}")
 
 

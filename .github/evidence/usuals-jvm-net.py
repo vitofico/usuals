@@ -13,22 +13,21 @@ RESULTS.mkdir(exist_ok=True)
 
 
 def run(label, modules, selector=None, failed_test=None):
-    args = ["scripts/dgradle", "--no-daemon"] + [
+    args = ["scripts/dgradle", "--no-daemon", "--no-build-cache", "--continue"] + [
         f":{module.replace('/', ':')}:test" for module in modules
     ]
     if selector:
         args += ["--tests", selector]
     roots = {module: Path(module, "build/test-results/test") for module in modules}
-    for source in roots.values():
-        shutil.rmtree(source, ignore_errors=True)
     output = RESULTS / label
     output.mkdir()
     start = time.monotonic()
+    started_ns = time.time_ns()
     with (output / "gradle.log").open("w") as log:
         status = subprocess.run(args, stdout=log, stderr=subprocess.STDOUT).returncode
     summary = {}
     for module, source in roots.items():
-        reports = sorted(source.glob("TEST-*.xml"))
+        reports = sorted(report for report in source.glob("TEST-*.xml") if report.stat().st_mtime_ns >= started_ns)
         if not reports:
             raise RuntimeError(f"{label}: no JUnit reports for {module}; see {output}/gradle.log")
         counts = {key: 0 for key in ("tests", "failures", "errors", "skipped")}
@@ -69,6 +68,9 @@ def mutate(case, module, path, old, new, test_class, test_name):
 
 if __name__ == "__main__":
     control = run("control", MODULES)
+    # These opt-in third-party tests were already skipped on main.
+    expected_skips = {"enrich": 4, "recipe": 2}
+    assert all(row["skipped"] == expected_skips.get(module, 0) for module, row in control.items()), control
     reducer = "src/main/kotlin/io/theficos/usuals/sync/Reducer.kt"
     hints = "src/main/java/io/theficos/usuals/smart/QuantityHints.kt"
     ingredients = "src/main/java/io/theficos/usuals/recipe/MarkdownIngredients.kt"

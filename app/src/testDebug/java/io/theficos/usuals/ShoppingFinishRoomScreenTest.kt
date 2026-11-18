@@ -26,7 +26,7 @@ import io.theficos.usuals.ui.list.ListViewModel
 import io.theficos.usuals.ui.shopping.ShoppingToolsStore
 import io.theficos.usuals.ui.theme.UsualsTheme
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
@@ -42,7 +42,11 @@ class ShoppingFinishRoomScreenTest {
 
     @Test fun finishUsesDisplayedVersionsAndUndoRestoresOnlyTheCompletedRow() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java).build()
+        val db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java)
+            .allowMainThreadQueries()
+            .setQueryExecutor { it.run() }
+            .setTransactionExecutor { it.run() }
+            .build()
         val models = ViewModelStore()
         try {
             val now = 1_700_000_000_000L
@@ -60,7 +64,9 @@ class ShoppingFinishRoomScreenTest {
             val smart = RepositorySmartStore(items, history, CategoryClassifier(InputLanguages.available), HistoryRanker(), RepeatPlanner())
             val persistentHistory = RepositoryHistoryStore(history, parser, smart)
             val historyStore = object : ScopedHistoryStore by persistentHistory {
-                override fun observeShopping() = flowOf(displayed)
+                override fun observeShopping() = persistentHistory.observeShopping().map { latest ->
+                    latest.copy(items = displayed.items)
+                }
             }
             lateinit var vm: ListViewModel
             compose.runOnUiThread {

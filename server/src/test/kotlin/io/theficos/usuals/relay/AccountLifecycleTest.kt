@@ -85,7 +85,7 @@ class AccountLifecycleTest {
         for (table in privateTables) assertThat(count(table)).isEqualTo(0)
         assertThat(db.transaction { c -> c.query("SELECT email IS NULL FROM web_user WHERE id=?", id(alice.id)) { it.getBoolean(1) }.single() }).isTrue()
         val changes = lists.changes(access(bob), cursor, 200)
-        assertThat(changes.lists.single().id).isEqualTo(other)
+        assertThat(changes.lists.map { it.id }).containsExactly(other)
         assertThat(changes.lists.single().members.map { it.id }).doesNotContain(alice.id)
         assertThat(client.post("$path/purge") { bearerAuth(Wire.encode(key)) }.status).isEqualTo(HttpStatusCode.OK)
         val status = lifecycle.status(alice.id, request.id)

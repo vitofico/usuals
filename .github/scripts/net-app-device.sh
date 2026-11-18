@@ -4,6 +4,14 @@ set -euo pipefail
 output=net-app-device
 mkdir -p "$output"
 sudo chown "$(id -u):$(id -g)" /dev/kvm
+sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?Android SDK is missing}}"
+sdkmanager_path="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+if [[ ! -x "$sdkmanager_path" ]]; then
+  sdkmanager_path="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+fi
+test -x "$sdkmanager_path"
+export PATH="$(dirname "$sdkmanager_path"):$sdk_root/platform-tools:$sdk_root/emulator:$PATH"
+emulator -version
 sdkmanager --install 'system-images;android-33;google_apis;x86_64'
 echo no | avdmanager create avd --name usuals-evidence --package 'system-images;android-33;google_apis;x86_64'
 emulator -avd usuals-evidence -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect >"$output/emulator.log" 2>&1 &
