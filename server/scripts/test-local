@@ -36,4 +36,6 @@ USUALS_TEST_DB_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$TASK_TMP/postgres
 export USUALS_TEST_DB_PASSWORD
 # This database is new on every invocation. Cached test results cannot establish
 # that its schema and queries work; rerun tests while retaining compiled outputs.
-scripts/dgradle -p server test --rerun webTest installDist --no-build-cache --no-watch-fs "$@"
+test_task=test
+if [[ "${GITHUB_EVENT_NAME:-}" == pull_request ]]; then test_task=:test; fi
+scripts/dgradle -p server "$test_task" --rerun webTest installDist --no-build-cache --no-watch-fs "$@"
