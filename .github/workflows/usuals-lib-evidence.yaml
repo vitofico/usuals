@@ -1,0 +1,30 @@
+name: Usuals library regression evidence
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: >-
+      github.repository == 'vitofico/usuals' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'test/behavioral-net' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run library controls and synthetic mutation checks
+        run: python3 .github/usuals-lib-evidence/run.py "$RUNNER_TEMP/usuals-lib-evidence"
+      - name: Retain fresh JUnit and Gradle logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: usuals-lib-evidence
+          path: ${{ runner.temp }}/usuals-lib-evidence
+          if-no-files-found: error
+          retention-days: 3
