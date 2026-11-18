@@ -5,11 +5,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 android() {
-  local workers=(--no-parallel --max-workers=2)
-  if [[ "${CI:-}" == true ]]; then workers=(--parallel --max-workers=4); fi
   scripts/retry-gradle-download scripts/dgradle verifyReleaseTools \
     :app:assembleDebug :app:assembleRelease test -x testReleaseUnitTest lint \
-    --no-daemon --no-watch-fs "${workers[@]}"
+    --no-daemon --no-watch-fs --no-parallel --max-workers=2
   python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release-unsigned.apk
 }
 
