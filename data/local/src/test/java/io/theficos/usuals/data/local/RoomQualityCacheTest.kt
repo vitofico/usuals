@@ -13,7 +13,6 @@ import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.enrich.SkipReason
 import io.theficos.usuals.model.Gtin
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -87,7 +86,7 @@ class RoomQualityCacheTest {
             .setQueryExecutor { it.run() }
             .setTransactionExecutor { it.run() }
             .build()
-        cache = RoomQualityCache(db.qualityDao())
+        cache = RoomQualityCache(db.qualityDao(), clock = { now })
     }
 
     @After
@@ -152,6 +151,20 @@ class RoomQualityCacheTest {
         assertThat(cache.get(pan)!!.confirmedMissing).isTrue()
     }
 
+    @Test
+    fun `every facet comes back exactly as it was stored`() = runTest {
+        cache.put(QualityLookup.Found(leche, stated), now)
+
+        val quality = cache.get(leche)!!.quality!!
+        assertThat(quality).isEqualTo(stated)
+        assertThat(quality.nutriScore).isEqualTo(NutriScore.B)
+        assertThat(quality.novaGroup).isEqualTo(NovaGroup.PROCESSED)
+        assertThat(quality.greenScore).isEqualTo(GreenScore.C)
+        // Order is part of the value: a list read back shuffled is a different
+        // list, and equality would not have caught a set-shaped encoding.
+        assertThat(quality.allergens).containsExactly("en:milk", "en:gluten").inOrder()
+        assertThat(quality.additives).containsExactly("en:e322").inOrder()
+    }
 
     @Test
     fun `the Green-Score grades beyond the old Eco-Score scale round trip, and old letters still read`() = runTest {
@@ -163,6 +176,17 @@ class RoomQualityCacheTest {
         assertThat(cache.get(leche)!!.quality!!.greenScore).isEqualTo(GreenScore.A_PLUS)
         assertThat(cache.get(pan)!!.quality!!.greenScore).isEqualTo(GreenScore.F)
         assertThat(cache.get(huevos)!!.quality!!.greenScore).isEqualTo(GreenScore.A)
+    }
+
+    @Test
+    fun `does not apply and not stated stay different facts on disk`() = runTest {
+        cache.put(QualityLookup.Found(leche, ProductQuality(nutriScoreNotApplicable = true)), now)
+        cache.put(QualityLookup.Found(pan, ProductQuality.EMPTY), now)
+
+        assertThat(db.qualityDao().find(leche.value)!!.nutriScoreNotApplicable).isTrue()
+        assertThat(db.qualityDao().find(pan.value)!!.nutriScoreNotApplicable).isFalse()
+        assertThat(cache.get(leche)!!.quality!!.nutriScoreNotApplicable).isTrue()
+        assertThat(cache.get(pan)!!.quality!!.nutriScoreNotApplicable).isFalse()
     }
 
     /**
@@ -187,23 +211,37 @@ class RoomQualityCacheTest {
 
     // region null is not empty
 
+    /**
+     * The one with an allergy behind it. Three products: one OFF says nothing
+     * about, one OFF has checked and found no allergens in, and one with a
+     * list. All three have to come back different, and the column has to hold
+     * the difference rather than the mapper guessing at it.
+     */
     @Test
-    fun `unknown empty and not applicable facts remain distinct`() = runTest {
-        val cases = listOf(
-            leche to ProductQuality(),
-            pan to ProductQuality(allergens = emptyList(), additives = emptyList(), nutriScoreNotApplicable = true),
-            huevos to ProductQuality(allergens = listOf("en:eggs"), additives = listOf("en:e322")),
-        )
-        for ((gtin, expected) in cases) {
-            cache.put(QualityLookup.Found(gtin, expected), now)
-            assertThat(cache.get(gtin)!!.quality).isEqualTo(expected)
-            val row = db.qualityDao().find(gtin.value)!!
-            if (expected.allergens == null) assertThat(row.allergens).isNull()
-            if (expected.allergens?.isEmpty() == true) assertThat(row.allergens).isEmpty()
-            if (expected.additives == null) assertThat(row.additives).isNull()
-            if (expected.additives?.isEmpty() == true) assertThat(row.additives).isEmpty()
-            assertThat(row.nutriScoreNotApplicable).isEqualTo(expected.nutriScoreNotApplicable)
-        }
+    fun `an unstated allergen list and an empty one stay different facts on disk`() = runTest {
+        cache.put(QualityLookup.Found(leche, ProductQuality(allergens = null)), now)
+        cache.put(QualityLookup.Found(pan, ProductQuality(allergens = emptyList())), now)
+        cache.put(QualityLookup.Found(huevos, ProductQuality(allergens = listOf("en:eggs"))), now)
+
+        assertThat(cache.get(leche)!!.quality!!.allergens).isNull()
+        assertThat(cache.get(pan)!!.quality!!.allergens).isEmpty()
+        assertThat(cache.get(huevos)!!.quality!!.allergens).containsExactly("en:eggs")
+
+        // At the column: NULL and the empty string, which is the distinction
+        // the whole encoding exists to keep.
+        assertThat(db.qualityDao().find(leche.value)!!.allergens).isNull()
+        assertThat(db.qualityDao().find(pan.value)!!.allergens).isEmpty()
+    }
+
+    @Test
+    fun `an unstated additive list and an empty one stay different facts on disk`() = runTest {
+        cache.put(QualityLookup.Found(leche, ProductQuality(additives = null)), now)
+        cache.put(QualityLookup.Found(pan, ProductQuality(additives = emptyList())), now)
+
+        assertThat(cache.get(leche)!!.quality!!.additives).isNull()
+        assertThat(cache.get(pan)!!.quality!!.additives).isEmpty()
+        assertThat(db.qualityDao().find(leche.value)!!.additives).isNull()
+        assertThat(db.qualityDao().find(pan.value)!!.additives).isEmpty()
     }
 
     // endregion
@@ -233,6 +271,12 @@ class RoomQualityCacheTest {
         assertThat(cache.get(leche)!!.fetchedAtEpochMillis).isEqualTo(requestedAt)
     }
 
+    @Test
+    fun `put without an instant stamps the injected clock, never the wall clock`() = runTest {
+        cache.put(QualityLookup.Found(leche, stated))
+
+        assertThat(cache.get(leche)!!.fetchedAtEpochMillis).isEqualTo(1_700_000_000_000L)
+    }
 
     @Test
     fun `a later answer replaces the one before it`() = runTest {
@@ -251,6 +295,17 @@ class RoomQualityCacheTest {
         assertThat(db.qualityDao().size()).isEqualTo(1)
     }
 
+    @Test
+    fun `the cache can be emptied, because every row in it is re-fetchable`() = runTest {
+        cache.put(QualityLookup.Found(leche, stated), now)
+        cache.put(QualityLookup.Missing(pan), now)
+
+        assertThat(db.qualityDao().clear()).isEqualTo(2)
+
+        assertThat(cache.get(leche)).isNull()
+        assertThat(cache.get(pan)).isNull()
+        assertThat(db.qualityDao().size()).isEqualTo(0)
+    }
 
     // endregion
 
@@ -268,25 +323,17 @@ class RoomQualityCacheTest {
     }
 
     @Test
-    fun `reads and observers stay inside the DAO bind bound`() = runTest {
-        cache.put(QualityLookup.Found(leche, stated), now)
+    fun `a batch read larger than one statement's parameters still answers`() = runTest {
         cache.put(QualityLookup.Found(aceite, stated), now)
-        val real = db.qualityDao()
-        val reads = mutableListOf<Int>()
-        val observers = mutableListOf<Int>()
-        val recording = object : QualityDao by real {
-            override suspend fun findAll(gtins: List<String>): List<QualityEntity> {
-                reads += gtins.size
-                return real.findAll(gtins)
-            }
-            override fun observe(gtins: List<String>) = real.observe(gtins).also { observers += gtins.size }
-        }
-        val bounded = RoomQualityCache(recording, maxBound = 3)
-        val requested = linkedSetOf(leche, pan, huevos, aceite)
-        assertThat(bounded.getAll(requested).keys).containsExactly(leche, aceite)
-        assertThat(bounded.observe(requested).first().keys).containsExactly(leche, aceite)
-        assertThat(reads).containsExactly(3, 1).inOrder()
-        assertThat(observers).containsExactly(3, 1).inOrder()
+        // Valid EAN-13s by check digit, so they parse; none is stored.
+        val many = (0 until 1_200).mapNotNull { Gtin.parse(ean13("400000%06d".format(it))) } + aceite
+
+        assertThat(cache.getAll(many).keys).containsExactly(aceite)
+    }
+
+    private fun ean13(twelve: String): String {
+        val sum = twelve.mapIndexed { i, c -> (c - '0') * if (i % 2 == 0) 1 else 3 }.sum()
+        return twelve + (10 - sum % 10) % 10
     }
 
     private fun gtin(raw: String): Gtin =

@@ -37,6 +37,18 @@ interface QualityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: QualityEntity)
 
+    /**
+     * Empties the cache.
+     *
+     * Every row here is derived and re-fetchable, so this is the one table in
+     * the database that can be thrown away without losing anything: a wipe
+     * costs a few HTTP requests and no data. That makes it the safe answer to
+     * "the quality data looks wrong" and to a person who would rather the app
+     * kept nothing from Open Food Facts on their phone.
+     */
+    @Query("DELETE FROM product_quality")
+    suspend fun clear(): Int
+
     /** How many barcodes are known about, answers and confirmed absences alike. */
     @Query("SELECT COUNT(*) FROM product_quality")
     suspend fun size(): Int

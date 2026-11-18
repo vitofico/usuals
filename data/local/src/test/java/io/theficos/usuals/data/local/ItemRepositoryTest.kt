@@ -283,6 +283,16 @@ class ItemRepositoryTest {
     }
 
     @Test
+    fun `reap takes a window, and a shorter one takes more`() = runTest {
+        val id = repo.add(ParsedItem("Tomates"))
+        repo.delete(id)
+        now += 60_000
+
+        assertThat(repo.reap(olderThanMillis = 120_000)).isEqualTo(0)
+        assertThat(repo.reap(olderThanMillis = 30_000)).isEqualTo(1)
+    }
+
+    @Test
     fun `setChecked, setQuantity and rename edit the row and stamp the clock`() = runTest {
         val id = repo.add(ParsedItem("Leche"))
 

@@ -31,14 +31,18 @@ import kotlinx.coroutines.flow.flowOf
  * a cache that decided for itself when a row had expired would be making that
  * call without knowing whether anybody is waiting.
  *
- * The caller supplies the instant its request started, so a slow response
- * cannot make a record look fresher than the data inside it.
+ * The clock is injected as everywhere else in this codebase, so "now" has one
+ * definition per process and a test can move it. The two-argument [put] the
+ * interface declares stays alongside the one-argument convenience because a
+ * caller that has just made a request knows something this class cannot: when
+ * the request went out. Stamping the row with that instant rather than with the
+ * moment a slow response finally landed keeps a record from looking fresher
+ * than the data inside it.
  */
-class RoomQualityCache internal constructor(
+class RoomQualityCache(
     private val dao: QualityDao,
-    private val maxBound: Int,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : QualityCache {
-    constructor(dao: QualityDao) : this(dao, MAX_BOUND)
 
     override suspend fun get(gtin: Gtin): CachedQuality? = dao.find(gtin.value)?.toCached()
 
@@ -48,7 +52,7 @@ class RoomQualityCache internal constructor(
      * of bound parameters in one statement.
      */
     suspend fun getAll(gtins: Collection<Gtin>): Map<Gtin, CachedQuality> =
-        gtins.map { it.value }.distinct().chunked(maxBound).flatMap { dao.findAll(it) }
+        gtins.map { it.value }.distinct().chunked(MAX_BOUND).flatMap { dao.findAll(it) }
             .mapNotNull { it.toCached() }.associateBy { it.gtin }
 
     override suspend fun put(outcome: QualityLookup, atEpochMillis: Long) {
@@ -86,6 +90,9 @@ class RoomQualityCache internal constructor(
         dao.upsert(entry)
     }
 
+    /** Records [outcome] as learned now. Same rules, including the one about failures. */
+    suspend fun put(outcome: QualityLookup) = put(outcome, clock())
+
     /**
      * The stated records for [gtins], again whenever the cache changes. Confirmed
      * absences are left out: for a list row they mean the same as no row.
@@ -95,7 +102,7 @@ class RoomQualityCache internal constructor(
      */
     fun observe(gtins: Set<Gtin>): Flow<Map<Gtin, ProductQuality>> {
         if (gtins.isEmpty()) return flowOf(emptyMap())
-        val parts = gtins.map { it.value }.chunked(maxBound).map { dao.observe(it) }
+        val parts = gtins.map { it.value }.chunked(MAX_BOUND).map { dao.observe(it) }
         return combine(parts) { chunks ->
             chunks.asList().flatten().mapNotNull { it.toCached() }
                 .mapNotNull { cached -> cached.quality?.let { cached.gtin to it } }.toMap()
