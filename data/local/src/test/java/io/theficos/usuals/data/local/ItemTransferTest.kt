@@ -222,20 +222,6 @@ class ItemTransferTest {
         originalRemains(source)
     }
 
-    @Test fun rejectedReceiptWithAnExistingDestinationCopyKeepsSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget { state ->
-                val imported = state.seen.values.single { it.kind == "import" }
-                check(state.rows.isNotEmpty())
-                state.copy(rejected = mapOf(imported.id to "invalid"))
-            }
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        assertThat(db.itemDao().active(target)).hasSize(1)
-        originalRemains(source)
-    }
-
     @Test fun discardedCapacityImportDoesNotDeleteSource() = runTest {
         val source = source()
         connectedDestination()

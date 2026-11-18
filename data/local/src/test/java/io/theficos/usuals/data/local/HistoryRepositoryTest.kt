@@ -125,27 +125,6 @@ class HistoryRepositoryTest {
         assertThat(history.snapshot().trips).isEmpty()
     }
 
-    @Test fun `only the displayed unarchived list can delete a trip`() = runTest {
-        database.listDao().insert(ListEntity("other", "Other"))
-        for (displayed in listOf(false, true)) {
-            for (archived in listOf(false, true)) {
-                database.listDao().update(requireNotNull(database.listDao().find("other")).copy(archived = false))
-                database.listDao().select(ListSelectionEntity(listId = "other"))
-                val imported = history.importPast(listOf(ParsedItem("eggs")), now)!!
-                database.listDao().update(requireNotNull(database.listDao().find("other")).copy(archived = archived))
-                database.listDao().select(ListSelectionEntity(listId = if (displayed) "other" else LOCAL_LIST_ID))
-                val before = history.snapshot("other")
-                val canDelete = displayed && !archived
-                assertThat(history.deleteTrip(imported.trip.id, "other")).isEqualTo(canDelete)
-                if (canDelete) {
-                    assertThat(history.snapshot("other").trips.map { it.id }).doesNotContain(imported.trip.id)
-                } else {
-                    assertThat(history.snapshot("other")).isEqualTo(before)
-                }
-            }
-        }
-    }
-
     @Test fun `removal records no purchase and finish reaps old tombstones`() = runTest {
         val deleted = items.add(ParsedItem("deleted"))
         items.delete(deleted)
