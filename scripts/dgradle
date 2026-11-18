@@ -90,10 +90,6 @@ fi
 # It is passed through rather than defaulted so that CI, which sets nothing,
 # cannot accidentally point a build matrix at a volunteer-funded service.
 echo "[dgradle] using $GRADLE_CACHE; builds in this checkout run one at a time." >&2
-if [[ -n "${USUALS_CI_DEPENDENCIES:-}" ]]; then
-  mkdir -p "$USUALS_CI_DEPENDENCIES"
-  RUN_FLAGS+=(-v "$USUALS_CI_DEPENDENCIES:/root/.gradle/caches/modules-2/files-2.1")
-fi
 exec docker run --rm "${RUN_FLAGS[@]}" \
   --platform linux/amd64 \
   --add-host=host.docker.internal:host-gateway \
