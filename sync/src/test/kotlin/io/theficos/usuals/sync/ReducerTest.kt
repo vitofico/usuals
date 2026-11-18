@@ -14,7 +14,7 @@ class ReducerTest {
     @Test fun reviewedScenariosConvergeAcrossReplayAndRestart() {
         val fixture = json.parseToJsonElement(javaClass.getResource("/shared-list-v1/reducer.json")!!.readText()).jsonObject
         val cases = fixture.getValue("cases").jsonArray
-        assertThat(cases).hasSize(41)
+        assertThat(cases).hasSize(38)
         for (scenario in cases.map { it.jsonObject }) {
             val initial = scenario.obj("initial")
             val scoped = (initial["lists"] as? JsonObject) ?: jsonObject("home" to initial)

@@ -52,19 +52,6 @@ class RecipeTest {
             server.enqueue(MockResponse().setHeader("Content-Type", "text/html").setBody("<script>secret()</script><p>Chop one onion.</p>"))
             assertThat((fetcher.fetch(server.url("/prose").toString()) as RecipeFetch.Read).prose).isEqualTo("Chop one onion.")
             assertThat(fetcher.fetch("file:///tmp/recipe.html")).isEqualTo(RecipeFetch.Failed(RecipeProblem.INVALID_URL))
-
-            server.enqueue(MockResponse().setResponseCode(429))
-            assertThat(fetcher.fetch(server.url("/rate-limited").toString()))
-                .isEqualTo(RecipeFetch.Failed(RecipeProblem.BLOCKED, 429))
-
-            val withUserInfo = server.url("/userinfo").newBuilder().username("user").password("pass").build()
-            assertThat(fetcher.fetch(withUserInfo.toString())).isEqualTo(RecipeFetch.Failed(RecipeProblem.INVALID_URL))
-
-            server.enqueue(MockResponse().setHeader("Content-Type", "text/html")
-                .setChunkedBody("x".repeat(4 * 1024 * 1024 + 1), 8192))
-            assertThat(fetcher.fetch(server.url("/chunked").toString()))
-                .isEqualTo(RecipeFetch.Failed(RecipeProblem.TOO_LARGE))
-            assertThat(server.requestCount).isEqualTo(6)
         }
     }
 

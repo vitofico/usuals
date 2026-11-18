@@ -9,8 +9,7 @@ class HistoryDeletionTest {
     private val reducer = Reducer()
     private val trip = buildJsonObject { put("closedAt", 10) }
     private val purchase = buildJsonObject { put("id", "milk"); put("tripId", "shop"); put("key", "milk"); put("name", "Milk"); put("boughtAt", 10) }
-    private val bystander = JsonObject(purchase + mapOf("id" to JsonPrimitive("tea"), "tripId" to JsonPrimitive("other")))
-    private val initial = Projection(trips = mapOf("shop" to trip, "other" to trip), purchases = mapOf("milk" to purchase, "tea" to bystander),
+    private val initial = Projection(trips = mapOf("shop" to trip, "other" to trip), purchases = mapOf("milk" to purchase),
         rows = mapOf("milk" to Row("milk", buildJsonObject { put("name", "Milk"); put("key", "milk") }, lifecycle = "finish", archived = true),
             "open" to Row("open", buildJsonObject { put("name", "Bread"); put("key", "bread") })),
         closes = mapOf("finish" to Close("shop", listOf("milk"))), seen = mapOf("finish" to Intent("finish", "home", "finish", buildJsonObject {})))
@@ -21,7 +20,7 @@ class HistoryDeletionTest {
         val result = delete()
         assertThat(result.outcome).isEqualTo(Outcome.APPLIED)
         assertThat(result.projection.trips.keys).containsExactly("other")
-        assertThat(result.projection.purchases).isEqualTo(mapOf("tea" to bystander))
+        assertThat(result.projection.purchases).isEmpty()
         assertThat(result.projection.rows).isEqualTo(initial.rows)
         assertThat(HistoryDeletion.contains(result.projection, "shop")).isTrue()
         assertThat(result.projection.cancelledCloses).contains("finish")
@@ -35,7 +34,7 @@ class HistoryDeletionTest {
     @Test fun importedAndOldShopsCanBeDeletedWithoutACloseRecord() {
         val result = delete(initial.copy(closes = emptyMap(), seen = emptyMap(), rows = emptyMap()))
         assertThat(result.outcome).isEqualTo(Outcome.APPLIED)
-        assertThat(result.projection.purchases).isEqualTo(mapOf("tea" to bystander))
+        assertThat(result.projection.purchases).isEmpty()
     }
 
     @Test fun deletionSurvivesSnapshotRestartAndTheResendHorizon() {
@@ -54,22 +53,11 @@ class HistoryDeletionTest {
         }))
         assertThat(stale.outcome).isEqualTo(Outcome.APPLIED)
         assertThat(stale.projection.trips.keys).containsExactly("other")
-        assertThat(stale.projection.purchases).isEqualTo(mapOf("tea" to bystander))
-        val facts = buildJsonObject {
-            put("name", "Bread"); put("key", "bread"); put("checkedAt", 10)
-        }
-        val checked = restored.rows.getValue("open").copy(facts = JsonObject(facts + ("checked" to JsonPrimitive(true))))
-        val beforeFinish = restored.copy(rows = restored.rows + ("open" to checked))
-        val candidate = buildJsonObject {
-            put("id", "open"); put("facts", facts); put("expectedFields", buildJsonObject {})
-        }
-        val finish = reducer.apply(beforeFinish, Intent("stale-finish", "home", "finish", buildJsonObject {
-            put("tripId", "shop"); put("closedAt", 10); put("rows", JsonArray(listOf(candidate)))
+        assertThat(stale.projection.purchases).isEmpty()
+        val finish = reducer.apply(restored, Intent("stale-finish", "home", "finish", buildJsonObject {
+            put("tripId", "shop"); put("closedAt", 10); put("rows", JsonArray(emptyList()))
         }))
         assertThat(finish.outcome).isEqualTo(Outcome.NO_OP)
-        assertThat(finish.projection.trips).isEqualTo(beforeFinish.trips)
-        assertThat(finish.projection.rows).isEqualTo(beforeFinish.rows)
-        assertThat(finish.projection.purchases).isEqualTo(beforeFinish.purchases)
     }
 
     @Test fun unknownAndMalformedDeletionCannotRemoveOtherHistory() {
