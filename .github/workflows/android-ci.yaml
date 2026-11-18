@@ -52,6 +52,14 @@ jobs:
         env:
           USUALS_CI_DEPENDENCIES: ${{ runner.temp }}/gradle-dependency-files
 
+      - name: Retain relay test results
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: relay-test-results
+          path: '**/test-results/*/TEST-*.xml'
+          if-no-files-found: error
+          retention-days: 3
+
   release:
     needs: [secrets-scan, android, server]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
