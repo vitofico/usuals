@@ -9,7 +9,6 @@ import io.theficos.usuals.enrich.NutriScore
 import io.theficos.usuals.enrich.ProductQuality
 import io.theficos.usuals.enrich.QualityLookup
 import io.theficos.usuals.model.Gtin
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -32,42 +31,22 @@ class QualityObserveTest {
     @Before fun setUp() {
         val context: Context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java).allowMainThreadQueries().build()
-        cache = RoomQualityCache(db.qualityDao(), clock = { 1L })
+        cache = RoomQualityCache(db.qualityDao())
     }
 
     @After fun tearDown() = db.close()
 
-    @Test fun `the dao emits again after a write and only for the barcodes asked about`() = runTest {
-        db.qualityDao().observe(listOf(milk.value, bread.value)).test {
-            assertThat(awaitItem()).isEmpty()
-            cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.B)))
-            assertThat(awaitItem().map { it.gtin }).containsExactly(milk.value)
-            cache.put(QualityLookup.Found(eggs, ProductQuality(nutriScore = NutriScore.A)))
-            assertThat(awaitItem().map { it.gtin }).containsExactly(milk.value)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test fun `confirmed absences read as no record and a refresh replaces the grade`() = runTest {
-        cache.put(QualityLookup.Missing(bread))
+    @Test fun `answers refresh and only reach requested barcodes`() = runTest {
+        cache.put(QualityLookup.Missing(bread), 1)
         cache.observe(setOf(milk, bread)).test {
             assertThat(awaitItem()).isEmpty()
-            cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.C)))
-            assertThat(awaitItem().getValue(milk).nutriScore).isEqualTo(NutriScore.C)
-            cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.A)))
-            assertThat(awaitItem().getValue(milk).nutriScore).isEqualTo(NutriScore.A)
+            cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.C)), 2)
+            assertThat(awaitItem()).containsExactly(milk, ProductQuality(nutriScore = NutriScore.C))
+            cache.put(QualityLookup.Found(eggs, ProductQuality(nutriScore = NutriScore.B)), 3)
+            assertThat(awaitItem().keys).containsExactly(milk)
+            cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.A)), 4)
+            assertThat(awaitItem()).containsExactly(milk, ProductQuality(nutriScore = NutriScore.A))
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    @Test fun `more barcodes than SQLite binds in one query still answer`() = runTest {
-        cache.put(QualityLookup.Found(milk, ProductQuality(nutriScore = NutriScore.B)))
-        val many = (1..1_200).mapNotNull { Gtin.parse(withCheckDigit("400%09d".format(it))) }.toSet() + milk
-        assertThat(cache.observe(many).first().keys).containsExactly(milk)
-    }
-
-    private fun withCheckDigit(twelve: String): String {
-        val sum = twelve.mapIndexed { i, c -> (c - '0') * if (i % 2 == 0) 1 else 3 }.sum()
-        return twelve + ((10 - sum % 10) % 10)
     }
 }

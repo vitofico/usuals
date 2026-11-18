@@ -49,9 +49,6 @@ data class Quantity(val amount: Double, val unit: MeasureUnit) {
         MeasureUnit.PIECE, MeasureUnit.PACK -> null
     }
 
-    /** True when both quantities measure the same kind of thing. */
-    fun isComparableWith(other: Quantity): Boolean = unit.dimension == other.unit.dimension
-
     companion object {
         fun pieces(n: Int): Quantity = Quantity(n.toDouble(), MeasureUnit.PIECE)
 

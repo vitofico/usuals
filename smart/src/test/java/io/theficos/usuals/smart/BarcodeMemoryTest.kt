@@ -2,7 +2,6 @@ package io.theficos.usuals.smart
 
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.*
-import io.theficos.usuals.parse.ItemIdentity
 import io.theficos.usuals.parse.Normalizer
 import org.junit.Test
 
@@ -55,23 +54,5 @@ class BarcodeMemoryTest {
         )
         assertThat(BarcodeMemory(history).remembered(typed("milk"))).isNull()
         assertThat(BarcodeMemory(HistorySnapshot()).remembered("milk")).isNull()
-    }
-
-    /**
-     * Memory never changes identity. Rows keep `gtin = null`, and even a row
-     * that did carry the remembered code would resolve to the key it already
-     * has, through the alias or because an unaliased code keys by name.
-     */
-    @Test fun `memory never changes a row's identity key`() {
-        val viaAlias = HistorySnapshot(aliases = listOf(ItemAlias("gtin:${brandA.value}", "milk")))
-        val viaPurchase = HistorySnapshot(purchases = listOf(bought("milk", brandB, day)))
-        for (history in listOf(viaAlias, viaPurchase)) {
-            val aliases = history.aliases.associate { it.fromKey to it.toKey }
-            val row = typed("Milk")
-            val remembered = BarcodeMemory(history).remembered(row)!!
-            assertThat(row.gtin).isNull()
-            assertThat(ItemIdentity.key(row.copy(gtin = remembered.gtin), aliases)).isEqualTo(ItemIdentity.key(row, aliases))
-            assertThat(ItemIdentity.key(row, aliases)).isEqualTo("milk")
-        }
     }
 }

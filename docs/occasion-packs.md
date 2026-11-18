@@ -138,7 +138,10 @@ actions, checked-row defaults and duplicate handling. Verification used syntheti
 data, disposable local PostgreSQL and an Android emulator.
 
 
-The opt-in native regression
+Run the debug unit suite for `ShoppingFinishRoomScreenTest`. It exercises the
+production list screen, stale displayed versions and Undo against in-memory Room.
+
+For an emulator check at normal or enlarged font size, the opt-in native regression
 `ShoppingFinishDeviceTest.footerPreservesConcurrentEditsAndFilteredRowsWithUndo`
 uses real Room data and a frozen `ListContent` presentation. It clicks the actual
 footer after quantity/check edits, verifies filtered rows remain, and tests Undo.

@@ -8,7 +8,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -136,10 +135,6 @@ class OpenAiCompatibleClientTest {
         assertThat(config.toString()).doesNotContain(apiKey)
         assertThat(config.toString()).contains(ProviderConfig.REDACTED)
         assertThat(config.hasKey).isTrue()
-    }
-
-    @Test
-    fun `a client never prints its config`() {
         assertThat(client().toString()).doesNotContain(apiKey)
     }
 
@@ -163,16 +158,6 @@ class OpenAiCompatibleClientTest {
         assertThat(capabilities.problem?.httpCode).isEqualTo(401)
         assertThat(capabilities.problem?.excerpt).contains(ProviderConfig.REDACTED)
         assertThat(capabilities.problem?.excerpt).doesNotContain(apiKey)
-    }
-
-    @Test
-    fun `a rate limit is named plainly`() = runTest {
-        server.enqueue(MockResponse().setResponseCode(429).setBody("slow down"))
-
-        val capabilities = client().probe()
-
-        assertThat(capabilities.reachable).isTrue()
-        assertThat(capabilities.problem?.kind).isEqualTo(ModelProblem.Kind.RATE_LIMITED)
     }
 
     @Test
@@ -210,7 +195,9 @@ class OpenAiCompatibleClientTest {
             503 to ModelProblem.Kind.HTTP_ERROR,
         )) {
             server.enqueue(MockResponse().setResponseCode(code).setBody("provider detail"))
-            val problem = client().probe().problem!!
+            val capabilities = client().probe()
+            assertThat(capabilities.reachable).isTrue()
+            val problem = capabilities.problem!!
             assertThat(problem.kind).isEqualTo(kind)
             assertThat(problem.httpCode).isEqualTo(code)
             assertThat(problem.excerpt).isEqualTo("provider detail")
@@ -269,36 +256,41 @@ class OpenAiCompatibleClientTest {
         assertThat(data.getValue("recipe_text").jsonPrimitive.content).isEqualTo(source)
     }
 
-    @Test fun `Ollama requests final answers without spending the output allowance on thinking`() = runTest {
-        replyWith("""{"ok": 1}""")
-        val local = OpenAiCompatibleClient(ProviderConfig.ollama("local", server.url("/v1").toString()))
-        assertThat(local.probe().supportsStructuredOutput).isTrue()
-        val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
-        assertThat(payload.getValue("temperature").jsonPrimitive.content).isEqualTo("0")
-        assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
-    }
-
-    @Test fun `GPT 6 Terra uses completion budget and skips reasoning for structured extraction`() = runTest {
-        replyWith("""{"ok": 1}""")
-        val terra = OpenAiCompatibleClient(ProviderConfig(
-            ProviderKind.OPENAI_COMPATIBLE, "Terra", server.url("/v1").toString(),
-            "gpt-6.1-terra", false, apiKey,
-        ))
-        assertThat(terra.probe().supportsStructuredOutput).isTrue()
-        val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
-        assertThat(payload).doesNotContainKey("max_tokens")
-        assertThat(payload.getValue("max_completion_tokens").jsonPrimitive.content.toInt()).isGreaterThan(0)
-        assertThat(payload.getValue("reasoning_effort").jsonPrimitive.content).isEqualTo("none")
-        assertThat(payload.getValue("temperature").jsonPrimitive.content).isEqualTo("0")
-    }
-
-    @Test fun `Anthropic requests omit temperature, reasoning effort and response format`() = runTest {
-        replyWith("""{"ok": 1}""")
-        assertThat(client(kind = ProviderKind.ANTHROPIC).probe().supportsStructuredOutput).isTrue()
-        val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
-        assertThat(payload).doesNotContainKey("temperature")
-        assertThat(payload).doesNotContainKey("reasoning_effort")
-        assertThat(payload).doesNotContainKey("response_format")
+    @Test fun `provider probes send the supported structured output parameters`() = runTest {
+        data class Probe(
+            val client: OpenAiCompatibleClient,
+            val temperature: String?,
+            val reasoning: String?,
+            val format: Boolean,
+            val completionBudget: Boolean = false,
+        )
+        val cases = listOf(
+            Probe(client(), "0", null, format = true),
+            Probe(
+                OpenAiCompatibleClient(ProviderConfig.ollama("local", server.url("/v1").toString())),
+                "0", "none", format = true,
+            ),
+            Probe(
+                OpenAiCompatibleClient(ProviderConfig(
+                    ProviderKind.OPENAI_COMPATIBLE, "Terra", server.url("/v1").toString(),
+                    "gpt-6.1-terra", false, apiKey,
+                )),
+                "0", "none", format = true, completionBudget = true,
+            ),
+            Probe(client(kind = ProviderKind.ANTHROPIC), null, null, format = false),
+        )
+        for ((provider, temperature, reasoning, format, completionBudget) in cases) {
+            replyWith("""{"ok": 1}""")
+            assertThat(provider.probe().supportsStructuredOutput).isTrue()
+            val payload = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            assertThat(payload["temperature"]?.jsonPrimitive?.content).isEqualTo(temperature)
+            assertThat(payload["reasoning_effort"]?.jsonPrimitive?.content).isEqualTo(reasoning)
+            assertThat(payload.containsKey("response_format")).isEqualTo(format)
+            if (completionBudget) {
+                assertThat(payload).doesNotContainKey("max_tokens")
+                assertThat(payload.getValue("max_completion_tokens").jsonPrimitive.content.toInt()).isGreaterThan(0)
+            }
+        }
     }
 
     // ---- parsing ------------------------------------------------------------
@@ -389,20 +381,6 @@ class OpenAiCompatibleClientTest {
         assertThat(http.connectTimeoutMillis).isEqualTo(30_000)
         assertThat(http.readTimeoutMillis).isEqualTo(30_000)
         assertThat(http.retryOnConnectionFailure).isFalse()
-    }
-
-    /**
-     * The user message out of a captured request body.
-     *
-     * Read out of the JSON rather than matched against the raw body, because
-     * the raw body has been through JSON escaping and a forged newline would be
-     * a literal backslash-n in it. The question these tests ask is what the
-     * model reads, which is the decoded string.
-     */
-    private fun promptIn(body: String): String {
-        val messages = Json.parseToJsonElement(body).jsonObject["messages"] as JsonArray
-        val user = messages.map { it.jsonObject }.first { it["role"]?.jsonPrimitive?.content == "user" }
-        return user.getValue("content").jsonPrimitive.content
     }
 }
 

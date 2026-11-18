@@ -50,6 +50,10 @@ changes, search independence and the collapsed disclosure. Browser equivalents
 are in `web/test/shopping-stats.test.mjs`, including preserving an open disclosure
 on refresh and clearing unavailable-list content.
 
+`QuietHistoryScreenTest` runs with the debug unit suite and checks the disclosure
+and its independence from History search. Run the device scenario to also check
+list switching and read-only behavior through Room.
+
 `ShoppingStatsDeviceTest` is an opt-in production-adapter/Room/Compose scenario
 using synthetic in-memory history. After the standard Android checks and an
 Android test APK build, run it on a selected disposable emulator:

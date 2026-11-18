@@ -72,7 +72,8 @@ class RelayIntegrationTest {
     }
     @Test fun heldUploadBodiesCannotBlockCatchUp() = testApplication {
         val account = f.account("Synthetic")
-        application { relayModule(f.relay, webIdentity = f.web) }
+        val operations = RelayMetrics(db)
+        application { relayModule(f.relay, operations, webIdentity = f.web) }
         coroutineScope {
             // One anonymous sender and two signed-in ones, as many as there are list-work permits.
             val held = List(3) { io.ktor.utils.io.ByteChannel() }
@@ -88,7 +89,7 @@ class RelayIntegrationTest {
                 }
             }
             try {
-                delay(200)
+                withTimeout(10_000) { while (operations.active.get() < 3) yield() }
                 val response = withTimeout(2000) { client.get("/api/lists/changes") { bearerAuth(account.bearer) } }
                 assertThat(response.status.value).isEqualTo(200)
             } finally { held.forEach { it.cancel(null) }; senders.forEach { it.cancelAndJoin() } }

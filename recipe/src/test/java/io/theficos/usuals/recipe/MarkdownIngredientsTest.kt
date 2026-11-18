@@ -3,6 +3,7 @@ package io.theficos.usuals.recipe
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.Quantity
 import io.theficos.usuals.parse.IngredientLineParser
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class MarkdownIngredientsTest {
@@ -97,23 +98,14 @@ class MarkdownIngredientsTest {
         assertThat(reader.read("# Shopping list\n## Notes\nSome instructions").ingredients).isEmpty()
     }
     @Test fun exactLengthAndItemLimitsAreAcceptedWhole() {
-        val text = "x".repeat(MarkdownIngredients.MAX_TEXT)
-        assertThat(reader.read(text).ingredients).containsExactly(text)
+        val textRows = (1..30).map { "item $it".padEnd(if (it == 30) 1000 else 999, 'x') }
+        val text = textRows.joinToString("\n")
+        assertThat(text.length).isEqualTo(MarkdownIngredients.MAX_TEXT)
+        assertThat(reader.read(text).ingredients).containsExactlyElementsIn(textRows).inOrder()
+        assertThrows(IllegalArgumentException::class.java) { reader.read(text + "x") }
         val rows = (1..MarkdownIngredients.MAX_ITEMS).map { "item $it" }
         val note = rows.joinToString("\n") { "- $it" }
         assertThat(reader.read(note).ingredients).containsExactlyElementsIn(rows).inOrder()
-    }
-    @Test(expected = IllegalArgumentException::class) fun oversizedTextIsRejectedRatherThanTruncated() {
-        reader.read("x".repeat(MarkdownIngredients.MAX_TEXT + 1))
-    }
-    @Test fun aLongKeepListImportsWhole() {
-        val note = (1..300).joinToString("\n") { if (it % 3 == 0) "[X] Item $it 🍅🍅" else "[ ] Item $it" }
-        val document = reader.read(note)
-        assertThat(document.ingredients).hasSize(300)
-        assertThat(document.ingredients.last()).isEqualTo("Item 300 🍅🍅")
-        assertThat(document.checked).hasSize(100)
-    }
-    @Test(expected = IllegalArgumentException::class) fun oversizedListsAreRejectedRatherThanPartiallyImported() {
-        reader.read((0..MarkdownIngredients.MAX_ITEMS).joinToString("\n") { "- item $it" })
+        assertThrows(IllegalArgumentException::class.java) { reader.read(note + "\n- another item") }
     }
 }

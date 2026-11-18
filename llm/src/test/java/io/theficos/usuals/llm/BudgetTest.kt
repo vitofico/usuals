@@ -53,33 +53,24 @@ class ModelBudgetTest {
     }
 
     @Test
-    fun `the allowance resets at UTC midnight and not before`() {
-        val clock = FrozenClock(MIDNIGHT + DAY_MILLIS - 1)
+    fun `the spent allowance refills only at the next UTC midnight`() {
+        val clock = FrozenClock(MIDNIGHT)
         val budget = ModelBudget(2, clock::now)
-
         assertThat(budget.tryConsume()).isTrue()
         assertThat(budget.tryConsume()).isTrue()
         assertThat(budget.tryConsume()).isFalse()
 
-        // One millisecond earlier, still yesterday.
-        assertThat(budget.remaining()).isEqualTo(0)
+        for (instant in listOf(MIDNIGHT + 23 * 60 * 60 * 1000, MIDNIGHT + DAY_MILLIS - 1)) {
+            clock.current = instant
+            assertThat(budget.remaining()).isEqualTo(0)
+            assertThat(budget.usedToday()).isEqualTo(2)
+            assertThat(budget.tryConsume()).isFalse()
+        }
 
         clock.current = MIDNIGHT + DAY_MILLIS
         assertThat(budget.remaining()).isEqualTo(2)
         assertThat(budget.usedToday()).isEqualTo(0)
         assertThat(budget.tryConsume()).isTrue()
-    }
-
-    @Test
-    fun `hours passing inside one day do not reset anything`() {
-        val clock = FrozenClock(MIDNIGHT)
-        val budget = ModelBudget(1, clock::now)
-        assertThat(budget.tryConsume()).isTrue()
-
-        clock.current = MIDNIGHT + 23 * 60 * 60 * 1000
-
-        assertThat(budget.tryConsume()).isFalse()
-        assertThat(budget.usedToday()).isEqualTo(1)
     }
 
     @Test

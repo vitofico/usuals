@@ -38,6 +38,8 @@ class ProviderSettingsTest {
         "https://ollama.example.com:11434/v1" to false,
         "https://localhost.example.com" to false,
         "http://100.64.0.1" to false,
+        "http://user@192.168.0.9:11434/v1/chat" to true,
+        "https://user@api.example.com/v1" to false,
         "" to false,
         "   " to false,
     )
@@ -52,66 +54,27 @@ class ProviderSettingsTest {
     }
 
     @Test
-    fun `looksLocal ignores credentials and paths in the url`() {
-        assertThat(ProviderSettings.looksLocal("http://user@192.168.0.9:11434/v1/chat")).isTrue()
-        assertThat(ProviderSettings.looksLocal("https://user@api.example.com/v1")).isFalse()
-    }
-
-    @Test
-    fun `anthropic default is haiku and is not local`() {
-        val settings = ProviderSettings.anthropic()
-
-        assertThat(settings.kind).isEqualTo(ProviderKind.ANTHROPIC)
-        assertThat(settings.model).isEqualTo(ProviderSettings.DEFAULT_ANTHROPIC_MODEL)
-        assertThat(settings.isLocal).isFalse()
-    }
-
-    @Test
-    fun `ollama on loopback is local`() {
-        val settings = ProviderSettings.ollama()
-
-        assertThat(settings.kind).isEqualTo(ProviderKind.OLLAMA)
-        assertThat(settings.baseUrl).isEqualTo(ProviderSettings.DEFAULT_OLLAMA_BASE_URL)
-        assertThat(settings.isLocal).isTrue()
-    }
-
-    /**
-     * The reason [ProviderSettings.isLocal] is stored rather than derived from
-     * the kind. Ollama behind a public hostname is a hosted model with a
-     * friendly name, and telling the user it stays on their LAN would be the
-     * dishonest slogan invariant 8 exists to prevent.
-     */
-    @Test
-    fun `ollama on a public host is not local`() {
-        val settings = ProviderSettings.ollama(baseUrl = "https://ollama.example.com")
-
-        assertThat(settings.isLocal).isFalse()
-    }
-
-    @Test
-    fun `an openai compatible endpoint on the lan is local`() {
-        val settings = ProviderSettings.openAiCompatible(
-            baseUrl = "http://192.168.1.20:8080/v1",
-            model = "qwen2.5:7b",
+    fun `provider defaults preserve model and locality choices`() {
+        val cases = listOf(
+            ProviderSettings.anthropic() to ProviderSettings(
+                ProviderKind.ANTHROPIC, "Anthropic", "", ProviderSettings.DEFAULT_ANTHROPIC_MODEL, false,
+            ),
+            ProviderSettings.ollama() to ProviderSettings(
+                ProviderKind.OLLAMA, "Ollama", ProviderSettings.DEFAULT_OLLAMA_BASE_URL, "", true,
+            ),
+            ProviderSettings.ollama("https://ollama.example.com") to ProviderSettings(
+                ProviderKind.OLLAMA, "Ollama", "https://ollama.example.com", "", false,
+            ),
+            ProviderSettings.openAiCompatible("http://192.168.1.20:8080/v1", "qwen2.5:7b") to ProviderSettings(
+                ProviderKind.OPENAI_COMPATIBLE, "Custom endpoint", "http://192.168.1.20:8080/v1", "qwen2.5:7b", true,
+            ),
+            ProviderSettings.openAiCompatible("https://gateway.example.com/v1", "llama3.1", isLocal = true) to ProviderSettings(
+                ProviderKind.OPENAI_COMPATIBLE, "Custom endpoint", "https://gateway.example.com/v1", "llama3.1", true,
+            ),
         )
-
-        assertThat(settings.kind).isEqualTo(ProviderKind.OPENAI_COMPATIBLE)
-        assertThat(settings.isLocal).isTrue()
-    }
-
-    /**
-     * The user gets the last word, because a VPN or a hosts entry can make
-     * either automatic answer wrong and only they can see the network.
-     */
-    @Test
-    fun `an explicit locality overrides the guess`() {
-        val settings = ProviderSettings.openAiCompatible(
-            baseUrl = "https://gateway.example.com/v1",
-            model = "llama3.1",
-            isLocal = true,
-        )
-
-        assertThat(settings.isLocal).isTrue()
+        for ((actual, expected) in cases) {
+            assertWithMessage(expected.baseUrl).that(actual).isEqualTo(expected)
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package io.theficos.usuals.parse
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.theficos.usuals.model.Gtin
 import io.theficos.usuals.model.ItemId
 import io.theficos.usuals.model.MeasureUnit
@@ -16,27 +17,45 @@ class ItemDraftTest {
     private fun fixedClock(millis: Long): () -> Long = { millis }
 
     @Test
-    fun `an utterance becomes a list row with its cache key already stamped`() {
-        val parsed = parser.parse("añade dos litros de leche entera").single()
-
-        val item = parsed.toItem(
-            id = ItemId("i-1"),
-            rawText = "añade dos litros de leche entera",
-            addedBy = MemberId("marta"),
-            position = 4.5,
-            clock = fixedClock(1_700_000_000_000),
+    fun `parsed input becomes a row with the original text and a stable key`() {
+        data class Draft(
+            val raw: String,
+            val name: String,
+            val key: String,
+            val quantity: Quantity? = null,
+            val note: String? = null,
+            val gtin: Gtin? = null,
         )
-
-        assertThat(item.id).isEqualTo(ItemId("i-1"))
-        assertThat(item.rawText).isEqualTo("añade dos litros de leche entera")
-        assertThat(item.name).isEqualTo("leche entera")
-        assertThat(item.normalizedName).isEqualTo("leche entera")
-        assertThat(item.quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(item.note).isNull()
-        assertThat(item.gtin).isNull()
-        assertThat(item.checked).isFalse()
-        assertThat(item.position).isEqualTo(4.5)
-        assertThat(item.addedBy).isEqualTo(MemberId("marta"))
+        val gtin = requireNotNull(Gtin.parse("8480000123459"))
+        val cases = listOf(
+            Draft("añade dos litros de leche entera", "leche entera", "leche entera", Quantity(2.0, MeasureUnit.LITRE)),
+            Draft("  necesitamos PAN de payés!!  ", "PAN de payés", "pan payes"),
+            Draft("leche para el café", "leche", "leche", note = "para el café"),
+            Draft("8480000123459", "leche entera", "leche entera", gtin = gtin),
+            Draft("Tomates", "Tomates", "tomate"),
+            Draft("tres tomate", "tomate", "tomate", Quantity.pieces(3)),
+        )
+        for (row in cases) {
+            val parsed = if (row.gtin == null) parser.parse(row.raw).single() else ParsedItem(row.name)
+            val item = parsed.toItem(
+                id = ItemId("i-1"),
+                rawText = row.raw,
+                addedBy = MemberId("marta"),
+                position = 4.5,
+                gtin = row.gtin,
+                clock = fixedClock(1_700_000_000_000),
+            )
+            assertWithMessage("input %s", row.raw).that(item.name).isEqualTo(row.name)
+            assertThat(item.id).isEqualTo(ItemId("i-1"))
+            assertThat(item.rawText).isEqualTo(row.raw)
+            assertThat(item.normalizedName).isEqualTo(row.key)
+            assertThat(item.quantity).isEqualTo(row.quantity)
+            assertThat(item.note).isEqualTo(row.note)
+            assertThat(item.gtin).isEqualTo(row.gtin)
+            assertThat(item.checked).isFalse()
+            assertThat(item.position).isEqualTo(4.5)
+            assertThat(item.addedBy).isEqualTo(MemberId("marta"))
+        }
     }
 
     @Test
@@ -53,49 +72,5 @@ class ItemDraftTest {
 
         assertThat(item.createdAt).isEqualTo(item.updatedAt)
         assertThat(reads).isEqualTo(1)
-    }
-
-    @Test
-    fun `the raw text is kept exactly, and the name is not`() {
-        val raw = "  necesitamos PAN de payés!!  "
-        val parsed = parser.parse(raw).single()
-        val item = parsed.toItem(ItemId("i-3"), rawText = raw, clock = fixedClock(0))
-
-        assertThat(item.rawText).isEqualTo(raw)
-        assertThat(item.name).isEqualTo("PAN de payés")
-        assertThat(item.normalizedName).isEqualTo("pan payes")
-    }
-
-    @Test
-    fun `a note survives onto the row`() {
-        val parsed = parser.parse("leche para el café").single()
-        val item = parsed.toItem(ItemId("i-4"), rawText = "leche para el café", clock = fixedClock(0))
-
-        assertThat(item.name).isEqualTo("leche")
-        assertThat(item.note).isEqualTo("para el café")
-    }
-
-    @Test
-    fun `a scanned barcode rides along and is the rung-1 identity`() {
-        val gtin = Gtin.parse("8480000123459")
-        val item = ParsedItem("leche entera").toItem(
-            id = ItemId("i-5"),
-            rawText = "8480000123459",
-            gtin = gtin,
-            clock = fixedClock(1_700_000_000_000),
-        )
-
-        assertThat(item.gtin).isEqualTo(gtin)
-        assertThat(item.normalizedName).isEqualTo("leche entera")
-    }
-
-    @Test
-    fun `two spellings of the same item share a cache key`() {
-        val first = parser.parse("Tomates").single().toItem(ItemId("a"), "Tomates", clock = fixedClock(0))
-        val second = parser.parse("tres tomate").single().toItem(ItemId("b"), "tres tomate", clock = fixedClock(0))
-
-        assertThat(first.normalizedName).isEqualTo(second.normalizedName)
-        assertThat(first.quantity).isNull()
-        assertThat(second.quantity).isEqualTo(Quantity.pieces(3))
     }
 }

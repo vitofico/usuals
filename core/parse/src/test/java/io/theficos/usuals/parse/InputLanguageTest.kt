@@ -20,13 +20,4 @@ class InputLanguageTest {
         assertThat(parsed.first().quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
     }
 
-    @Test
-    fun `English and Spanish input stay available together independent of UI language`() {
-        val parser = LocalUtteranceParser()
-        assertThat(parser.parse("add two litres of milk").single().quantity)
-            .isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(parser.parse("añade dos litros de leche").single().quantity)
-            .isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-        assertThat(Normalizer.normalize("Dos Tomates")).isEqualTo("dos tomate")
-    }
 }

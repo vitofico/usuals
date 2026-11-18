@@ -1,44 +1,34 @@
 package io.theficos.usuals.smart
 
-import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 
 class AllergenAvoidanceTest {
-    private val avoid = setOf("en:milk", "en:nuts")
-
-    @Test fun `an avoided allergen the record lists is contained`() {
-        val match = AllergenAvoidance.match(listOf("en:gluten", "en:milk"), emptyList(), avoid)
-        assertThat(match.contains).containsExactly("en:milk")
-        assertThat(match.mayContain).isEmpty()
-        assertThat(match.flagged).isTrue()
-    }
-
-    @Test fun `an avoided trace is may contain, and a contained one is not repeated as a trace`() {
-        val match = AllergenAvoidance.match(listOf("en:milk"), listOf("en:nuts", "EN:Milk "), avoid)
-        assertThat(match.contains).containsExactly("en:milk")
-        assertThat(match.mayContain).containsExactly("en:nuts")
-    }
-
-    @Test fun `unstated allergens are unknown, never clear`() {
-        val match = AllergenAvoidance.match(null, null, avoid)
-        assertThat(match.allergensStated).isFalse()
-        assertThat(match.flagged).isFalse()
-    }
-
-    @Test fun `a stated trace still warns when the allergen list was never filled in`() {
-        val match = AllergenAvoidance.match(null, listOf("en:nuts"), avoid)
-        assertThat(match.allergensStated).isFalse()
-        assertThat(match.mayContain).containsExactly("en:nuts")
-    }
-
-    @Test fun `an empty allergen list is stated with nothing to flag`() {
-        val match = AllergenAvoidance.match(emptyList(), emptyList(), avoid)
-        assertThat(match.allergensStated).isTrue()
-        assertThat(match.flagged).isFalse()
-    }
-
-    @Test fun `allergens the person does not avoid are not flagged`() {
-        assertThat(AllergenAvoidance.match(listOf("en:gluten"), listOf("en:soybeans"), avoid).flagged).isFalse()
-        assertThat(AllergenAvoidance.match(listOf("en:milk"), null, emptySet()).flagged).isFalse()
+    @Test fun `allergen and trace results retain the whole warning state`() {
+        val avoid = setOf("en:milk", "en:nuts")
+        data class Warning(
+            val allergens: List<String>?,
+            val traces: List<String>?,
+            val avoided: Set<String>,
+            val contains: List<String> = emptyList(),
+            val mayContain: List<String> = emptyList(),
+            val stated: Boolean,
+            val flagged: Boolean,
+        )
+        val cases = listOf(
+            Warning(listOf("en:gluten", "en:milk"), emptyList(), avoid, contains = listOf("en:milk"), stated = true, flagged = true),
+            Warning(listOf("en:milk"), listOf("en:nuts", "EN:Milk "), avoid, listOf("en:milk"), listOf("en:nuts"), true, true),
+            Warning(null, null, avoid, stated = false, flagged = false),
+            Warning(null, listOf("en:nuts"), avoid, mayContain = listOf("en:nuts"), stated = false, flagged = true),
+            Warning(emptyList(), emptyList(), avoid, stated = true, flagged = false),
+            Warning(listOf("en:gluten"), listOf("en:soybeans"), avoid, stated = true, flagged = false),
+            Warning(listOf("en:milk"), null, emptySet(), stated = true, flagged = false),
+        )
+        for (row in cases) {
+            val match = AllergenAvoidance.match(row.allergens, row.traces, row.avoided)
+            assertWithMessage("%s match", row).that(match)
+                .isEqualTo(AllergenMatch(row.contains, row.mayContain, row.stated))
+            assertWithMessage("%s flagged", row).that(match.flagged).isEqualTo(row.flagged)
+        }
     }
 }

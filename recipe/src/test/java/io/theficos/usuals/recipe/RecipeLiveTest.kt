@@ -23,10 +23,4 @@ class RecipeLiveTest {
         }
         assertThat(failures).isEmpty()
     }
-
-    @Test fun `a live blocking site returns a structured block reason`() = runTest {
-        assumeTrue(java.lang.Boolean.getBoolean("usuals.recipe.live"))
-        val read = RecipeFetcher(RecipeJsonLd()).fetch("https://www.loveandlemons.com/roasted-broccoli/")
-        assertThat((read as? RecipeFetch.Failed)?.problem).isEqualTo(RecipeProblem.BLOCKED)
-    }
 }

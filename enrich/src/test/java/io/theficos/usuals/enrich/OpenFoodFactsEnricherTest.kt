@@ -2,6 +2,9 @@ package io.theficos.usuals.enrich
 
 import com.google.common.truth.Truth.assertThat
 import io.theficos.usuals.model.Gtin
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -169,20 +172,29 @@ class OpenFoodFactsEnricherTest {
     }
 
     @Test
-    fun `an absent tag list stays unknown while an empty one is a checked none`() = runTest {
-        enqueueRecord(""""nutriscore_grade":"b","nova_group":2""")
-        enqueueRecord(""""allergens_tags":[],"additives_tags":[]""")
-
-        val silent = quality()
-        val checked = quality()
-
-        // The distinction with somebody's allergy behind it. Null is "nobody
-        // filled this in"; empty is "we looked and there are none".
-        assertThat(silent.nutriScore).isEqualTo(NutriScore.B)
-        assertThat(silent.allergens).isNull()
-        assertThat(silent.additives).isNull()
-        assertThat(checked.allergens).isEmpty()
-        assertThat(checked.additives).isEmpty()
+    fun `absent empty and malformed tags retain their distinct meanings`() = runTest {
+        data class Tags(
+            val fields: String,
+            val allergens: List<String>? = null,
+            val additives: List<String>? = null,
+            val traces: List<String>? = null,
+            val nutriScore: NutriScore? = null,
+        )
+        val cases = listOf(
+            Tags(""""nutriscore_grade":"b","nova_group":2"""", nutriScore = NutriScore.B),
+            Tags(""""allergens_tags":[],"additives_tags":[]"""", allergens = emptyList(), additives = emptyList()),
+            Tags(""""traces_tags":[]"""", traces = emptyList()),
+            Tags(""""traces_tags":[null,123]"""),
+            Tags(""""ingredients_text":42"""),
+        )
+        for (row in cases) {
+            enqueueRecord(row.fields)
+            val product = quality()
+            assertThat(product.allergens).isEqualTo(row.allergens)
+            assertThat(product.additives).isEqualTo(row.additives)
+            assertThat(product.traces).isEqualTo(row.traces)
+            assertThat(product.nutriScore).isEqualTo(row.nutriScore)
+        }
     }
 
     @Test
@@ -320,26 +332,30 @@ class OpenFoodFactsEnricherTest {
     }
 
     @Test
-    fun `an outage is never written down as an absence`() = runTest {
-        server.enqueue(MockResponse().setResponseCode(500).setBody("upstream is having a day"))
-
-        val outcome = enricher().lookup(spread)
-
-        assertThat(outcome).isEqualTo(QualityLookup.Failed(spread, FailureReason.SERVER_ERROR))
-        // The load-bearing half. Missing would outlive the outage by weeks.
-        assertThat(outcome.cacheable).isFalse()
-    }
-
-    @Test
-    fun `being rate limited is a fact about us, not about the product`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(429).setHeader("Retry-After", "7").setBody("slow down"),
+    fun `failed lookups do not cache an answer or make a second request`() = runTest {
+        data class Failure(val response: MockResponse, val reason: FailureReason, val code: Gtin? = null)
+        val large = """{"product":{"product_name":"""" + "x".repeat(1_048_576) + """"}}"""
+        val cases = listOf(
+            Failure(MockResponse().setResponseCode(500).setBody("upstream is having a day"), FailureReason.SERVER_ERROR),
+            Failure(MockResponse().setResponseCode(429).setHeader("Retry-After", "7").setBody("slow down"), FailureReason.RATE_LIMITED),
+            Failure(MockResponse().setResponseCode(302).setHeader("Location", server.url("/elsewhere").toString()), FailureReason.MALFORMED),
+            Failure(MockResponse().setBody("<html><body>mantenimiento</body></html>"), FailureReason.MALFORMED),
+            Failure(MockResponse().setResponseCode(404).setBody("""{"detail":"Not Found"}"""), FailureReason.MALFORMED, absent),
+            Failure(MockResponse().setBody("""{"code":"$ABSENT","product":{"product_name":"Wrong product"}}"""), FailureReason.MALFORMED),
+            Failure(MockResponse().setResponseCode(404).setBody("""{"status":"failure"}"""), FailureReason.MALFORMED),
+            Failure(MockResponse().setResponseCode(404).setBody("""{"code":"$ABSENT","result":{"id":"product_not_found"}}"""), FailureReason.MALFORMED),
+            Failure(MockResponse().setBody(large), FailureReason.MALFORMED),
+            Failure(MockResponse().setChunkedBody(large, 8192), FailureReason.MALFORMED),
         )
-
-        val outcome = enricher().lookup(spread)
-
-        assertThat(outcome).isEqualTo(QualityLookup.Failed(spread, FailureReason.RATE_LIMITED))
-        assertThat(outcome.cacheable).isFalse()
+        for (row in cases) {
+            val before = server.requestCount
+            server.enqueue(row.response)
+            val requested = row.code ?: spread
+            val outcome = enricher().lookup(requested)
+            assertThat(outcome).isEqualTo(QualityLookup.Failed(requested, row.reason))
+            assertThat(outcome.cacheable).isFalse()
+            assertThat(server.requestCount - before).isEqualTo(1)
+        }
     }
 
     /**
@@ -384,54 +400,6 @@ class OpenFoodFactsEnricherTest {
         assertThat(waits).containsExactly(OffRateLimiter.ONE_MINUTE_MILLIS)
     }
 
-    /**
-     * One permit, one request, rather than one permit and up to twenty.
-     *
-     * Left at OkHttp's default this client follows redirects, so a captive
-     * portal or an intercepting network, which is the ordinary case on a phone,
-     * turns a single permitted product read into a chain of requests that Open
-     * Food Facts sees and the rate limiter does not. A 3xx is now an exchange
-     * that produced no answer, which is what the `read` branch already said it
-     * treated a followed-nowhere redirect as.
-     */
-    @Test
-    fun `a redirect is not followed, so one permit cannot become several requests`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(302).setHeader("Location", server.url("/elsewhere").toString()),
-        )
-
-        val outcome = enricher().lookup(spread)
-
-        assertThat(outcome).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-        assertThat(outcome.cacheable).isFalse()
-        // The second response was never enqueued, so a followed redirect would
-        // have hung or failed differently. One request left the client.
-        assertThat(server.requestCount).isEqualTo(1)
-    }
-
-    @Test
-    fun `a body that is not the contract is malformed, not an empty product`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody("<html><body>mantenimiento</body></html>"),
-        )
-
-        val outcome = enricher().lookup(spread)
-
-        assertThat(outcome).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-        assertThat(outcome.cacheable).isFalse()
-    }
-
-    @Test
-    fun `a 404 that does not confirm the absence is a failure, not an absence`() = runTest {
-        // What a proxy or a moved API version returns. It says nothing about
-        // whether OFF has this product, so it must not be kept as if it did.
-        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"detail":"Not Found"}"""))
-
-        val outcome = enricher().lookup(absent)
-
-        assertThat(outcome).isEqualTo(QualityLookup.Failed(absent, FailureReason.MALFORMED))
-    }
-
     @Test
     fun `a hostile retry after cannot switch enrichment off for the session`() {
         assertThat(offRetryAfterMillis("7")).isEqualTo(7_000)
@@ -467,32 +435,6 @@ class OpenFoodFactsEnricherTest {
         assertThat(quality().productName).isNull()
     }
 
-    @Test fun `mismatched product codes and unconfirmed failures are not cached`() = runTest {
-        enqueueRecord(""""code":"$ABSENT","product_name":"Wrong product"""")
-        assertThat(enricher().lookup(spread)).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"status":"failure"}"""))
-        assertThat(enricher().lookup(spread)).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"code":"$ABSENT","result":{"id":"product_not_found"}}"""))
-        assertThat(enricher().lookup(spread)).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-    }
-
-    @Test fun `oversized known and chunked bodies are rejected`() = runTest {
-        val body = """{"product":{"product_name":"""" + "x".repeat(1_048_576) + """"}}"""
-        server.enqueue(MockResponse().setBody(body))
-        assertThat(enricher().lookup(spread)).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-        server.enqueue(MockResponse().setChunkedBody(body, 8192))
-        assertThat(enricher().lookup(spread)).isEqualTo(QualityLookup.Failed(spread, FailureReason.MALFORMED))
-    }
-
-    @Test fun `missing empty and malformed traces remain distinct`() = runTest {
-        enqueueRecord(""""traces_tags":[]""")
-        assertThat(quality().traces).isEmpty()
-        enqueueRecord(""""traces_tags":[null,123]""")
-        assertThat(quality().traces).isNull()
-        enqueueRecord(""""ingredients_text":42""")
-        assertThat(quality().traces).isNull()
-    }
-
     @Test fun `revoking consent while a response arrives discards the result`() = runTest {
         enqueueRecord(""""product_name":"Late name"""")
         var enabled = true
@@ -503,6 +445,27 @@ class OpenFoodFactsEnricherTest {
             baseUrl = server.url("/").toString(), httpClient = http, allowRequest = { enabled })
         assertThat(client.lookup(spread)).isEqualTo(QualityLookup.Skipped(spread, SkipReason.OPTED_OUT))
         assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test fun `revoking lookup blocks a request waiting for its shared permit`() = runTest {
+        MockWebServer().use { server ->
+            server.start()
+            var enabled = true
+            val limiter = OffRateLimiter(1, 60_000, { testScheduler.currentTime })
+            val client = OpenFoodFactsEnricher("Usuals test", limiter, baseUrl = server.url("/").toString(),
+                isRestricted = { false }, allowRequest = { enabled })
+            server.enqueue(MockResponse().setBody("""{"product":{"product_name":"Milk","categories_tags":["en:milks"]}}"""))
+            val first = Gtin.parse("4006381333931")!!
+            val next = Gtin.parse("3017620422003")!!
+            assertThat(client.lookup(first)).isInstanceOf(QualityLookup.Found::class.java)
+            val queued = async { client.lookup(next) }
+            runCurrent()
+            assertThat(queued.isCompleted).isFalse()
+            enabled = false
+            advanceTimeBy(60_000); runCurrent()
+            assertThat(queued.await()).isEqualTo(QualityLookup.Skipped(next, SkipReason.OPTED_OUT))
+            assertThat(server.requestCount).isEqualTo(1)
+        }
     }
 
     // ---- how we ask --------------------------------------------------------

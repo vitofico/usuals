@@ -42,7 +42,7 @@ class MemoryViewModelTest {
         assertThat(items.current).isEmpty()
         vm.onDraftChange("milk")
         vm.onDraftSubmit()
-        assertThat(items.current.single().name).isEqualTo("milk")
+        assertThat(items.current.map { it.name }).containsExactly("bread", "milk").inOrder()
         assertThat(history.data.value.purchases).hasSize(1)
         assertThat(history.data.value.preferences.single().muted).isTrue()
     }
@@ -55,10 +55,11 @@ class MemoryViewModelTest {
         val vm = ListViewModel(items, LocalUtteranceParser(), FakeSpeechSource(), clock = { 2_000 },
             historyStore = history(), smartStore = smart, compute = main.dispatcher)
         vm.onType()
-        vm.onDraftChange("2 l mi")
+        vm.onDraftChange("bread, 2 l mi")
         vm.onAutocomplete(memory)
-        assertThat(items.current.single().name).isEqualTo("milk")
-        assertThat(items.current.single().quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
+        assertThat(items.current.map { it.name }).containsExactly("bread", "milk").inOrder()
+        assertThat(items.current.last().quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
+        assertThat(items.current.last().fromSuggestion).isFalse()
         assertThat(vm.state.value.capture).isEqualTo(CaptureState.Typing())
     }
 
@@ -71,5 +72,8 @@ class MemoryViewModelTest {
         vm.onStoreFilter("Bakery")
         assertThat(vm.state.value.pending.map { it.rawName }).containsExactly("bread")
         assertThat(vm.state.value.favoritesOnList).containsExactly("saved-milk")
+        assertThat(vm.state.value.stores).containsExactly("Bakery", "Market").inOrder()
+        vm.onStoreFilter(null)
+        assertThat(vm.state.value.pending.map { it.rawName }).containsExactly("milk", "bread")
     }
 }

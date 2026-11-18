@@ -41,7 +41,7 @@ class ProductTypeMigrationTest {
         val row = db.qualityDao().find("4006381333931")!!
         assertThat(row.nutriScoreNotApplicable).isNull()
         assertThat(row.productType).isNull()
-        val cache = RoomQualityCache(db.qualityDao()) { 0L }
+        val cache = RoomQualityCache(db.qualityDao())
         val quality = cache.get(Gtin.parse("4006381333931")!!)!!.quality!!
         assertThat(quality.productName).isEqualTo("Saved product")
         assertThat(quality.nutriScore).isEqualTo(NutriScore.B)
@@ -54,7 +54,7 @@ class ProductTypeMigrationTest {
         cache.put(QualityLookup.Found(shampoo, ProductQuality(productType = ProductType.BEAUTY, nutriScoreNotApplicable = true, productName = "Hand cream")), 456)
         db.close()
         db = UsualsDatabase.build(context, name)
-        val reopened = RoomQualityCache(db.qualityDao()) { 0L }.get(shampoo)!!.quality!!
+        val reopened = RoomQualityCache(db.qualityDao()).get(shampoo)!!.quality!!
         assertThat(reopened.productType).isEqualTo(ProductType.BEAUTY)
         assertThat(reopened.nutriScoreNotApplicable).isTrue()
         assertThat(reopened.productName).isEqualTo("Hand cream")

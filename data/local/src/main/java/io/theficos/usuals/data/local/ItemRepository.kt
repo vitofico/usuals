@@ -405,7 +405,7 @@ class ItemRepository(
     private data class TransferReceipt(val list: String, val id: String, val facts: JsonObject, val key: String,
         val category: String?, val commands: List<Intent>, val aliases: Map<String, String>, val aliasRevision: String?)
 
-    suspend fun reap(olderThanMillis: Long = FORTNIGHT_MILLIS): Int = replica.reap(clock() - olderThanMillis)
+    suspend fun reap(): Int = replica.reap(clock() - FORTNIGHT_MILLIS)
     suspend fun nextPosition(): Double = (dao.maxPosition(listId()) ?: 0.0) + POSITION_STEP
 
     companion object {

@@ -31,57 +31,35 @@ class KeystoreSecretStoreTest {
     private fun store() = KeystoreSecretStore(context)
 
     @Test
-    fun `starts empty`() {
-        assertThat(store().modelKey()).isNull()
-        assertThat(store().hasModelKey()).isFalse()
+    fun `a fresh instance sees initial replacement and cleared state`() {
+        val first = store()
+        assertThat(first.modelKey()).isNull()
+        assertThat(first.hasModelKey()).isFalse()
+
+        first.putModelKey(SAMPLE_KEY)
+        val second = store()
+        assertThat(second.modelKey()).isEqualTo(SAMPLE_KEY)
+        assertThat(second.hasModelKey()).isTrue()
+        first.putModelKey(OTHER_KEY)
+        assertThat(second.modelKey()).isEqualTo(OTHER_KEY)
+
+        first.clear()
+        for (reader in listOf(first, second, store())) {
+            assertThat(reader.modelKey()).isNull()
+            assertThat(reader.hasModelKey()).isFalse()
+        }
     }
 
     @Test
-    fun `round trips a key through a fresh instance`() {
-        store().putModelKey(SAMPLE_KEY)
-
-        // A second instance reads from disk rather than from a field, which is
-        // what a cold app start does.
-        assertThat(store().modelKey()).isEqualTo(SAMPLE_KEY)
-        assertThat(store().hasModelKey()).isTrue()
-    }
-
-    @Test
-    fun `putModelKey replaces the previous key`() {
+    fun `padded keys are trimmed and blanks are rejected`() {
         val subject = store()
-        subject.putModelKey(SAMPLE_KEY)
-        subject.putModelKey(OTHER_KEY)
-
-        assertThat(subject.modelKey()).isEqualTo(OTHER_KEY)
-    }
-
-    @Test
-    fun `putModelKey trims surrounding whitespace`() {
-        val subject = store()
-        subject.putModelKey("  \n$SAMPLE_KEY\t ")
-
-        assertThat(subject.modelKey()).isEqualTo(SAMPLE_KEY)
-    }
-
-    @Test
-    fun `putModelKey rejects a blank key`() {
-        val subject = store()
-
         for (blank in listOf("", "   ", "\n", "\t ")) {
             val thrown = runCatching { subject.putModelKey(blank) }.exceptionOrNull()
             assertThat(thrown).isInstanceOf(IllegalArgumentException::class.java)
+            assertThat(subject.modelKey()).isNull()
         }
-        assertThat(subject.modelKey()).isNull()
-    }
-
-    @Test
-    fun `clear forgets the key`() {
-        val subject = store()
-        subject.putModelKey(SAMPLE_KEY)
-        subject.clear()
-
-        assertThat(subject.modelKey()).isNull()
-        assertThat(store().modelKey()).isNull()
+        subject.putModelKey("  \n$SAMPLE_KEY\t ")
+        assertThat(subject.modelKey()).isEqualTo(SAMPLE_KEY)
     }
 
     /**

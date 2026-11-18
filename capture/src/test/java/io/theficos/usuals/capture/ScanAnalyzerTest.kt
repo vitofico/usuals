@@ -145,7 +145,9 @@ class ScanAnalyzerTest {
         clock.advance(120L)
         subject.confirm(Ean13Fixture.frame(ACEITE))
 
-        assertThat(scanned.map { it.value }).containsExactly(LECHE, ACEITE).inOrder()
+        clock.advance(120L)
+        subject.confirm(Ean13Fixture.frame(LECHE))
+        assertThat(scanned.map { it.value }).containsExactly(LECHE, ACEITE, LECHE).inOrder()
     }
 
     @Test
@@ -216,7 +218,10 @@ class ScanAnalyzerTest {
         val frame = Ean13Fixture.frame(LECHE)
 
         subject.confirm(frame)
-        clock.advance(2_500L)
+        clock.advance(1_999L)
+        subject.confirm(frame)
+        assertThat(scanned).hasSize(1)
+        clock.advance(2_000L)
         subject.confirm(frame)
 
         assertThat(scanned).hasSize(2)

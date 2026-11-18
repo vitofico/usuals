@@ -9,6 +9,8 @@ import io.theficos.usuals.sync.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,7 +28,11 @@ class ItemTransferTest {
     private var seq = 0L
     private val target = "camping"
 
-    @Before fun setup() = runTest {
+    @Before fun setup() = runTest { openFixture() }
+
+    private suspend fun openFixture() {
+        next = 0
+        seq = 0
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), UsualsDatabase::class.java)
             .allowMainThreadQueries().build()
         replica = LocalReplica(db, newId = { "intent-${++next}" })
@@ -143,27 +149,31 @@ class ItemTransferTest {
         assertThat(preference.muted).isTrue()
     }
 
-    @Test fun editedSourceDoesNotWriteDestination() = runTest {
-        val source = source()
-        items.setQuantity(ItemId(source.id), Quantity.pieces(4), source)
-        assertThat(items.transfer(source, target, move = true)).isEqualTo(ItemTransferResult.SOURCE_CHANGED)
-        assertThat(db.itemDao().active(target)).isEmpty()
-        originalRemains(source)
+    @Test fun staleSourceCannotWriteDestination() = runTest {
+        data class Row(val move: Boolean, val change: suspend (ItemVersion) -> Unit)
+        val rows = listOf(
+            Row(true) { items.setQuantity(ItemId(it.id), Quantity.pieces(4), it) },
+            Row(false) {
+                items.savePreference(ItemPreferenceEntity("milk", category = "OTHER", repeatEveryDays = 7))
+            },
+            Row(true) { db.listDao().select(ListSelectionEntity(listId = target)) },
+            Row(true) { items.saveAlias(ItemAliasEntity("milk", "dairy", it.list)) },
+        )
+        for ((index, row) in rows.withIndex()) {
+            if (index > 0) {
+                db.close()
+                openFixture()
+            }
+            val source = source()
+            row.change(source)
+            assertThat(items.transfer(source, target, move = row.move)).isEqualTo(ItemTransferResult.SOURCE_CHANGED)
+            assertThat(db.itemDao().active(target)).isEmpty()
+            originalRemains(source)
+        }
     }
 
-    @Test fun changedSourceCategoryDoesNotWriteDestination() = runTest {
-        val source = source()
-        items.savePreference(ItemPreferenceEntity("milk", category = "OTHER", repeatEveryDays = 7))
-        assertThat(items.transfer(source, target, move = false)).isEqualTo(ItemTransferResult.SOURCE_CHANGED)
-        assertThat(db.itemDao().active(target)).isEmpty()
-    }
 
-    @Test fun switchedListCannotTransferAnOldSheet() = runTest {
-        val source = source()
-        db.listDao().select(ListSelectionEntity(listId = target))
-        assertThat(items.transfer(source, target, move = true)).isEqualTo(ItemTransferResult.SOURCE_CHANGED)
-        assertThat(db.itemDao().active(target)).isEmpty()
-    }
+
 
     @Test fun archivedRemovedAndSameDestinationRejectBeforeWriting() = runTest {
         val source = source()
@@ -198,69 +208,73 @@ class ItemTransferTest {
         originalRemains(source)
     }
 
-    @Test fun acknowledgedRejectedImportDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget { state ->
-                val imported = state.seen.values.single { it.kind == "import" }
-                state.copy(rows = emptyMap(), rejected = mapOf(imported.id to "invalid"))
+    @Test fun unusableDestinationAcknowledgementsKeepSource() = runTest {
+        data class Row(val keepCopy: Boolean = false, val afterCopy: suspend () -> Unit)
+        val rows = listOf(
+            Row {
+                confirmTarget { state ->
+                    val imported = state.seen.values.single { it.kind == "import" }
+                    state.copy(rows = emptyMap(), rejected = mapOf(imported.id to "invalid"))
+                }
+            },
+            Row(keepCopy = true) {
+                confirmTarget { state ->
+                    val imported = state.seen.values.single { it.kind == "import" }
+                    check(state.rows.isNotEmpty())
+                    state.copy(rejected = mapOf(imported.id to "invalid"))
+                }
+            },
+            Row {
+                confirmTarget { state ->
+                    val preference = state.seen.values.single { it.kind == "preference" }
+                    state.copy(conflicts = mapOf(preference.id to Conflict(preference.payload, JsonObject(emptyMap()), "stale")))
+                }
+            },
+            Row { replica.discard(target, replica.pendingIntents(target, 100).map { it.id }) },
+            Row { error("offline") },
+            Row { replica.drop(target) },
+            Row { confirmTarget(); replica.archive(target, true) },
+            Row { confirmTarget(); discardConfirmedDestination() },
+        )
+        for ((index, row) in rows.withIndex()) {
+            if (index > 0) {
+                db.close()
+                openFixture()
             }
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
+            val source = source()
+            connectedDestination()
+            assertThat(items.transfer(source, target, move = true, sync = row.afterCopy))
+                .isEqualTo(ItemTransferResult.SOURCE_KEPT)
+            if (row.keepCopy) assertThat(db.itemDao().active(target)).hasSize(1)
+            originalRemains(source)
+        }
     }
 
-    @Test fun conflictingCategoryAcknowledgementDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget { state ->
-                val preference = state.seen.values.single { it.kind == "preference" }
-                state.copy(conflicts = mapOf(preference.id to Conflict(preference.payload, JsonObject(emptyMap()), "stale")))
-            }
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
+    private suspend fun discardConfirmedDestination() {
+        val copied = db.itemDao().active(target).single()
+        val state = replica.projection(target)
+        replica.submitTo(target, "delete", buildJsonObject {
+            put("target", copied.id)
+            put("expected", buildJsonObject {
+                put("lifecycle", requireNotNull(state.rows[copied.id]?.lifecycle))
+            })
+            put("deletedAt", 2000)
+            put("updatedAt", 2000)
+        })
     }
 
-    @Test fun rejectedReceiptWithAnExistingDestinationCopyKeepsSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget { state ->
-                val imported = state.seen.values.single { it.kind == "import" }
-                check(state.rows.isNotEmpty())
-                state.copy(rejected = mapOf(imported.id to "invalid"))
-            }
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        assertThat(db.itemDao().active(target)).hasSize(1)
-        originalRemains(source)
-    }
 
-    @Test fun discardedCapacityImportDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            replica.discard(target, replica.pendingIntents(target, 100).map { it.id })
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
-    }
 
-    @Test fun networkFailureAndCancellationKeepOriginalWithoutPendingDelete() = runTest {
+
+
+    @Test fun cancellationIsRethrownWithoutPendingDelete() = runTest {
         val source = source()
         connectedDestination()
-        assertThat(items.transfer(source, target, move = true) { error("offline") }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
         val failed = runCatching { items.transfer(source, target, move = true) { throw CancellationException("interrupted") } }
         assertThat(failed.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
         originalRemains(source)
     }
 
-    @Test fun destinationDisappearingDuringSyncDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) { replica.drop(target) }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
-    }
 
     @Test fun sourceChangingAfterCopyDoesNotLoseTheChangedOriginal() = runTest {
         val source = source()
@@ -273,38 +287,8 @@ class ItemTransferTest {
         assertThat(items.items().single().quantity).isEqualTo(Quantity.pieces(5))
     }
 
-    @Test fun destinationArchivedAfterAcknowledgementDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget()
-            replica.archive(target, true)
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
-    }
 
-    @Test fun sourceAliasChangeDoesNotWriteDestination() = runTest {
-        val source = source()
-        items.saveAlias(ItemAliasEntity("milk", "dairy", source.list))
-        assertThat(items.transfer(source, target, move = true)).isEqualTo(ItemTransferResult.SOURCE_CHANGED)
-        assertThat(db.itemDao().active(target)).isEmpty()
-    }
 
-    @Test fun targetChangedAfterAcknowledgementDoesNotDeleteSource() = runTest {
-        val source = source()
-        connectedDestination()
-        assertThat(items.transfer(source, target, move = true) {
-            confirmTarget()
-            val copied = db.itemDao().active(target).single()
-            val state = replica.projection(target)
-            replica.submitTo(target, "delete", kotlinx.serialization.json.buildJsonObject {
-                put("target", kotlinx.serialization.json.JsonPrimitive(copied.id))
-                put("expected", kotlinx.serialization.json.buildJsonObject { put("lifecycle", kotlinx.serialization.json.JsonPrimitive(requireNotNull(state.rows[copied.id]?.lifecycle))) })
-                put("deletedAt", kotlinx.serialization.json.JsonPrimitive(2000)); put("updatedAt", kotlinx.serialization.json.JsonPrimitive(2000))
-            })
-        }).isEqualTo(ItemTransferResult.SOURCE_KEPT)
-        originalRemains(source)
-    }
 
     @Test fun accountRemovalDuringConfirmationCannotResurrectItsListsOrQueueADelete() = runTest {
         val source = source()

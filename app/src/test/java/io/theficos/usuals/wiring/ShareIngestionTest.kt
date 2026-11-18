@@ -1,8 +1,10 @@
 package io.theficos.usuals.wiring
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import com.google.common.truth.Truth.assertThat
+import android.text.SpannableString
+import com.google.common.truth.Truth.assertWithMessage
 import io.theficos.usuals.STATE_SHARE_CONSUMED
 import io.theficos.usuals.pendingShare
 import org.junit.Test
@@ -33,70 +35,40 @@ class ShareIngestionTest {
         Bundle().apply { putBoolean(STATE_SHARE_CONSUMED, consumed) }
 
     @Test
-    fun a_fresh_share_is_ingested() {
-        assertThat(pendingShare(share("2 litros de leche y 3 tomates"), null))
-            .isEqualTo("2 litros de leche y 3 tomates")
-    }
-    @Test
-    fun copied_styled_notes_and_markdown_are_read_as_plain_text() {
+    fun readsTextAndConnectIntentOnceAcrossRecreation() {
+        data class Case(val label: String, val intent: Intent?, val saved: Bundle?, val expected: String?)
+
+        val shopping = "2 litros de leche y 3 tomates"
         val note = "Shopping\n☐ milk\n☑ bought bread"
-        for (mime in listOf("text/plain", "text/markdown", "text/x-markdown")) {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = mime
-                putExtra(Intent.EXTRA_TEXT, android.text.SpannableString(note))
+        val connect = "usuals://connect#synthetic-code"
+        fun link(uri: String) = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+        val cases = buildList {
+            add(Case("fresh text", share(shopping), null, shopping))
+            for (mime in listOf("text/plain", "text/markdown", "text/x-markdown")) {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = mime
+                    putExtra(Intent.EXTRA_TEXT, SpannableString(note))
+                }
+                add(Case("fresh $mime", intent, null, note))
+                add(Case("consumed $mime", intent, recreation(consumed = true), null))
             }
-            assertThat(pendingShare(intent, null)).isEqualTo(note)
-            assertThat(pendingShare(intent, recreation(consumed = true))).isNull()
+            add(Case("rotation after consumption", share(shopping), recreation(consumed = true), null))
+            add(Case("rotation before consumption", share("pan"), recreation(consumed = false), "pan"))
+            add(Case("fresh connect URI", link(connect), null, connect))
+            add(Case("consumed connect URI", link(connect), recreation(consumed = true), null))
+            add(Case("join URI", link("usuals://join#synthetic-invitation"), null, null))
+            add(Case("ordinary HTTPS URI", link("https://example.test/recipe"), null, null))
+            add(Case("ordinary launch", Intent(Intent.ACTION_MAIN), null, null))
+            add(Case("no intent", null, null, null))
+            val image = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_TEXT, "leche")
+            }
+            add(Case("image with text", image, null, null))
+            add(Case("blank text", share("   "), null, null))
         }
-    }
-
-    @Test
-    fun a_rotation_after_the_list_swallowed_it_ingests_nothing() {
-        val intent = share("2 litros de leche y 3 tomates")
-
-        assertThat(pendingShare(intent, recreation(consumed = true))).isNull()
-    }
-
-    /**
-     * The other half of the rule, and the reason a bare
-     * `savedInstanceState != null` guard is not enough: turning the phone
-     * before the list has read the text must not lose it.
-     */
-    @Test
-    fun a_rotation_before_the_list_swallowed_it_still_ingests_it_once() {
-        val intent = share("pan")
-
-        assertThat(pendingShare(intent, recreation(consumed = false))).isEqualTo("pan")
-    }
-
-    @Test
-    fun a_connect_deep_link_is_consumed_once() {
-        val uri = "usuals://connect#synthetic-code"
-        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri))
-        assertThat(pendingShare(intent, null)).isEqualTo(uri)
-        assertThat(pendingShare(intent, recreation(consumed = true))).isNull()
-        assertThat(pendingShare(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("usuals://join#synthetic-invitation")), null)).isNull()
-        assertThat(pendingShare(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://example.test/recipe")), null)).isNull()
-    }
-
-    @Test
-    fun an_ordinary_launch_shares_nothing() {
-        assertThat(pendingShare(Intent(Intent.ACTION_MAIN), null)).isNull()
-        assertThat(pendingShare(null, null)).isNull()
-    }
-
-    @Test
-    fun a_share_that_is_not_text_is_not_read() {
-        val image = Intent(Intent.ACTION_SEND).apply {
-            type = "image/png"
-            putExtra(Intent.EXTRA_TEXT, "leche")
+        cases.forEach { case ->
+            assertWithMessage(case.label).that(pendingShare(case.intent, case.saved)).isEqualTo(case.expected)
         }
-
-        assertThat(pendingShare(image, null)).isNull()
-    }
-
-    @Test
-    fun a_blank_share_is_not_a_share() {
-        assertThat(pendingShare(share("   "), null)).isNull()
     }
 }
