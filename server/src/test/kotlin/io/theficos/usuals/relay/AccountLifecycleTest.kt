@@ -51,6 +51,21 @@ class AccountLifecycleTest {
         val own = create(alice); val other = create(bob)
         val lists = Lists(f.relay, f.web.config)
         lists.add(access(alice), own, AddMember(bob.id)); lists.add(access(bob), other, AddMember(alice.id))
+        val cursor = lists.changes(access(bob), null, 200).cursor
+        val aliceCaller = f.web.reader(alice.cookie)
+        val connections = Connections(db, f.relay, f.web) { now }
+        val device = SyncCrypto.device()
+        val verifier = randomToken()
+        val ticket = connections.start(ConnectStart(device.publicKeys, Wire.hash(Wire.decode(verifier, 32))), "fixture")
+        connections.approve(aliceCaller, ticket.id)
+        connections.offer(aliceCaller, ConnectOfferRequest(Wire.hash(Wire.decode(randomToken(), 32))))
+        db.transaction { c ->
+            c.execute("INSERT INTO ai_preference VALUES (?,?,?,?)", id(alice.id), "synthetic", "test", byteArrayOf(1))
+            c.execute("INSERT INTO ai_usage VALUES (?,?,?)", id(alice.id), 1L, 1)
+        }
+        val privateTables = listOf("local_credential", "web_session", "native_session", "connection_ticket", "connection_offer", "ai_preference", "ai_usage")
+        fun count(table: String) = db.transaction { c -> c.query("SELECT count(*) FROM $table WHERE user_id=?", id(alice.id)) { it.getInt(1) }.single() }
+        for (table in privateTables) assertThat(count(table)).isGreaterThan(0)
         val request = request(true)
         val authorization = client.post("/api/account/closure-requests") {
             header(HttpHeaders.Cookie, "__Host-usuals-session=${alice.cookie}"); header(HttpHeaders.Origin, f.origin); header("X-CSRF-Token", alice.csrf)
@@ -59,6 +74,7 @@ class AccountLifecycleTest {
         assertThat(authorization.status).isEqualTo(HttpStatusCode.OK)
         val path = "/api/service/accounts/${alice.id}/closure/${request.id}"
         assertThat(client.post(path).status).isEqualTo(HttpStatusCode.Unauthorized)
+        assertThat(client.post("$path/purge") { bearerAuth(Wire.encode(key)) }.status).isEqualTo(HttpStatusCode.Conflict)
         for (repeat in 1..2) assertThat(client.post(path) { bearerAuth(Wire.encode(key)) }.status).isEqualTo(HttpStatusCode.OK)
         assertThat(client.get("/api/me") { header(HttpHeaders.Cookie, "__Host-usuals-session=${alice.cookie}") }.status).isEqualTo(HttpStatusCode.Unauthorized)
         assertThat(client.get("/api/lists/changes") { bearerAuth(alice.bearer) }.status).isEqualTo(HttpStatusCode.Unauthorized)
@@ -66,8 +82,11 @@ class AccountLifecycleTest {
         assertThat(db.transaction { c -> c.query("SELECT projection IS NOT NULL FROM list WHERE id=?", id(other)) { it.getBoolean(1) }.single() }).isTrue()
         assertThat(lists.changes(access(bob), null, 200).lists.map { it.id }).containsExactly(other)
         assertThat(db.transaction { c -> c.query("SELECT count(*) FROM list_member WHERE user_id=?", id(alice.id)) { it.getInt(1) }.single() }).isEqualTo(0)
-        for (table in listOf("local_credential", "web_session", "native_session", "connection_ticket", "ai_preference"))
-            assertThat(db.transaction { c -> c.query("SELECT count(*) FROM $table WHERE user_id=?", id(alice.id)) { it.getInt(1) }.single() }).isEqualTo(0)
+        for (table in privateTables) assertThat(count(table)).isEqualTo(0)
+        assertThat(db.transaction { c -> c.query("SELECT email IS NULL FROM web_user WHERE id=?", id(alice.id)) { it.getBoolean(1) }.single() }).isTrue()
+        val changes = lists.changes(access(bob), cursor, 200)
+        assertThat(changes.lists.single().id).isEqualTo(other)
+        assertThat(changes.lists.single().members.map { it.id }).doesNotContain(alice.id)
         assertThat(client.post("$path/purge") { bearerAuth(Wire.encode(key)) }.status).isEqualTo(HttpStatusCode.OK)
         val status = lifecycle.status(alice.id, request.id)
         assertThat(status.state).isEqualTo("purged"); assertThat(status.issuer).isNull(); assertThat(status.subject).isNull()

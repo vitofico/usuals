@@ -128,6 +128,25 @@ class InvitationsTest {
         lists.remove(access(currentAlice), shared.id, editor.user.id)
         assertThat(preview(removed, null).state).isEqualTo("unavailable")
     }
+    @Test fun eightFailedDeliveriesStopRetryingAndExpiredInvitationsAreRetainedForThirtyDays() {
+        val alice = login("alice@example.test")
+        val invitation = invite(alice, create(alice).id, "bob@example.test")
+        mailUnavailable = true
+        repeat(8) {
+            assertThat(invitations.deliverOne()).isTrue()
+            now += 3_600_000
+        }
+        fun status() = db.transaction { c -> c.query("SELECT attempts,delivery FROM email_invitation WHERE id=?", id(invitation.id)) { it.getInt(1) to it.getString(2) }.singleOrNull() }
+        assertThat(status()).isEqualTo(8 to "failed")
+        assertThat(invitations.deliverOne()).isFalse()
+        now = invitation.expiresAt + 30L * 86_400_000
+        assertThat(invitations.deliverOne()).isFalse()
+        assertThat(status()).isEqualTo(8 to "failed")
+        now++
+        assertThat(invitations.deliverOne()).isFalse()
+        assertThat(status()).isNull()
+    }
+
     @Test fun outboxSurvivesRetryAndKeyRotationWithoutKeepingDeliveredSecrets() {
         val alice = login("alice@example.test"); val shared = create(alice)
         val invitation = invite(alice, shared.id, "bob@example.test")

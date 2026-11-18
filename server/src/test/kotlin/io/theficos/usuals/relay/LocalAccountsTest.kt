@@ -132,7 +132,12 @@ class LocalAccountsTest {
         val cookie = activate("operator", setup()); val account = caller(cookie)
         val invite = web.localCreate(account, LocalCreateRequest("member"))
         val pending = web.localChallenge("restore")
+        val connections = Connections(db, f.relay, web) { now }
+        val verifier = randomToken()
+        val ticket = connections.start(ConnectStart(SyncCrypto.device().publicKeys, Wire.hash(Wire.decode(verifier, 32))), "fixture")
+        connections.approve(account, ticket.id)
         db.fence(identity.serverId, uuid())
+        denied("not_found") { connections.complete(ticket.id, ConnectFinish(ticket.pollToken, verifier), "fixture") }
         denied("unauthenticated") { web.me(cookie) }
         denied("forbidden") { localActivate(LocalActivateRequest("member", invite.setupToken, password), pending.browserToken, f.origin, pending.result.csrfToken, "activation") }
         denied("unauthenticated") { activate("member", invite.setupToken) }
@@ -149,6 +154,22 @@ class LocalAccountsTest {
         val cookie = activate("operator", setup(reset = true))
         assertThat(web.me(cookie).user.subject).isEqualTo(subject)
     }
+    @Test fun aFullUsernameBucketRefusesEvenCorrectCredentials() = testApplication {
+        activate("operator", setup())
+        // Advance beyond setup's rate window and seed ten uses of this synthetic account.
+        now += 60_000
+        repeat(10) { auth.limit("local-password-user:operator", 10) }
+        application { relayModule(f.relay, webIdentity = web) }
+        val challenge = client.get("/auth/local/challenge")
+        val binding = challenge.headers.getAll(HttpHeaders.SetCookie)!!.single().substringBefore(';')
+        val csrf = Wire.json.parseToJsonElement(challenge.bodyAsText()).jsonObject.getValue("csrfToken").jsonPrimitive.content
+        val blocked = client.post("/auth/local/login") {
+            header(HttpHeaders.Cookie, binding); header(HttpHeaders.Origin, f.origin); header("X-CSRF-Token", csrf)
+            contentType(ContentType.Application.Json); setBody(Wire.json.encodeToString(LocalLoginRequest("operator", password)))
+        }
+        assertThat(blocked.status).isEqualTo(HttpStatusCode.TooManyRequests)
+    }
+
     @Test fun realHttpLocalSessionsGuardListRoutes() = testApplication {
         val token = setup()
         application { relayModule(f.relay, webIdentity = web) }

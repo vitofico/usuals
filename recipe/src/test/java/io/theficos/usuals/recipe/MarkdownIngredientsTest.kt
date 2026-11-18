@@ -96,6 +96,13 @@ class MarkdownIngredientsTest {
     @Test fun emptySourcesStayEmpty() {
         assertThat(reader.read("# Shopping list\n## Notes\nSome instructions").ingredients).isEmpty()
     }
+    @Test fun exactLengthAndItemLimitsAreAcceptedWhole() {
+        val text = "x".repeat(MarkdownIngredients.MAX_TEXT)
+        assertThat(reader.read(text).ingredients).containsExactly(text)
+        val rows = (1..MarkdownIngredients.MAX_ITEMS).map { "item $it" }
+        val note = rows.joinToString("\n") { "- $it" }
+        assertThat(reader.read(note).ingredients).containsExactlyElementsIn(rows).inOrder()
+    }
     @Test(expected = IllegalArgumentException::class) fun oversizedTextIsRejectedRatherThanTruncated() {
         reader.read("x".repeat(MarkdownIngredients.MAX_TEXT + 1))
     }

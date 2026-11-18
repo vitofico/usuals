@@ -411,6 +411,21 @@ class ListsTest {
         assertThat(older.list.projection.rows).isEqualTo(shared.projection.rows)
     }
 
+    @Test fun firstFeedEntryOverPageByteBudgetStillAdvancesCursor() = http {
+        val list = client.create(alice).id
+        db.transaction { c ->
+            val stored = c.query("SELECT projection FROM list WHERE id=?", id(list)) { it.getBytes(1) }.single()
+            val plain = f.relay.cipher.open(list, stored)
+            // JSON permits trailing whitespace. Keep the same valid projection at the size boundary.
+            val padded = plain + ByteArray(4 * 1024 * 1024) { 32 }
+            c.execute("UPDATE list SET projection=? WHERE id=?", f.relay.cipher.seal(list, padded), id(list))
+        }
+        val page = client.changes(alice)
+        assertThat(page.lists.map { it.id }).containsExactly(list)
+        assertThat(page.hasMore).isFalse()
+        assertThat(client.changes(alice, page.cursor).lists).isEmpty()
+    }
+
     @Test fun feedPagesInSeqOrderAndResetsWithoutAKnownCursor() = http {
         val lists = (1..3).map { client.create(alice, name = "List $it").id }
         val reset = client.changes(alice)

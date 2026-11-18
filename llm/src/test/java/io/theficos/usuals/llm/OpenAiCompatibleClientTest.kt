@@ -55,7 +55,12 @@ class OpenAiCompatibleClientTest {
         server.shutdown()
     }
 
-    private fun client(key: String? = apiKey, kind: ProviderKind = ProviderKind.OPENAI_COMPATIBLE): OpenAiCompatibleClient = OpenAiCompatibleClient(
+    private fun client(
+        key: String? = apiKey,
+        kind: ProviderKind = ProviderKind.OPENAI_COMPATIBLE,
+        failOnError: Boolean = false,
+    ): OpenAiCompatibleClient = OpenAiCompatibleClient(
+        failOnError = failOnError,
         config = ProviderConfig(
             kind = kind,
             label = "Prueba",
@@ -177,6 +182,20 @@ class OpenAiCompatibleClientTest {
         val capabilities = client().probe()
 
         assertThat(capabilities.problem!!.excerpt!!.length).isLessThan(300)
+    }
+
+    @Test
+    fun `server extraction reports HTTP errors and non JSON replies`() = runTest {
+        val serverClient = client(failOnError = true)
+        server.enqueue(MockResponse().setResponseCode(503).setBody("provider detail"))
+        val unavailable = runCatching { serverClient.parseUtterance("milk") }.exceptionOrNull()
+        assertThat(unavailable).isInstanceOf(ModelCallException::class.java)
+        assertThat((unavailable as ModelCallException).problem.kind).isEqualTo(ModelProblem.Kind.HTTP_ERROR)
+
+        replyWith("Here are your items.")
+        val prose = runCatching { serverClient.parseUtterance("milk") }.exceptionOrNull()
+        assertThat(prose).isInstanceOf(ModelCallException::class.java)
+        assertThat((prose as ModelCallException).problem.kind).isEqualTo(ModelProblem.Kind.NOT_JSON)
     }
 
     // ---- probing ------------------------------------------------------------
@@ -322,18 +341,20 @@ class OpenAiCompatibleClientTest {
               {"name":"   ","amount":1,"unit":"PIECE"},
               {"amount":1,"unit":"PIECE"},
               {"name":"arroz","amount":-3,"unit":"KILOGRAM"},
-              {"name":"pan","amount":1,"unit":"NO_EXISTE"}
+              {"name":"pan","amount":1,"unit":"NO_EXISTE"},
+              {"name":"leche","amount":0,"unit":"LITRE"}
             ]}
             """.trimIndent(),
         )
 
         val items = client().parseUtterance("algo raro")
 
-        assertThat(items.map { it.name }).containsExactly("arroz", "pan").inOrder()
+        assertThat(items.map { it.name }).containsExactly("arroz", "pan", "leche").inOrder()
         // A negative amount is not a quantity, and an unknown unit is not a
         // reason to throw the item away.
         assertThat(items[0].quantity).isNull()
         assertThat(items[1].quantity).isEqualTo(Quantity(1.0, MeasureUnit.PIECE))
+        assertThat(items[2].quantity).isNull()
     }
 
     @Test

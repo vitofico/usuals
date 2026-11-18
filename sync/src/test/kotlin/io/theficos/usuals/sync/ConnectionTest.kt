@@ -45,6 +45,44 @@ class ConnectionTest {
         store.state = ClientState()
         assertThat(client.refreshAccount()).isNull()
     }
+    @Test fun accountAndCapabilitiesMustBelongToTheSavedConnection() = runBlocking {
+        val store = Store()
+        val saved = ServerConnection("https://usuals.example", pending().info, "alice", "token", 20000)
+        store.state = ClientState(connection = saved)
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                val response = when (path) {
+                    "/v1/connection/account" -> Wire.json.encodeToString(ConnectionAccount.serializer(), ConnectionAccount("other", "Other"))
+                    "/v1/capabilities" -> Wire.json.encodeToString(InstanceCapabilities.serializer(), InstanceCapabilities("other", historyDeletion = true))
+                    else -> error("Unexpected path $path")
+                }
+                return WireResponse(200, response.toByteArray())
+            }
+        }
+        val client = ConnectionClient(store, transport) { 1000 }
+        assertThat(client.refreshAccount()).isNull()
+        assertThat(store.read().connection).isEqualTo(saved)
+        assertThat(runCatching { client.supportsHistoryDeletion() }.exceptionOrNull())
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(store.read().connection).isEqualTo(saved)
+    }
+
+    @Test fun discoveredReceiptKeyMustMatchTheServerId() = runBlocking {
+        val store = Store()
+        val instance = pending().info
+        val mismatched = instance.copy(server = instance.server.copy(serverId = Wire.hash(ByteArray(32))))
+        val transport = object : RelayTransport {
+            override suspend fun request(origin: String, method: String, path: String, body: ByteArray?, token: String?, maxResponse: Int): WireResponse {
+                assertThat(path).isEqualTo("/v1/instance")
+                return WireResponse(200, Wire.json.encodeToString(InstanceInfo.serializer(), mismatched).toByteArray())
+            }
+        }
+        val client = ConnectionClient(store, transport) { 1000 }
+        assertThat(runCatching { client.discover("https://usuals.example") }.exceptionOrNull())
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(store.read()).isEqualTo(ClientState())
+    }
+
     @Test fun olderServersKeepWorkingWithoutAccountMetadata() = runBlocking {
         val store = Store()
         store.state = ClientState(connection = ServerConnection("https://usuals.example", pending().info, "alice", "token", 20000))
