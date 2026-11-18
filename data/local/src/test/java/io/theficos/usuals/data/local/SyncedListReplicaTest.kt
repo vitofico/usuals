@@ -211,6 +211,34 @@ class SyncedListReplicaTest {
         val lists = ListRepository(db) { "independent" }
         val other = lists.create("Other")
         items.add(ParsedItem("Bread"))
+        val tables = listOf(
+            "items", "purchase", "trip", "item_pref", "local_item_pref", "item_alias",
+            "sync_projection", "sync_outbox", "conflict_dismissal",
+        )
+        fun facts(list: String) = tables.associateWith { table ->
+            db.openHelper.readableDatabase.query(
+                "SELECT * FROM `$table` WHERE listId = ? ORDER BY rowid", arrayOf(list),
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) add(List(cursor.columnCount) { cursor.getString(it) })
+                }
+            }
+        }
+        for (list in listOf(LOCAL_LIST_ID, other)) {
+            db.historyDao().insertTrip(TripEntity("trip", 1, list))
+            db.historyDao().insertPurchases(listOf(PurchaseEntity("bought", "trip", "milk", "Milk", boughtAt = 1, listId = list)))
+            db.historyDao().saveSharedPreferences(listOf(SharedPreferenceEntity(list, "milk", "DAIRY", 3)))
+            db.historyDao().saveLocalPreferences(listOf(LocalPreferenceEntity(list, "milk", true, 4)))
+            db.historyDao().saveAliases(listOf(ItemAliasEntity("milks", "milk", list)))
+            db.syncDao().enqueue(OutboxEntity(list, "settled-fixture", 99, "{}", acknowledged = true))
+            db.syncDao().dismiss(ConflictDismissalEntity(list, "dismissed-fixture"))
+        }
+        val bystander = facts(other)
+        val beforeDrop = facts(LOCAL_LIST_ID)
+        for (table in tables) {
+            assertThat(bystander.getValue(table)).isNotEmpty()
+            assertThat(beforeDrop.getValue(table)).isNotEmpty()
+        }
         lists.select(LOCAL_LIST_ID)
         replica.drop(LOCAL_LIST_ID)
         assertThat(lists.selected()).isEqualTo(other)
@@ -219,6 +247,8 @@ class SyncedListReplicaTest {
         assertThat(db.syncDao().pending(LOCAL_LIST_ID)).isEmpty()
         assertThat(db.syncDao().projection(LOCAL_LIST_ID, optimistic = false) + db.syncDao().projection(LOCAL_LIST_ID, optimistic = true)).isEmpty()
         assertThat(db.historyDao().allItems(LOCAL_LIST_ID)).isEmpty()
+        for (table in tables) assertThat(facts(LOCAL_LIST_ID).getValue(table)).isEmpty()
+        assertThat(facts(other)).isEqualTo(bystander)
         replica.drop(other)
         assertThat(db.listDao().all().map { it.id }).containsExactly("fresh")
         assertThat(lists.selected()).isEqualTo("fresh")
@@ -247,6 +277,8 @@ class SyncedListReplicaTest {
         replica.applyPage(page("1.5", listOf(server(Projection(name = "B again"), 5, "b")), listOf(RemovedList("a", 3), RemovedList("b", 4))))
         assertThat(db.listDao().find("a")).isNull()
         assertThat(db.listDao().find("b")!!.name).isEqualTo("B again")
+        replica.applyPage(page("1.5", removed = listOf(RemovedList("b", 3))))
+        assertThat(db.listDao().find("b")?.seq).isEqualTo(5L)
         replica.applyPage(page("1.6", removed = listOf(RemovedList("b", 6))))
         assertThat(db.listDao().find("b")).isNull()
         db.close()
@@ -411,6 +443,9 @@ class SyncedListReplicaTest {
         val replica = LocalReplica(db, newId = { "rename" })
         replica.rename(LOCAL_LIST_ID, "Kitchen")
         val horizon = Reducer.RESEND_HORIZON
+        val bystander = OutboxEntity("other-scope", "settled-bystander", 1, "{}", acknowledged = true)
+        synced(db, bystander.listId)
+        db.syncDao().enqueue(bystander)
         for (ordinal in 2L..horizon + 6L) db.syncDao().enqueue(OutboxEntity(LOCAL_LIST_ID, "settled-$ordinal", ordinal, "{}", acknowledged = true))
         val empty = JsonObject(emptyMap())
         replica.accept(server(Projection(conflicts = mapOf("settled-2" to Conflict(empty, empty, "conflict")), rejected = mapOf("settled-3" to "invalid")), 1))
@@ -418,6 +453,7 @@ class SyncedListReplicaTest {
         assertThat(kept).containsAtLeast("rename", "settled-2", "settled-3", "settled-7", "settled-${horizon + 6}")
         assertThat(kept).containsNoneOf("settled-4", "settled-5", "settled-6")
         assertThat(kept).hasSize(horizon + 3)
+        assertThat(db.syncDao().pending(bystander.listId)).containsExactly(bystander)
         db.close()
     }
     @Test fun theFeedReturningAPushedListAtTheSameSeqRewritesNothing() = runTest {

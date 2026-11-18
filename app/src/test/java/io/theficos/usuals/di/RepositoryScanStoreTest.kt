@@ -26,13 +26,14 @@ class RepositoryScanStoreTest {
     private lateinit var db: UsualsDatabase
     private lateinit var items: ItemRepository
     private lateinit var history: HistoryRepository
+    private var now = 1_700_000_000_000L
     private lateinit var smart: RepositorySmartStore
     private val classifier = CategoryClassifier(InputLanguages.available)
     private val code = Gtin.parse("4006381333931")!!
     @Before fun setup() {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), UsualsDatabase::class.java)
             .allowMainThreadQueries().setQueryExecutor { it.run() }.setTransactionExecutor { it.run() }.build()
-        items = ItemRepository(db); history = HistoryRepository(db, items)
+        items = ItemRepository(db, clock = { now }); history = HistoryRepository(db, items, clock = { now })
         smart = RepositorySmartStore(items, history, classifier, HistoryRanker(), RepeatPlanner())
     }
     @After fun close() = db.close()
@@ -184,5 +185,20 @@ class RepositoryScanStoreTest {
         history.savePreference(ItemPreference("soap", category = Category.HOUSEHOLD.name))
         val id = scans.add(scans.lookup(code).copy(category = Category.DAIRY), "soap")
         assertThat(smart.present(items.items(), history.snapshot())[id]!!.category).isEqualTo(Category.HOUSEHOLD)
+    }
+
+    @Test fun rescanUsesTheLatestPurchasedSpellingAfterTheActiveRowIsGone() = runTest {
+        val scans = store({ false }) { error("no lookup needed") }
+        val first = scans.add(scans.lookup(code), "WASHING LIQUID")
+        items.setChecked(first, true)
+        history.finish()
+        now += RepeatPlanner.DAY_MILLIS
+        val second = scans.add(scans.lookup(code), "Washing Liquid")
+        items.setChecked(second, true)
+        history.finish()
+
+        assertThat(items.items()).isEmpty()
+        assertThat(history.snapshot().purchases.map { it.name }).containsExactly("WASHING LIQUID", "Washing Liquid")
+        assertThat(scans.lookup(code).name).isEqualTo("Washing Liquid")
     }
 }
