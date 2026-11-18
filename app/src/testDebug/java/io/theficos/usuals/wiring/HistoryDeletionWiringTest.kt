@@ -25,7 +25,7 @@ class HistoryDeletionWiringTest {
 
     @After fun reset() = ServiceLocator.reset()
 
-    @Test fun offlineListKeepsHistoryDeletion() = runBlocking {
+    @Test fun offlineListKeepsHistoryDeletion(): Unit = runBlocking {
         val scope = seedLocalHistory()
         val shop = ServiceLocator.historyRepository.snapshot().trips.single()
         assertThat(ServiceLocator.historyStore.deleteTrip(shop.id, scope)).isTrue()
@@ -34,7 +34,7 @@ class HistoryDeletionWiringTest {
         assertThat(remaining.purchases).isEmpty()
     }
 
-    @Test fun syncedListWithoutRelayCapabilityPreservesHistory() = runBlocking {
+    @Test fun syncedListWithoutRelayCapabilityPreservesHistory(): Unit = runBlocking {
         val scope = seedLocalHistory()
         val before = ServiceLocator.historyRepository.snapshot()
         val list = requireNotNull(ServiceLocator.database.listDao().find(scope))

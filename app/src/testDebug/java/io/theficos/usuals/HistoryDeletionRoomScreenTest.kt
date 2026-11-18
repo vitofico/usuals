@@ -15,6 +15,7 @@ import io.theficos.usuals.parse.ParsedItem
 import io.theficos.usuals.smart.CategoryClassifier
 import io.theficos.usuals.smart.HistoryRanker
 import io.theficos.usuals.smart.RepeatPlanner
+import io.theficos.usuals.ui.history.HistoryNotice
 import io.theficos.usuals.ui.history.HistoryScreen
 import io.theficos.usuals.ui.history.HistoryViewModel
 import io.theficos.usuals.ui.theme.UsualsTheme
@@ -33,7 +34,11 @@ class HistoryDeletionRoomScreenTest {
 
     @Test fun cancelAndConfirmDeleteChangeOnlyTheSelectedShop() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java).build()
+        val db = Room.inMemoryDatabaseBuilder(context, UsualsDatabase::class.java)
+            .allowMainThreadQueries()
+            .setQueryExecutor { it.run() }
+            .setTransactionExecutor { it.run() }
+            .build()
         val models = ViewModelStore()
         val now = 1_800_000_000_000L
         try {
@@ -66,6 +71,8 @@ class HistoryDeletionRoomScreenTest {
             compose.onNodeWithContentDescription(context.getString(R.string.history_shop_options)).performClick()
             compose.onNodeWithText(context.getString(R.string.history_delete)).performClick()
             compose.onNodeWithText(context.getString(R.string.history_delete)).performClick()
+            compose.waitUntil(10_000) { vm.state.value.notice != null }
+            assertEquals(HistoryNotice.DELETED, vm.state.value.notice)
             compose.waitUntil(10_000) { vm.state.value.stats.shopCount == 0 }
             compose.onNodeWithText(context.getString(R.string.history_deleted)).assertExists()
             assertTrue(vm.state.value.selected.isEmpty())

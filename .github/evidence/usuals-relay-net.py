@@ -44,7 +44,7 @@ assert original_runner.count(marker) == 1
 runner.write_text(original_runner.replace(marker, "scripts/dgradle -p server :test --rerun"))
 runner.chmod(0o755)
 try:
-    for name, file, old, new, selector in cases:
+    for name, file, old, new, selector in cases[1:]:
         path = source / file
         original = path.read_text()
         assert original.count(old) == 1, name

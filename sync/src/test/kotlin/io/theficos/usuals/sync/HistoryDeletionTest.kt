@@ -35,7 +35,7 @@ class HistoryDeletionTest {
     @Test fun importedAndOldShopsCanBeDeletedWithoutACloseRecord() {
         val result = delete(initial.copy(closes = emptyMap(), seen = emptyMap(), rows = emptyMap()))
         assertThat(result.outcome).isEqualTo(Outcome.APPLIED)
-        assertThat(result.projection.purchases).isEmpty()
+        assertThat(result.projection.purchases).isEqualTo(mapOf("tea" to bystander))
     }
 
     @Test fun deletionSurvivesSnapshotRestartAndTheResendHorizon() {
