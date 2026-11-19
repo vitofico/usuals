@@ -6,7 +6,7 @@ cd "$ROOT"
 
 android() {
   scripts/retry-gradle-download scripts/dgradle verifyReleaseTools \
-    :app:assembleDebug :app:assembleRelease test lint \
+    :app:assembleDebug :app:assembleRelease test -x testReleaseUnitTest lint \
     --no-daemon --no-watch-fs --no-parallel --max-workers=2
   python3 scripts/check-native-alignment.py app/build/outputs/apk/release/app-release-unsigned.apk
 }

@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'fastlane/**'
+      - 'web/**'
   # Weekly, so a query-pack update finds the code even in a quiet week. Monday
   # 06:00 UTC, deliberately not on the hour boundary everyone else picks.
   schedule:
