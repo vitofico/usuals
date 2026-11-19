@@ -141,70 +141,59 @@ class ItemRepositoryTest {
     }
 
     @Test
-    fun `quantities in the same unit are summed rather than stacked`() = runTest {
-        repo.add(ParsedItem("Leche", Quantity(1.0, MeasureUnit.LITRE)))
-        repo.add(ParsedItem("leche", Quantity(2.0, MeasureUnit.LITRE)))
-
-        assertThat(visible().single().quantity).isEqualTo(Quantity(3.0, MeasureUnit.LITRE))
-    }
-
-    @Test
-    fun `a comparable unit is converted into the unit the row already uses`() = runTest {
-        repo.add(ParsedItem("Tomates", Quantity(0.5, MeasureUnit.KILOGRAM)))
-        repo.add(ParsedItem("tomate", Quantity(500.0, MeasureUnit.GRAM)))
-
-        assertThat(visible().single().quantity).isEqualTo(Quantity(1.0, MeasureUnit.KILOGRAM))
-    }
-
-    @Test
-    fun `quantities that cannot be added leave the existing row alone`() = runTest {
-        repo.add(ParsedItem("Leche", Quantity(2.0, MeasureUnit.LITRE)))
-        repo.add(ParsedItem("leche", Quantity(500.0, MeasureUnit.GRAM)))
-
-        val merged = visible().single()
-        assertThat(merged.quantity).isEqualTo(Quantity(2.0, MeasureUnit.LITRE))
-    }
-
-    @Test
-    fun `a count never merges into a pack`() = runTest {
-        repo.add(ParsedItem("Cervezas", Quantity(3.0, MeasureUnit.PACK)))
-        repo.add(ParsedItem("cerveza", Quantity(2.0, MeasureUnit.PIECE)))
-
-        assertThat(visible().single().quantity).isEqualTo(Quantity(3.0, MeasureUnit.PACK))
-    }
-
-    @Test
-    fun `a merge fills the gaps the existing row has`() = runTest {
-        val id = repo.add(ParsedItem("Leche"))
-        now += 1_000
-
-        repo.add(
-            ParsedItem("leche", Quantity(1.0, MeasureUnit.LITRE), note = "para el café"),
-            gtin = Gtin.parse("8410123456783"),
+    fun `matching items combine only compatible quantities in the stored unit`() = runTest {
+        val cases = listOf(
+            Triple(ParsedItem("Leche", Quantity(1.0, MeasureUnit.LITRE)),
+                ParsedItem("leche", Quantity(2.0, MeasureUnit.LITRE)), Quantity(3.0, MeasureUnit.LITRE)),
+            Triple(ParsedItem("Tomates", Quantity(0.5, MeasureUnit.KILOGRAM)),
+                ParsedItem("tomate", Quantity(500.0, MeasureUnit.GRAM)), Quantity(1.0, MeasureUnit.KILOGRAM)),
+            Triple(ParsedItem("Aceite", Quantity(2.0, MeasureUnit.LITRE)),
+                ParsedItem("aceite", Quantity(500.0, MeasureUnit.GRAM)), Quantity(2.0, MeasureUnit.LITRE)),
+            Triple(ParsedItem("Cervezas", Quantity(3.0, MeasureUnit.PACK)),
+                ParsedItem("cerveza", Quantity(2.0, MeasureUnit.PIECE)), Quantity(3.0, MeasureUnit.PACK)),
         )
-
-        val merged = visible().single()
-        assertThat(merged.id).isEqualTo(id)
-        assertThat(merged.quantity).isEqualTo(Quantity(1.0, MeasureUnit.LITRE))
-        assertThat(merged.note).isEqualTo("para el café")
-        assertThat(merged.gtin).isEqualTo(Gtin.parse("8410123456783"))
-        assertThat(merged.updatedAt).isEqualTo(now)
+        for ((index, case) in cases.withIndex()) {
+            val (original, incoming, expected) = case
+            val id = repo.add(original)
+            repo.add(incoming)
+            assertThat(visible()).hasSize(index + 1)
+            assertThat(repo.find(id)?.quantity).isEqualTo(expected)
+        }
     }
 
     @Test
-    fun `a merge never overwrites what the row already says`() = runTest {
-        repo.add(
-            ParsedItem("Leche", Quantity(1.0, MeasureUnit.LITRE), note = "entera"),
-            gtin = Gtin.parse("8410123456783"),
+    fun `matching metadata fills gaps without replacing existing details`() = runTest {
+        data class Case(
+            val original: ParsedItem,
+            val incoming: ParsedItem,
+            val originalGtin: Gtin?,
+            val incomingGtin: Gtin?,
+            val quantity: Quantity,
+            val note: String,
+            val gtin: Gtin?,
+            val changed: Boolean,
         )
-        repo.add(
-            ParsedItem("leche", note = "desnatada"),
-            gtin = Gtin.parse("8410987654325"),
+        val litre = Quantity(1.0, MeasureUnit.LITRE)
+        val known = Gtin.parse("8410123456783")
+        val cases = listOf(
+            Case(ParsedItem("Leche"), ParsedItem("leche", litre, note = "para el café"),
+                null, known, litre, "para el café", known, true),
+            Case(ParsedItem("Aceite", litre, note = "entera"), ParsedItem("aceite", note = "desnatada"),
+                known, Gtin.parse("8410987654325"), litre, "entera", known, false),
         )
+        for ((index, case) in cases.withIndex()) {
+            val id = repo.add(case.original, gtin = case.originalGtin)
+            now += 1_000
+            repo.add(case.incoming, gtin = case.incomingGtin)
 
-        val merged = visible().single()
-        assertThat(merged.note).isEqualTo("entera")
-        assertThat(merged.gtin).isEqualTo(Gtin.parse("8410123456783"))
+            assertThat(visible()).hasSize(index + 1)
+            val result = requireNotNull(repo.find(id))
+            assertThat(result.id).isEqualTo(id)
+            assertThat(result.quantity).isEqualTo(case.quantity)
+            assertThat(result.note).isEqualTo(case.note)
+            assertThat(result.gtin).isEqualTo(case.gtin)
+            if (case.changed) assertThat(result.updatedAt).isEqualTo(now)
+        }
     }
 
     @Test

@@ -71,8 +71,6 @@ class Gtin private constructor(val value: String) {
             return Gtin(ean13)
         }
 
-        fun isValid(raw: String): Boolean = parse(raw) != null
-
         /**
          * GS1 mod-10: weight the digits 1, 3, 1, 3, ... from the left across a
          * 13-digit code (which puts weight 1 on the check digit at the right)

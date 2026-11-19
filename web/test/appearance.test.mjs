@@ -3,60 +3,43 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { palettes, paletteId, readPalette, writePalette, backgroundStyleId, readBackgroundStyle, writeBackgroundStyle, readCompactMode, writeCompactMode } from "../src/appearance.mjs";
 
-test("compact mode defaults off and persists independently of the palette", () => {
+test("preferences round trip independently and tolerate unavailable storage", () => {
   const values = new Map();
   const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
-  assert.equal(readCompactMode(storage), false);
+  const blocked = { getItem() { throw Error("blocked"); }, setItem() { throw Error("full"); } };
+  for (const [read, write, initial, choices] of [
+    [readPalette, writePalette, "plum", palettes],
+    [readCompactMode, writeCompactMode, false, [true, false]],
+    [readBackgroundStyle, writeBackgroundStyle, "artwork", ["plain", "artwork"]],
+  ]) {
+    assert.equal(read(storage), initial);
+    for (const choice of choices) {
+      const written = write(choice, storage);
+      if (write !== writeCompactMode) assert.equal(written, choice);
+      assert.equal(read(storage), choice);
+    }
+    for (const unavailable of [null, blocked]) {
+      assert.equal(read(unavailable), initial);
+      assert.doesNotThrow(() => {
+        const written = write(choices[0], unavailable);
+        if (write !== writeCompactMode) assert.equal(written, choices[0]);
+      });
+    }
+  }
+  assert.equal(writePalette("tide", null), "tide");
+  assert.equal(writePalette("grove", blocked), "grove");
   writeCompactMode(true, storage);
-  writePalette("grove", storage);
-  assert.equal(readCompactMode(storage), true);
-  writeCompactMode(false, storage);
-  assert.equal(readCompactMode(storage), false);
-  assert.equal(readCompactMode(null), false);
-  assert.doesNotThrow(() => writeCompactMode(true, null));
-});
-
-test("background artwork defaults on and a deliberate plain choice survives palette changes and reloads", () => {
-  const values = new Map();
-  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
-  assert.equal(readBackgroundStyle(storage), "artwork");
   writeBackgroundStyle("plain", storage);
   writePalette("grove", storage);
-  assert.equal(readBackgroundStyle(storage), "plain");
-  assert.equal(readPalette(storage), "grove");
+  assert.deepEqual([readCompactMode(storage), readBackgroundStyle(storage), readPalette(storage)], [true, "plain", "grove"]);
   writeBackgroundStyle("artwork", storage);
-  assert.equal(readBackgroundStyle(storage), "artwork");
   assert.equal(readPalette(storage), "grove");
-  for (const unknown of [null, "future", "__proto__", {}]) assert.equal(backgroundStyleId(unknown), "artwork");
-});
-
-test("background choice still works when browser storage is unavailable", () => {
-  const blocked = { getItem() { throw Error("blocked"); }, setItem() { throw Error("full"); } };
-  assert.equal(readBackgroundStyle(blocked), "artwork");
-  assert.equal(readBackgroundStyle(null), "artwork");
-  assert.equal(writeBackgroundStyle("plain", blocked), "plain");
-  assert.equal(writeBackgroundStyle("plain", null), "plain");
-});
-
-test("palette selection survives storage round trips and rejects unknown values", () => {
-  const values = new Map();
-  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
-  assert.equal(readPalette(storage), "plum");
-  for (const palette of palettes) {
-    assert.equal(writePalette(palette, storage), palette);
-    assert.equal(readPalette(storage), palette);
+  for (const unknown of [null, "future", "__proto__", {}, "GROVE"]) {
+    assert.equal(paletteId(unknown), "plum");
+    assert.equal(backgroundStyleId(unknown), "artwork");
   }
-  for (const unknown of [null, "future", "__proto__", {}, "GROVE"]) assert.equal(paletteId(unknown), "plum");
   writePalette("future", storage);
   assert.equal(readPalette(storage), "plum");
-});
-
-test("unavailable or full browser storage still permits a live palette choice", () => {
-  const blocked = { getItem() { throw Error("blocked"); }, setItem() { throw Error("full"); } };
-  assert.equal(readPalette(blocked), "plum");
-  assert.equal(readPalette(null), "plum");
-  assert.equal(writePalette("grove", blocked), "grove");
-  assert.equal(writePalette("tide", null), "tide");
 });
 
 const css = await readFile(new URL("../assets/theme.css", import.meta.url), "utf8");

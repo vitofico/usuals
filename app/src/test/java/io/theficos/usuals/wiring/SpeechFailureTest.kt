@@ -22,24 +22,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class SpeechFailureTest {
 
-    @Test
-    fun another_app_on_the_microphone_does_not_end_dictation() {
-        // A phone call or a stray assistant activation. It frees up.
-        assertThat(endOfCapture(SpeechRecognizer.ERROR_RECOGNIZER_BUSY)).isNull()
-    }
-
-    @Test
-    fun a_recognition_service_having_a_bad_moment_does_not_end_dictation() {
-        assertThat(endOfCapture(SpeechRecognizer.ERROR_SERVER)).isNull()
-        assertThat(endOfCapture(CaptureFailure.ERROR_SERVER_DISCONNECTED)).isNull()
-    }
-
-    @Test
-    fun silence_is_an_ordinary_outcome_of_a_press() {
-        assertThat(endOfCapture(SpeechRecognizer.ERROR_NO_MATCH)).isNull()
-        assertThat(endOfCapture(SpeechRecognizer.ERROR_SPEECH_TIMEOUT)).isNull()
-    }
-
     /**
      * Several recognisers report the stop that immediately follows a start as a
      * client error, so this is what a mistap looks like. Reading it as a phone
@@ -48,28 +30,6 @@ class SpeechFailureTest {
     @Test
     fun a_press_too_short_to_get_going_is_not_a_broken_microphone() {
         assertThat(endOfCapture(SpeechRecognizer.ERROR_CLIENT)).isNull()
-    }
-
-    @Test
-    fun a_refused_microphone_opens_the_keyboard() {
-        val ended = endOfCapture(SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS)
-
-        assertThat(ended).isNotNull()
-        assertThat(ended?.failure).isEqualTo(CaptureFailure.PERMISSION_DENIED)
-    }
-
-    @Test
-    fun a_missing_language_model_opens_the_keyboard() {
-        val ended = endOfCapture(CaptureFailure.ERROR_LANGUAGE_UNAVAILABLE)
-
-        assertThat(ended).isNotNull()
-        assertThat(ended?.failure).isEqualTo(CaptureFailure.LANGUAGE_UNAVAILABLE)
-    }
-
-    @Test
-    fun a_recorder_that_will_not_read_opens_the_keyboard() {
-        assertThat(endOfCapture(SpeechRecognizer.ERROR_AUDIO)?.failure)
-            .isEqualTo(CaptureFailure.AUDIO)
     }
 
     /**

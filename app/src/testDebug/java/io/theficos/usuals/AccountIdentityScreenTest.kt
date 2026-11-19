@@ -12,16 +12,22 @@ import io.theficos.usuals.ui.settings.SettingsScreen
 import io.theficos.usuals.ui.settings.SettingsViewModel
 import io.theficos.usuals.ui.theme.UsualsTheme
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-class AccountIdentityDeviceTest {
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33], qualifiers = "en-w411dp-h891dp")
+class AccountIdentityScreenTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun settingsShowTheCurrentPersonAndServerAndForgetThemOnSignOut() {
         var account: AccountSummary? = AccountSummary("usuals.example.org:8443", "Vito")
-        val vm = SettingsViewModel(accountSummary = { account })
+        val vm = SettingsViewModel(worker = Dispatchers.Main.immediate, accountSummary = { account })
         var opened = false
         compose.setContent { UsualsTheme { SettingsScreen(vm, {}, onOpenAccount = { opened = true }) } }
         val identity = compose.activity.getString(R.string.account_signed_in_as, "Vito") + "\nusuals.example.org:8443"
@@ -34,7 +40,7 @@ class AccountIdentityDeviceTest {
     }
 
     @Test fun accountWithoutAHumanReadableNameShowsTheServer() {
-        val vm = SettingsViewModel(accountSummary = { AccountSummary("usuals.example.org", "  ") })
+        val vm = SettingsViewModel(worker = Dispatchers.Main.immediate, accountSummary = { AccountSummary("usuals.example.org", "  ") })
         compose.setContent { UsualsTheme { SettingsScreen(vm, {}) } }
         compose.onNodeWithText(compose.activity.getString(R.string.settings_account_on, "usuals.example.org")).assertIsDisplayed()
     }

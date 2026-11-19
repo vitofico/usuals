@@ -1,6 +1,7 @@
 package io.theficos.usuals.enrich
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.theficos.usuals.model.Gtin
 import org.junit.Test
 
@@ -24,61 +25,34 @@ import org.junit.Test
 class RestrictedCirculationTest {
 
     @Test
-    fun `the GS1 in-store prefixes 02 and 04 are skipped`() {
-        assertThat(RestrictedCirculation.isRestricted(gtin("0212345678909"))).isTrue()
-        assertThat(RestrictedCirculation.isRestricted(gtin("0412345678903"))).isTrue()
-    }
-
-    @Test
-    fun `the prefixes on either side of 02 and 04 stay eligible for lookup`() {
-        assertThat(RestrictedCirculation.isRestricted(gtin("0112345678902"))).isFalse()
-        assertThat(RestrictedCirculation.isRestricted(gtin("0312345678906"))).isFalse()
-        assertThat(RestrictedCirculation.isRestricted(gtin("0512345678900"))).isFalse()
-    }
-
-    @Test
-    fun `the whole 20 to 29 band is skipped, not only its endpoints`() {
-        val band = listOf(
-            "2012345678903",
-            "2112345678900",
-            "2212345678907",
-            "2312345678904",
-            "2412345678901",
-            "2512345678908",
-            "2612345678905",
-            "2712345678902",
-            "2812345678909",
-            "2912345678906",
+    fun `restricted circulation covers the whole reserved prefix range`() {
+        val cases = mapOf(
+            "0212345678909" to true,
+            "0412345678903" to true,
+            "0112345678902" to false,
+            "0312345678906" to false,
+            "0512345678900" to false,
+            "1912345678907" to false,
+            "2012345678903" to true,
+            "2112345678900" to true,
+            "2212345678907" to true,
+            "2312345678904" to true,
+            "2412345678901" to true,
+            "2512345678908" to true,
+            "2612345678905" to true,
+            "2712345678902" to true,
+            "2812345678909" to true,
+            "2912345678906" to true,
+            "3012345678902" to false,
+            "3017620422003" to false,
+            "212345002506" to true,
         )
-
-        for (code in band) {
-            assertThat(RestrictedCirculation.isRestricted(gtin(code))).isTrue()
+        for ((code, restricted) in cases) {
+            val barcode = gtin(code)
+            assertWithMessage("restricted %s", code).that(RestrictedCirculation.isRestricted(barcode)).isEqualTo(restricted)
         }
-    }
-
-    @Test
-    fun `the prefixes just outside the 20 to 29 band stay eligible for lookup`() {
-        assertThat(RestrictedCirculation.isRestricted(gtin("1912345678907"))).isFalse()
-        assertThat(RestrictedCirculation.isRestricted(gtin("3012345678902"))).isFalse()
-    }
-
-    @Test
-    fun `an ordinary manufacturer barcode is never skipped`() {
-        // Nutella, 400g, a real code and about as mainstream as a jar gets.
-        assertThat(RestrictedCirculation.isRestricted(gtin("3017620422003"))).isFalse()
-    }
-
-    @Test
-    fun `a UPC-A in-store code is still caught after being widened to thirteen digits`() {
-        // A North American scale-printed code: leading 2, then the shop's own
-        // item number and an embedded price. Twelve digits gain one zero on the
-        // left, so the UPC in-store range lands on the EAN-13 prefix 02 and this
-        // check sees it. That alignment is luck, not design, which is exactly why
-        // it is asserted here rather than left implied.
-        val widened = gtin("212345002506")
-
-        assertThat(widened.value).isEqualTo("0212345002506")
-        assertThat(RestrictedCirculation.isRestricted(widened)).isTrue()
+        // Widening UPC-A moves its leading 2 into the reserved EAN-13 prefix.
+        assertThat(gtin("212345002506").value).isEqualTo("0212345002506")
     }
 
     @Test
