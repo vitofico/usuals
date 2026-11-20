@@ -46,6 +46,9 @@ outputs['app/src/main/res/drawable/ic_brand_mark.xml'] = vector(32, 64, '''<path
     android:fillColor="@color/ic_launcher_background" />\n''' + paths)
 outputs['app/src/main/res/drawable/ic_launcher_foreground.xml'] = vector(108, 108, '''<group android:translateX="18" android:translateY="18" android:scaleX="1.125" android:scaleY="1.125">
 ''' + paths + '\n</group>')
+# Center the standalone glyph in the notification slot, including its stroke and dot.
+outputs['app/src/main/res/drawable/ic_notification.xml'] = vector(24, 42, '''<group android:translateX="-11" android:translateY="-10">
+''' + paths + '\n</group>')
 colours = (ROOT/'app/src/main/res/values/colors.xml').read_text()
 for name, value in [('ic_launcher_background', ground), ('brand_champagne', ink)]:
     colours, count = re.subn(r'(<color name="'+name+r'">)[^<]+(</color>)', lambda m: m[1]+value+m[2], colours)
