@@ -1,5 +1,9 @@
 # Changelog
 
+## Android notifications
+
+- Enlarge the Usuals symbol in the status bar for shopping reminders and shared-list activity.
+
 ## Shopping list reminders
 
 - Remove the automatic "Still needed?" popup for unchecked items carried across

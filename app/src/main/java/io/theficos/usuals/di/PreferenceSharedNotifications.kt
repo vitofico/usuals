@@ -49,7 +49,7 @@ fun preferenceSharedNotifications(context: Context): SharedNotifications {
                     else -> context.resources.getQuantityString(R.plurals.notifications_items_body, notice.items, notice.items)
                 }
                 val notification = NotificationCompat.Builder(context, CHANNEL)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle(context.getString(R.string.notifications_activity_title))
                     .setContentText(body).setContentIntent(pending).setAutoCancel(true)
                     .setSilent(true).setOnlyAlertOnce(true).setVisibility(NotificationCompat.VISIBILITY_SECRET)

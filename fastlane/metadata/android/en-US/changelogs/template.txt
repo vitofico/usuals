@@ -1,1 +1,1 @@
-Items can stay on your shopping list for as long as you need them. Usuals no longer interrupts you with the “Still needed?” popup after several shops. You can remove items whenever you choose.
+The Usuals symbol is now larger in the status bar for shopping reminders and shared-list activity.

@@ -1,1 +1,1 @@
-Les articles peuvent rester sur votre liste aussi longtemps que nécessaire. Usuals ne vous interrompt plus avec « Toujours nécessaire ? » après plusieurs courses. Vous pouvez les supprimer quand vous le souhaitez.
+Le symbole Usuals dans la barre d’état est plus grand pour les rappels de courses et les notifications des listes partagées.

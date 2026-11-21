@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.theficos.usuals.R
 import io.theficos.usuals.di.preferenceSharedNotifications
 import io.theficos.usuals.sync.*
 import io.theficos.usuals.widget.EXTRA_OPEN_LIST
@@ -34,6 +35,7 @@ class PreferenceSharedNotificationsTest {
         receive("fresh")
         assertThat(manager.activeNotifications).hasLength(1)
         val notification = manager.activeNotifications.single().notification
+        assertThat(notification.smallIcon.resId).isEqualTo(R.drawable.ic_notification)
         assertThat(notification.channelId).isEqualTo("shared-list-activity")
         assertThat(manager.getNotificationChannel(notification.channelId).importance).isEqualTo(NotificationManager.IMPORTANCE_LOW)
         assertThat(manager.getNotificationChannel(notification.channelId).sound).isNull()
