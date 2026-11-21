@@ -1,0 +1,1 @@
+Le symbole Usuals dans la barre d’état est plus grand pour les rappels de courses et les notifications des listes partagées.
