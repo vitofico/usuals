@@ -72,4 +72,6 @@
     <string name="model_problem_model">Gib den Modellnamen ein.</string>
     <string name="model_problem_configuration">Vervollständige die Anbietereinstellungen und versuche es erneut.</string>
     <string name="model_problem_budget">Das heutige Aufruflimit wurde erreicht oder Modellaufrufe sind ausgeschaltet.</string>
+    <string name="settings_model_http_consent">Unverschlüsselte Anfragen an diesen lokalen Endpunkt erlauben. Personen im Netzwerk könnten die gesendeten Daten lesen.</string>
+    <string name="settings_model_https_required">Für entfernte Endpunkte und alle Endpunkte mit API-Schlüssel ist HTTPS erforderlich.</string>
 </resources>

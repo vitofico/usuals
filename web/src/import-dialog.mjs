@@ -20,6 +20,12 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const endpoint = el("input", { id: "import-endpoint", class: "field", type: "url", required: true, autocomplete: "off" });
   const modelName = el("input", { id: "import-model", class: "field", required: true, maxlength: 128, autocomplete: "off" });
   const key = el("input", { id: "import-key", class: "field", type: "password", autocomplete: "off", maxlength: 4096 });
+  const httpConsent = el("input", { type: "checkbox" });
+  const consentLabel = el("label", { class: "check-row", hidden: true }, httpConsent, t("importModelHttpConsent"));
+  endpoint.addEventListener("input", () => {
+    httpConsent.checked = false;
+    consentLabel.hidden = !/^http:/i.test(endpoint.value.trim());
+  });
   const limit = el("input", { id: "import-limit", class: "field", type: "number", min: 2, max: 200, value: 20, required: true });
   const cancel = button(t("cancel"), closeDialog);
   const review = el("section", { hidden: true }), reviewList = el("ul", { class: "import-review" });
@@ -121,16 +127,17 @@ export function importDialog({ el, button, t, openDialog, closeDialog, dialog, p
   const connection = el("form", { onsubmit: event => {
     event.preventDefault(); run(async () => {
       const credential = key.value; key.value = "";
-      model.connect({ endpoint: endpoint.value, model: modelName.value, apiKey: credential, limit: Number(limit.value) });
+      model.connect({ endpoint: endpoint.value, model: modelName.value, apiKey: credential, allowLocalHttp: httpConsent.checked, limit: Number(limit.value) });
       await model.check();
     });
   } },
   el("label", { class: "label", for: endpoint.id }, t("importModelEndpointLabel")), endpoint,
   el("label", { class: "label", for: modelName.id }, t("importModelName")), modelName,
   el("label", { class: "label", for: key.id }, t("importModelKey")), key,
+  consentLabel,
   el("label", { class: "label", for: limit.id }, t("importModelLimit")), limit,
   el("p", { class: "helper" }, t("importModelMemory")), el("button", { type: "submit", class: "secondary" }, t("importConnectModel")));
-  for (const field of [endpoint, modelName, key, limit]) field.addEventListener("input", () => { model.disconnect(); stopCamera(); update(); });
+  for (const field of [endpoint, modelName, key, limit, httpConsent]) field.addEventListener("input", () => { model.disconnect(); stopCamera(); update(); });
   const serverDetails = el("p", { class: "helper" }), textServerDetails = el("p", { class: "helper" });
   const textServerDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));
   const serverDescription = el("p", { class: "helper" }, t("serverAiPrivacy"));

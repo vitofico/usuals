@@ -197,6 +197,8 @@
   "importMarkdownReviewHelp": "Prüfe Namen und Mengen aus deiner Liste. Vorhandene Einträge werden übersprungen; die Liste ändert sich erst nach deiner Bestätigung.",
   "importReviewHelp": "Prüfe Namen und Mengen. Das Modell kann Fehler machen. Vorhandene Einträge werden übersprungen; die Liste ändert sich erst nach deiner Bestätigung.",
   "importFailed": "Diese Quelle konnte nicht importiert werden. Deine gespeicherte Liste bleibt erhalten.",
+  "importModelHttpConsent": "Unverschlüsselte Anfragen an diesen lokalen Endpunkt erlauben. Personen im Netzwerk könnten die gesendeten Daten lesen.",
+  "importModelHttps": "Für entfernte Endpunkte und alle Endpunkte mit API-Schlüssel ist HTTPS erforderlich.",
   "importModelEndpoint": "Gib eine API-Basis-URL aus den erlaubten Ursprüngen und einen Modellnamen ein. Verwende HTTPS, außer für localhost.",
   "importModelBudget": "Diese Verbindung hat ihr Aufruflimit erreicht. Verbinde sie mit einem passenden Limit erneut, um fortzufahren.",
   "importModelMissing": "Verbinde zuerst ein Bildmodell. Es wurde kein Foto gesendet.",

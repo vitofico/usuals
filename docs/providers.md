@@ -21,7 +21,7 @@ image support with synthetic pixels before forwarding your photo.
 Operators configure `USUALS_AI_PROFILES` as a JSON array, for example:
 
 ```json
-[{"id":"private","label":"Household model","baseUrl":"http://ollama.ollama.svc.cluster.local:11434/v1","model":"installed-text-model","imageModel":"installed-vision-model","isLocal":true,"kind":"OLLAMA"}]
+[{"id":"private","label":"Household model","baseUrl":"http://ollama.ollama.svc.cluster.local:11434/v1","model":"installed-text-model","imageModel":"installed-vision-model","isLocal":true,"allowHttp":true,"kind":"OLLAMA"}]
 ```
 
 Use actual installed, tested model IDs. An internal Ollama URL does not establish
@@ -29,7 +29,7 @@ that inference is local; cloud-backed models can forward content externally.
 For an internal HTTP proxy that forwards to a cloud model, use `isLocal: false`
 and explicitly set `allowHttp: true`. This operator-only transport exception
 preserves the external-processing disclosure. Restrict it to a trusted internal
-network; personal provider keys also traverse that HTTP hop. It does not permit
+network. All HTTP profiles require explicit opt-in and reject operator and personal API keys. It does not permit
 users to choose destinations or bypass the operator's network policy.
 `USUALS_AI_DEFAULT` selects a profile ID, otherwise the first profile is used.
 An empty array disables the gateway. External profiles use HTTPS, with optional
@@ -100,7 +100,9 @@ calls it directly. The local daily call ceiling is enforced in code. Zero means
 model use is disabled. The running budget reads the saved ceiling, and changes
 apply immediately.
 
-Tests use local scripted HTTP responses. No CI test requires a live model.
+On Android, a keyless local HTTP model requires consent in direct AI settings. Changing its URL clears consent. Existing HTTP settings require consent after upgrading.
+
+Tests use local scripted responses. No CI test requires a live model.
 
 ## Recipe calls and local reasoning models
 
@@ -140,7 +142,7 @@ The capability test is a compatibility check, not an accuracy guarantee.
 
 An operator must set `USUALS_WEB_MODEL_ORIGINS` to a JSON array of exact origins,
 for example `["https://models.example.org"]`. The default is `[]`, which leaves
-photo import unavailable. HTTPS is required except for localhost loopback QA.
+photo import unavailable. Loopback HTTP requires explicit consent each time the user sets up a connection. Any API key requires HTTPS.
 Wildcards, credentials and paths are rejected. This sets the browser CSP and
 public `/model-origins.json`; it never configures server-side model calls.
 

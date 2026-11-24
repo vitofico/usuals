@@ -40,8 +40,11 @@ class ModelBudgetWiringTest {
         }
         val probe = OpenAiModelProbe(apiKey = { null }, budget = ModelBudget(1), clients = { client })
         val settings = ProviderSettings.ollama("http://localhost:11434/v1", "fake")
-        assertThat(probe.probe(settings).reachable).isTrue()
-        assertThat(probe.probe(settings).problem!!.kind).isEqualTo(ModelProblem.Kind.BUDGET_EXHAUSTED)
+        assertThat(probe.probe(settings).reachable).isFalse()
+        val allowed = settings.copy(consentedHttpUrl = settings.baseUrl)
+        assertThat(probe.probe(allowed.copy(baseUrl = "http://127.0.0.1")).reachable).isFalse()
+        assertThat(probe.probe(allowed).reachable).isTrue()
+        assertThat(probe.probe(allowed).problem!!.kind).isEqualTo(ModelProblem.Kind.BUDGET_EXHAUSTED)
         assertThat(probes).isEqualTo(1)
     }
 }

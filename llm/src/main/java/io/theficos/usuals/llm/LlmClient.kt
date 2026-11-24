@@ -50,10 +50,11 @@ data class ProviderConfig(
     val model: String,
     val isLocal: Boolean,
     val apiKey: String?,
+    val allowLocalHttp: Boolean = false,
 ) {
 
     init {
-        require(baseUrl.isNotBlank()) { "a provider needs an endpoint" }
+        require(ModelEndpoint.permits(baseUrl, allowLocalHttp, hasKey)) { "invalid model transport" }
         require(model.isNotBlank()) { "a provider needs a model name" }
     }
 
@@ -81,7 +82,7 @@ data class ProviderConfig(
         const val REDACTED = "(redacted)"
 
         /** The genuinely private configuration: a model on the LAN, no key, nothing billed. */
-        fun ollama(model: String, baseUrl: String = "http://localhost:11434/v1"): ProviderConfig =
+        fun ollama(model: String, baseUrl: String = "http://localhost:11434/v1", allowLocalHttp: Boolean = false): ProviderConfig =
             ProviderConfig(
                 kind = ProviderKind.OLLAMA,
                 label = "Ollama",
@@ -89,6 +90,7 @@ data class ProviderConfig(
                 model = model,
                 isLocal = true,
                 apiKey = null,
+                allowLocalHttp = allowLocalHttp,
             )
     }
 }

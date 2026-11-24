@@ -82,4 +82,6 @@
     <string name="model_problem_model">Enter the model name.</string>
     <string name="model_problem_configuration">Complete the provider settings and try again.</string>
     <string name="model_problem_budget">Today’s model call limit has been reached, or model calls are disabled.</string>
+    <string name="settings_model_http_consent">Allow unencrypted requests to this local endpoint. People on the network could read the data you send.</string>
+    <string name="settings_model_https_required">Use HTTPS for remote endpoints and for any endpoint with an API key.</string>
 </resources>

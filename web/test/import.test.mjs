@@ -103,3 +103,15 @@ test('default provider transport preserves the browser fetch receiver', async ()
     model.connect({endpoint:'https://model.invalid/v1',model:'test'});await model.check();assert.equal(model.status.verified,true);model.disconnect();
   } finally {globalThis.fetch=previous;}
 });
+
+test("loopback HTTP requires consent and rejects credentials even with consent", () => {
+  const origins = ["http://localhost:11434", "http://models.example"];
+  const model = new ImageModel({ origins });
+  const options = { endpoint: origins[0] + "/v1", model: "test" };
+  assert.throws(() => model.connect(options));
+  model.connect({ ...options, allowLocalHttp: true });
+  assert.equal(model.status.configured, true);
+  assert.throws(() => model.connect({ ...options, allowLocalHttp: true, apiKey: "test-key" }));
+  assert.equal(model.status.configured, false);
+  assert.throws(() => model.connect({ ...options, endpoint: origins[1], allowLocalHttp: true }));
+});

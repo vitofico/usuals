@@ -15,7 +15,7 @@ class ImageImportTest {
         MockWebServer().use { server ->
             server.start()
             val challenge = VisionChallenge.create()
-            val config = ProviderConfig.ollama("vision", server.url("/v1").toString())
+            val config = ProviderConfig.ollama("vision", server.url("/v1").toString(), allowLocalHttp = true)
             val client = OpenAiCompatibleClient(config, imageChallenge = { challenge })
             fun reply(content: JsonObject) = MockResponse().setBody(buildJsonObject { put("choices", buildJsonArray {
                 add(buildJsonObject { putJsonObject("message") { put("content", content.toString()) } })
@@ -46,7 +46,7 @@ class ImageImportTest {
         MockWebServer().use { server ->
             server.start()
             server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"content":"{\"ok\":1}"}}]}"""))
-            val result = OpenAiCompatibleClient(ProviderConfig.ollama("text", server.url("/v1").toString())).probeImages()
+            val result = OpenAiCompatibleClient(ProviderConfig.ollama("text", server.url("/v1").toString(), allowLocalHttp = true)).probeImages()
             assertThat(result.reachable).isTrue()
             assertThat(result.supportsImages).isFalse()
             assertThat(result.problem?.kind).isEqualTo(ModelProblem.Kind.IMAGES_UNSUPPORTED)
@@ -56,7 +56,7 @@ class ImageImportTest {
         MockWebServer().use { source -> MockWebServer().use { other ->
             source.start(); other.start()
             source.enqueue(MockResponse().setResponseCode(307).setHeader("Location", other.url("/stolen")))
-            val result = OpenAiCompatibleClient(ProviderConfig.ollama("vision", source.url("/v1").toString())).parseImage(VisionChallenge.create().image)
+            val result = OpenAiCompatibleClient(ProviderConfig.ollama("vision", source.url("/v1").toString(), allowLocalHttp = true)).parseImage(VisionChallenge.create().image)
             assertThat(result).isEmpty()
             assertThat(other.requestCount).isEqualTo(0)
         } }
@@ -64,7 +64,7 @@ class ImageImportTest {
     @Test fun oversizedRepliesAreRejectedAndUnitOnlyPhotosDoNotInventAmounts() = runTest {
         MockWebServer().use { server ->
             server.start()
-            val client = OpenAiCompatibleClient(ProviderConfig.ollama("vision", server.url("/v1").toString()))
+            val client = OpenAiCompatibleClient(ProviderConfig.ollama("vision", server.url("/v1").toString(), allowLocalHttp = true))
             server.enqueue(MockResponse().setBody("x".repeat(512001)))
             assertThat(client.probeImages().problem?.kind).isEqualTo(ModelProblem.Kind.NOT_JSON)
             server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"content":"{\"items\":[{\"name\":\"salt\",\"unit\":\"GRAM\"}]}"}}]}"""))
@@ -79,7 +79,7 @@ class ImageImportTest {
             val http = defaultHttpClient().newBuilder().eventListener(object : okhttp3.EventListener() {
                 override fun canceled(call: okhttp3.Call) { cancelled.countDown() }
             }).build()
-            val client = OpenAiCompatibleClient(ProviderConfig.ollama("vision", server.url("/v1").toString()), http)
+            val client = OpenAiCompatibleClient(ProviderConfig.ollama("vision", server.url("/v1").toString(), allowLocalHttp = true), http)
             val job = launch { client.probeImages() }
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { check(server.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS) != null) }
             job.cancel()

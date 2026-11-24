@@ -32,7 +32,7 @@ class PreferenceSettingsStoreTest {
                 provider = ProviderSettings.ollama(
                     baseUrl = "http://10.0.2.2:11434/v1",
                     model = "qwen3.8:27b-mlx",
-                ),
+                ).copy(consentedHttpUrl = "http://10.0.2.2:11434/v1"),
                 dailyCallCeiling = 12,
                 automaticMatchingEnabled = true,
             ),
@@ -41,6 +41,7 @@ class PreferenceSettingsStoreTest {
         // A second instance, which is what the next launch builds.
         val reopened = PreferenceSettingsStore(context).load()
 
+        assertThat(reopened.provider.consentedHttpUrl).isEqualTo(reopened.provider.baseUrl)
         assertThat(reopened.provider.kind).isEqualTo(ProviderKind.OLLAMA)
         assertThat(reopened.provider.model).isEqualTo("qwen3.8:27b-mlx")
         assertThat(reopened.dailyCallCeiling).isEqualTo(12)

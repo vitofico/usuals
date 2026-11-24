@@ -222,7 +222,10 @@ class ConnectionAiTest {
             cloud.copy(kind = "UNKNOWN", baseUrl = "https://models.example/v1") to false,
             cloud to false,
             cloud.copy(baseUrl = "https://models.example/v1") to true,
-            cloud.copy(isLocal = true) to true,
+            cloud.copy(isLocal = true) to false,
+            cloud.copy(allowHttp = true) to false,
+            cloud.copy(baseUrl = "http://ollama.local/v1", allowHttp = true) to true,
+            cloud.copy(baseUrl = "http://ollama.local/v1", allowHttp = true, keyEnv = "KEY") to false,
             cloud.copy(baseUrl = "ftp://models.example/v1", allowHttp = true) to false,
         )) {
             if (valid) AiConfiguration(listOf(profile))
@@ -237,8 +240,29 @@ class ConnectionAiTest {
 
     }
 
+    @Test fun httpProfileRejectsPersonalKeyBeforeSaving() {
+        val provider = AiProvider("private", "Private", "http://ollama.local/v1", "model", allowHttp = true)
+        val gateway = AiGateway(db, AiConfiguration(listOf(provider), wrappingKey = ByteArray(32) { 42 }))
+        assertThrows(RelayError::class.java) { gateway.select(user, AiSelection("private", key = "synthetic")) }
+        assertThat(gateway.settings(user).hasKey).isFalse()
+    }
+
+    @Test fun switchingAnExistingKeyedProfileToHttpBlocksCallsBeforeCharging() = runBlocking {
+        val https = gateway()
+        https.select(user, AiSelection("private", key = "synthetic"))
+        val local = AiProvider("private", "Private", "http://ollama.local/v1", "model", allowHttp = true)
+        val http = AiGateway(db, AiConfiguration(listOf(local), wrappingKey = ByteArray(32) { 42 }), { now }) {
+            error("HTTP client must not be built with a stored key")
+        }
+        val settings = http.settings(user)
+        assertThrows(RelayError::class.java) {
+            runBlocking { http.execute(user, "probe", AiRequest(revision = settings.revision)) }
+        }
+        assertThat(http.settings(user).used).isEqualTo(settings.used)
+    }
+
     private fun gateway(limit: Int = 20, keys: MutableList<String?> = mutableListOf()) = AiGateway(db,
-        AiConfiguration(listOf(AiProvider("private", "Private", "http://ollama:11434/v1", "text", "vision", true)), wrappingKey = ByteArray(32) { 42 }, dailyLimit = limit), { now }) { config ->
+        AiConfiguration(listOf(AiProvider("private", "Private", "https://ollama.local/v1", "text", "vision", true)), wrappingKey = ByteArray(32) { 42 }, dailyLimit = limit), { now }) { config ->
         keys += config.apiKey
         object : LlmClient {
             override suspend fun probe() = ModelCapabilities(true, true, config.model)
@@ -302,7 +326,7 @@ class ConnectionAiTest {
         gateway.select(user, AiSelection("private", key = "synthetic-secret"))
         gateway.rewrap(ByteArray(32) { 9 })
         val keys = mutableListOf<String?>()
-        val replacement = AiGateway(db, AiConfiguration(listOf(AiProvider("private", "Private", "http://ollama:11434/v1", "text", "vision", true)), wrappingKey = ByteArray(32) { 9 }), { now }) { config ->
+        val replacement = AiGateway(db, AiConfiguration(listOf(AiProvider("private", "Private", "https://ollama.local/v1", "text", "vision", true)), wrappingKey = ByteArray(32) { 9 }), { now }) { config ->
             keys += config.apiKey
             object : LlmClient {
                 override suspend fun probe() = ModelCapabilities(true, true, "text")

@@ -73,4 +73,6 @@
     <string name="model_problem_model">Inserisci il nome del modello.</string>
     <string name="model_problem_configuration">Completa le impostazioni del fornitore e riprova.</string>
     <string name="model_problem_budget">Il limite di chiamate di oggi è stato raggiunto o le chiamate sono disattivate.</string>
+    <string name="settings_model_http_consent">Consenti richieste non cifrate a questo server locale. Altre persone sulla rete potrebbero leggere i dati inviati.</string>
+    <string name="settings_model_https_required">Usa HTTPS per i server remoti e per qualsiasi server con una chiave API.</string>
 </resources>
