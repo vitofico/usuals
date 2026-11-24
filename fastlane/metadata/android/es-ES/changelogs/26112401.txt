@@ -1,0 +1,1 @@
+El símbolo de Usuals en la barra de estado es más grande en los recordatorios de compra y las notificaciones de las listas compartidas.
