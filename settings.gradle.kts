@@ -10,12 +10,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        // Maven Central rate-limits large Robolectric SDK test fixtures on CI runners.
+        // Maven Central rate-limits large Robolectric test artifacts on CI runners.
         maven("https://maven-central.storage-download.googleapis.com/maven2") {
-            content {
-                onlyForConfigurations("robolectricSdkApi26", "robolectricSdkApi33", "robolectricSdkApi36")
-                includeModule("org.robolectric", "android-all-instrumented")
-            }
+            content { includeGroup("org.robolectric") }
         }
         mavenCentral()
     }
