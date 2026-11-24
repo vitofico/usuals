@@ -90,7 +90,9 @@ for part in collage:
 renderer = shutil.which('rsvg-convert')
 if renderer is None:
     sys.exit('Install librsvg (rsvg-convert) to export the store icon')
-outputs['fastlane/metadata/android/en-US/images/icon.png'] = subprocess.check_output([renderer, '--width', '512', '--height', '512', str(source)])
+store_icon = subprocess.check_output([renderer, '--width', '512', '--height', '512', str(source)])
+for listing in sorted((ROOT/'fastlane/metadata/android').glob('*/title.txt')):
+    outputs[str(listing.parent.relative_to(ROOT)/'images/icon.png')] = store_icon
 stale = [name for name, data in outputs.items() if not (ROOT/name).is_file() or (ROOT/name).read_bytes() != data]
 if args.check:
     if stale:
