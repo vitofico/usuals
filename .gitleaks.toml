@@ -40,6 +40,8 @@ description = "Known-benign values, each pinned by its exact text"
 # over the shape would pass silently for ever, including on the day the shape
 # stops meaning what it means today.
 regexes = [
+    # Gradle test configuration selecting the pinned Robolectric Android 13 SDK.
+    '^robolectricSdkApi33$',
     '''^8\.0\.0_r4-robolectric-r1-i6$''',
     '''^13-robolectric-9030017-i6$''',
     '''^14-robolectric-10818077-i6$''',
