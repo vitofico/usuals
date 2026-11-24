@@ -110,7 +110,12 @@ class SettingsViewModel(
     }
 
     fun setBaseUrl(baseUrl: String) {
-        updateSettings { it.copy(provider = it.provider.copy(baseUrl = baseUrl)) }
+        updateSettings { it.copy(provider = it.provider.copy(baseUrl = baseUrl, consentedHttpUrl = null)) }
+        clearModelProbe()
+    }
+
+    fun setHttpConsent(allowed: Boolean) {
+        updateSettings { it.copy(provider = it.provider.copy(consentedHttpUrl = if (allowed) it.provider.baseUrl.trim() else null)) }
         clearModelProbe()
     }
 

@@ -14,6 +14,7 @@ com.google.j2objc:j2objc-annotations:3.0.0=testCompileClasspath
 com.google.protobuf:protobuf-java:4.33.6=testRuntimeClasspath
 com.google.truth:truth:1.4.4=testCompileClasspath,testRuntimeClasspath
 com.squareup.okhttp3:mockwebserver:4.12.0=testCompileClasspath,testRuntimeClasspath
+com.squareup.okhttp3:okhttp-tls:4.12.0=testCompileClasspath,testRuntimeClasspath
 com.squareup.okhttp3:okhttp:4.12.0=compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.squareup.okio:okio-jvm:3.6.0=compileClasspath,testCompileClasspath,testRuntimeClasspath
 com.squareup.okio:okio:3.6.0=compileClasspath,testCompileClasspath,testRuntimeClasspath

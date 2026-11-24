@@ -44,8 +44,16 @@ class OpenAiCompatibleClientTest {
 
     private val server = MockWebServer()
 
+    private val cert = okhttp3.tls.HeldCertificate.Builder().addSubjectAlternativeName("localhost").build()
+    private val trust = okhttp3.tls.HandshakeCertificates.Builder().addTrustedCertificate(cert.certificate).build()
+    private val transport = OkHttpClient.Builder()
+        .sslSocketFactory(trust.sslSocketFactory(), trust.trustManager)
+        .callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false).build()
+
     @Before
     fun start() {
+        val identity = okhttp3.tls.HandshakeCertificates.Builder().heldCertificate(cert).build()
+        server.useHttps(identity.sslSocketFactory(), false)
         server.start()
     }
 
@@ -63,10 +71,7 @@ class OpenAiCompatibleClientTest {
             isLocal = false,
             apiKey = key,
         ),
-        httpClient = OkHttpClient.Builder()
-            .callTimeout(10, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(false)
-            .build(),
+        httpClient = transport,
     )
 
     private fun replyWith(content: String) {
@@ -248,14 +253,14 @@ class OpenAiCompatibleClientTest {
         val cases = listOf(
             Probe(client(), "0", null, format = true),
             Probe(
-                OpenAiCompatibleClient(ProviderConfig.ollama("local", server.url("/v1").toString())),
+                OpenAiCompatibleClient(ProviderConfig.ollama("local", server.url("/v1").toString()), httpClient = transport),
                 "0", "none", format = true,
             ),
             Probe(
                 OpenAiCompatibleClient(ProviderConfig(
                     ProviderKind.OPENAI_COMPATIBLE, "Terra", server.url("/v1").toString(),
                     "gpt-6.1-terra", false, apiKey,
-                )),
+                ), httpClient = transport),
                 "0", "none", format = true, completionBudget = true,
             ),
             Probe(client(kind = ProviderKind.ANTHROPIC), null, null, format = false),

@@ -246,14 +246,13 @@ object ServiceLocator {
      * Saved provider settings plus the stored key, as a client or as nothing.
      *
      * Both halves are functions so that neither is read until a client is
-     * actually being built. A keystore that refuses reads as "no key" rather
-     * than as a throw: null is already a supported answer, and every feature
-     * that can use a model works without one.
+     * actually being built. An unreadable keystore disables the client until
+     * its credential state can be checked.
      */
     val modelClients: ModelClients by resettable {
         ModelClients(
             settings = { providerSettingsStore.load() },
-            apiKey = { runCatching { secretStore.modelKey() }.getOrNull() },
+            apiKey = { secretStore.modelKey() },
         )
     }
 

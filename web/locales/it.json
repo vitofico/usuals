@@ -197,6 +197,8 @@
   "importMarkdownReviewHelp": "Controlla ogni nome e quantità della tua lista. Le voci esistenti vengono ignorate e la lista cambia solo alla conferma.",
   "importReviewHelp": "Controlla ogni nome e quantità. Il modello può sbagliare. Le voci esistenti vengono ignorate e la lista cambia solo alla conferma.",
   "importFailed": "Impossibile importare questo contenuto. La lista salvata viene conservata.",
+  "importModelHttpConsent": "Consenti richieste non cifrate a questo server locale. Altre persone sulla rete potrebbero leggere i dati inviati.",
+  "importModelHttps": "Usa HTTPS per i server remoti e per qualsiasi server con una chiave API.",
   "importModelEndpoint": "Inserisci un URL base API da un’origine consentita e un nome del modello. Usa HTTPS, tranne per localhost.",
   "importModelBudget": "Questa connessione ha raggiunto il limite di chiamate. Per continuare, riconnettila con un limite adeguato.",
   "importModelMissing": "Connetti prima un modello per immagini. Nessuna foto è stata inviata.",

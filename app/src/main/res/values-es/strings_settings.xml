@@ -73,4 +73,6 @@
     <string name="model_problem_model">Introduce el nombre del modelo.</string>
     <string name="model_problem_configuration">Completa los ajustes del proveedor y vuelve a intentarlo.</string>
     <string name="model_problem_budget">Se ha alcanzado el límite de llamadas de hoy o las llamadas están desactivadas.</string>
+    <string name="settings_model_http_consent">Permitir solicitudes sin cifrar a este servidor local. Otras personas en la red podrían leer los datos enviados.</string>
+    <string name="settings_model_https_required">Usa HTTPS para servidores remotos y para cualquier servidor con clave de API.</string>
 </resources>

@@ -2,7 +2,6 @@ package io.theficos.usuals.relay
 
 import io.theficos.usuals.llm.*
 import io.theficos.usuals.sync.*
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
@@ -28,9 +27,7 @@ class AiConfiguration(val profiles: List<AiProvider> = emptyList(), val default:
         profiles.forEach { p ->
             require(p.id.matches(Regex("[a-z0-9-]{1,40}")) && p.label.length in 1..100 && p.model.length in 1..128 && p.imageModel.length in 1..128)
             require(p.kind in setOf("ANTHROPIC", "OLLAMA", "OPENAI_COMPATIBLE"))
-            val uri = URI(p.baseUrl)
-            require(uri.host != null && uri.userInfo == null && uri.rawQuery == null && uri.rawFragment == null &&
-                (uri.scheme == "https" || uri.scheme == "http" && (p.isLocal || p.allowHttp)) && p.baseUrl.length <= 1024)
+            require(p.baseUrl.length <= 1024 && ModelEndpoint.permits(p.baseUrl, p.allowHttp, p.keyEnv != null))
             p.keyEnv?.let { require(it.matches(Regex("[A-Z][A-Z0-9_]{0,100}"))); validateKey(environment[it]) }
         }
     }
@@ -67,7 +64,9 @@ class AiGateway(private val db: Database, val configuration: AiConfiguration,
             Triple(it.getString(1), it.getString(2), it.getBytes(3))
         }.singleOrNull()
         val profile = configuration.profiles.firstOrNull { it.id == (selected?.first ?: configuration.default) } ?: reject("ai_unavailable", 503)
-        return Choice(profile, selected?.second, selected?.third?.let { decrypt(user, it) } ?: configuration.key(profile),
+        val key = selected?.third?.let { decrypt(user, it) } ?: configuration.key(profile)
+        expect(ModelEndpoint.permits(profile.baseUrl, profile.allowHttp, key != null), "invalid", 400)
+        return Choice(profile, selected?.second, key,
             revision(profile, selected?.second, selected?.third))
     }
     private fun revision(profile: AiProvider, model: String?, credential: ByteArray?) = Wire.hash(
@@ -90,6 +89,7 @@ class AiGateway(private val db: Database, val configuration: AiConfiguration,
             } else {
                 val profile = configuration.profiles.firstOrNull { it.id == request.profile } ?: reject("invalid", 400)
                 expect(request.model == null || request.model in setOf(profile.model, profile.imageModel))
+                expect(ModelEndpoint.permits(profile.baseUrl, profile.allowHttp, request.key != null))
                 val encrypted = request.key?.let { encrypt(user, it) }
                 c.execute("INSERT INTO ai_preference VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET profile=EXCLUDED.profile,model=EXCLUDED.model,credential=EXCLUDED.credential",
                     id(user), profile.id, request.model, encrypted)
@@ -133,7 +133,7 @@ class AiGateway(private val db: Database, val configuration: AiConfiguration,
         }
         val p = choice.profile
         val model = if (action in setOf("image", "probe-image")) p.imageModel else choice.model ?: p.model
-        val config = ProviderConfig(ProviderKind.valueOf(p.kind), p.label, p.baseUrl, model, p.isLocal, choice.key)
+        val config = ProviderConfig(ProviderKind.valueOf(p.kind), p.label, p.baseUrl, model, p.isLocal, choice.key, p.allowHttp)
         val client = build(config)
         if (action.startsWith("probe")) {
             val caps = if (action == "probe-image") client.probeImages() else client.probe()

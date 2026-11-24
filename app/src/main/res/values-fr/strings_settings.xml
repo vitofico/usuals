@@ -73,4 +73,6 @@
     <string name="model_problem_model">Saisissez le nom du modèle.</string>
     <string name="model_problem_configuration">Complétez les paramètres du fournisseur et réessayez.</string>
     <string name="model_problem_budget">La limite d’appels du jour est atteinte ou les appels sont désactivés.</string>
+    <string name="settings_model_http_consent">Autoriser les requêtes non chiffrées vers ce serveur local. Des personnes sur le réseau pourraient lire les données envoyées.</string>
+    <string name="settings_model_https_required">Utilisez HTTPS pour les serveurs distants et pour tout serveur avec une clé API.</string>
 </resources>

@@ -197,6 +197,8 @@
   "importMarkdownReviewHelp": "Check each name and quantity from your list. Existing items are skipped, and your list changes only when you confirm.",
   "importReviewHelp": "Check each name and quantity. Model results can be wrong. Existing items are skipped, and your list changes only when you confirm.",
   "importFailed": "Could not import this source. Your saved list is kept.",
+  "importModelHttpConsent": "Allow unencrypted requests to this local endpoint. People on the network could read the data you send.",
+  "importModelHttps": "Use HTTPS for remote endpoints and for any endpoint with an API key.",
   "importModelEndpoint": "Enter a valid model API base URL from the allowed origins, and a model name. Use HTTPS, except for localhost.",
   "importModelBudget": "This connection has reached its model-call limit. Connect again with a suitable limit if you want to continue.",
   "importModelMissing": "Connect an image model first. No photo was sent.",

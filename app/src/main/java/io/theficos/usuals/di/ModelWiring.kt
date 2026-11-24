@@ -2,6 +2,7 @@ package io.theficos.usuals.di
 
 import io.theficos.usuals.llm.LlmClient
 import io.theficos.usuals.llm.ModelBudget
+import io.theficos.usuals.llm.ModelEndpoint
 import io.theficos.usuals.llm.ModelCapabilities
 import io.theficos.usuals.llm.ModelProblem
 import io.theficos.usuals.llm.OpenAiCompatibleClient
@@ -153,6 +154,9 @@ internal fun wireConfigOf(settings: ProviderSettings, apiKey: () -> String?): Pr
     val model = settings.model.trim()
     if (baseUrl.isEmpty() || model.isEmpty()) return null
 
+    val key = try { apiKey()?.trim()?.takeIf { it.isNotEmpty() } } catch (_: Exception) { return null }
+    val consented = settings.consentedHttpUrl == baseUrl
+    if (!ModelEndpoint.permits(baseUrl, consented, key != null)) return null
     return ProviderConfig(
         kind = kind,
         label = settings.label,
@@ -161,7 +165,8 @@ internal fun wireConfigOf(settings: ProviderSettings, apiKey: () -> String?): Pr
         isLocal = settings.isLocal,
         // A key is optional and blank is not a key. Ollama on the LAN has none,
         // and sending an empty bearer token would be a lie about the request.
-        apiKey = apiKey()?.takeIf { it.isNotBlank() }?.trim(),
+        apiKey = key,
+        allowLocalHttp = consented,
     )
 }
 

@@ -47,6 +47,7 @@ class ProviderSettingsStore(context: Context) {
             label = prefs.getString(KEY_LABEL, null) ?: kind.name,
             baseUrl = prefs.getString(KEY_BASE_URL, null).orEmpty(),
             model = prefs.getString(KEY_MODEL, null).orEmpty(),
+            consentedHttpUrl = prefs.getString(KEY_HTTP_CONSENT, null),
             isLocal = prefs.getBoolean(KEY_IS_LOCAL, false),
         )
     }
@@ -65,6 +66,7 @@ class ProviderSettingsStore(context: Context) {
                 .putString(KEY_LABEL, settings.label)
                 .putString(KEY_BASE_URL, settings.baseUrl)
                 .putString(KEY_MODEL, settings.model)
+                .putString(KEY_HTTP_CONSENT, settings.consentedHttpUrl)
                 .putBoolean(KEY_IS_LOCAL, settings.isLocal)
                 .commit()
             if (!committed) {
@@ -99,6 +101,7 @@ class ProviderSettingsStore(context: Context) {
         internal const val KEY_LABEL = "label"
         internal const val KEY_BASE_URL = "base_url"
         internal const val KEY_MODEL = "model"
+        private const val KEY_HTTP_CONSENT = "consented_http_url"
         internal const val KEY_IS_LOCAL = "is_local"
     }
 }

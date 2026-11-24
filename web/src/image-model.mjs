@@ -16,10 +16,12 @@ export function modelItems(text) {
 export class ImageModel {
   #config = null; #verified = false; #used = 0; #active = null; #epoch = 0;
   constructor({ origins = [], fetcher = (...args) => globalThis.fetch(...args), challenge }) { this.origins = [...origins]; this.fetcher = fetcher; this.challenge = challenge; }
-  connect({ endpoint, model, apiKey = "", limit = 20 }) {
+  connect({ endpoint, model, apiKey = "", limit = 20, allowLocalHttp = false }) {
     this.disconnect();
     let url; try { url = new URL(endpoint); } catch { throw new Problem("importModelEndpoint"); }
     requireThat(this.origins.includes(url.origin) && !url.username && !url.password && !url.search && !url.hash && endpoint.length <= 1024, "importModelEndpoint");
+    const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    requireThat(url.protocol === "https:" || (url.protocol === "http:" && loopback && allowLocalHttp === true && !apiKey), "importModelHttps");
     requireThat(typeof model === "string" && model.trim() && model.length <= 128 && apiKey.length <= 4096 && !/[\r\n]/.test(apiKey), "importModelEndpoint");
     requireThat(Number.isInteger(limit) && limit >= 1 && limit <= 200, "importModelBudget");
     this.#config = { endpoint: url.href.replace(/\/$/, "") + "/chat/completions", model: model.trim(), apiKey, limit };

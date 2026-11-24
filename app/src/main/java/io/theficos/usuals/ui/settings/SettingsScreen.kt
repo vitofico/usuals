@@ -3,6 +3,7 @@
 package io.theficos.usuals.ui.settings
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.theficos.usuals.ui.components.SectionCard
 import io.theficos.usuals.R
+import io.theficos.usuals.llm.ModelEndpoint
 import io.theficos.usuals.llm.ModelCapabilities
 import io.theficos.usuals.auth.ProviderKind
 import io.theficos.usuals.ui.theme.AppPalette
@@ -233,6 +235,20 @@ private fun ModelSection(state: SettingsUiState, vm: SettingsViewModel) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth(),
         )
+        val endpoint = provider.baseUrl.trim()
+        if (endpoint.startsWith("http:", ignoreCase = true)) {
+            if (state.apiKey != KeyState.ABSENT || state.apiKeyDraft.isNotBlank() ||
+                !ModelEndpoint.permits(endpoint, allowLocalHttp = true, hasKey = false)) {
+                Quiet(stringResource(R.string.settings_model_https_required))
+            } else {
+                val allowed = provider.consentedHttpUrl == endpoint
+                Row(Modifier.fillMaxWidth().toggleable(allowed, role = Role.Switch, onValueChange = vm::setHttpConsent),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.settings_model_http_consent), modifier = Modifier.weight(1f))
+                    Switch(checked = allowed, onCheckedChange = null)
+                }
+            }
+        }
         if (provider.kind == ProviderKind.OLLAMA) {
             Quiet(stringResource(R.string.settings_model_ollama_hint))
             Quiet(stringResource(R.string.settings_model_local_example))

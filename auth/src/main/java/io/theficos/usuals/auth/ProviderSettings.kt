@@ -70,6 +70,7 @@ data class ProviderSettings(
     val baseUrl: String,
     val model: String,
     val isLocal: Boolean,
+    val consentedHttpUrl: String? = null,
 ) {
 
     companion object {

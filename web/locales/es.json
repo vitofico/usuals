@@ -197,6 +197,8 @@
   "importMarkdownReviewHelp": "Comprueba cada nombre y cantidad de tu lista. Se omiten los artículos existentes y la lista solo cambia cuando confirmas.",
   "importReviewHelp": "Comprueba cada nombre y cantidad. El modelo puede equivocarse. Se omiten los elementos existentes y la lista solo cambia cuando confirmas.",
   "importFailed": "No se pudo importar el contenido. La lista guardada se conserva.",
+  "importModelHttpConsent": "Permitir solicitudes sin cifrar a este servidor local. Otras personas en la red podrían leer los datos enviados.",
+  "importModelHttps": "Usa HTTPS para servidores remotos y para cualquier servidor con clave de API.",
   "importModelEndpoint": "Introduce una URL base de API de un origen permitido y un nombre de modelo. Usa HTTPS, excepto para localhost.",
   "importModelBudget": "Se alcanzó el límite de llamadas de esta conexión. Vuelve a conectar con un límite adecuado para continuar.",
   "importModelMissing": "Conecta primero un modelo de imágenes. No se ha enviado ninguna foto.",
